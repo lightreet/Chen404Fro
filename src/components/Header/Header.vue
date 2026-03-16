@@ -211,6 +211,7 @@ import {
 import { useUserStore } from '@/stores/user';
 import { UserRole } from '@/types';
 import { storeToRefs } from 'pinia';
+import { logout as logoutApi } from '@/api/auth';
 
 const route = useRoute();
 const router = useRouter();
@@ -346,12 +347,15 @@ const handleLogout = async () => {
       cancelButtonText: '取消',
       type: 'warning',
     });
+    // 调用退出登录 API
+    await logoutApi();
+    // 清除本地用户状态
     userStore.logout();
     ElMessage.success('已退出登录');
     closeMobileMenu();
     router.push('/');
   } catch {
-    // 用户取消
+    // 用户取消或请求失败
   }
 };
 </script>

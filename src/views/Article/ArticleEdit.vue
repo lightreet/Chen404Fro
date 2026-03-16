@@ -135,8 +135,8 @@
         <div class="advanced-settings">
           <el-divider>高级设置</el-divider>
           <div class="settings-row">
-            <el-checkbox v-model="form.isTop">置顶文章</el-checkbox>
-            <el-checkbox v-model="form.isRecommend">推荐文章</el-checkbox>
+            <el-checkbox v-model="form.isTop" :true-value="1" :false-value="0">置顶文章</el-checkbox>
+            <el-checkbox v-model="form.isRecommend" :true-value="1" :false-value="0">推荐文章</el-checkbox>
             <el-radio-group v-model="form.status" size="small">
               <el-radio-button :label="ArticleStatus.DRAFT">草稿</el-radio-button>
               <el-radio-button :label="ArticleStatus.PUBLISHED">发布</el-radio-button>
@@ -216,7 +216,7 @@ const toolbars = [
   'catalog',
 ];
 
-// 表单数据
+// 表单数据（与后端/数据库一致：置顶、推荐为 0/1 整型）
 const form = reactive<Partial<Article>>({
   title: '',
   content: '',
@@ -224,8 +224,8 @@ const form = reactive<Partial<Article>>({
   coverImage: '',
   categoryId: undefined,
   status: ArticleStatus.DRAFT,
-  isTop: false,
-  isRecommend: false,
+  isTop: 0,
+  isRecommend: 0,
 });
 
 // 标签ID数组（单独处理）
@@ -247,11 +247,13 @@ const fetchCategoriesAndTags = async () => {
       getCategories(),
       getTags(),
     ]);
-    categories.value = categoriesRes;
-    tags.value = tagsRes;
+    categories.value = categoriesRes || [];
+    tags.value = tagsRes || [];
   } catch (error) {
     console.error('获取分类/标签失败:', error);
-    ElMessage.error('获取分类/标签失败');
+    // 失败时显示空列表，不提示用户
+    categories.value = [];
+    tags.value = [];
   }
 };
 
@@ -291,34 +293,56 @@ const handleCoverUpload = async (options: { file: File; onSuccess: (res: any) =>
 // 封面上传前校验
 const beforeCoverUpload = (file: File) => {
   const isImage = file.type.startsWith('image/');
-  const isLt5M = file.size / 1024 / 1024 < 5;
+  const isLt12M = file.size / 1024 / 1024 < 12;
 
   if (!isImage) {
     ElMessage.error('只能上传图片文件!');
     return false;
   }
-  if (!isLt5M) {
-    ElMessage.error('图片大小不能超过 5MB!');
+  if (!isLt12M) {
+    ElMessage.error('图片大小不能超过 12MB!');
     return false;
   }
   return true;
 };
 
-// 编辑器内图片上传
+// 编辑器内图片上传（并行上传优化版）
 const onUploadImg = async (files: File[], callback: (urls: string[]) => void) => {
   try {
-    const urls: string[] = [];
-    for (const file of files) {
-      // 校验文件大小 (5MB)
-      if (file.size > 5 * 1024 * 1024) {
-        ElMessage.error(`${file.name} 大小超过5MB限制`);
-        continue;
+    // 先校验所有文件大小
+    const validFiles = files.filter(file => {
+      if (file.size > 12 * 1024 * 1024) {
+        ElMessage.error(`${file.name} 大小超过12MB限制`);
+        return false;
       }
-      // 调用上传API
-      const res = await uploadImage(file);
-      urls.push(res.url);
+      return true;
+    });
+
+    if (validFiles.length === 0) {
+      callback([]);
+      return;
     }
+
+    // 并行上传所有图片
+    const uploadPromises = validFiles.map(async (file) => {
+      try {
+        const res = await uploadImage(file);
+        return res.url;
+      } catch (error) {
+        console.error(`上传失败: ${file.name}`, error);
+        ElMessage.error(`${file.name} 上传失败`);
+        return null;
+      }
+    });
+
+    // 等待所有上传完成
+    const results = await Promise.all(uploadPromises);
+
+    // 过滤掉失败的
+    const urls = results.filter((url): url is string => url !== null);
+
     callback(urls);
+
     if (urls.length > 0) {
       ElMessage.success(`成功上传 ${urls.length} 张图片`);
     }

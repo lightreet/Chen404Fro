@@ -50,16 +50,18 @@ export const useUserStore = defineStore('user', () => {
     }
   };
 
+  // 获取当前存储的 token（供请求拦截器使用）
+  const getToken = () => {
+    return token.value || localStorage.getItem('token') || '';
+  };
+
   // 登录
   const login = (userData: User, newToken: string, remember = true) => {
-    if (remember) {
-      setUser(userData);
-      setToken(newToken);
-    } else {
-      // 不记住时只存内存，不持久化
-      user.value = userData;
-      token.value = newToken;
-    }
+    // 始终保存到 localStorage，确保当前会话可用
+    setUser(userData);
+    setToken(newToken);
+    // 记录是否要记住登录状态（可用于控制 token 过期后的行为）
+    localStorage.setItem('remember', String(remember));
   };
 
   // 登出

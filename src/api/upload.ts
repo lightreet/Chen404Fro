@@ -26,19 +26,13 @@ export function uploadImage(file: File): Promise<UploadResult> {
 }
 
 /**
- * 批量上传图片
+ * 批量上传图片（并行上传优化版）
  * @param files 图片文件列表
  */
-export function uploadImages(files: File[]): Promise<UploadResult[]> {
-  const formData = new FormData();
-  files.forEach(file => {
-    formData.append('files', file);
-  });
-  return request.post('/upload/images', formData, {
-    headers: {
-      'Content-Type': 'multipart/form-data',
-    },
-  });
+export async function uploadImages(files: File[]): Promise<UploadResult[]> {
+  // 使用 Promise.all 并行上传所有图片
+  const uploadPromises = files.map(file => uploadImage(file));
+  return Promise.all(uploadPromises);
 }
 
 /**

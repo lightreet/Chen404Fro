@@ -165,8 +165,10 @@ export interface Article {
   viewCount: number;
   commentCount: number;
   likeCount: number;
-  isTop: boolean;
-  isRecommend: boolean;
+  /** 是否置顶：0-否 1-是 */
+  isTop: number;
+  /** 是否推荐：0-否 1-是 */
+  isRecommend: number;
   publishTime: string;
   createTime: string;
   updateTime: string;
