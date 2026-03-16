@@ -1,0 +1,149 @@
+import { createRouter, createWebHistory } from 'vue-router';
+import type { RouteRecordRaw } from 'vue-router';
+import { ElMessage } from 'element-plus';
+
+const routes: RouteRecordRaw[] = [
+  {
+    path: '/',
+    name: 'Home',
+    component: () => import('@/views/Home/Home.vue'),
+    meta: {
+      title: '首页',
+    },
+  },
+  // 根路径重定向到首页（兼容 /home）
+  {
+    path: '/home',
+    redirect: '/',
+  },
+  {
+    path: '/article/:id',
+    name: 'ArticleDetail',
+    component: () => import('@/views/Article/ArticleDetail.vue'),
+    meta: {
+      title: '文章详情',
+    },
+  },
+  {
+    path: '/article/edit/:id?',
+    name: 'ArticleEdit',
+    component: () => import('@/views/Article/ArticleEdit.vue'),
+    meta: {
+      title: '编写文章',
+      requiresAuth: true, // 需要登录
+    },
+  },
+  {
+    path: '/archive',
+    name: 'Archive',
+    component: () => import('@/views/Archive/Archive.vue'),
+    meta: {
+      title: '归档',
+    },
+  },
+  {
+    path: '/category',
+    name: 'Category',
+    component: () => import('@/views/Category/Category.vue'),
+    meta: {
+      title: '分类',
+    },
+  },
+  {
+    path: '/tag',
+    name: 'Tag',
+    component: () => import('@/views/Tag/Tag.vue'),
+    meta: {
+      title: '标签',
+    },
+  },
+  {
+    path: '/guestbook',
+    name: 'Guestbook',
+    component: () => import('@/views/Guestbook/Guestbook.vue'),
+    meta: {
+      title: '留言板',
+    },
+  },
+  {
+    path: '/friends',
+    name: 'Friends',
+    component: () => import('@/views/Friends/Friends.vue'),
+    meta: {
+      title: '友人帐',
+    },
+  },
+  {
+    path: '/about',
+    name: 'About',
+    component: () => import('@/views/About/About.vue'),
+    meta: {
+      title: '关于',
+    },
+  },
+  {
+    path: '/login',
+    name: 'Login',
+    component: () => import('@/views/Auth/Login.vue'),
+    meta: {
+      title: '登录',
+      guest: true, // 标记为游客可访问
+    },
+  },
+  {
+    path: '/register',
+    name: 'Register',
+    component: () => import('@/views/Auth/Register.vue'),
+    meta: {
+      title: '注册',
+      guest: true,
+    },
+  },
+  // 404 页面
+  {
+    path: '/:pathMatch(.*)*',
+    name: 'NotFound',
+    component: () => import('@/views/NotFound/NotFound.vue'),
+    meta: {
+      title: '页面不存在',
+    },
+  },
+];
+
+const router = createRouter({
+  history: createWebHistory(),
+  routes,
+  scrollBehavior(to, from, savedPosition) {
+    if (savedPosition) {
+      return savedPosition;
+    } else {
+      return { top: 0 };
+    }
+  },
+});
+
+// 路由守卫
+router.beforeEach((to, from, next) => {
+  // 设置页面标题
+  const title = to.meta.title as string;
+  if (title) {
+    document.title = title === '首页' ? 'Chen404 Blog' : `${title} - Chen404 Blog`;
+  }
+
+  // 检查是否需要登录
+  if (to.meta.requiresAuth) {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      ElMessage.warning('请先登录');
+      next({
+        path: '/login',
+        query: { redirect: to.fullPath },
+      });
+      return;
+    }
+  }
+
+  next();
+});
+
+export default router;
