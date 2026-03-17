@@ -24,25 +24,25 @@ export function getArticles(params?: ArticleQueryParams): Promise<PageResult<Art
 
 /**
  * 获取文章详情
- * @param id 文章ID
+ * @param id 文章ID（请传 string，避免 Long 在 JS 中精度丢失）
  * @param incrementView 是否增加阅读量，默认为true
  */
 export function getArticleById(
-  id: number,
+  id: number | string,
   incrementView: boolean = true
 ): Promise<Article> {
-  return get(`/articles/${id}`, { incrementView });
+  return get(`/articles/${String(id)}`, { incrementView });
 }
 
 /**
  * 获取上一篇和下一篇文章
- * @param id 当前文章ID
+ * @param id 当前文章ID（请传 string，避免 Long 在 JS 中精度丢失）
  */
-export function getArticleNeighbors(id: number): Promise<{
-  prev?: { id: number; title: string };
-  next?: { id: number; title: string };
+export function getArticleNeighbors(id: number | string): Promise<{
+  prev?: { id: number | string; title: string };
+  next?: { id: number | string; title: string };
 }> {
-  return get(`/articles/${id}/neighbors`);
+  return get(`/articles/${String(id)}/neighbors`);
 }
 
 /**
@@ -58,16 +58,28 @@ export function createArticle(data: Partial<Article>): Promise<Article> {
  * @param id 文章ID
  * @param data 文章数据
  */
-export function updateArticle(id: number, data: Partial<Article>): Promise<Article> {
-  return put(`/admin/articles/${id}`, data);
+export function updateArticle(id: number | string, data: Partial<Article>): Promise<Article> {
+  return put(`/admin/articles/${String(id)}`, data);
 }
 
 /**
  * 删除文章（管理员）
  * @param id 文章ID
  */
-export function deleteArticle(id: number): Promise<void> {
-  return del(`/admin/articles/${id}`);
+export function deleteArticle(id: number | string): Promise<void> {
+  return del(`/admin/articles/${String(id)}`);
+}
+
+/**
+ * 获取当前登录用户的文章列表（个人中心管理）
+ */
+export function getMyArticles(params?: {
+  page?: number;
+  size?: number;
+  status?: number;
+  keyword?: string;
+}): Promise<PageResult<Article>> {
+  return get('/admin/articles', params);
 }
 
 /**

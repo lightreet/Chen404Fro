@@ -17,6 +17,11 @@
         />
       </div>
 
+      <!-- 空状态 -->
+      <div class="empty-state" v-if="!loading && articleList.length === 0">
+        <p>暂无文章，快去写一篇吧 ~</p>
+      </div>
+
       <!-- 加载更多 -->
       <div class="load-more" v-if="hasMore">
         <el-button
@@ -41,38 +46,47 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
+import { ElMessage } from 'element-plus';
 import { Compass } from '@element-plus/icons-vue';
 import DefaultLayout from '@/layouts/DefaultLayout.vue';
 import ArticleCard from '@/components/ArticleCard/ArticleCard.vue';
 import type { Article } from '@/types';
-import { generateMockArticles, getMockTotal } from '@/utils/mock';
+import { getArticles } from '@/api/article';
+
+const pageSize = 6;
 
 // 文章列表
 const articleList = ref<Article[]>([]);
 const currentPage = ref(1);
-const pageSize = 6;
 const total = ref(0);
 const loading = ref(false);
 const hasMore = ref(true);
 
-// 加载文章列表
+// 加载文章列表（仅已发布文章，对接后端 GET /api/articles）
 const loadArticles = async (page: number = 1) => {
   loading.value = true;
-
   try {
-    // 模拟 API 延迟
-    await new Promise(resolve => setTimeout(resolve, 500));
-
-    const newArticles = generateMockArticles(page, pageSize);
+    const res = await getArticles({
+      page,
+      size: pageSize,
+      status: 1, // 仅已发布
+    });
+    const list = res?.list ?? [];
+    const totalCount = res?.total ?? 0;
 
     if (page === 1) {
-      articleList.value = newArticles;
+      articleList.value = list;
     } else {
-      articleList.value.push(...newArticles);
+      articleList.value.push(...list);
     }
-
-    total.value = getMockTotal();
-    hasMore.value = articleList.value.length < total.value;
+    total.value = totalCount;
+    hasMore.value = articleList.value.length < totalCount;
+  } catch (err) {
+    console.error('加载文章列表失败', err);
+    ElMessage.error('加载文章列表失败，请稍后重试');
+    if (currentPage.value === 1) {
+      hasMore.value = false;
+    }
   } finally {
     loading.value = false;
   }
@@ -85,7 +99,6 @@ const loadMore = () => {
   loadArticles(currentPage.value);
 };
 
-// 初始化
 onMounted(() => {
   loadArticles();
 });
@@ -132,6 +145,13 @@ onMounted(() => {
 // 文章列表
 .article-list {
   margin-bottom: 32px;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 48px 24px;
+  color: var(--text-tertiary);
+  font-size: 15px;
 }
 
 // 加载更多

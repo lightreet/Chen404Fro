@@ -74,10 +74,6 @@
                   <el-icon><User /></el-icon>
                   个人中心
                 </el-dropdown-item>
-                <el-dropdown-item command="articles">
-                  <el-icon><Document /></el-icon>
-                  我的文章
-                </el-dropdown-item>
                 <el-dropdown-item v-if="isAdmin" command="admin">
                   <el-icon><Setting /></el-icon>
                   后台管理
@@ -205,7 +201,6 @@ import {
   Menu,
   EditPen,
   SwitchButton,
-  Document,
   Setting,
 } from '@element-plus/icons-vue';
 import { useUserStore } from '@/stores/user';
@@ -326,9 +321,6 @@ const handleUserCommand = (command: string) => {
   switch (command) {
     case 'profile':
       router.push('/profile');
-      break;
-    case 'articles':
-      router.push('/my-articles');
       break;
     case 'admin':
       router.push('/admin');

@@ -3,7 +3,7 @@
  * 包含登录、注册、密码重置等功能
  */
 
-import { get, post } from './request';
+import { get, post, put } from './request';
 import type {
   LoginParams,
   LoginResult,
@@ -12,6 +12,7 @@ import type {
   SendCodeParams,
   ForgotPasswordParams,
   ChangePasswordParams,
+  UpdateProfileParams,
   ApiResponse,
 } from '@/types';
 
@@ -96,6 +97,14 @@ export function resetPassword(params: ForgotPasswordParams): Promise<void> {
  */
 export function changePassword(params: ChangePasswordParams): Promise<void> {
   return post('/auth/change-password', params);
+}
+
+/**
+ * 更新个人资料（需要登录）
+ * @param params 更新参数 { nickname, avatar }
+ */
+export function updateProfile(params: UpdateProfileParams): Promise<User> {
+  return put('/auth/profile', params);
 }
 
 /**

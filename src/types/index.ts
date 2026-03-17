@@ -93,6 +93,12 @@ export interface ChangePasswordParams {
   newPassword: string;
 }
 
+// 更新个人资料请求
+export interface UpdateProfileParams {
+  nickname: string;
+  avatar: string;
+}
+
 // ==================== 首页相关类型 ====================
 
 // 站点统计信息
@@ -154,10 +160,13 @@ export interface HomeData {
 // ==================== 文章相关类型 ====================
 
 export interface Article {
-  id: number;
+  /** 文章 ID（后端 Long 序列化为 string，避免大数精度丢失） */
+  id: number | string;
   title: string;
   summary: string;
   content?: string;
+  /** 服务端渲染好的 HTML（若有则优先展示） */
+  contentHtml?: string;
   coverImage?: string;
   authorId: number;
   categoryId: number;

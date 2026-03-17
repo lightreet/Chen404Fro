@@ -99,6 +99,15 @@ const routes: RouteRecordRaw[] = [
       guest: true,
     },
   },
+  {
+    path: '/profile',
+    name: 'Profile',
+    component: () => import('@/views/Profile/Profile.vue'),
+    meta: {
+      title: '个人中心',
+      requiresAuth: true,
+    },
+  },
   // 404 页面
   {
     path: '/:pathMatch(.*)*',

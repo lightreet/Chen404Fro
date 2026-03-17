@@ -3,7 +3,7 @@
     <div class="article-detail-page">
       <el-skeleton :rows="10" animated v-if="loading" />
 
-      <div class="article-content-wrapper" v-else>
+      <div class="article-content-wrapper" v-else-if="article">
         <!-- 文章头部 -->
         <div class="article-header">
           <el-button text @click="$router.back()" class="back-btn">
@@ -11,36 +11,37 @@
             返回
           </el-button>
 
-          <h1 class="article-title">{{ article?.title || '文章标题' }}</h1>
+          <h1 class="article-title">{{ article.title }}</h1>
 
           <div class="article-meta">
             <span class="meta-item">
               <el-icon><Calendar /></el-icon>
-              {{ formatDate(article?.publishTime) }}
+              {{ formatDate(article.publishTime ?? article.createTime ?? '') }}
             </span>
             <span class="meta-item">
               <el-icon><View /></el-icon>
-              {{ article?.viewCount || 0 }} 阅读
+              {{ article.viewCount ?? 0 }} 阅读
             </span>
             <span class="meta-item">
               <el-icon><ChatDotRound /></el-icon>
-              {{ article?.commentCount || 0 }} 评论
+              {{ article.commentCount ?? 0 }} 评论
             </span>
           </div>
         </div>
 
-        <!-- 文章内容 -->
+        <!-- 文章内容：优先后端 contentHtml，否则用 MdPreview 渲染 Markdown -->
         <div class="article-body">
-          <div class="markdown-content" v-html="renderedContent"></div>
+          <div v-if="article.contentHtml" class="markdown-content" v-html="article.contentHtml"></div>
+          <MdPreview v-else :model-value="article.content ?? ''" :theme="previewTheme" class="markdown-preview" />
         </div>
 
         <!-- 文章标签 -->
-        <div class="article-tags" v-if="article?.tags?.length">
+        <div class="article-tags" v-if="article.tags?.length">
           <span
             v-for="tag in article.tags"
             :key="tag.id"
             class="tag"
-            :style="{ backgroundColor: tag.color + '20', color: tag.color }"
+            :style="{ backgroundColor: (tag.color || '#fb7299') + '20', color: tag.color || '#fb7299' }"
           >
             {{ tag.name }}
           </span>
@@ -58,6 +59,12 @@
           </div>
         </div>
       </div>
+
+      <!-- 文章不存在 -->
+      <div v-else class="article-not-found">
+        <p>文章不存在或已被删除</p>
+        <el-button type="primary" @click="$router.push('/')">返回首页</el-button>
+      </div>
     </div>
   </DefaultLayout>
 </template>
@@ -66,43 +73,53 @@
 import { ref, onMounted, computed } from 'vue';
 import { useRoute } from 'vue-router';
 import { ArrowLeft, Calendar, View, ChatDotRound } from '@element-plus/icons-vue';
+import { MdPreview } from 'md-editor-v3';
+import 'md-editor-v3/lib/preview.css';
 import DefaultLayout from '@/layouts/DefaultLayout.vue';
 import type { Article } from '@/types';
 import { formatDate } from '@/utils/format';
-import { generateMockArticles } from '@/utils/mock';
+import { getArticleById, getArticleNeighbors } from '@/api/article';
 
 const route = useRoute();
 const loading = ref(true);
 const article = ref<Article | null>(null);
-const prevArticle = ref<{ id: number; title: string } | null>(null);
-const nextArticle = ref<{ id: number; title: string } | null>(null);
+const prevArticle = ref<{ id: number | string; title: string } | null>(null);
+const nextArticle = ref<{ id: number | string; title: string } | null>(null);
 
-// 模拟渲染的 Markdown 内容
-const renderedContent = computed(() => {
-  return `
-    <p>这是一篇示例文章内容。在实际项目中，这里将显示 Markdown 渲染后的 HTML 内容。</p>
-    <h2>文章正文</h2>
-    <p>文章内容会在这里展示，包括代码块、图片、列表等各种 Markdown 元素。</p>
-    <pre><code class="language-typescript">const greeting = "Hello, Chen404!";
-console.log(greeting);</code></pre>
-    <p>更多内容...</p>
-  `;
+const previewTheme = computed(() => {
+  return localStorage.getItem('theme') === 'dark' ? 'dark' : 'light';
 });
 
-// 加载文章
+// 加载文章详情与上一篇/下一篇（对接 GET /api/articles/:id 与 GET /api/articles/:id/neighbors）
+// id 使用 string 传递，避免后端 Long 在 JSON 中超出 JS 安全整数导致精度丢失
 const loadArticle = async () => {
+  const id = route.params.id as string;
+  if (!id) {
+    loading.value = false;
+    return;
+  }
   loading.value = true;
-
   try {
-    await new Promise(resolve => setTimeout(resolve, 500));
-
-    const id = parseInt(route.params.id as string);
-    const articles = generateMockArticles(1, 10);
-    article.value = articles.find(a => a.id === id) || articles[0];
-
-    // 模拟上一篇/下一篇
-    prevArticle.value = { id: id - 1, title: '上一篇文章的标题示例' };
-    nextArticle.value = { id: id + 1, title: '下一篇文章的标题示例' };
+    const [articleRes, neighborsRes] = await Promise.all([
+      getArticleById(id, true),
+      getArticleNeighbors(id),
+    ]);
+    article.value = articleRes ?? null;
+    if (neighborsRes?.prev) {
+      prevArticle.value = { id: neighborsRes.prev.id, title: neighborsRes.prev.title };
+    } else {
+      prevArticle.value = null;
+    }
+    if (neighborsRes?.next) {
+      nextArticle.value = { id: neighborsRes.next.id, title: neighborsRes.next.title };
+    } else {
+      nextArticle.value = null;
+    }
+  } catch (err) {
+    console.error('加载文章失败', err);
+    article.value = null;
+    prevArticle.value = null;
+    nextArticle.value = null;
   } finally {
     loading.value = false;
   }
@@ -215,6 +232,25 @@ onMounted(() => {
   &:hover {
     opacity: 0.8;
     transform: translateY(-1px);
+  }
+}
+
+.article-not-found {
+  text-align: center;
+  padding: 64px 24px;
+  background: var(--bg-secondary);
+  border-radius: var(--radius-lg);
+
+  p {
+    color: var(--text-secondary);
+    margin: 0 0 20px;
+    font-size: 16px;
+  }
+}
+
+.markdown-preview {
+  :deep(.md-editor-preview-wrapper) {
+    padding: 0;
   }
 }
 

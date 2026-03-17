@@ -1,13 +1,20 @@
 <template>
   <article
     class="article-card"
-    :class="{ 'image-left': isImageLeft, 'image-right': !isImageLeft }"
+    :class="[
+      { 'image-left': isImageLeft, 'image-right': !isImageLeft },
+      { compact },
+    ]"
   >
     <div class="card-content">
-      <!-- 日期 -->
+      <!-- 日期与作者 -->
       <div class="article-meta">
         <el-icon><Calendar /></el-icon>
-        <span>{{ formatDate(article.publishTime) }}</span>
+        <span>{{ formatDate(article.publishTime ?? article.createTime ?? '') }}</span>
+        <template v-if="authorName">
+          <span class="meta-sep">·</span>
+          <span class="author-name">{{ authorName }}</span>
+        </template>
       </div>
 
       <!-- 标题 -->
@@ -21,20 +28,25 @@
       <div class="article-stats">
         <span class="stat-item">
           <el-icon><View /></el-icon>
-          {{ formatNumber(article.viewCount) }}
+          {{ formatNumber(article.viewCount ?? 0) }}
         </span>
         <span class="stat-item">
           <el-icon><ChatDotRound /></el-icon>
-          {{ article.commentCount }}
+          {{ article.commentCount ?? 0 }}
         </span>
         <span class="stat-item category-tag" v-if="article.category">
           <el-icon><Folder /></el-icon>
           {{ article.category.name }}
         </span>
+        <template v-if="mode === 'manage'">
+          <el-tag v-if="article.status === 0" type="info" size="small">草稿</el-tag>
+          <el-tag v-else-if="article.status === 1" type="success" size="small">已发布</el-tag>
+          <el-tag v-else type="warning" size="small">其他</el-tag>
+        </template>
       </div>
 
       <!-- 摘要 -->
-      <p class="article-summary">{{ article.summary }}</p>
+      <p class="article-summary">{{ article.summary || '暂无摘要' }}</p>
 
       <!-- 标签 -->
       <div class="article-tags" v-if="article.tags && article.tags.length > 0">
@@ -42,15 +54,19 @@
           v-for="tag in article.tags"
           :key="tag.id"
           class="tag"
-          :style="{ backgroundColor: tag.color + '20', color: tag.color }"
+          :style="{ backgroundColor: (tag.color || '#fb7299') + '20', color: tag.color || '#fb7299' }"
         >
           {{ tag.name }}
         </span>
       </div>
 
-      <!-- 阅读更多 -->
+      <!-- 阅读更多 / 管理操作 -->
       <div class="article-action">
-        <router-link :to="`/article/${article.id}`" class="read-more">
+        <template v-if="mode === 'manage'">
+          <el-button text type="primary" @click="$emit('edit', article.id)">编辑</el-button>
+          <el-button text type="danger" @click="$emit('delete', article.id)">删除</el-button>
+        </template>
+        <router-link v-else :to="`/article/${article.id}`" class="read-more">
           <span>阅读更多</span>
           <el-icon><ArrowRight /></el-icon>
         </router-link>
@@ -73,17 +89,35 @@ import { Calendar, View, ChatDotRound, Folder, ArrowRight } from '@element-plus/
 import type { Article } from '@/types';
 import { formatDate, formatNumber } from '@/utils/format';
 
+defineEmits<{
+  (e: 'edit', id: number | string): void;
+  (e: 'delete', id: number | string): void;
+}>();
+
 interface Props {
   article: Article;
   index?: number;
+  /** 管理态：显示状态与编辑/删除，否则显示阅读更多 */
+  mode?: 'home' | 'manage';
+  /** 紧凑态：缩小内边距与字号（用于个人中心列表） */
+  compact?: boolean;
 }
 
 const props = withDefaults(defineProps<Props>(), {
   index: 0,
+  mode: 'home',
+  compact: false,
 });
 
 // 根据索引决定图片位置（奇数左，偶数右）
 const isImageLeft = computed(() => props.index % 2 === 1);
+
+// 作者名称：优先昵称，其次用户名
+const authorName = computed(() => {
+  const a = props.article.author;
+  if (!a) return '';
+  return (a.nickname && a.nickname.trim()) ? a.nickname.trim() : (a.username || '');
+});
 </script>
 
 <style scoped lang="scss">
@@ -127,6 +161,56 @@ const isImageLeft = computed(() => props.index % 2 === 1);
   min-width: 0;
 }
 
+// 紧凑态（个人中心等）
+.article-card.compact {
+  margin-bottom: 16px;
+
+  .card-content {
+    padding: 18px 22px;
+  }
+
+  .article-meta {
+    font-size: 12px;
+    margin-bottom: 8px;
+  }
+
+  .article-title {
+    font-size: 17px;
+    margin-bottom: 10px;
+  }
+
+  .article-stats {
+    gap: 12px;
+    margin-bottom: 10px;
+    font-size: 12px;
+  }
+
+  .article-summary {
+    font-size: 13px;
+    margin-bottom: 10px;
+    -webkit-line-clamp: 2;
+  }
+
+  .article-tags {
+    gap: 6px;
+    margin-bottom: 10px;
+  }
+
+  .tag {
+    padding: 2px 8px;
+    font-size: 11px;
+  }
+
+  .read-more,
+  .article-action .el-button {
+    font-size: 13px;
+  }
+
+  .card-image {
+    width: 280px;
+  }
+}
+
 .article-meta {
   display: flex;
   align-items: center;
@@ -137,6 +221,16 @@ const isImageLeft = computed(() => props.index % 2 === 1);
 
   .el-icon {
     font-size: 14px;
+  }
+
+  .meta-sep {
+    margin: 0 2px;
+    opacity: 0.7;
+  }
+
+  .author-name {
+    color: var(--text-secondary);
+    font-weight: 500;
   }
 }
 
