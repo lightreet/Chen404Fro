@@ -543,17 +543,27 @@ const handleLogout = async () => {
 .dropdown-user-info {
   padding: 12px 16px;
   display: flex;
-  flex-direction: column;
-  gap: 4px;
+  align-items: center;
+  gap: 10px;
+  line-height: 1.2;
 
   .dropdown-nickname {
     font-weight: 500;
     color: var(--text-primary);
+    max-width: 180px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   .dropdown-role {
     font-size: 12px;
-    color: var(--text-secondary);
+    color: var(--primary);
+    background: rgba(251, 114, 153, 0.12);
+    border: 1px solid rgba(251, 114, 153, 0.18);
+    padding: 2px 8px;
+    border-radius: 999px;
+    white-space: nowrap;
   }
 }
 

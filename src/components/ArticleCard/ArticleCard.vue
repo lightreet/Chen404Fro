@@ -6,7 +6,11 @@
       { compact },
     ]"
   >
-    <div class="card-content">
+    <div
+      class="card-content"
+      :class="{ 'is-clickable': mode !== 'manage' }"
+      @click="mode !== 'manage' ? goToDetail() : undefined"
+    >
       <!-- 日期与作者 -->
       <div class="article-meta">
         <el-icon><Calendar /></el-icon>
@@ -19,9 +23,10 @@
 
       <!-- 标题 -->
       <h3 class="article-title">
-        <router-link :to="`/article/${article.id}`">
+        <router-link v-if="mode !== 'manage'" :to="articleDetailUrl" @click.stop>
           {{ article.title }}
         </router-link>
+        <span v-else>{{ article.title }}</span>
       </h3>
 
       <!-- 统计信息 -->
@@ -60,14 +65,14 @@
         </span>
       </div>
 
-      <!-- 阅读更多 / 管理操作 -->
+      <!-- 阅读详情 / 管理操作 -->
       <div class="article-action">
         <template v-if="mode === 'manage'">
           <el-button text type="primary" @click="$emit('edit', article.id)">编辑</el-button>
           <el-button text type="danger" @click="$emit('delete', article.id)">删除</el-button>
         </template>
-        <router-link v-else :to="`/article/${article.id}`" class="read-more">
-          <span>阅读更多</span>
+        <router-link v-else :to="articleDetailUrl" class="read-more" @click.stop>
+          <span>阅读详情</span>
           <el-icon><ArrowRight /></el-icon>
         </router-link>
       </div>
@@ -85,9 +90,12 @@
 
 <script setup lang="ts">
 import { computed } from 'vue';
+import { useRouter } from 'vue-router';
 import { Calendar, View, ChatDotRound, Folder, ArrowRight } from '@element-plus/icons-vue';
 import type { Article } from '@/types';
 import { formatDate, formatNumber } from '@/utils/format';
+
+const router = useRouter();
 
 defineEmits<{
   (e: 'edit', id: number | string): void;
@@ -111,6 +119,13 @@ const props = withDefaults(defineProps<Props>(), {
 
 // 根据索引决定图片位置（奇数左，偶数右）
 const isImageLeft = computed(() => props.index % 2 === 1);
+
+// 文章详情页路径（首页/列表点击卡片或「阅读详情」跳转）
+const articleDetailUrl = computed(() => `/article/${props.article.id}`);
+
+const goToDetail = () => {
+  router.push(articleDetailUrl.value);
+};
 
 // 作者名称：优先昵称，其次用户名
 const authorName = computed(() => {
@@ -152,13 +167,17 @@ const authorName = computed(() => {
   }
 }
 
-// 内容区
+// 内容区（首页模式下整块可点击跳转详情）
 .card-content {
   flex: 1;
   padding: 28px 32px;
   display: flex;
   flex-direction: column;
   min-width: 0;
+
+  &.is-clickable {
+    cursor: pointer;
+  }
 }
 
 // 紧凑态（个人中心等）

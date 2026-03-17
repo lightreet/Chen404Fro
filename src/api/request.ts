@@ -49,9 +49,11 @@ request.interceptors.response.use(
       switch (status) {
         case 401:
           ElMessage.error('未授权，请重新登录');
-          // 清除 token 并跳转到登录页
+          // 清除 token 并跳转到登录页（保留当前路径便于登录后回跳）
           localStorage.removeItem('token');
-          window.location.href = '/admin/login';
+          localStorage.removeItem('refreshToken');
+          const redirect = encodeURIComponent(window.location.pathname + window.location.search);
+          window.location.href = redirect ? `/login?redirect=${redirect}` : '/login';
           break;
         case 403:
           ElMessage.error('拒绝访问');

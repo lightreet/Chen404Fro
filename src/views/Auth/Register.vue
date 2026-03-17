@@ -147,6 +147,7 @@ import { ElMessage } from 'element-plus';
 import { User, Message, Lock, Key, UserFilled, ArrowLeft } from '@element-plus/icons-vue';
 import { register, sendVerifyCode as sendVerifyCodeApi, login } from '@/api/auth';
 import { useUserStore } from '@/stores/user';
+import { createConfirmPasswordRule } from '@/utils/validation';
 
 const router = useRouter();
 const userStore = useUserStore();
@@ -165,16 +166,7 @@ const form = reactive({
   confirmPassword: '',
 });
 
-// 确认密码验证
-const validateConfirmPassword = (rule: any, value: string, callback: Function) => {
-  if (value !== form.password) {
-    callback(new Error('两次输入的密码不一致'));
-  } else {
-    callback();
-  }
-};
-
-// 邮箱注册规则
+// 邮箱注册规则（确认密码使用统一校验工具）
 const emailRules = {
   username: [
     { required: true, message: '请输入用户名', trigger: 'blur' },
@@ -195,7 +187,7 @@ const emailRules = {
   ],
   confirmPassword: [
     { required: true, message: '请确认密码', trigger: 'blur' },
-    { validator: validateConfirmPassword, trigger: 'blur' },
+    createConfirmPasswordRule(() => form.password, '确认密码'),
   ],
 };
 
@@ -251,10 +243,10 @@ const handleRegister = async () => {
 
     await register(registerData);
     const loginRes = await login({ username: form.username, password: form.password });
-    userStore.login(loginRes.user, loginRes.token, true);
-    if (loginRes.refreshToken) {
-      localStorage.setItem('refreshToken', loginRes.refreshToken);
-    }
+    userStore.login(loginRes.user, loginRes.token, {
+      remember: true,
+      refreshToken: loginRes.refreshToken,
+    });
     ElMessage.success('注册成功');
     router.push('/');
   } catch (error) {

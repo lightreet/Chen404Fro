@@ -56,7 +56,7 @@
           <!-- 标签输入 -->
           <div class="form-item flex-2">
             <el-select
-              v-model="form.tagIds"
+              v-model="formTagIds"
               multiple
               filterable
               allow-create
@@ -167,6 +167,7 @@ import {
   uploadImages,
   uploadCover,
 } from '@/api';
+import { validateImageFile, DEFAULT_IMAGE_MAX_MB } from '@/utils/validation';
 
 const route = useRoute();
 const router = useRouter();
@@ -290,17 +291,11 @@ const handleCoverUpload = async (options: { file: File; onSuccess: (res: any) =>
   }
 };
 
-// 封面上传前校验
+// 封面上传前校验（与个人中心头像校验共用工具）
 const beforeCoverUpload = (file: File) => {
-  const isImage = file.type.startsWith('image/');
-  const isLt12M = file.size / 1024 / 1024 < 12;
-
-  if (!isImage) {
-    ElMessage.error('只能上传图片文件!');
-    return false;
-  }
-  if (!isLt12M) {
-    ElMessage.error('图片大小不能超过 12MB!');
+  const result = validateImageFile(file, DEFAULT_IMAGE_MAX_MB);
+  if (!result.valid) {
+    ElMessage.error(result.message);
     return false;
   }
   return true;
@@ -309,10 +304,10 @@ const beforeCoverUpload = (file: File) => {
 // 编辑器内图片上传（并行上传优化版）
 const onUploadImg = async (files: File[], callback: (urls: string[]) => void) => {
   try {
-    // 先校验所有文件大小
-    const validFiles = files.filter(file => {
-      if (file.size > 12 * 1024 * 1024) {
-        ElMessage.error(`${file.name} 大小超过12MB限制`);
+    const validFiles = files.filter((file) => {
+      const result = validateImageFile(file, DEFAULT_IMAGE_MAX_MB);
+      if (!result.valid) {
+        ElMessage.error(`${file.name}: ${result.message}`);
         return false;
       }
       return true;

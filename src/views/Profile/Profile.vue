@@ -259,6 +259,7 @@ import { useUserStore } from '@/stores/user';
 import { getUserInfo, changePassword, updateProfile } from '@/api/auth';
 import { uploadAvatar } from '@/api/upload';
 import { formatDate } from '@/utils/format';
+import { createConfirmPasswordRule, validateImageFile, AVATAR_MAX_MB } from '@/utils/validation';
 import { getMyArticles, deleteArticle } from '@/api/article';
 import ArticleCard from '@/components/ArticleCard/ArticleCard.vue';
 
@@ -292,14 +293,6 @@ const passwordForm = reactive({
   confirmPassword: '',
 });
 
-const validateConfirm = (_rule: unknown, value: string, callback: (err?: Error) => void) => {
-  if (value !== passwordForm.newPassword) {
-    callback(new Error('两次输入的新密码不一致'));
-  } else {
-    callback();
-  }
-};
-
 const passwordRules: FormRules = {
   oldPassword: [{ required: true, message: '请输入当前密码', trigger: 'blur' }],
   newPassword: [
@@ -308,7 +301,7 @@ const passwordRules: FormRules = {
   ],
   confirmPassword: [
     { required: true, message: '请再次输入新密码', trigger: 'blur' },
-    { validator: validateConfirm, trigger: 'blur' },
+    createConfirmPasswordRule(() => passwordForm.newPassword, '确认新密码'),
   ],
 };
 
@@ -361,14 +354,9 @@ const handleSaveProfile = async () => {
 };
 
 const beforeAvatarUpload = (file: File) => {
-  const isImage = file.type.startsWith('image/');
-  if (!isImage) {
-    ElMessage.error('请选择图片文件');
-    return false;
-  }
-  const maxSizeMb = 2;
-  if (file.size / 1024 / 1024 > maxSizeMb) {
-    ElMessage.error(`头像大小不能超过 ${maxSizeMb}MB`);
+  const result = validateImageFile(file, AVATAR_MAX_MB);
+  if (!result.valid) {
+    ElMessage.error(result.message);
     return false;
   }
   return true;

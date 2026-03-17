@@ -83,13 +83,14 @@
 
 <script setup lang="ts">
 import { ref, reactive } from 'vue';
-import { useRouter } from 'vue-router';
+import { useRouter, useRoute } from 'vue-router';
 import { ElMessage } from 'element-plus';
 import { User, Lock, ArrowLeft } from '@element-plus/icons-vue';
 import { login } from '@/api/auth';
 import { useUserStore } from '@/stores/user';
 
 const router = useRouter();
+const route = useRoute();
 const userStore = useUserStore();
 const formRef = ref();
 const loading = ref(false);
@@ -131,14 +132,14 @@ const handleLogin = async () => {
       password: form.password,
     });
 
-    // 更新全局用户状态（根据 rememberMe 决定是否持久化）
-    userStore.login(res.user, res.token, rememberMe.value);
-    if (rememberMe.value) {
-      localStorage.setItem('refreshToken', res.refreshToken);
-    }
+    userStore.login(res.user, res.token, {
+      remember: rememberMe.value,
+      refreshToken: res.refreshToken,
+    });
 
     ElMessage.success('登录成功');
-    router.push('/');
+    const redirect = (route.query.redirect as string) || '/';
+    router.push(redirect.startsWith('/') ? redirect : '/');
   } catch (error) {
     console.error('登录失败:', error);
   } finally {

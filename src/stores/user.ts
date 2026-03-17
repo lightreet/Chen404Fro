@@ -22,14 +22,19 @@ export const useUserStore = defineStore('user', () => {
     }
   };
 
-  // 设置 Token
-  const setToken = (newToken: string) => {
+  // 设置 Token（同时可更新 refreshToken，由 store 统一持久化）
+  const setToken = (newToken: string, refreshToken?: string) => {
     token.value = newToken;
     if (newToken) {
       localStorage.setItem('token', newToken);
+      if (refreshToken !== undefined) {
+        if (refreshToken) localStorage.setItem('refreshToken', refreshToken);
+        else localStorage.removeItem('refreshToken');
+      }
     } else {
       localStorage.removeItem('token');
       localStorage.removeItem('refreshToken');
+      localStorage.removeItem('remember');
     }
   };
 
@@ -55,12 +60,16 @@ export const useUserStore = defineStore('user', () => {
     return token.value || localStorage.getItem('token') || '';
   };
 
-  // 登录
-  const login = (userData: User, newToken: string, remember = true) => {
-    // 始终保存到 localStorage，确保当前会话可用
+  // 登录（token/refreshToken/remember 均由 store 持久化，视图层不直接操作 localStorage）
+  const login = (userData: User, newToken: string, options?: { remember?: boolean; refreshToken?: string }) => {
     setUser(userData);
-    setToken(newToken);
-    // 记录是否要记住登录状态（可用于控制 token 过期后的行为）
+    const remember = options?.remember !== false;
+    if (remember && options?.refreshToken != null) {
+      setToken(newToken, options.refreshToken);
+    } else {
+      setToken(newToken);
+      if (!remember) localStorage.removeItem('refreshToken');
+    }
     localStorage.setItem('remember', String(remember));
   };
 

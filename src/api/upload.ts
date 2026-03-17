@@ -1,6 +1,5 @@
 /**
- * 文件上传相关 API
- * 包含图片上传、封面上传、头像上传等功能
+ * 文件上传相关 API（统一走 multipart/form-data，减少重复）
  */
 
 import request from './request';
@@ -8,59 +7,40 @@ import request from './request';
 export interface UploadResult {
   url: string;
   name: string;
-  size: string;
+  size?: string;
 }
 
+const UPLOAD_HEADERS = { 'Content-Type': 'multipart/form-data' as const };
+
+type UploadEndpoint = 'image' | 'cover' | 'avatar';
+
 /**
- * 上传单张图片（用于编辑器内）
- * @param file 图片文件
+ * 统一上传：将文件以 multipart 形式 POST 到指定上传端点
  */
+function uploadFile(file: File, endpoint: UploadEndpoint): Promise<UploadResult> {
+  const formData = new FormData();
+  formData.append('file', file);
+  return request.post(`/upload/${endpoint}`, formData, { headers: UPLOAD_HEADERS });
+}
+
+/** 上传单张图片（编辑器内） */
 export function uploadImage(file: File): Promise<UploadResult> {
-  const formData = new FormData();
-  formData.append('file', file);
-  return request.post('/upload/image', formData, {
-    headers: {
-      'Content-Type': 'multipart/form-data',
-    },
-  });
+  return uploadFile(file, 'image');
 }
 
-/**
- * 批量上传图片（并行上传优化版）
- * @param files 图片文件列表
- */
+/** 批量上传图片（并行） */
 export async function uploadImages(files: File[]): Promise<UploadResult[]> {
-  // 使用 Promise.all 并行上传所有图片
-  const uploadPromises = files.map(file => uploadImage(file));
-  return Promise.all(uploadPromises);
+  return Promise.all(files.map((file) => uploadFile(file, 'image')));
 }
 
-/**
- * 上传封面图
- * @param file 封面图片
- */
+/** 上传封面图 */
 export function uploadCover(file: File): Promise<UploadResult> {
-  const formData = new FormData();
-  formData.append('file', file);
-  return request.post('/upload/cover', formData, {
-    headers: {
-      'Content-Type': 'multipart/form-data',
-    },
-  });
+  return uploadFile(file, 'cover');
 }
 
-/**
- * 上传头像
- * @param file 头像图片
- */
+/** 上传头像 */
 export function uploadAvatar(file: File): Promise<UploadResult> {
-  const formData = new FormData();
-  formData.append('file', file);
-  return request.post('/upload/avatar', formData, {
-    headers: {
-      'Content-Type': 'multipart/form-data',
-    },
-  });
+  return uploadFile(file, 'avatar');
 }
 
 /**
