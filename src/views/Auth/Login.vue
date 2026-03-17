@@ -20,22 +20,6 @@
         <div class="auth-form">
           <h3 class="form-title">账号登录</h3>
 
-          <!-- 登录方式切换 -->
-          <div class="login-tabs">
-            <button
-              :class="['tab-btn', { active: loginType === 'email' }]"
-              @click="loginType = 'email'"
-            >
-              邮箱登录
-            </button>
-            <button
-              :class="['tab-btn', { active: loginType === 'phone' }]"
-              @click="loginType = 'phone'"
-            >
-              手机号登录
-            </button>
-          </div>
-
           <el-form
             ref="formRef"
             :model="form"
@@ -43,30 +27,14 @@
             class="login-form"
             @keyup.enter="handleLogin"
           >
-            <!-- 邮箱登录 -->
-            <template v-if="loginType === 'email'">
-              <el-form-item prop="email">
-                <el-input
-                  v-model="form.email"
-                  placeholder="请输入邮箱"
-                  size="large"
-                  :prefix-icon="Message"
-                />
-              </el-form-item>
-            </template>
-
-            <!-- 手机号登录 -->
-            <template v-else>
-              <el-form-item prop="phone">
-                <el-input
-                  v-model="form.phone"
-                  placeholder="请输入手机号"
-                  size="large"
-                  :prefix-icon="Phone"
-                  maxlength="11"
-                />
-              </el-form-item>
-            </template>
+            <el-form-item prop="account">
+              <el-input
+                v-model="form.account"
+                placeholder="请输入用户名或邮箱"
+                size="large"
+                :prefix-icon="User"
+              />
+            </el-form-item>
 
             <el-form-item prop="password">
               <el-input
@@ -114,10 +82,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed } from 'vue';
+import { ref, reactive } from 'vue';
 import { useRouter } from 'vue-router';
 import { ElMessage } from 'element-plus';
-import { Message, Phone, Lock, ArrowLeft } from '@element-plus/icons-vue';
+import { User, Lock, ArrowLeft } from '@element-plus/icons-vue';
 import { login } from '@/api/auth';
 import { useUserStore } from '@/stores/user';
 
@@ -126,41 +94,30 @@ const userStore = useUserStore();
 const formRef = ref();
 const loading = ref(false);
 const rememberMe = ref(false);
-const loginType = ref<'email' | 'phone'>('email');
-
 const form = reactive({
-  email: '',
-  phone: '',
+  account: '',
   password: '',
 });
 
-// 邮箱验证规则
-const emailRules = {
-  email: [
-    { required: true, message: '请输入邮箱', trigger: 'blur' },
-    { type: 'email', message: '邮箱格式不正确', trigger: 'blur' },
+const rules = {
+  account: [
+    { required: true, message: '请输入用户名或邮箱', trigger: 'blur' },
+    {
+      validator: (_rule: unknown, value: string, callback: (err?: Error) => void) => {
+        if (!value) return callback();
+        const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+        const isUsername = /^[a-zA-Z0-9_]{3,20}$/.test(value);
+        if (isEmail || isUsername) return callback();
+        callback(new Error('请输入正确的用户名（3-20位字母数字下划线）或邮箱'));
+      },
+      trigger: 'blur',
+    },
   ],
   password: [
     { required: true, message: '请输入密码', trigger: 'blur' },
     { min: 6, message: '密码至少6位', trigger: 'blur' },
   ],
 };
-
-// 手机号验证规则
-const phoneRules = {
-  phone: [
-    { required: true, message: '请输入手机号', trigger: 'blur' },
-    { pattern: /^1[3-9]\d{9}$/, message: '手机号格式不正确', trigger: 'blur' },
-  ],
-  password: [
-    { required: true, message: '请输入密码', trigger: 'blur' },
-    { min: 6, message: '密码至少6位', trigger: 'blur' },
-  ],
-};
-
-const rules = computed(() => {
-  return loginType.value === 'email' ? emailRules : phoneRules;
-});
 
 const handleLogin = async () => {
   if (!formRef.value) return;
@@ -169,14 +126,10 @@ const handleLogin = async () => {
     await formRef.value.validate();
     loading.value = true;
 
-    // 根据登录类型构造参数
-    const loginParams = {
-      username: loginType.value === 'email' ? form.email : form.phone,
+    const res = await login({
+      username: form.account,
       password: form.password,
-    };
-
-    // 调用登录API
-    const res = await login(loginParams);
+    });
 
     // 更新全局用户状态（根据 rememberMe 决定是否持久化）
     userStore.login(res.user, res.token, rememberMe.value);
@@ -310,39 +263,6 @@ const handleLogin = async () => {
   color: var(--text-primary);
   margin: 0 0 24px;
   text-align: center;
-}
-
-/* 登录方式切换 */
-.login-tabs {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 24px;
-  background: var(--bg-primary);
-  padding: 4px;
-  border-radius: var(--radius-md);
-}
-
-.tab-btn {
-  flex: 1;
-  padding: 10px;
-  border: none;
-  background: transparent;
-  color: var(--text-secondary);
-  font-size: 14px;
-  cursor: pointer;
-  border-radius: var(--radius-sm);
-  transition: all 0.3s;
-
-  &:hover {
-    color: var(--primary);
-  }
-
-  &.active {
-    background: var(--bg-secondary);
-    color: var(--primary);
-    font-weight: 500;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-  }
 }
 
 /* 表单样式 */

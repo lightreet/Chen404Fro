@@ -20,22 +20,6 @@
         <div class="auth-form">
           <h3 class="form-title">创建账号</h3>
 
-          <!-- 注册方式切换 -->
-          <div class="login-tabs">
-            <button
-              :class="['tab-btn', { active: registerType === 'email' }]"
-              @click="switchRegisterType('email')"
-            >
-              邮箱注册
-            </button>
-            <button
-              :class="['tab-btn', { active: registerType === 'phone' }]"
-              @click="switchRegisterType('phone')"
-            >
-              手机号注册
-            </button>
-          </div>
-
           <el-form
             ref="formRef"
             :model="form"
@@ -43,7 +27,6 @@
             class="register-form"
             @keyup.enter="handleRegister"
           >
-            <!-- 用户名 -->
             <el-form-item prop="username">
               <el-input
                 v-model="form.username"
@@ -54,68 +37,33 @@
               />
             </el-form-item>
 
-            <!-- 邮箱注册 -->
-            <template v-if="registerType === 'email'">
-              <el-form-item prop="email">
-                <el-input
-                  v-model="form.email"
-                  placeholder="请输入邮箱"
-                  size="large"
-                  :prefix-icon="Message"
-                />
-              </el-form-item>
-              <!-- 邮箱验证码 -->
-              <el-form-item prop="code">
-                <div class="verify-code-wrapper">
-                  <el-input
-                    v-model="form.code"
-                    placeholder="请输入邮箱验证码"
-                    size="large"
-                    :prefix-icon="Key"
-                    maxlength="6"
-                  />
-                  <el-button
-                    type="primary"
-                    :disabled="codeSending || codeCountdown > 0"
-                    @click="sendVerifyCode"
-                  >
-                    {{ codeCountdown > 0 ? `${codeCountdown}s` : '获取验证码' }}
-                  </el-button>
-                </div>
-              </el-form-item>
-            </template>
+            <el-form-item prop="email">
+              <el-input
+                v-model="form.email"
+                placeholder="请输入邮箱"
+                size="large"
+                :prefix-icon="Message"
+              />
+            </el-form-item>
 
-            <!-- 手机号注册 -->
-            <template v-else>
-              <el-form-item prop="phone">
+            <el-form-item prop="code">
+              <div class="verify-code-wrapper">
                 <el-input
-                  v-model="form.phone"
-                  placeholder="请输入手机号"
+                  v-model="form.code"
+                  placeholder="请输入邮箱验证码"
                   size="large"
-                  :prefix-icon="Phone"
-                  maxlength="11"
+                  :prefix-icon="Key"
+                  maxlength="6"
                 />
-              </el-form-item>
-              <!-- 短信验证码 -->
-              <el-form-item prop="code">
-                <div class="verify-code-wrapper">
-                  <el-input
-                    v-model="form.code"
-                    placeholder="请输入短信验证码"
-                    size="large"
-                    :prefix-icon="Key"
-                    maxlength="6"
-                  />
-                  <el-button
-                    type="primary"
-                    :disabled="codeSending || codeCountdown > 0"
-                    @click="sendVerifyCode"
-                  >
-                    {{ codeCountdown > 0 ? `${codeCountdown}s` : '获取验证码' }}
-                  </el-button>
-                </div>
-              </el-form-item>
-            </template>
+                <el-button
+                  type="primary"
+                  :disabled="codeSending || codeCountdown > 0"
+                  @click="sendVerifyCode"
+                >
+                  {{ codeCountdown > 0 ? `${codeCountdown}s` : '获取验证码' }}
+                </el-button>
+              </div>
+            </el-form-item>
 
             <!-- 昵称 -->
             <el-form-item prop="nickname">
@@ -193,24 +141,24 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed } from 'vue';
+import { ref, reactive } from 'vue';
 import { useRouter } from 'vue-router';
 import { ElMessage } from 'element-plus';
-import { User, Message, Phone, Lock, Key, UserFilled, ArrowLeft } from '@element-plus/icons-vue';
-import { register, sendVerifyCode as sendVerifyCodeApi } from '@/api/auth';
+import { User, Message, Lock, Key, UserFilled, ArrowLeft } from '@element-plus/icons-vue';
+import { register, sendVerifyCode as sendVerifyCodeApi, login } from '@/api/auth';
+import { useUserStore } from '@/stores/user';
 
 const router = useRouter();
+const userStore = useUserStore();
 const formRef = ref();
 const loading = ref(false);
 const agreement = ref(false);
-const registerType = ref<'email' | 'phone'>('email');
 const codeSending = ref(false);
 const codeCountdown = ref(0);
 
 const form = reactive({
   username: '',
   email: '',
-  phone: '',
   code: '',
   nickname: '',
   password: '',
@@ -251,73 +199,24 @@ const emailRules = {
   ],
 };
 
-// 手机号注册规则
-const phoneRules = {
-  username: [
-    { required: true, message: '请输入用户名', trigger: 'blur' },
-    { min: 3, max: 20, message: '用户名长度3-20位', trigger: 'blur' },
-  ],
-  phone: [
-    { required: true, message: '请输入手机号', trigger: 'blur' },
-    { pattern: /^1[3-9]\d{9}$/, message: '手机号格式不正确', trigger: 'blur' },
-  ],
-  code: [
-    { required: true, message: '请输入验证码', trigger: 'blur' },
-    { min: 4, max: 6, message: '验证码为4-6位', trigger: 'blur' },
-  ],
-  password: [
-    { required: true, message: '请输入密码', trigger: 'blur' },
-    { min: 6, max: 20, message: '密码长度6-20位', trigger: 'blur' },
-  ],
-  confirmPassword: [
-    { required: true, message: '请确认密码', trigger: 'blur' },
-    { validator: validateConfirmPassword, trigger: 'blur' },
-  ],
-};
+const rules = emailRules;
 
-const rules = computed(() => {
-  return registerType.value === 'email' ? emailRules : phoneRules;
-});
-
-// 切换注册方式时清空验证码
-const switchRegisterType = (type: 'email' | 'phone') => {
-  if (registerType.value === type) return;
-  registerType.value = type;
-  form.code = '';
-};
-
-// 发送验证码（邮箱或手机）
+// 发送验证码（邮箱）
 const sendVerifyCode = async () => {
-  if (registerType.value === 'email') {
-    if (!form.email?.trim()) {
-      ElMessage.warning('请先输入邮箱');
-      return;
-    }
-    const emailReg = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailReg.test(form.email)) {
-      ElMessage.warning('邮箱格式不正确');
-      return;
-    }
-  } else {
-    if (!form.phone?.trim()) {
-      ElMessage.warning('请先输入手机号');
-      return;
-    }
-    const phoneReg = /^1[3-9]\d{9}$/;
-    if (!phoneReg.test(form.phone)) {
-      ElMessage.warning('手机号格式不正确');
-      return;
-    }
+  if (!form.email?.trim()) {
+    ElMessage.warning('请先输入邮箱');
+    return;
+  }
+  const emailReg = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailReg.test(form.email)) {
+    ElMessage.warning('邮箱格式不正确');
+    return;
   }
 
   codeSending.value = true;
   try {
-    const params =
-      registerType.value === 'email'
-        ? { email: form.email, type: 'register' as const }
-        : { phone: form.phone, type: 'register' as const };
-    await sendVerifyCodeApi(params);
-    ElMessage.success(registerType.value === 'email' ? '验证码已发送到邮箱' : '验证码已发送到手机');
+    await sendVerifyCodeApi({ email: form.email, type: 'register' });
+    ElMessage.success('验证码已发送到邮箱');
 
     codeCountdown.value = 60;
     const timer = setInterval(() => {
@@ -345,16 +244,19 @@ const handleRegister = async () => {
       username: form.username,
       password: form.password,
       nickname: form.nickname || form.username,
+      email: form.email,
       code: form.code,
-      registerType: registerType.value,
-      ...(registerType.value === 'email'
-        ? { email: form.email }
-        : { phone: form.phone }),
+      registerType: 'email' as const,
     };
 
     await register(registerData);
-    ElMessage.success('注册成功，请登录');
-    router.push('/login');
+    const loginRes = await login({ username: form.username, password: form.password });
+    userStore.login(loginRes.user, loginRes.token, true);
+    if (loginRes.refreshToken) {
+      localStorage.setItem('refreshToken', loginRes.refreshToken);
+    }
+    ElMessage.success('注册成功');
+    router.push('/');
   } catch (error) {
     console.error('注册失败:', error);
   } finally {
@@ -489,39 +391,6 @@ const showPrivacy = () => {
   text-align: center;
 }
 
-/* 注册方式切换 */
-.login-tabs {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 24px;
-  background: var(--bg-primary);
-  padding: 4px;
-  border-radius: var(--radius-md);
-}
-
-.tab-btn {
-  flex: 1;
-  padding: 10px;
-  border: none;
-  background: transparent;
-  color: var(--text-secondary);
-  font-size: 14px;
-  cursor: pointer;
-  border-radius: var(--radius-sm);
-  transition: all 0.3s;
-
-  &:hover {
-    color: var(--primary);
-  }
-
-  &.active {
-    background: var(--bg-secondary);
-    color: var(--primary);
-    font-weight: 500;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-  }
-}
-
 /* 表单样式 */
 .register-form {
   :deep(.el-input__wrapper) {
@@ -529,17 +398,32 @@ const showPrivacy = () => {
   }
 }
 
-/* 验证码输入框 */
+/* 验证码输入框：与上方表单项等宽，按钮略矮一丢丢 */
 .verify-code-wrapper {
   display: flex;
+  align-items: center;
   gap: 12px;
+  width: 100%;
+  --code-input-height: 40px;
+  --code-btn-height: 36px;
 
-  .el-input {
+  :deep(.el-input) {
     flex: 1;
+    min-width: 0;
+    height: var(--code-input-height);
   }
 
-  .el-button {
+  :deep(.el-input__wrapper) {
+    height: var(--code-input-height);
+    min-height: var(--code-input-height);
+    box-sizing: border-box;
+  }
+
+  :deep(.el-button) {
+    flex-shrink: 0;
     min-width: 120px;
+    height: var(--code-btn-height);
+    margin: 0;
   }
 }
 
