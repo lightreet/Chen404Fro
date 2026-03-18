@@ -2,6 +2,7 @@
 
 import axios, { type AxiosInstance, type AxiosRequestConfig, type AxiosResponse } from 'axios';
 import { ElMessage } from 'element-plus';
+import { refreshToken as refreshTokenApi } from './auth';
 
 // 创建 axios 实例
 const request: AxiosInstance = axios.create({
@@ -11,6 +12,14 @@ const request: AxiosInstance = axios.create({
     'Content-Type': 'application/json',
   },
 });
+
+let isRefreshing = false;
+let refreshWaiters: Array<(token: string) => void> = [];
+
+function notifyRefreshWaiters(token: string) {
+  refreshWaiters.forEach((cb) => cb(token));
+  refreshWaiters = [];
+}
 
 // 请求拦截器
 request.interceptors.request.use(
@@ -48,13 +57,67 @@ request.interceptors.response.use(
 
       switch (status) {
         case 401:
-          ElMessage.error('未授权，请重新登录');
-          // 清除 token 并跳转到登录页（保留当前路径便于登录后回跳）
-          localStorage.removeItem('token');
-          localStorage.removeItem('refreshToken');
-          const redirect = encodeURIComponent(window.location.pathname + window.location.search);
-          window.location.href = redirect ? `/login?redirect=${redirect}` : '/login';
-          break;
+          // 先尝试使用 refreshToken 静默续期，再失败才跳转登录
+          return (async () => {
+            const originalConfig: AxiosRequestConfig & { _retry?: boolean } = error.config || {};
+            const refreshToken = localStorage.getItem('refreshToken') || '';
+            const reqUrl = String(originalConfig.url || '');
+
+            // refresh 接口本身 / 或没有 refreshToken / 或已重试过 -> 直接跳登录
+            if (originalConfig._retry || !refreshToken || reqUrl.includes('/auth/refresh')) {
+              ElMessage.error('未授权，请重新登录');
+              localStorage.removeItem('token');
+              localStorage.removeItem('refreshToken');
+              const redirect = encodeURIComponent(window.location.pathname + window.location.search);
+              window.location.href = redirect ? `/login?redirect=${redirect}` : '/login';
+              return Promise.reject(error);
+            }
+
+            originalConfig._retry = true;
+
+            // 处理并发 401：只发起一次刷新，其余等待
+            if (isRefreshing) {
+              const newToken = await new Promise<string>((resolve) => {
+                refreshWaiters.push(resolve);
+              });
+              if (!newToken) {
+                ElMessage.error('登录已过期，请重新登录');
+                localStorage.removeItem('token');
+                localStorage.removeItem('refreshToken');
+                const redirect = encodeURIComponent(window.location.pathname + window.location.search);
+                window.location.href = redirect ? `/login?redirect=${redirect}` : '/login';
+                return Promise.reject(error);
+              }
+              originalConfig.headers = originalConfig.headers || {};
+              (originalConfig.headers as any).Authorization = `Bearer ${newToken}`;
+              return request(originalConfig);
+            }
+
+            isRefreshing = true;
+            try {
+              const res = await refreshTokenApi(refreshToken);
+              if (!res?.token) {
+                throw new Error('refresh failed');
+              }
+              localStorage.setItem('token', res.token);
+              if (res.refreshToken) localStorage.setItem('refreshToken', res.refreshToken);
+              notifyRefreshWaiters(res.token);
+
+              originalConfig.headers = originalConfig.headers || {};
+              (originalConfig.headers as any).Authorization = `Bearer ${res.token}`;
+              return request(originalConfig);
+            } catch (e) {
+              notifyRefreshWaiters('');
+              ElMessage.error('登录已过期，请重新登录');
+              localStorage.removeItem('token');
+              localStorage.removeItem('refreshToken');
+              const redirect = encodeURIComponent(window.location.pathname + window.location.search);
+              window.location.href = redirect ? `/login?redirect=${redirect}` : '/login';
+              return Promise.reject(error);
+            } finally {
+              isRefreshing = false;
+            }
+          })();
         case 403:
           ElMessage.error('拒绝访问');
           break;

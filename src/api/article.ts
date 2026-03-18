@@ -46,32 +46,28 @@ export function getArticleNeighbors(id: number | string): Promise<{
 }
 
 /**
- * 创建文章（管理员）
- * @param data 文章数据
+ * 创建文章（需登录）
  */
 export function createArticle(data: Partial<Article>): Promise<Article> {
-  return post('/admin/articles', data);
+  return post('/articles', data);
 }
 
 /**
- * 更新文章（管理员）
- * @param id 文章ID
- * @param data 文章数据
+ * 更新文章（需登录）
  */
 export function updateArticle(id: number | string, data: Partial<Article>): Promise<Article> {
-  return put(`/admin/articles/${String(id)}`, data);
+  return put(`/articles/${String(id)}`, data);
 }
 
 /**
- * 删除文章（管理员）
- * @param id 文章ID
+ * 删除文章（需登录）
  */
 export function deleteArticle(id: number | string): Promise<void> {
-  return del(`/admin/articles/${String(id)}`);
+  return del(`/articles/${String(id)}`);
 }
 
 /**
- * 获取当前登录用户的文章列表（个人中心管理）
+ * 获取当前登录用户的文章列表（个人中心管理，需登录）
  */
 export function getMyArticles(params?: {
   page?: number;
@@ -79,7 +75,7 @@ export function getMyArticles(params?: {
   status?: number;
   keyword?: string;
 }): Promise<PageResult<Article>> {
-  return get('/admin/articles', params);
+  return get('/articles/mine', params);
 }
 
 /**
@@ -121,28 +117,24 @@ export function getArticlesByCategory(
 }
 
 /**
- * 创建分类（管理员）
- * @param data 分类数据
+ * 创建分类（需管理员，后端 @RequireAdmin 校验）
  */
 export function createCategory(data: Partial<Category>): Promise<Category> {
-  return post('/admin/categories', data);
+  return post('/categories', data);
 }
 
 /**
- * 更新分类（管理员）
- * @param id 分类ID
- * @param data 分类数据
+ * 更新分类（需管理员）
  */
 export function updateCategory(id: number, data: Partial<Category>): Promise<Category> {
-  return put(`/admin/categories/${id}`, data);
+  return put(`/categories/${id}`, data);
 }
 
 /**
- * 删除分类（管理员）
- * @param id 分类ID
+ * 删除分类（需管理员）
  */
 export function deleteCategory(id: number): Promise<void> {
-  return del(`/admin/categories/${id}`);
+  return del(`/categories/${id}`);
 }
 
 // ==================== 标签相关 ====================

@@ -68,9 +68,11 @@ onUnmounted(() => {
   flex-direction: column;
 }
 
+/* 为固定导航栏预留高度（64px）+ 适当留白，避免内容与导航贴得太紧 */
 .main-content {
   flex: 1;
-  padding: 24px 0;
+  padding-top: calc(64px + 24px);
+  padding-bottom: 24px;
 }
 
 .content-wrapper {

@@ -132,7 +132,7 @@ onMounted(() => {
 
 <style scoped lang="scss">
 .article-detail-page {
-  padding-top: 24px;
+  padding-top: 40px;
 }
 
 .article-content-wrapper {

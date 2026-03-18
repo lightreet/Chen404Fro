@@ -185,6 +185,10 @@ export interface Article {
   category?: Category;
   tags?: Tag[];
   author?: Author;
+  /** 创建/更新时提交的标签 ID 列表 */
+  tagIds?: number[];
+  /** 创建/更新时提交的新标签名称（后端会 findOrCreate） */
+  tagNames?: string[];
 }
 
 export enum ArticleStatus {
