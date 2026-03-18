@@ -1,6 +1,6 @@
 <template>
   <article
-    class="article-card"
+    class="article-card jp-card jp-card-hover"
     :class="[
       { 'image-left': isImageLeft, 'image-right': !isImageLeft },
       { compact },
@@ -13,10 +13,11 @@
     >
       <!-- 日期与作者 -->
       <div class="article-meta">
-        <el-icon><Calendar /></el-icon>
+        <el-icon class="meta-date-icon"><Calendar /></el-icon>
         <span>{{ formatDate(article.publishTime ?? article.createTime ?? '') }}</span>
         <template v-if="authorName">
           <span class="meta-sep">·</span>
+          <el-icon class="author-icon"><User /></el-icon>
           <span class="author-name">{{ authorName }}</span>
         </template>
       </div>
@@ -40,7 +41,12 @@
           {{ article.commentCount ?? 0 }}
         </span>
         <span class="stat-item category-tag" v-if="article.category">
-          <el-icon><Folder /></el-icon>
+          <Icon
+            class="category-icon-iconify"
+            :icon="article.category.icon || 'mdi:folder'"
+            width="14"
+            height="14"
+          />
           {{ article.category.name }}
         </span>
         <template v-if="mode === 'manage'">
@@ -53,13 +59,12 @@
       <!-- 摘要 -->
       <p class="article-summary">{{ article.summary || '暂无摘要' }}</p>
 
-      <!-- 标签 -->
+      <!-- 标签：统一 jp-chip 灰色系 -->
       <div class="article-tags" v-if="article.tags && article.tags.length > 0">
         <span
           v-for="tag in article.tags"
           :key="tag.id"
-          class="tag"
-          :style="{ backgroundColor: (tag.color || '#fb7299') + '20', color: tag.color || '#fb7299' }"
+          class="tag jp-chip"
         >
           {{ tag.name }}
         </span>
@@ -91,7 +96,8 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { useRouter } from 'vue-router';
-import { Calendar, View, ChatDotRound, Folder, ArrowRight } from '@element-plus/icons-vue';
+import { Icon } from '@iconify/vue';
+import { Calendar, View, ChatDotRound, ArrowRight, User } from '@element-plus/icons-vue';
 import type { Article } from '@/types';
 import { formatDate, formatNumber } from '@/utils/format';
 
@@ -138,17 +144,8 @@ const authorName = computed(() => {
 <style scoped lang="scss">
 .article-card {
   display: flex;
-  background: var(--bg-secondary);
-  border-radius: var(--radius-lg);
-  overflow: hidden;
-  box-shadow: var(--shadow-sm);
-  transition: all 0.3s ease;
   margin-bottom: 24px;
-
-  &:hover {
-    transform: translateY(-4px);
-    box-shadow: var(--shadow-lg);
-  }
+  /* 卡片视觉由 UnoCSS jp-card / jp-card-hover 提供 */
 
   // 图片在左
   &.image-left {
@@ -247,6 +244,17 @@ const authorName = computed(() => {
     opacity: 0.7;
   }
 
+  .meta-date-icon,
+  .author-icon {
+    color: var(--primary);
+  }
+
+  .author-icon {
+    font-size: 14px;
+    margin-right: 4px;
+    vertical-align: middle;
+  }
+
   .author-name {
     color: var(--text-secondary);
     font-weight: 500;
@@ -289,8 +297,14 @@ const authorName = computed(() => {
   }
 
   &.category-tag {
-    color: var(--primary);
+    /* 与评论等统计项统一为次要文字色 */
+    color: inherit;
     cursor: pointer;
+
+    .category-icon-iconify {
+      flex-shrink: 0;
+      vertical-align: middle;
+    }
 
     &:hover {
       text-decoration: underline;
@@ -320,16 +334,11 @@ const authorName = computed(() => {
 }
 
 .tag {
-  padding: 4px 10px;
-  border-radius: 12px;
-  font-size: 12px;
-  font-weight: 500;
-  transition: all 0.3s;
+  transition: opacity 0.2s;
   cursor: pointer;
-
+  /* 基础样式由 jp-chip 提供 */
   &:hover {
-    opacity: 0.8;
-    transform: translateY(-1px);
+    opacity: 0.85;
   }
 }
 

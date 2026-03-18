@@ -50,6 +50,14 @@ const routes: RouteRecordRaw[] = [
     },
   },
   {
+    path: '/category/:id',
+    name: 'CategoryDetail',
+    component: () => import('@/views/Category/CategoryDetail.vue'),
+    meta: {
+      title: '分类文章',
+    },
+  },
+  {
     path: '/tag',
     name: 'Tag',
     component: () => import('@/views/Tag/Tag.vue'),

@@ -6,37 +6,101 @@
         <p class="page-desc">探索不同主题的文章</p>
       </div>
 
-      <div class="categories-grid">
-        <div
-          v-for="category in categories"
-          :key="category.id"
-          class="category-card"
-        >
-          <router-link :to="`/category/${category.id}`">
-            <div class="category-icon">
-              <el-icon><FolderOpened /></el-icon>
-            </div>
-            <h3 class="category-name">{{ category.name }}</h3>
-            <p class="category-desc">{{ category.description }}</p>
-            <span class="category-count">{{ Math.floor(Math.random() * 20) + 1 }} 篇文章</span>
-          </router-link>
-        </div>
+      <!-- 加载中 -->
+      <div v-if="loading" class="loading-state">
+        <el-icon class="loading-icon"><Loading /></el-icon>
+        <p>加载中…</p>
       </div>
+
+      <!-- 分类网格：首屏 9 个，加载更多每次 +9 -->
+      <template v-else>
+        <div class="categories-grid">
+          <div
+            v-for="category in displayedCategories"
+            :key="category.id"
+            class="category-card jp-card jp-card-hover"
+          >
+            <router-link :to="`/category/${category.id}`">
+              <div class="category-icon">
+                <Icon
+                  :icon="category.icon || 'mdi:folder-open'"
+                  width="28"
+                  height="28"
+                />
+              </div>
+              <h3 class="category-name">{{ category.name }}</h3>
+              <p class="category-desc">{{ category.description || '暂无描述' }}</p>
+              <span class="category-count">{{ (category.articleCount ?? 0) }} 篇文章</span>
+            </router-link>
+          </div>
+        </div>
+
+        <!-- 空状态 -->
+        <div v-if="categories.length === 0" class="empty-state">
+          <p>暂无分类</p>
+        </div>
+
+        <!-- 加载更多 -->
+        <div v-else-if="hasMore" class="load-more">
+          <el-button class="jp-btn-primary !border-0" @click="loadMore">
+            加载更多
+          </el-button>
+        </div>
+
+        <!-- 没有更多了 -->
+        <div v-else-if="categories.length > 0" class="no-more">
+          <el-divider>
+            <span class="no-more-text">已经到底啦 ~</span>
+          </el-divider>
+        </div>
+      </template>
     </div>
   </DefaultLayout>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
-import { FolderOpened } from '@element-plus/icons-vue';
+import { ref, computed, onMounted } from 'vue';
+import { ElMessage } from 'element-plus';
+import { Icon } from '@iconify/vue';
+import { Loading } from '@element-plus/icons-vue';
 import DefaultLayout from '@/layouts/DefaultLayout.vue';
 import type { Category } from '@/types';
-import { mockCategories } from '@/utils/mock';
+import { getCategories } from '@/api/article';
+
+const pageSize = 9;
 
 const categories = ref<Category[]>([]);
+const displayCount = ref(pageSize);
+const loading = ref(false);
+
+const displayedCategories = computed(() =>
+  categories.value.slice(0, displayCount.value)
+);
+
+const hasMore = computed(
+  () => categories.value.length > displayCount.value
+);
+
+const loadMore = () => {
+  displayCount.value += pageSize;
+};
+
+const fetchCategories = async () => {
+  loading.value = true;
+  try {
+    const list = await getCategories(true);
+    categories.value = list ?? [];
+  } catch (err) {
+    console.error('加载分类失败', err);
+    ElMessage.error('加载分类失败，请稍后重试');
+    categories.value = [];
+  } finally {
+    loading.value = false;
+  }
+};
 
 onMounted(() => {
-  categories.value = mockCategories;
+  fetchCategories();
 });
 </script>
 
@@ -62,27 +126,76 @@ onMounted(() => {
   color: var(--text-secondary);
 }
 
+.loading-state {
+  text-align: center;
+  padding: 48px 24px;
+  color: var(--text-secondary);
+
+  .loading-icon {
+    font-size: 32px;
+    margin-bottom: 12px;
+    animation: spin 1s linear infinite;
+  }
+
+  p {
+    margin: 0;
+    font-size: 14px;
+  }
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.empty-state {
+  text-align: center;
+  padding: 48px 24px;
+  color: var(--text-tertiary);
+  font-size: 15px;
+}
+
+.load-more {
+  text-align: center;
+  padding: 24px 0;
+}
+
+.no-more {
+  padding: 24px 0;
+
+  .no-more-text {
+    color: var(--text-tertiary);
+    font-size: 14px;
+  }
+}
+
+/* 每行 3 个，桌面端；平板 2 列，手机 1 列 */
 .categories-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  grid-template-columns: repeat(3, 1fr);
   gap: 20px;
+  margin-bottom: 24px;
+}
+
+@media (max-width: 900px) {
+  .categories-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 600px) {
+  .categories-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .category-card {
-  background: var(--bg-secondary);
-  border-radius: var(--radius-lg);
   padding: 28px;
-  transition: all 0.3s;
   text-align: center;
 
   a {
     color: inherit;
     text-decoration: none;
-  }
-
-  &:hover {
-    transform: translateY(-4px);
-    box-shadow: var(--shadow-lg);
   }
 }
 
@@ -97,6 +210,11 @@ onMounted(() => {
   justify-content: center;
   color: white;
   font-size: 28px;
+
+  /* Iconify 图标继承父级白色 */
+  :deep(svg) {
+    color: currentColor;
+  }
 }
 
 .category-name {

@@ -5,9 +5,11 @@
 
     <!-- 主内容区 -->
     <main class="main-content">
+      <!-- 可选：全宽 Hero 插槽（用于首页等） -->
+      <slot name="hero" />
       <div class="container">
-        <div class="content-wrapper">
-          <!-- 左侧 Live2D -->
+        <div class="content-wrapper" :class="{ 'has-live2d': !isMobile }">
+          <!-- 左侧 Live2D：固定到视口左侧，处于屏幕左与文章卡片之间的位置 -->
           <aside class="sidebar-left" v-if="!isMobile">
             <Live2D />
           </aside>
@@ -68,24 +70,36 @@ onUnmounted(() => {
   flex-direction: column;
 }
 
-/* 为固定导航栏预留高度（64px）+ 适当留白，避免内容与导航贴得太紧 */
+/* 有 hero 插槽时由 hero 占位，无 hero 时保持原有顶部留白 */
 .main-content {
   flex: 1;
   padding-top: calc(64px + 24px);
   padding-bottom: 24px;
 }
 
+.main-content:has([data-hero]) {
+  padding-top: 0;
+}
+
 .content-wrapper {
   display: flex;
   gap: 24px;
   align-items: flex-start;
+
+  /* 有 Live2D 时为主内容预留左侧空间，避免与固定侧栏重叠 */
+  &.has-live2d {
+    padding-left: 328px; /* 280 侧栏 + 48 与卡片的间距 */
+  }
 }
 
 .sidebar-left {
   width: 280px;
   flex-shrink: 0;
-  position: sticky;
-  top: 88px;
+  position: fixed;
+  left: 24px;
+  bottom: 24px;
+  top: auto;
+  z-index: 10;
 }
 
 .main-area {

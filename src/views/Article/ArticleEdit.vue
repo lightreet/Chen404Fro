@@ -94,6 +94,12 @@
                   :class="{ selected: form.categoryId === category.id }"
                   @click="form.categoryId = category.id"
                 >
+                  <Icon
+                    class="category-card-icon"
+                    :icon="category.icon || 'mdi:folder'"
+                    width="14"
+                    height="14"
+                  />
                   {{ category.name }}
                 </button>
               </div>
@@ -208,6 +214,7 @@
 import { ref, reactive, computed, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { ElMessage, ElMessageBox } from 'element-plus';
+import { Icon } from '@iconify/vue';
 import { ArrowLeft, ArrowDown, Plus } from '@element-plus/icons-vue';
 import { MdEditor } from 'md-editor-v3';
 import 'md-editor-v3/lib/style.css';
@@ -875,6 +882,8 @@ onMounted(() => {
   }
 
   .category-card {
+    display: inline-flex;
+    align-items: center;
     padding: 6px 14px;
     border-radius: 12px;
     border: 1px solid var(--border-color, #e2e8f0);
@@ -884,6 +893,11 @@ onMounted(() => {
     font-weight: 500;
     cursor: pointer;
     transition: color 0.2s ease, border-color 0.2s ease, background-color 0.2s ease;
+
+    .category-card-icon {
+      margin-right: 6px;
+      flex-shrink: 0;
+    }
 
     &:hover {
       border-color: var(--primary);

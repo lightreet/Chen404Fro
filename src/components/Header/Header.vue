@@ -31,7 +31,7 @@
             to="/article/edit"
             class="write-btn"
           >
-            <el-button type="primary" size="small" class="write-link">
+            <el-button type="primary" size="small" class="write-link rounded-full">
               <el-icon><EditPen /></el-icon>
               <span>编写</span>
             </el-button>
@@ -47,7 +47,7 @@
 
           <!-- 未登录显示登录按钮 -->
           <router-link v-if="!isLoggedIn && !isMobile" to="/login" class="login-link">
-            <el-button type="primary" size="small" class="login-btn">
+            <el-button type="primary" size="small" class="login-btn rounded-full">
               <el-icon><User /></el-icon>
               <span>登录</span>
             </el-button>
