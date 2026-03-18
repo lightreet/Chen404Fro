@@ -323,7 +323,7 @@ const handleUserCommand = (command: string) => {
       router.push('/profile');
       break;
     case 'admin':
-      router.push('/admin');
+      router.push({ path: '/admin', query: { tab: 'categories' } });
       break;
     case 'logout':
       handleLogout();

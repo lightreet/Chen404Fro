@@ -108,6 +108,16 @@ const routes: RouteRecordRaw[] = [
       requiresAuth: true,
     },
   },
+  {
+    path: '/admin',
+    name: 'Admin',
+    component: () => import('@/views/Admin/AdminLayout.vue'),
+    meta: {
+      title: '后台管理',
+      requiresAuth: true,
+      requiresAdmin: true,
+    },
+  },
   // 404 页面
   {
     path: '/:pathMatch(.*)*',
@@ -148,6 +158,24 @@ router.beforeEach((to, from, next) => {
         path: '/login',
         query: { redirect: to.fullPath },
       });
+      return;
+    }
+  }
+
+  // 检查是否需要管理员权限（与 Header/Profile 的角色判定保持一致：role === 1）
+  if (to.meta.requiresAdmin) {
+    const savedUser = localStorage.getItem('user');
+    let role: unknown = null;
+    if (savedUser) {
+      try {
+        role = JSON.parse(savedUser)?.role;
+      } catch {
+        role = null;
+      }
+    }
+    if (role !== 1) {
+      ElMessage.error('仅管理员可访问');
+      next({ path: '/' });
       return;
     }
   }

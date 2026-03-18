@@ -31,10 +31,6 @@
               <el-icon><Document /></el-icon>
               <span>我的文章</span>
             </el-menu-item>
-            <el-menu-item index="categories">
-              <el-icon><CollectionTag /></el-icon>
-              <span>分类管理</span>
-            </el-menu-item>
             <el-menu-item index="favorites">
               <el-icon><Star /></el-icon>
               <span>收藏</span>
@@ -181,42 +177,6 @@
             </el-card>
           </div>
 
-          <!-- 分类管理（仅管理员可增删改） -->
-          <div v-else-if="activeMenu === 'categories'">
-            <el-card class="info-card" shadow="never">
-              <template #header>
-                <div class="content-header">
-                  <span class="card-title">
-                    <el-icon class="card-icon"><CollectionTag /></el-icon>
-                    分类管理
-                  </span>
-                  <el-button v-if="isAdmin" type="primary" size="default" @click="openCategoryDialog()">
-                    <el-icon><Plus /></el-icon>
-                    新增分类
-                  </el-button>
-                </div>
-              </template>
-              <div v-if="!isAdmin" class="placeholder">
-                仅管理员可管理分类，请使用管理员账号登录。
-              </div>
-              <template v-else>
-                <el-table v-loading="categoriesLoading" :data="categoriesList" stripe class="category-table">
-                  <el-table-column prop="name" label="名称" min-width="120" />
-                  <el-table-column prop="slug" label="别名" min-width="100" />
-                  <el-table-column prop="description" label="描述" min-width="160" show-overflow-tooltip />
-                  <el-table-column prop="sortOrder" label="排序" width="80" align="center" />
-                  <el-table-column prop="articleCount" label="文章数" width="80" align="center" />
-                  <el-table-column label="操作" width="140" align="center" fixed="right">
-                    <template #default="{ row }">
-                      <el-button text type="primary" size="small" @click="openCategoryDialog(row)">编辑</el-button>
-                      <el-button text type="danger" size="small" @click="handleDeleteCategory(row)">删除</el-button>
-                    </template>
-                  </el-table-column>
-                </el-table>
-              </template>
-            </el-card>
-          </div>
-
           <!-- 其他菜单占位 -->
           <el-card v-else class="info-card" shadow="never">
             <template #header>
@@ -282,39 +242,6 @@
       </template>
     </el-dialog>
 
-    <!-- 分类新增/编辑弹窗 -->
-    <el-dialog
-      v-model="categoryDialogVisible"
-      :title="editingCategoryId == null ? '新增分类' : '编辑分类'"
-      width="480px"
-      :close-on-click-modal="false"
-      class="category-dialog"
-      @closed="categoryFormRef?.resetFields()"
-    >
-      <el-form
-        ref="categoryFormRef"
-        :model="categoryForm"
-        :rules="categoryRules"
-        label-position="top"
-      >
-        <el-form-item label="名称" prop="name">
-          <el-input v-model="categoryForm.name" placeholder="分类名称" maxlength="50" show-word-limit />
-        </el-form-item>
-        <el-form-item label="别名（URL）" prop="slug">
-          <el-input v-model="categoryForm.slug" placeholder="如 tech，选填" />
-        </el-form-item>
-        <el-form-item label="描述" prop="description">
-          <el-input v-model="categoryForm.description" type="textarea" placeholder="选填" :rows="2" />
-        </el-form-item>
-        <el-form-item label="排序" prop="sortOrder">
-          <el-input-number v-model="categoryForm.sortOrder" :min="0" :max="999" />
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="categoryDialogVisible = false">取消</el-button>
-        <el-button type="primary" :loading="categorySaving" @click="handleSaveCategory">确定</el-button>
-      </template>
-    </el-dialog>
   </DefaultLayout>
 </template>
 
@@ -322,7 +249,7 @@
 import { ref, reactive, computed, onMounted, nextTick } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import type { FormInstance, FormRules } from 'element-plus';
-import { User, Lock, Link, EditPen, HomeFilled, Document, CollectionTag, Star, Upload, Search, Plus } from '@element-plus/icons-vue';
+import { User, Lock, Link, EditPen, HomeFilled, Document, Star, Upload, Search } from '@element-plus/icons-vue';
 import { useRouter } from 'vue-router';
 import DefaultLayout from '@/layouts/DefaultLayout.vue';
 import { useUserStore } from '@/stores/user';
@@ -330,17 +257,15 @@ import { getUserInfo, changePassword, updateProfile } from '@/api/auth';
 import { uploadAvatar } from '@/api/upload';
 import { formatDate } from '@/utils/format';
 import { createConfirmPasswordRule, validateImageFile, AVATAR_MAX_MB } from '@/utils/validation';
-import { getMyArticles, deleteArticle, getCategories, createCategory, updateCategory, deleteCategory } from '@/api/article';
+import { getMyArticles, deleteArticle } from '@/api/article';
 import ArticleCard from '@/components/ArticleCard/ArticleCard.vue';
-import type { Category } from '@/types';
 import { UserRole } from '@/types';
 
 const userStore = useUserStore();
 const router = useRouter();
 const user = ref(userStore.user);
 
-const activeMenu = ref<'articles' | 'categories' | 'favorites' | 'settings'>('articles');
-const isAdmin = computed(() => user.value?.role === UserRole.ADMIN);
+const activeMenu = ref<'articles' | 'favorites' | 'settings'>('articles');
 
 const profileEditCardRef = ref();
 const profileFormRef = ref<FormInstance>();
@@ -378,94 +303,6 @@ const passwordRules: FormRules = {
   ],
 };
 
-// 分类管理
-const categoriesList = ref<Category[]>([]);
-const categoriesLoading = ref(false);
-const categoryDialogVisible = ref(false);
-const categorySaving = ref(false);
-const editingCategoryId = ref<number | null>(null);
-const categoryFormRef = ref<FormInstance>();
-const categoryForm = reactive({
-  name: '',
-  slug: '',
-  description: '',
-  sortOrder: 0,
-});
-const categoryRules: FormRules = {
-  name: [{ required: true, message: '请输入分类名称', trigger: 'blur' }],
-};
-
-const loadCategories = async () => {
-  categoriesLoading.value = true;
-  try {
-    const list = await getCategories(true);
-    categoriesList.value = list ?? [];
-  } catch {
-    ElMessage.error('获取分类列表失败');
-    categoriesList.value = [];
-  } finally {
-    categoriesLoading.value = false;
-  }
-};
-
-const openCategoryDialog = (row?: Category) => {
-  editingCategoryId.value = row ? row.id : null;
-  categoryForm.name = row?.name ?? '';
-  categoryForm.slug = row?.slug ?? '';
-  categoryForm.description = row?.description ?? '';
-  categoryForm.sortOrder = row?.sortOrder ?? 0;
-  categoryDialogVisible.value = true;
-  nextTick(() => categoryFormRef.value?.clearValidate());
-};
-
-const handleSaveCategory = async () => {
-  if (!categoryFormRef.value) return;
-  try {
-    await categoryFormRef.value.validate();
-    categorySaving.value = true;
-    if (editingCategoryId.value == null) {
-      await createCategory({
-        name: categoryForm.name.trim(),
-        slug: categoryForm.slug.trim() || undefined,
-        description: categoryForm.description.trim() || undefined,
-        sortOrder: categoryForm.sortOrder,
-      });
-      ElMessage.success('创建成功');
-    } else {
-      await updateCategory(editingCategoryId.value, {
-        name: categoryForm.name.trim(),
-        slug: categoryForm.slug.trim() || undefined,
-        description: categoryForm.description.trim() || undefined,
-        sortOrder: categoryForm.sortOrder,
-      });
-      ElMessage.success('更新成功');
-    }
-    categoryDialogVisible.value = false;
-    loadCategories();
-  } catch (err: unknown) {
-    if (err && typeof err === 'object' && 'message' in err) {
-      ElMessage.error((err as { message?: string }).message ?? '操作失败');
-    }
-  } finally {
-    categorySaving.value = false;
-  }
-};
-
-const handleDeleteCategory = async (row: Category) => {
-  try {
-    await ElMessageBox.confirm(`确定要删除分类「${row.name}」吗？`, '提示', {
-      confirmButtonText: '确定',
-      cancelButtonText: '取消',
-      type: 'warning',
-    });
-    await deleteCategory(row.id);
-    ElMessage.success('已删除');
-    loadCategories();
-  } catch (e) {
-    if (e !== 'cancel') ElMessage.error('删除失败');
-  }
-};
-
 const loadUser = async () => {
   try {
     const data = await getUserInfo();
@@ -482,8 +319,6 @@ const handleMenuSelect = (index: string) => {
   activeMenu.value = index as any;
   if (activeMenu.value === 'articles') {
     loadMyArticles(1);
-  } else if (activeMenu.value === 'categories' && isAdmin.value) {
-    loadCategories();
   }
 };
 
@@ -724,6 +559,9 @@ onMounted(() => {
 .profile-nav {
   position: sticky;
   top: calc(64px + var(--spacing-lg));
+  /* 让左侧菜单默认沾满屏幕高度（减去吸顶偏移与底部留白） */
+  height: calc(100vh - (64px + var(--spacing-lg)) - var(--spacing-lg));
+  display: flex;
 }
 
 .nav-menu {
@@ -731,6 +569,8 @@ onMounted(() => {
   border: 1px solid var(--border-color);
   background: var(--bg-secondary);
   overflow: hidden;
+  flex: 1;
+  height: 100%;
 }
 
 .profile-content {
@@ -804,6 +644,8 @@ onMounted(() => {
   }
   .profile-nav {
     position: static;
+    height: auto;
+    display: block;
   }
   .keyword-input {
     width: 100%;
