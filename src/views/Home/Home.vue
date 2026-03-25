@@ -2,7 +2,7 @@
   <DefaultLayout>
     <!-- 全宽 Hero：背景图 + 遮罩 + 居中标语 + 底部波浪 -->
     <template #hero>
-      <section ref="heroRef" id="hero-sakura" class="home-hero" data-hero>
+      <section class="home-hero" data-hero>
         <div class="hero-bg" />
         <div class="hero-overlay" />
         <div class="hero-content">
@@ -67,7 +67,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue';
+import { ref, onMounted } from 'vue';
 import { ElMessage } from 'element-plus';
 import { Compass } from '@element-plus/icons-vue';
 import DefaultLayout from '@/layouts/DefaultLayout.vue';
@@ -76,10 +76,6 @@ import type { Article } from '@/types';
 import { getArticles } from '@/api/article';
 
 const pageSize = 6;
-const heroRef = ref<HTMLElement | null>(null);
-let sakuraInstance: { stop: (graceful?: boolean) => void } | null = null;
-let sakuraLink: HTMLLinkElement | null = null;
-let sakuraScript: HTMLScriptElement | null = null;
 
 // 文章列表
 const articleList = ref<Article[]>([]);
@@ -127,41 +123,6 @@ const loadMore = () => {
 
 onMounted(() => {
   loadArticles();
-  // 樱花飘落特效：动态加载 sakura-js（仅 Hero 区域），样式与主题粉一致
-  if (!document.getElementById('hero-sakura')) return;
-  sakuraLink = document.createElement('link');
-  sakuraLink.rel = 'stylesheet';
-  sakuraLink.href = '/sakura.min.css';
-  document.head.appendChild(sakuraLink);
-  sakuraScript = document.createElement('script');
-  sakuraScript.src = '/sakura.min.js';
-  sakuraScript.async = true;
-  sakuraScript.onload = () => {
-    const Sakura = (window as unknown as { Sakura: new (s: string, o?: object) => { stop: (g?: boolean) => void } }).Sakura;
-    if (typeof Sakura !== 'function') return;
-    sakuraInstance = new Sakura('#hero-sakura', {
-      fallSpeed: 1.5,
-      minSize: 8,
-      maxSize: 16,
-      delay: 200,
-      colors: [
-        { gradientColorStart: 'rgba(255, 183, 197, 0.85)', gradientColorEnd: 'rgba(255, 197, 208, 0.85)', gradientColorDegree: 120 },
-        { gradientColorStart: 'rgba(255, 189, 189, 0.9)', gradientColorEnd: 'rgba(227, 170, 181, 0.9)', gradientColorDegree: 120 },
-      ],
-    });
-  };
-  document.body.appendChild(sakuraScript);
-});
-
-onUnmounted(() => {
-  if (sakuraInstance) {
-    sakuraInstance.stop(true);
-    sakuraInstance = null;
-  }
-  if (sakuraLink?.parentNode) sakuraLink.parentNode.removeChild(sakuraLink);
-  sakuraLink = null;
-  if (sakuraScript?.parentNode) sakuraScript.parentNode.removeChild(sakuraScript);
-  sakuraScript = null;
 });
 </script>
 
@@ -276,11 +237,6 @@ onUnmounted(() => {
 @keyframes hero-bounce {
   0%, 100% { transform: translateY(0); }
   50% { transform: translateY(6px); }
-}
-
-/* 樱花花瓣在标语和波浪之下，避免遮挡文字 */
-.home-hero :deep(.sakura) {
-  z-index: 0;
 }
 
 @media (max-width: 768px) {

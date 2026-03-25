@@ -11,9 +11,12 @@
           <span class="status-text">
             状态：{{ form.status === ArticleStatus.PUBLISHED ? '已发布' : '草稿' }}
           </span>
+          <span class="autosave-text" :class="`is-${autoSaveState}`">
+            {{ autoSaveStatusText }}
+          </span>
         </div>
         <div class="header-actions">
-          <button type="button" class="header-link" @click="handleSaveDraft" :disabled="savingDraft">
+          <button type="button" class="header-link" @click="handleSaveDraft" :disabled="isDraftSaving">
             保存草稿
           </button>
           <el-button type="primary" @click="handlePublish" :loading="publishing">
@@ -211,8 +214,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted } from 'vue';
-import { useRoute, useRouter } from 'vue-router';
+import { ref, reactive, computed, onMounted, onUnmounted, watch } from 'vue';
+import { useRoute, useRouter, onBeforeRouteLeave } from 'vue-router';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { Icon } from '@iconify/vue';
 import { ArrowLeft, ArrowDown, Plus } from '@element-plus/icons-vue';
@@ -227,10 +230,17 @@ import {
   getCategories,
   getTags,
   uploadImage,
-  uploadImages,
   uploadCover,
 } from '@/api';
+import type { RequestConfig } from '@/api';
 import { validateImageFile, DEFAULT_IMAGE_MAX_MB } from '@/utils/validation';
+
+type DraftSaveSource = 'manual' | 'auto' | 'leave';
+type AutoSaveState = 'idle' | 'dirty' | 'saving' | 'saved' | 'error';
+
+const AUTO_SAVE_DEBOUNCE_MS = 5000;
+const AUTO_SAVE_INTERVAL_MS = 30000;
+const AUTO_SAVE_REQUEST_CONFIG: RequestConfig = { suppressErrorMessage: true };
 
 const route = useRoute();
 const router = useRouter();
@@ -238,7 +248,7 @@ const router = useRouter();
 // 判断是否为编辑模式
 const articleId = computed(() => {
   const id = route.params.id;
-  return id ? parseInt(id as string, 10) : null;
+  return typeof id === 'string' ? id : null;
 });
 const isEdit = computed(() => !!articleId.value);
 
@@ -308,9 +318,20 @@ const categories = ref<Category[]>([]);
 const tags = ref<Tag[]>([]);
 
 // 加载状态
-const savingDraft = ref(false);
+const isDraftSaving = ref(false);
 const publishing = ref(false);
 const loading = ref(false);
+const autoSaveState = ref<AutoSaveState>('idle');
+const lastSavedAt = ref<Date | null>(null);
+const hasPendingChanges = ref(false);
+const editorReady = ref(false);
+const loadedArticleStatus = ref<ArticleStatus | null>(null);
+
+let activeSavePromise: Promise<boolean> | null = null;
+let autoSaveDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+let autoSaveIntervalId: ReturnType<typeof setInterval> | null = null;
+let lastSavedSnapshot = '';
+let queuedAutoSave = false;
 
 // 获取分类和标签列表
 const fetchCategoriesAndTags = async () => {
@@ -336,6 +357,7 @@ const fetchArticleDetail = async () => {
   loading.value = true;
   try {
     const article = await getArticleById(articleId.value);
+    loadedArticleStatus.value = article.status;
     Object.assign(form, article);
     if (article.tags) {
       formTagIds.value = article.tags.map((tag) => Number(tag.id));
@@ -457,6 +479,115 @@ const buildSubmitData = (): Partial<Article> => {
   };
 };
 
+const buildDraftSubmitData = (): Partial<Article> => {
+  return {
+    ...buildSubmitData(),
+    status: ArticleStatus.DRAFT,
+  };
+};
+
+const currentDraftSnapshot = computed(() => JSON.stringify(buildDraftSubmitData()));
+
+const isAutoSaveEnabled = computed(() => {
+  return !(isEdit.value && loadedArticleStatus.value === ArticleStatus.PUBLISHED);
+});
+
+const hasMeaningfulDraftContent = computed(() => {
+  return Boolean(
+    form.title?.trim()
+    || form.content?.trim()
+    || form.summary?.trim()
+    || form.coverImage
+    || form.categoryId
+    || formTagIds.value.length
+    || customTagNames.value.length
+  );
+});
+
+const formatTime = (date: Date) => {
+  return new Intl.DateTimeFormat('zh-CN', {
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  }).format(date);
+};
+
+const autoSaveStatusText = computed(() => {
+  if (!hasMeaningfulDraftContent.value && !lastSavedAt.value) {
+    return '自动保存已开启';
+  }
+
+  if (!isAutoSaveEnabled.value) {
+    return hasPendingChanges.value ? '已发布文章改动未自动保存' : '已发布文章暂不自动保存';
+  }
+
+  if (autoSaveState.value === 'saving') {
+    return '自动保存中...';
+  }
+
+  if (autoSaveState.value === 'error') {
+    return '自动保存失败，等待重试';
+  }
+
+  if (hasPendingChanges.value) {
+    return form.title?.trim() ? '未保存' : '未保存，填写标题后自动保存';
+  }
+
+  if (lastSavedAt.value) {
+    return `已自动保存 ${formatTime(lastSavedAt.value)}`;
+  }
+
+  return '自动保存已开启';
+});
+
+const canSaveDraft = (showMessage: boolean = false) => {
+  if (form.title?.trim()) {
+    return true;
+  }
+
+  if (showMessage) {
+    ElMessage.warning('请输入文章标题');
+  }
+  return false;
+};
+
+const clearAutoSaveDebounce = () => {
+  if (autoSaveDebounceTimer) {
+    clearTimeout(autoSaveDebounceTimer);
+    autoSaveDebounceTimer = null;
+  }
+};
+
+const syncSavedSnapshot = (state: AutoSaveState = 'idle') => {
+  lastSavedSnapshot = currentDraftSnapshot.value;
+  hasPendingChanges.value = false;
+  autoSaveState.value = state;
+};
+
+const scheduleAutoSave = () => {
+  if (!editorReady.value || !isAutoSaveEnabled.value || !canSaveDraft()) return;
+
+  clearAutoSaveDebounce();
+  autoSaveDebounceTimer = setTimeout(() => {
+    void saveDraftCore({ source: 'auto', silent: true });
+  }, AUTO_SAVE_DEBOUNCE_MS);
+};
+
+const shouldWarnBeforeUnload = () => {
+  if (publishing.value || !hasMeaningfulDraftContent.value) {
+    return false;
+  }
+
+  return hasPendingChanges.value || isDraftSaving.value;
+};
+
+const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+  if (!shouldWarnBeforeUnload()) return;
+
+  event.preventDefault();
+  event.returnValue = '';
+};
+
 const addCustomTag = () => {
   const name = newTagName.value?.trim();
   if (!name) return;
@@ -529,35 +660,93 @@ const onTagsWrapMouseLeave = () => {
   showTagSuggestions.value = false;
 };
 
-// 保存草稿
-const handleSaveDraft = async () => {
-  if (!form.title?.trim()) {
-    ElMessage.warning('请输入文章标题');
-    return;
+const saveDraftCore = async ({
+  source,
+  silent = false,
+}: {
+  source: DraftSaveSource;
+  silent?: boolean;
+}): Promise<boolean> => {
+  if (publishing.value) {
+    return false;
   }
 
-  savingDraft.value = true;
-  try {
-    const data = buildSubmitData();
-    data.status = ArticleStatus.DRAFT;
+  if (source !== 'manual' && !isAutoSaveEnabled.value) {
+    return false;
+  }
 
-    if (isEdit.value && articleId.value) {
-      await updateArticle(articleId.value, data);
-      ElMessage.success('草稿保存成功');
-    } else {
-      const res = await createArticle(data);
-      ElMessage.success('草稿保存成功');
-      // 跳转到编辑页面
-      if (res.id) {
-        router.replace(`/article/edit/${res.id}`);
+  const shouldShowValidationMessage = !silent && source === 'manual';
+  if (!canSaveDraft(shouldShowValidationMessage)) {
+    if (hasMeaningfulDraftContent.value) {
+      autoSaveState.value = 'dirty';
+    }
+    return false;
+  }
+
+  if (source !== 'manual' && !hasPendingChanges.value && currentDraftSnapshot.value === lastSavedSnapshot) {
+    return true;
+  }
+
+  if (isDraftSaving.value) {
+    queuedAutoSave = true;
+    return activeSavePromise ?? false;
+  }
+
+  clearAutoSaveDebounce();
+  isDraftSaving.value = true;
+  autoSaveState.value = 'saving';
+
+  const savePromise = (async () => {
+    try {
+      const data = buildDraftSubmitData();
+      const requestConfig = silent ? AUTO_SAVE_REQUEST_CONFIG : undefined;
+
+      if (isEdit.value && articleId.value) {
+        await updateArticle(articleId.value, data, requestConfig);
+      } else {
+        const res = await createArticle(data, requestConfig);
+        if (res.id) {
+          await router.replace(`/article/edit/${res.id}`);
+        }
+      }
+
+      loadedArticleStatus.value = ArticleStatus.DRAFT;
+      lastSavedAt.value = new Date();
+      syncSavedSnapshot('saved');
+
+      if (!silent && source === 'manual') {
+        ElMessage.success('草稿保存成功');
+      }
+      return true;
+    } catch (error) {
+      console.error(`${source} 保存草稿失败:`, error);
+      hasPendingChanges.value = true;
+      autoSaveState.value = 'error';
+
+      if (!silent && source === 'manual') {
+        ElMessage.error('保存草稿失败');
+      }
+      return false;
+    } finally {
+      isDraftSaving.value = false;
+      activeSavePromise = null;
+
+      if (queuedAutoSave && hasPendingChanges.value && isAutoSaveEnabled.value && canSaveDraft()) {
+        queuedAutoSave = false;
+        void saveDraftCore({ source: 'auto', silent: true });
+      } else {
+        queuedAutoSave = false;
       }
     }
-  } catch (error) {
-    console.error('保存草稿失败:', error);
-    ElMessage.error('保存草稿失败');
-  } finally {
-    savingDraft.value = false;
-  }
+  })();
+
+  activeSavePromise = savePromise;
+  return savePromise;
+};
+
+// 保存草稿
+const handleSaveDraft = async () => {
+  await saveDraftCore({ source: 'manual' });
 };
 
 // 发布文章
@@ -581,6 +770,7 @@ const handlePublish = async () => {
 
   publishing.value = true;
   try {
+    clearAutoSaveDebounce();
     const data = buildSubmitData();
     data.status = ArticleStatus.PUBLISHED;
 
@@ -604,11 +794,78 @@ const handlePublish = async () => {
 };
 
 // 页面加载时获取数据
-onMounted(() => {
-  fetchCategoriesAndTags();
-  if (isEdit.value) {
-    fetchArticleDetail();
+watch(currentDraftSnapshot, (newSnapshot) => {
+  if (!editorReady.value) return;
+
+  if (newSnapshot === lastSavedSnapshot) {
+    hasPendingChanges.value = false;
+    autoSaveState.value = lastSavedAt.value ? 'saved' : 'idle';
+    clearAutoSaveDebounce();
+    return;
   }
+
+  hasPendingChanges.value = true;
+
+  if (isDraftSaving.value) {
+    queuedAutoSave = true;
+    return;
+  }
+
+  autoSaveState.value = 'dirty';
+  scheduleAutoSave();
+});
+
+onBeforeRouteLeave(async () => {
+  if (!shouldWarnBeforeUnload()) {
+    return true;
+  }
+
+  if (activeSavePromise) {
+    await activeSavePromise.catch(() => false);
+  }
+
+  if (!hasPendingChanges.value) {
+    return true;
+  }
+
+  if (isAutoSaveEnabled.value && canSaveDraft()) {
+    const saved = await saveDraftCore({ source: 'leave', silent: true });
+    if (saved && !hasPendingChanges.value) {
+      return true;
+    }
+  }
+
+  return window.confirm('草稿还有未同步的改动，确定离开当前页面吗？');
+});
+
+onMounted(async () => {
+  await fetchCategoriesAndTags();
+  if (isEdit.value) {
+    await fetchArticleDetail();
+  }
+
+  syncSavedSnapshot();
+  editorReady.value = true;
+
+  autoSaveIntervalId = setInterval(() => {
+    if (!hasPendingChanges.value || !isAutoSaveEnabled.value || !canSaveDraft()) return;
+    void saveDraftCore({ source: 'auto', silent: true });
+  }, AUTO_SAVE_INTERVAL_MS);
+
+  window.addEventListener('beforeunload', handleBeforeUnload);
+});
+
+onUnmounted(() => {
+  clearAutoSaveDebounce();
+  if (autoSaveIntervalId) {
+    clearInterval(autoSaveIntervalId);
+    autoSaveIntervalId = null;
+  }
+  if (tagSuggestionsBlurTimer) {
+    clearTimeout(tagSuggestionsBlurTimer);
+    tagSuggestionsBlurTimer = null;
+  }
+  window.removeEventListener('beforeunload', handleBeforeUnload);
 });
 </script>
 
@@ -658,6 +915,25 @@ onMounted(() => {
   .status-text {
     font-size: 13px;
     color: var(--text-tertiary, #94a3b8);
+  }
+
+  .autosave-text {
+    font-size: 13px;
+    color: var(--text-tertiary, #94a3b8);
+    transition: color 0.2s ease;
+
+    &.is-dirty,
+    &.is-saving {
+      color: var(--primary, #ec4899);
+    }
+
+    &.is-saved {
+      color: var(--success, #10b981);
+    }
+
+    &.is-error {
+      color: var(--danger, #ef4444);
+    }
   }
 
   .header-actions {

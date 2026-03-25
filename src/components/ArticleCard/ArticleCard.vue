@@ -4,6 +4,7 @@
     :class="[
       { 'image-left': isImageLeft, 'image-right': !isImageLeft },
       { compact },
+      { 'manage-mode': mode === 'manage', 'has-cover': !!article.coverImage, 'no-cover': !article.coverImage },
     ]"
   >
     <div
@@ -85,10 +86,14 @@
 
     <!-- 封面图 -->
     <div class="card-image" v-if="article.coverImage">
-      <router-link :to="`/article/${article.id}`" class="image-link">
+      <router-link v-if="mode !== 'manage'" :to="`/article/${article.id}`" class="image-link">
         <img :src="article.coverImage" :alt="article.title" loading="lazy" />
         <div class="image-overlay"></div>
       </router-link>
+      <div v-else class="image-link">
+        <img :src="article.coverImage" :alt="article.title" loading="lazy" />
+        <div class="image-overlay"></div>
+      </div>
     </div>
   </article>
 </template>
@@ -164,6 +169,23 @@ const authorName = computed(() => {
   }
 }
 
+.article-card.manage-mode {
+  align-items: stretch;
+  overflow: hidden;
+
+  &.image-left,
+  &.image-right {
+    flex-direction: row;
+  }
+
+  &.no-cover {
+    .card-content {
+      min-height: 210px;
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(248, 250, 252, 0.92));
+    }
+  }
+}
+
 // 内容区（首页模式下整块可点击跳转详情）
 .card-content {
   flex: 1;
@@ -179,7 +201,7 @@ const authorName = computed(() => {
 
 // 紧凑态（个人中心等）
 .article-card.compact {
-  margin-bottom: 16px;
+  margin-bottom: 0;
 
   .card-content {
     padding: 18px 22px;
@@ -224,6 +246,66 @@ const authorName = computed(() => {
 
   .card-image {
     width: 280px;
+  }
+}
+
+.article-card.compact.manage-mode {
+  border: 1px solid rgba(226, 232, 240, 0.85);
+  box-shadow: 0 18px 36px rgba(15, 23, 42, 0.06);
+
+  .card-content {
+    padding: 22px 24px;
+  }
+
+  .article-meta {
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+
+  .article-title {
+    font-size: 20px;
+    margin-bottom: 12px;
+  }
+
+  .article-stats {
+    gap: 10px 14px;
+    flex-wrap: wrap;
+    margin-bottom: 12px;
+  }
+
+  .article-summary {
+    font-size: 14px;
+    line-height: 1.75;
+    margin-bottom: 14px;
+    -webkit-line-clamp: 3;
+  }
+
+  .article-tags {
+    margin-bottom: 14px;
+  }
+
+  .article-action {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding-top: 12px;
+    border-top: 1px dashed var(--border-light);
+  }
+
+  .article-action .el-button + .el-button {
+    margin-left: 0;
+  }
+
+  .card-image {
+    width: 250px;
+    min-height: 210px;
+    border-radius: 0;
+    background: var(--bg-hover);
+
+    .image-link,
+    img {
+      height: 100%;
+    }
   }
 }
 
@@ -430,6 +512,14 @@ const authorName = computed(() => {
 
     .card-content {
       padding: 20px 24px;
+    }
+  }
+
+  .article-card.compact.manage-mode {
+    .card-image {
+      width: 100%;
+      min-height: 190px;
+      border-radius: 0 !important;
     }
   }
 }

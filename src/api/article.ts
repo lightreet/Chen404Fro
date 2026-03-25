@@ -3,7 +3,7 @@
  * 包含文章列表、详情、分类、标签、归档等功能
  */
 
-import { get, post, put, del } from './request';
+import { get, post, put, del, type RequestConfig } from './request';
 import type {
   Article,
   Category,
@@ -48,15 +48,15 @@ export function getArticleNeighbors(id: number | string): Promise<{
 /**
  * 创建文章（需登录）
  */
-export function createArticle(data: Partial<Article>): Promise<Article> {
-  return post('/articles', data);
+export function createArticle(data: Partial<Article>, config?: RequestConfig): Promise<Article> {
+  return post('/articles', data, config);
 }
 
 /**
  * 更新文章（需登录）
  */
-export function updateArticle(id: number | string, data: Partial<Article>): Promise<Article> {
-  return put(`/articles/${String(id)}`, data);
+export function updateArticle(id: number | string, data: Partial<Article>, config?: RequestConfig): Promise<Article> {
+  return put(`/articles/${String(id)}`, data, config);
 }
 
 /**

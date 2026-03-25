@@ -1,5 +1,6 @@
 <template>
   <div class="default-layout">
+    <SakuraOverlay />
     <!-- 顶部导航 -->
     <Header />
 
@@ -37,6 +38,7 @@ import { ref, onMounted, onUnmounted } from 'vue';
 import Header from '@/components/Header/Header.vue';
 import Footer from '@/components/Footer/Footer.vue';
 import Live2D from '@/components/Live2D/Live2D.vue';
+import SakuraOverlay from '@/components/SakuraOverlay/SakuraOverlay.vue';
 
 interface Props {
   showRightSidebar?: boolean;

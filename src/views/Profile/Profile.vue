@@ -45,14 +45,17 @@
         <!-- 右侧内容区 -->
         <section class="profile-content">
           <!-- 我的文章 -->
-          <div v-if="activeMenu === 'articles'">
+          <div v-if="activeMenu === 'articles'" class="article-panel">
             <el-card class="info-card" shadow="never">
               <template #header>
                 <div class="content-header">
-                  <span class="card-title">
-                    <el-icon class="card-icon"><Document /></el-icon>
-                    我的文章
-                  </span>
+                  <div class="header-main">
+                    <span class="card-title">
+                      <el-icon class="card-icon"><Document /></el-icon>
+                      我的文章
+                    </span>
+                    <p class="header-desc">统一管理草稿与已发布文章，支持快速筛选与搜索。</p>
+                  </div>
                   <div class="content-actions">
                     <el-radio-group v-model="articleStatus" size="default" class="status-radio" @change="loadMyArticles(1)">
                       <el-radio-button :label="-1">全部</el-radio-button>
@@ -72,6 +75,7 @@
                         搜索
                       </el-button>
                     </div>
+                    <span class="article-total">共 {{ articleTotal }} 篇</span>
                   </div>
                 </div>
               </template>
@@ -551,7 +555,7 @@ onMounted(() => {
 /* 下方主体区：左侧菜单 + 右侧内容 */
 .profile-main {
   display: grid;
-  grid-template-columns: 220px 1fr;
+  grid-template-columns: 240px minmax(0, 1fr);
   gap: var(--spacing-lg);
   align-items: start;
 }
@@ -559,18 +563,36 @@ onMounted(() => {
 .profile-nav {
   position: sticky;
   top: calc(64px + var(--spacing-lg));
-  /* 让左侧菜单默认沾满屏幕高度（减去吸顶偏移与底部留白） */
-  height: calc(100vh - (64px + var(--spacing-lg)) - var(--spacing-lg));
-  display: flex;
+  display: block;
 }
 
 .nav-menu {
   border-radius: var(--radius-xl);
   border: 1px solid var(--border-color);
-  background: var(--bg-secondary);
+  border-right: none;
+  background: rgba(255, 255, 255, 0.92);
   overflow: hidden;
-  flex: 1;
-  height: 100%;
+  padding: 14px 10px;
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.06);
+}
+
+.nav-menu :deep(.el-menu) {
+  border-right: none;
+}
+
+.nav-menu :deep(.el-menu-item) {
+  height: 48px;
+  line-height: 48px;
+  border-radius: 14px;
+  margin-bottom: 8px;
+}
+
+.nav-menu :deep(.el-menu-item:last-child) {
+  margin-bottom: 0;
+}
+
+.nav-menu :deep(.el-menu-item.is-active) {
+  background: linear-gradient(135deg, rgba(96, 165, 250, 0.14), rgba(244, 114, 182, 0.12));
 }
 
 .profile-content {
@@ -579,44 +601,76 @@ onMounted(() => {
 
 .content-header {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: var(--spacing-md);
   flex-wrap: wrap;
 }
 
+.header-main {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.header-desc {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--text-tertiary);
+}
+
 .content-actions {
   display: flex;
+  justify-content: flex-end;
   align-items: center;
-  gap: var(--spacing-lg);
+  gap: 12px 16px;
   flex-wrap: wrap;
 }
 
 .status-radio {
   display: inline-flex;
   gap: var(--spacing-sm);
+  padding: 4px;
+  border-radius: 999px;
+  background: var(--bg-hover);
 }
 
 .status-radio :deep(.el-radio-button__inner) {
-  border-radius: var(--radius-md);
+  border-radius: 999px;
   padding-left: 14px;
   padding-right: 14px;
+  border: none;
+  box-shadow: none;
 }
 
 .search-row {
   display: inline-flex;
   align-items: center;
   gap: var(--spacing-sm);
+  flex-wrap: wrap;
 }
 
 .keyword-input {
-  width: 220px;
+  width: min(320px, 100%);
+}
+
+.article-total {
+  display: inline-flex;
+  align-items: center;
+  height: 36px;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: var(--bg-hover);
+  color: var(--text-secondary);
+  font-size: 13px;
 }
 
 .article-list {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-md);
+  gap: 18px;
 }
 
 /* 文章卡片与首页一致，由 ArticleCard compact 展示 */
@@ -629,8 +683,11 @@ onMounted(() => {
 
 .empty-state {
   text-align: center;
-  padding: var(--spacing-xl) 0;
+  padding: 72px 24px;
   color: var(--text-tertiary);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.75), rgba(248, 250, 252, 0.92));
+  border: 1px dashed var(--border-color);
+  border-radius: 20px;
 }
 
 .placeholder {
@@ -638,15 +695,24 @@ onMounted(() => {
   padding: var(--spacing-lg) 0;
 }
 
-@media (max-width: 900px) {
+@media (max-width: 1024px) {
   .profile-main {
     grid-template-columns: 1fr;
   }
+
   .profile-nav {
     position: static;
-    height: auto;
     display: block;
   }
+
+  .content-actions {
+    justify-content: flex-start;
+  }
+
+  .search-row {
+    width: 100%;
+  }
+
   .keyword-input {
     width: 100%;
   }
@@ -655,6 +721,7 @@ onMounted(() => {
 .info-card {
   border-radius: var(--radius-xl);
   border: 1px solid var(--border-color);
+  box-shadow: 0 18px 44px rgba(15, 23, 42, 0.06);
 
   :deep(.el-card__header) {
     padding: var(--spacing-md) var(--spacing-lg);

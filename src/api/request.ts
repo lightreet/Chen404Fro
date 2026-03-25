@@ -4,6 +4,10 @@ import axios, { type AxiosInstance, type AxiosRequestConfig, type AxiosResponse 
 import { ElMessage } from 'element-plus';
 import { refreshToken as refreshTokenApi } from './auth';
 
+export interface RequestConfig extends AxiosRequestConfig {
+  suppressErrorMessage?: boolean;
+}
+
 // 创建 axios 实例
 const request: AxiosInstance = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL || '/api',
@@ -19,6 +23,10 @@ let refreshWaiters: Array<(token: string) => void> = [];
 function notifyRefreshWaiters(token: string) {
   refreshWaiters.forEach((cb) => cb(token));
   refreshWaiters = [];
+}
+
+function shouldSuppressError(config?: AxiosRequestConfig) {
+  return Boolean((config as RequestConfig | undefined)?.suppressErrorMessage);
 }
 
 // 请求拦截器
@@ -43,7 +51,9 @@ request.interceptors.response.use(
 
     // 如果后端返回的状态码不是 200，视为错误
     if (code !== 200) {
-      ElMessage.error(message || '请求失败');
+      if (!shouldSuppressError(response.config)) {
+        ElMessage.error(message || '请求失败');
+      }
       return Promise.reject(new Error(message));
     }
 
@@ -59,13 +69,15 @@ request.interceptors.response.use(
         case 401:
           // 先尝试使用 refreshToken 静默续期，再失败才跳转登录
           return (async () => {
-            const originalConfig: AxiosRequestConfig & { _retry?: boolean } = error.config || {};
+            const originalConfig: RequestConfig & { _retry?: boolean } = error.config || {};
             const refreshToken = localStorage.getItem('refreshToken') || '';
             const reqUrl = String(originalConfig.url || '');
 
             // refresh 接口本身 / 或没有 refreshToken / 或已重试过 -> 直接跳登录
             if (originalConfig._retry || !refreshToken || reqUrl.includes('/auth/refresh')) {
-              ElMessage.error('未授权，请重新登录');
+              if (!shouldSuppressError(originalConfig)) {
+                ElMessage.error('未授权，请重新登录');
+              }
               localStorage.removeItem('token');
               localStorage.removeItem('refreshToken');
               const redirect = encodeURIComponent(window.location.pathname + window.location.search);
@@ -81,7 +93,9 @@ request.interceptors.response.use(
                 refreshWaiters.push(resolve);
               });
               if (!newToken) {
-                ElMessage.error('登录已过期，请重新登录');
+                if (!shouldSuppressError(originalConfig)) {
+                  ElMessage.error('登录已过期，请重新登录');
+                }
                 localStorage.removeItem('token');
                 localStorage.removeItem('refreshToken');
                 const redirect = encodeURIComponent(window.location.pathname + window.location.search);
@@ -108,7 +122,9 @@ request.interceptors.response.use(
               return request(originalConfig);
             } catch (e) {
               notifyRefreshWaiters('');
-              ElMessage.error('登录已过期，请重新登录');
+              if (!shouldSuppressError(originalConfig)) {
+                ElMessage.error('登录已过期，请重新登录');
+              }
               localStorage.removeItem('token');
               localStorage.removeItem('refreshToken');
               const redirect = encodeURIComponent(window.location.pathname + window.location.search);
@@ -119,19 +135,29 @@ request.interceptors.response.use(
             }
           })();
         case 403:
-          ElMessage.error('拒绝访问');
+          if (!shouldSuppressError(error.config)) {
+            ElMessage.error('拒绝访问');
+          }
           break;
         case 404:
-          ElMessage.error('请求的资源不存在');
+          if (!shouldSuppressError(error.config)) {
+            ElMessage.error('请求的资源不存在');
+          }
           break;
         case 500:
-          ElMessage.error('服务器内部错误');
+          if (!shouldSuppressError(error.config)) {
+            ElMessage.error('服务器内部错误');
+          }
           break;
         default:
-          ElMessage.error(data?.message || '网络错误');
+          if (!shouldSuppressError(error.config)) {
+            ElMessage.error(data?.message || '网络错误');
+          }
       }
     } else {
-      ElMessage.error('网络连接失败');
+      if (!shouldSuppressError(error.config)) {
+        ElMessage.error('网络连接失败');
+      }
     }
 
     return Promise.reject(error);
@@ -139,23 +165,23 @@ request.interceptors.response.use(
 );
 
 // 封装 GET 请求
-export function get<T>(url: string, params?: object): Promise<T> {
-  return request.get(url, { params }) as Promise<T>;
+export function get<T>(url: string, params?: object, config?: RequestConfig): Promise<T> {
+  return request.get(url, { ...config, params }) as Promise<T>;
 }
 
 // 封装 POST 请求
-export function post<T>(url: string, data?: object): Promise<T> {
-  return request.post(url, data) as Promise<T>;
+export function post<T>(url: string, data?: object, config?: RequestConfig): Promise<T> {
+  return request.post(url, data, config) as Promise<T>;
 }
 
 // 封装 PUT 请求
-export function put<T>(url: string, data?: object): Promise<T> {
-  return request.put(url, data) as Promise<T>;
+export function put<T>(url: string, data?: object, config?: RequestConfig): Promise<T> {
+  return request.put(url, data, config) as Promise<T>;
 }
 
 // 封装 DELETE 请求
-export function del<T>(url: string): Promise<T> {
-  return request.delete(url) as Promise<T>;
+export function del<T>(url: string, config?: RequestConfig): Promise<T> {
+  return request.delete(url, config) as Promise<T>;
 }
 
 export default request;
