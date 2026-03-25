@@ -1,199 +1,240 @@
 <template>
   <DefaultLayout>
     <div class="profile-page">
-      <!-- 顶部信息卡：二次元柔和渐变 + 装饰圆 -->
-      <div class="profile-banner">
-        <div class="banner-decoration">
-          <div class="circle circle-1"></div>
-          <div class="circle circle-2"></div>
-          <div class="circle circle-3"></div>
-        </div>
-        <div class="banner-content">
-          <el-avatar :size="96" :src="user?.avatar" class="profile-avatar">
-            {{ (user?.nickname || user?.username || 'U').charAt(0) }}
-          </el-avatar>
-          <h1 class="profile-nickname">{{ user?.nickname || user?.username || '—' }}</h1>
-          <p class="profile-username">@{{ user?.username || '—' }}</p>
-          <p class="profile-subtitle">欢迎回来 ~</p>
-        </div>
-      </div>
-
-      <!-- 下方卡片区 -->
-      <div class="profile-main">
-        <!-- 左侧菜单 -->
-        <aside class="profile-nav">
-          <el-menu
-            :default-active="activeMenu"
-            class="nav-menu"
-            @select="handleMenuSelect"
-          >
-            <el-menu-item index="articles">
-              <el-icon><Document /></el-icon>
-              <span>我的文章</span>
-            </el-menu-item>
-            <el-menu-item index="favorites">
-              <el-icon><Star /></el-icon>
-              <span>收藏</span>
-            </el-menu-item>
-            <el-menu-item index="settings">
-              <el-icon><User /></el-icon>
-              <span>个人信息</span>
-            </el-menu-item>
-          </el-menu>
-        </aside>
-
-        <!-- 右侧内容区 -->
-        <section class="profile-content">
-          <!-- 我的文章 -->
-          <div v-if="activeMenu === 'articles'" class="article-panel">
-            <el-card class="info-card" shadow="never">
-              <template #header>
-                <div class="content-header">
-                  <div class="header-main">
-                    <span class="card-title">
-                      <el-icon class="card-icon"><Document /></el-icon>
-                      我的文章
-                    </span>
-                    <p class="header-desc">统一管理草稿与已发布文章，支持快速筛选与搜索。</p>
-                  </div>
-                  <div class="content-actions">
-                    <el-radio-group v-model="articleStatus" size="default" class="status-radio" @change="loadMyArticles(1)">
-                      <el-radio-button :label="-1">全部</el-radio-button>
-                      <el-radio-button :label="0">草稿</el-radio-button>
-                      <el-radio-button :label="1">已发布</el-radio-button>
-                    </el-radio-group>
-                    <div class="search-row">
-                      <el-input
-                        v-model="articleKeyword"
-                        placeholder="搜索标题/摘要"
-                        clearable
-                        class="keyword-input"
-                        @keyup.enter="loadMyArticles(1)"
-                      />
-                      <el-button type="primary" @click="loadMyArticles(1)">
-                        <el-icon><Search /></el-icon>
-                        搜索
-                      </el-button>
-                    </div>
-                    <span class="article-total">共 {{ articleTotal }} 篇</span>
-                  </div>
+      <div class="profile-center">
+        <!-- 顶部用户信息卡（参考 boxmoe.com/user 的“个人中心头部”样式） -->
+        <div class="profile-banner">
+          <div class="banner-decoration">
+            <div class="circle circle-1" />
+            <div class="circle circle-2" />
+            <div class="circle circle-3" />
+          </div>
+          <div class="banner-content">
+            <div class="banner-inline">
+              <el-avatar :size="74" :src="user?.avatar || ''" class="profile-avatar">
+                {{ String(user?.nickname || user?.username || 'U').charAt(0) }}
+              </el-avatar>
+              <div class="banner-text">
+                <div class="profile-nickname">
+                  {{ user?.nickname || user?.username || '未登录' }}
                 </div>
-              </template>
+                <div class="profile-username">账号：@{{ user?.username || '—' }}</div>
+                <div class="profile-subtitle">{{ roleText }}</div>
+              </div>
+            </div>
+          </div>
+        </div>
 
-              <el-skeleton v-if="articleLoading" :rows="6" animated />
+        <!-- 下方卡片区 -->
+        <div class="profile-main">
+          <div class="profile-split-scroll-box">
+          <!-- 左侧菜单 -->
+          <aside class="profile-nav">
+            <el-menu
+              :default-active="activeMenu"
+              class="nav-menu"
+              @select="handleMenuSelect"
+            >
+              <el-menu-item index="articles">
+                <el-icon><Document /></el-icon>
+                <span>我的文章</span>
+              </el-menu-item>
+              <el-menu-item index="favorites">
+                <el-icon><Star /></el-icon>
+                <span>收藏</span>
+              </el-menu-item>
+              <el-menu-item index="settings">
+                <el-icon><User /></el-icon>
+                <span>个人信息</span>
+              </el-menu-item>
+            </el-menu>
+          </aside>
 
-              <div v-else class="article-list">
-                <div v-if="myArticles.length === 0" class="empty-state">
+          <!-- 右侧内容区 -->
+          <section class="profile-content">
+            <!-- 我的文章 -->
+            <div v-if="activeMenu === 'articles'" class="article-panel">
+              <el-card class="info-card article-list-card" shadow="never">
+                <template #header>
+                  <div class="content-header">
+                    <div class="header-main">
+                      <div class="header-heading">
+                        <span class="card-title">
+                          <el-icon class="card-icon"><Document /></el-icon>
+                          我的文章
+                        </span>
+                        <span class="article-total">共 {{ articleTotal }} 篇</span>
+                      </div>
+                    </div>
+                    <div class="content-actions">
+                      <el-radio-group v-model="articleStatus" size="default" class="status-radio" @change="loadMyArticles(1)">
+                        <el-radio-button :label="-1">全部</el-radio-button>
+                        <el-radio-button :label="0">草稿</el-radio-button>
+                        <el-radio-button :label="1">已发布</el-radio-button>
+                      </el-radio-group>
+                      <div class="search-row">
+                        <el-input
+                          v-model="articleKeyword"
+                          placeholder="搜索标题/摘要"
+                          clearable
+                          class="keyword-input"
+                          @keyup.enter="loadMyArticles(1)"
+                        />
+                        <el-button type="primary" @click="loadMyArticles(1)">
+                          <el-icon><Search /></el-icon>
+                          搜索
+                        </el-button>
+                      </div>
+                    </div>
+                  </div>
+                </template>
+
+                <el-skeleton v-if="articleLoading" :rows="6" animated />
+
+                <div v-else-if="myArticles.length === 0" class="empty-state">
                   暂无文章
                 </div>
 
-                <ArticleCard
-                  v-for="(a, idx) in myArticles"
-                  :key="String(a.id)"
-                  :article="a"
-                  :index="idx"
-                  mode="manage"
-                  compact
-                  @edit="handleEditArticle"
-                  @delete="handleDeleteArticle"
-                />
+                <div v-else class="article-list-shell">
+                  <div class="article-scroll-area">
+                    <div class="article-list">
+                      <ArticleCard
+                        v-for="(a, idx) in myArticles"
+                        :key="String(a.id)"
+                        :article="a"
+                        :index="idx"
+                        mode="manage"
+                        compact
+                        @edit="handleEditArticle"
+                        @delete="handleDeleteArticle"
+                      />
+                    </div>
+                  </div>
 
-                <div class="pager">
-                  <el-pagination
-                    background
-                    layout="prev, pager, next"
-                    :current-page="articlePage"
-                    :page-size="articlePageSize"
-                    :total="articleTotal"
-                    @current-change="loadMyArticles"
-                  />
+                  <div class="pager">
+                    <el-pagination
+                      background
+                      layout="prev, pager, next"
+                      :current-page="articlePage"
+                      :page-size="articlePageSize"
+                      :total="articleTotal"
+                      @current-change="loadMyArticles"
+                    />
+                  </div>
                 </div>
-              </div>
-            </el-card>
-          </div>
+              </el-card>
+            </div>
 
-          <!-- 个人信息：头像、昵称、修改密码等统一在此修改 -->
-          <div v-else-if="activeMenu === 'settings'">
-            <el-card ref="profileEditCardRef" class="info-card" shadow="never">
+            <!-- 收藏（当前后端尚未提供收藏接口，这里先做“对齐样式/预留入口”） -->
+            <div v-else-if="activeMenu === 'favorites'" class="article-panel">
+              <el-card class="info-card" shadow="never">
+                <template #header>
+                  <span class="card-title">
+                    <el-icon class="card-icon"><Star /></el-icon>
+                    我的收藏
+                  </span>
+                </template>
+
+                <div class="empty-state">
+                  暂无收藏内容（当前项目收藏接口尚未接入）。
+                </div>
+
+                <div class="placeholder">
+                  你可以在文章页使用“收藏/点赞”（如果已实现）后续扩展这里。
+                </div>
+              </el-card>
+            </div>
+
+            <!-- 个人信息：头像、昵称、修改密码等统一在此修改 -->
+            <div v-else-if="activeMenu === 'settings'">
+              <el-card class="info-card" shadow="never">
+                <template #header>
+                  <span class="card-title">
+                    <el-icon class="card-icon"><User /></el-icon>
+                    个人信息
+                  </span>
+                </template>
+                <div v-if="user" class="profile-edit">
+                  <el-form
+                    ref="profileFormRef"
+                    :model="profileForm"
+                    :rules="profileRules"
+                    label-position="top"
+                    class="profile-form"
+                  >
+                    <el-form-item label="头像" prop="avatar">
+                      <div class="avatar-edit-row">
+                        <el-avatar :size="80" :src="profileForm.avatar" class="form-avatar">
+                          {{ (user?.nickname || user?.username || 'U').charAt(0) }}
+                        </el-avatar>
+                        <el-upload
+                          :show-file-list="false"
+                          :before-upload="beforeAvatarUpload"
+                          :http-request="handleAvatarUpload"
+                          class="avatar-upload-inline"
+                        >
+                          <el-button type="primary" size="default">
+                            <el-icon class="btn-icon"><Upload /></el-icon>
+                            更新头像
+                          </el-button>
+                        </el-upload>
+                      </div>
+                    </el-form-item>
+
+                    <el-form-item label="昵称" prop="nickname">
+                      <el-input v-model="profileForm.nickname" maxlength="20" show-word-limit placeholder="请输入昵称" />
+                    </el-form-item>
+
+                    <div class="profile-form-actions">
+                      <el-button
+                        type="primary"
+                        :loading="profileSaving"
+                        @click="handleSaveProfile"
+                      >
+                        保存资料
+                      </el-button>
+                      <el-button @click="resetProfileForm">重置</el-button>
+                      <el-button @click="openPasswordDialog">
+                        <el-icon><Lock /></el-icon>
+                        修改密码
+                      </el-button>
+                    </div>
+                  </el-form>
+
+                  <el-divider />
+
+                  <el-descriptions :column="2" border class="profile-desc">
+                    <el-descriptions-item label="昵称">{{ user.nickname || user.username }}</el-descriptions-item>
+                    <el-descriptions-item label="用户名">{{ user.username }}</el-descriptions-item>
+                    <el-descriptions-item label="简介">{{ user.bio || '—' }}</el-descriptions-item>
+                    <el-descriptions-item label="邮箱">{{ user.email || '未绑定' }}</el-descriptions-item>
+                    <el-descriptions-item label="手机">{{ user.phone || '未绑定' }}</el-descriptions-item>
+                    <el-descriptions-item label="状态">{{ user.status === 1 ? '启用' : '禁用' }}</el-descriptions-item>
+                    <el-descriptions-item label="角色">{{ user.role === UserRole.ADMIN ? '管理员' : '普通用户' }}</el-descriptions-item>
+                    <el-descriptions-item label="注册时间">{{ formatDate(user.createTime ?? '') || '—' }}</el-descriptions-item>
+                    <el-descriptions-item label="最后登录">{{ formatDateTime(user.lastLoginTime ?? '') || '—' }}</el-descriptions-item>
+                    <el-descriptions-item label="最后登录 IP">{{ user.lastLoginIp || '—' }}</el-descriptions-item>
+                  </el-descriptions>
+                </div>
+                <el-skeleton v-else :rows="6" animated />
+              </el-card>
+            </div>
+
+            <!-- 其他菜单占位 -->
+            <el-card v-else class="info-card" shadow="never">
               <template #header>
                 <span class="card-title">
-                  <el-icon class="card-icon"><User /></el-icon>
-                  个人信息
+                  <el-icon class="card-icon"><Link /></el-icon>
+                  功能开发中
                 </span>
               </template>
-              <div v-if="user" class="profile-edit">
-                <el-form
-                  ref="profileFormRef"
-                  :model="profileForm"
-                  :rules="profileRules"
-                  label-position="top"
-                  class="profile-form"
-                >
-                  <el-form-item label="头像" prop="avatar">
-                    <div class="avatar-edit-row">
-                      <el-avatar :size="80" :src="profileForm.avatar" class="form-avatar">
-                        {{ (user?.nickname || user?.username || 'U').charAt(0) }}
-                      </el-avatar>
-                      <el-upload
-                        :show-file-list="false"
-                        :before-upload="beforeAvatarUpload"
-                        :http-request="handleAvatarUpload"
-                        class="avatar-upload-inline"
-                      >
-                        <el-button type="primary" size="default">
-                          <el-icon class="btn-icon"><Upload /></el-icon>
-                          更新头像
-                        </el-button>
-                      </el-upload>
-                    </div>
-                  </el-form-item>
-
-                  <el-form-item label="昵称" prop="nickname">
-                    <el-input v-model="profileForm.nickname" maxlength="20" show-word-limit placeholder="请输入昵称" />
-                  </el-form-item>
-
-                  <div class="profile-form-actions">
-                    <el-button
-                      type="primary"
-                      :loading="profileSaving"
-                      @click="handleSaveProfile"
-                    >
-                      保存资料
-                    </el-button>
-                    <el-button @click="resetProfileForm">重置</el-button>
-                    <el-button @click="openPasswordDialog">
-                      <el-icon><Lock /></el-icon>
-                      修改密码
-                    </el-button>
-                  </div>
-                </el-form>
-
-                <el-divider />
-
-                <el-descriptions :column="2" border class="profile-desc">
-                  <el-descriptions-item label="用户名">{{ user.username }}</el-descriptions-item>
-                  <el-descriptions-item label="邮箱">{{ user.email || '未绑定' }}</el-descriptions-item>
-                  <el-descriptions-item label="状态">{{ user.status === 1 ? '启用' : '禁用' }}</el-descriptions-item>
-                  <el-descriptions-item label="注册时间">{{ formatDate(user.createTime ?? '') || '—' }}</el-descriptions-item>
-                </el-descriptions>
+              <div class="placeholder">
+                该功能正在建设中，敬请期待。
               </div>
-              <el-skeleton v-else :rows="6" animated />
             </el-card>
+          </section>
           </div>
-
-          <!-- 其他菜单占位 -->
-          <el-card v-else class="info-card" shadow="never">
-            <template #header>
-              <span class="card-title">
-                <el-icon class="card-icon"><Link /></el-icon>
-                功能开发中
-              </span>
-            </template>
-            <div class="placeholder">
-              该功能正在建设中，敬请期待。
-            </div>
-          </el-card>
-        </section>
+        </div>
       </div>
     </div>
 
@@ -253,13 +294,13 @@
 import { ref, reactive, computed, onMounted, nextTick } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import type { FormInstance, FormRules } from 'element-plus';
-import { User, Lock, Link, EditPen, HomeFilled, Document, Star, Upload, Search } from '@element-plus/icons-vue';
-import { useRouter } from 'vue-router';
+import { User, Lock, Link, Document, Star, Upload, Search } from '@element-plus/icons-vue';
+import { useRoute, useRouter } from 'vue-router';
 import DefaultLayout from '@/layouts/DefaultLayout.vue';
 import { useUserStore } from '@/stores/user';
 import { getUserInfo, changePassword, updateProfile } from '@/api/auth';
 import { uploadAvatar } from '@/api/upload';
-import { formatDate } from '@/utils/format';
+import { formatDate, formatDateTime } from '@/utils/format';
 import { createConfirmPasswordRule, validateImageFile, AVATAR_MAX_MB } from '@/utils/validation';
 import { getMyArticles, deleteArticle } from '@/api/article';
 import ArticleCard from '@/components/ArticleCard/ArticleCard.vue';
@@ -267,11 +308,16 @@ import { UserRole } from '@/types';
 
 const userStore = useUserStore();
 const router = useRouter();
+const route = useRoute();
 const user = ref(userStore.user);
 
 const activeMenu = ref<'articles' | 'favorites' | 'settings'>('articles');
 
-const profileEditCardRef = ref();
+const roleText = computed(() => {
+  if (!user.value) return '—';
+  return user.value.role === UserRole.ADMIN ? '管理员' : '普通用户';
+});
+
 const profileFormRef = ref<FormInstance>();
 const profileSaving = ref(false);
 const profileForm = reactive({
@@ -324,6 +370,13 @@ const handleMenuSelect = (index: string) => {
   if (activeMenu.value === 'articles') {
     loadMyArticles(1);
   }
+};
+
+const syncActiveMenuFromRoute = () => {
+  const tab = route.query.tab;
+  const nextTab =
+    tab === 'articles' || tab === 'favorites' || tab === 'settings' ? tab : undefined;
+  if (nextTab) activeMenu.value = nextTab;
 };
 
 const resetProfileForm = () => {
@@ -461,8 +514,9 @@ onMounted(() => {
     profileForm.nickname = userStore.user.nickname || userStore.user.username;
     profileForm.avatar = userStore.user.avatar || '';
   }
+  syncActiveMenuFromRoute();
   loadUser();
-  loadMyArticles(1);
+  if (activeMenu.value === 'articles') loadMyArticles(1);
 });
 </script>
 
@@ -470,6 +524,16 @@ onMounted(() => {
 .profile-page {
   padding-top: calc(64px + var(--spacing-lg));
   padding-bottom: var(--spacing-xl);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.profile-center {
+  /* Large-desktop content width; right column grows via flex; nav stays 240px */
+  width: clamp(920px, 88vw, 1440px);
+  max-width: 100%;
+  min-width: 0;
 }
 
 /* 顶部信息卡：与登录页一致的二次元渐变 + 装饰 */
@@ -477,7 +541,7 @@ onMounted(() => {
   position: relative;
   background: linear-gradient(135deg, var(--primary), var(--primary-light));
   border-radius: var(--radius-xl);
-  padding: var(--spacing-xl);
+  padding: var(--spacing-lg);
   margin-bottom: var(--spacing-lg);
   overflow: hidden;
   color: white;
@@ -500,70 +564,93 @@ onMounted(() => {
 }
 
 .circle-1 {
-  width: 160px;
-  height: 160px;
-  top: -40px;
-  right: -40px;
+  width: 120px;
+  height: 120px;
+  top: -30px;
+  right: -30px;
 }
 
 .circle-2 {
-  width: 100px;
-  height: 100px;
-  bottom: 60px;
-  left: -30px;
+  width: 80px;
+  height: 80px;
+  bottom: 52px;
+  left: -20px;
 }
 
 .circle-3 {
-  width: 60px;
-  height: 60px;
-  bottom: -10px;
-  right: 80px;
+  width: 42px;
+  height: 42px;
+  bottom: -8px;
+  right: 64px;
   background: rgba(255, 255, 255, 0.15);
 }
 
 .banner-content {
   position: relative;
   z-index: 1;
-  text-align: center;
+  width: 100%;
+}
+
+.banner-inline {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.banner-text {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
 }
 
 .profile-avatar {
   border: 4px solid rgba(255, 255, 255, 0.5);
   background: rgba(255, 255, 255, 0.2);
-  font-size: 36px;
-  margin-bottom: var(--spacing-md);
+  font-size: 28px;
+  margin: 0;
 }
 
 .profile-nickname {
-  font-size: 24px;
+  font-size: 20px;
   font-weight: 600;
   margin: 0 0 var(--spacing-xs);
 }
 
 .profile-username {
-  font-size: 14px;
+  font-size: 13px;
   opacity: 0.9;
   margin: 0 0 var(--spacing-sm);
 }
 
 .profile-subtitle {
-  font-size: 14px;
+  font-size: 13px;
   opacity: 0.85;
   margin: 0;
 }
 
 /* 下方主体区：左侧菜单 + 右侧内容 */
 .profile-main {
-  display: grid;
-  grid-template-columns: 240px minmax(0, 1fr);
+  min-width: 0;
+}
+
+.profile-split-scroll-box {
+  display: flex;
   gap: var(--spacing-lg);
-  align-items: start;
+  align-items: stretch;
+  overflow-y: auto;
+  max-height: calc(100vh - 210px);
+  padding-right: 0;
+  min-height: 0;
 }
 
 .profile-nav {
-  position: sticky;
-  top: calc(64px + var(--spacing-lg));
+  position: static;
   display: block;
+  min-height: 0;
+  flex: 0 0 240px;
+  width: 240px;
+  min-width: 240px;
 }
 
 .nav-menu {
@@ -572,6 +659,7 @@ onMounted(() => {
   border-right: none;
   background: rgba(255, 255, 255, 0.92);
   overflow: hidden;
+  min-height: 100%;
   padding: 14px 10px;
   box-shadow: 0 18px 40px rgba(15, 23, 42, 0.06);
 }
@@ -597,21 +685,41 @@ onMounted(() => {
 
 .profile-content {
   min-width: 0;
+  min-height: 0;
+  flex: 1;
+}
+
+.article-panel {
+  min-width: 0;
+  padding: 0 16px;
+}
+
+@media (min-width: 901px) {
+  .article-panel {
+    padding-left: 6px;
+    padding-right: 4px;
+  }
 }
 
 .content-header {
   display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: var(--spacing-md);
-  flex-wrap: wrap;
+  flex-direction: column;
+  gap: 14px;
 }
 
 .header-main {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 0;
   min-width: 0;
+}
+
+.header-heading {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 16px;
+  flex-wrap: wrap;
 }
 
 .header-desc {
@@ -619,13 +727,14 @@ onMounted(() => {
   font-size: 13px;
   line-height: 1.6;
   color: var(--text-tertiary);
+  max-width: 560px;
 }
 
 .content-actions {
   display: flex;
-  justify-content: flex-end;
+  justify-content: flex-start;
   align-items: center;
-  gap: 12px 16px;
+  gap: 12px 18px;
   flex-wrap: wrap;
 }
 
@@ -646,14 +755,15 @@ onMounted(() => {
 }
 
 .search-row {
-  display: inline-flex;
+  display: flex;
   align-items: center;
   gap: var(--spacing-sm);
-  flex-wrap: wrap;
+  justify-content: flex-start;
+  min-width: 0;
 }
 
 .keyword-input {
-  width: min(320px, 100%);
+  width: min(340px, 100%);
 }
 
 .article-total {
@@ -670,7 +780,22 @@ onMounted(() => {
 .article-list {
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: 14px;
+  padding: 0 6px;
+}
+
+.article-list-shell {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  gap: 14px;
+}
+
+.article-scroll-area {
+  min-height: 0;
+  max-height: none;
+  overflow: visible;
+  padding-right: 0;
 }
 
 /* 文章卡片与首页一致，由 ArticleCard compact 展示 */
@@ -678,7 +803,7 @@ onMounted(() => {
 .pager {
   display: flex;
   justify-content: center;
-  margin-top: var(--spacing-md);
+  padding-top: 4px;
 }
 
 .empty-state {
@@ -695,26 +820,48 @@ onMounted(() => {
   padding: var(--spacing-lg) 0;
 }
 
-@media (max-width: 1024px) {
-  .profile-main {
-    grid-template-columns: 1fr;
+@media (max-width: 900px) {
+  .profile-center {
+    width: 100%;
+  }
+
+  .profile-split-scroll-box {
+    flex-direction: column;
+    max-height: none;
+    overflow: visible;
+    padding-right: 0;
   }
 
   .profile-nav {
     position: static;
     display: block;
+    flex: none;
+    width: auto;
+    min-width: 0;
   }
 
   .content-actions {
     justify-content: flex-start;
   }
 
+  .header-heading {
+    align-items: flex-start;
+  }
+
   .search-row {
     width: 100%;
+    min-width: 0;
+    justify-content: flex-start;
   }
 
   .keyword-input {
     width: 100%;
+  }
+
+  .article-scroll-area {
+    max-height: none;
+    overflow: visible;
+    padding-right: 0;
   }
 }
 
@@ -731,6 +878,29 @@ onMounted(() => {
 
   :deep(.el-card__body) {
     padding: var(--spacing-lg);
+  }
+}
+
+.article-list-card {
+  overflow: hidden;
+
+  :deep(.el-card__body) {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+}
+
+/* After .info-card so horizontal padding wins on desktop only */
+@media (min-width: 901px) {
+  .profile-content :deep(.info-card .el-card__body) {
+    padding-left: var(--spacing-md);
+    padding-right: var(--spacing-md);
+  }
+
+  .profile-content :deep(.info-card .el-card__header) {
+    padding-left: var(--spacing-md);
+    padding-right: var(--spacing-md);
   }
 }
 

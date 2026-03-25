@@ -180,7 +180,7 @@ const authorName = computed(() => {
 
   &.no-cover {
     .card-content {
-      min-height: 210px;
+      min-height: 150px;
       background: linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(248, 250, 252, 0.92));
     }
   }
@@ -254,41 +254,41 @@ const authorName = computed(() => {
   box-shadow: 0 18px 36px rgba(15, 23, 42, 0.06);
 
   .card-content {
-    padding: 22px 24px;
+    padding: 12px 14px;
   }
 
   .article-meta {
-    gap: 8px;
-    margin-bottom: 10px;
+    gap: 6px;
+    margin-bottom: 6px;
   }
 
   .article-title {
-    font-size: 20px;
-    margin-bottom: 12px;
+    font-size: 15px;
+    margin-bottom: 5px;
   }
 
   .article-stats {
-    gap: 10px 14px;
+    gap: 6px 10px;
     flex-wrap: wrap;
-    margin-bottom: 12px;
+    margin-bottom: 5px;
   }
 
   .article-summary {
-    font-size: 14px;
-    line-height: 1.75;
-    margin-bottom: 14px;
-    -webkit-line-clamp: 3;
+    font-size: 13px;
+    line-height: 1.65;
+    margin-bottom: 7px;
+    -webkit-line-clamp: 2;
   }
 
   .article-tags {
-    margin-bottom: 14px;
+    margin-bottom: 7px;
   }
 
   .article-action {
     display: flex;
     align-items: center;
     gap: 4px;
-    padding-top: 12px;
+    padding-top: 6px;
     border-top: 1px dashed var(--border-light);
   }
 
@@ -297,8 +297,8 @@ const authorName = computed(() => {
   }
 
   .card-image {
-    width: 250px;
-    min-height: 210px;
+    width: 180px;
+    min-height: 150px;
     border-radius: 0;
     background: var(--bg-hover);
 
@@ -500,7 +500,7 @@ const authorName = computed(() => {
 }
 
 // 响应式
-@media (max-width: 1024px) {
+@media (max-width: 900px) {
   .article-card {
     flex-direction: column !important;
 
@@ -518,7 +518,7 @@ const authorName = computed(() => {
   .article-card.compact.manage-mode {
     .card-image {
       width: 100%;
-      min-height: 190px;
+      min-height: 150px;
       border-radius: 0 !important;
     }
   }

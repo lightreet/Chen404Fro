@@ -30,9 +30,12 @@ export interface User {
   email?: string;
   phone?: string;
   avatar: string;
+  bio?: string;
   role: UserRole;
   status: UserStatus;
   createTime: string;
+  lastLoginTime?: string;
+  lastLoginIp?: string;
 }
 
 export enum UserRole {

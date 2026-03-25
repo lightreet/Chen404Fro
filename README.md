@@ -1,24 +1,24 @@
 # Chen404 博客系统 - 前端
 
-基于 Vue 3 + Vite + TypeScript 的个人博客前端，风格参考 2heng.xin，清新动漫风、樱花粉主题。
+基于 Vue 3 + Vite + TypeScript 的个人博客前端。当前版本以首页文章流、文章详情/编辑、个人中心、基础后台管理以及动漫风视觉效果为主，整体采用樱花粉主题、Live2D 与自定义樱花动画。
 
 ## 技术栈
 
 | 类别 | 技术 |
-|------|------|
-| 框架 | Vue 3、Vite 8、TypeScript |
+| ------ | ------ |
+| 框架 | Vue 3、Vite 8、TypeScript 5 |
 | 路由与状态 | Vue Router 4、Pinia |
-| UI 组件库 | Element Plus、Sass |
-| HTTP 请求 | Axios |
+| UI 与样式 | Element Plus、Sass、UnoCSS |
+| HTTP | Axios |
 | Markdown 编辑 | md-editor-v3 |
 | 其他 | dayjs、@element-plus/icons-vue |
 
-## 快速开始
-
-### 环境要求
+## 环境要求
 
 - Node.js 18+
-- npm 或 yarn
+- npm
+
+## 快速开始
 
 ### 安装依赖
 
@@ -26,119 +26,143 @@
 npm install
 ```
 
-### 开发运行
+### 本地开发
 
 ```bash
 npm run dev
 ```
 
-访问 http://localhost:5173
+默认访问：
 
-### 构建部署
+- `http://localhost:5173`
+
+### 构建预览
 
 ```bash
 npm run build
 npm run preview
 ```
 
-## 项目结构
+`npm run build` 会先执行 `vue-tsc -b`，再执行 Vite 构建。
 
-```
-Chen404Fro/
-├── public/                  # 静态资源
-│   └── live2d/             # Live2D 模型文件
-├── src/
-│   ├── api/                # API 接口封装
-│   │   ├── auth.ts         # 认证接口
-│   │   ├── article.ts      # 文章接口
-│   │   ├── home.ts         # 首页接口
-│   │   └── ...
-│   ├── assets/             # 静态资源
-│   │   ├── images/
-│   │   └── styles/         # 全局样式
-│   │       ├── global.scss
-│   │       └── variables.scss
-│   ├── components/         # 公共组件
-│   │   ├── Header/         # 顶部导航
-│   │   ├── Footer/         # 页脚
-│   │   ├── ArticleCard/    # 文章卡片
-│   │   ├── Sidebar/        # 侧边栏
-│   │   ├── Comment/        # 评论组件
-│   │   └── Live2D/         # 看板娘
-│   ├── layouts/            # 布局组件
-│   │   └── DefaultLayout.vue
-│   ├── router/             # 路由配置
-│   │   └── index.ts
-│   ├── stores/             # Pinia 状态管理
-│   │   ├── app.ts          # 应用状态
-│   │   ├── user.ts         # 用户状态
-│   │   └── article.ts      # 文章状态
-│   ├── types/              # TypeScript 类型
-│   ├── utils/              # 工具函数
-│   │   ├── request.ts      # Axios 封装
-│   │   └── format.ts       # 格式化工具
-│   ├── views/              # 页面视图
-│   │   ├── Home/           # 首页
-│   │   ├── Article/        # 文章详情、编辑
-│   │   ├── Archive/        # 归档页
-│   │   ├── Category/       # 分类页
-│   │   ├── Tag/            # 标签页
-│   │   ├── Guestbook/      # 留言板
-│   │   ├── Friends/        # 友人帐
-│   │   ├── About/          # 关于页
-│   │   ├── Auth/           # 登录/注册
-│   │   └── NotFound/       # 404
-│   ├── App.vue
-│   └── main.ts
-├── doc/
-│   └── architecture.md     # 架构设计文档
-├── index.html
-├── vite.config.ts
-├── tsconfig.json
-└── package.json
-```
-
-## 页面路由
-
-| 路径 | 页面 | 说明 |
-|------|------|------|
-| `/` | 首页 | 文章流、Banner、站点统计 |
-| `/article/:id` | 文章详情 | Markdown 渲染、代码高亮、评论 |
-| `/article/edit/:id?` | 编写文章 | 需登录 |
-| `/archive` | 归档 | 按年月时间线 |
-| `/category/:id?` | 分类 | 分类及文章列表 |
-| `/tag/:id?` | 标签 | 标签及文章列表 |
-| `/guestbook` | 留言板 | 评论式留言 |
-| `/friends` | 友人帐 | 友链展示与申请 |
-| `/about` | 关于 | 关于本站 |
-| `/login` | 登录 | 账号/邮箱登录 |
-| `/register` | 注册 | 用户注册 |
-
-## 与后端对接
-
-- **Base URL**: 通过环境变量配置（默认 `/api`）
-- **认证**: JWT Token，存 localStorage，请求头 `Authorization: Bearer <token>`
-- **响应格式**: `{ code, message, data }`
-
-环境变量配置：
+## 环境变量
 
 ```bash
 # .env.development
-VITE_API_BASE_URL=/api
+VITE_API_BASE_URL=http://localhost:10404/api
 
 # .env.production
-VITE_API_BASE_URL=https://api.chen404.com/api
+VITE_API_BASE_URL=https://your-domain.com/api
 ```
+
+说明：
+
+- 当前仓库已提交的 `.env.development` / `.env.example` 默认直连 `http://localhost:10404/api`
+- 当前 `vite.config.ts` 未配置 `server.proxy`
+- 如果你希望开发环境走同源 `/api`，需要自行补充代理配置
+- 认证基于 JWT，前端会在 `localStorage` 中维护 `token`、`refreshToken`、`user`
+
+## 当前页面与路由
+
+| 路径 | 页面 | 说明 |
+| ------ | ------ | ------ |
+| `/` | 首页 | Hero、樱花动画、文章流 |
+| `/home` | 首页重定向 | 重定向到 `/` |
+| `/article/:id` | 文章详情 | 文章正文与上下篇 |
+| `/article/edit/:id?` | 编写文章 | 登录后可访问 |
+| `/archive` | 归档 | 当前包含部分静态/模拟数据逻辑 |
+| `/category` | 分类页 | 分类总览 |
+| `/category/:id` | 分类详情 | 分类下文章列表 |
+| `/tag` | 标签页 | 当前包含模拟数据逻辑 |
+| `/guestbook` | 留言板 | 当前页面为前端展示版本 |
+| `/friends` | 友人帐 | 当前页面为前端展示版本 |
+| `/about` | 关于页 | 站点介绍 |
+| `/login` | 登录 | 支持游客访问 |
+| `/register` | 注册 | 支持游客访问 |
+| `/profile` | 个人中心 | 登录后可访问 |
+| `/admin` | 后台管理 | 管理员可访问 |
+| `/:pathMatch(.*)*` | 404 | 未匹配路由 |
+
+## 当前目录结构
+
+```text
+Chen404Fro/
+├── public/
+│   └── live2d/                 # Live2D 模型资源
+├── src/
+│   ├── api/                    # 前端 API 封装
+│   │   ├── auth.ts
+│   │   ├── article.ts
+│   │   ├── index.ts
+│   │   ├── home.ts
+│   │   ├── upload.ts
+│   │   ├── comment.ts
+│   │   ├── friend.ts
+│   │   └── request.ts
+│   ├── assets/
+│   │   └── styles/             # 主题变量与全局样式
+│   ├── components/
+│   │   ├── ArticleCard/
+│   │   ├── Footer/
+│   │   ├── Header/
+│   │   ├── Live2D/
+│   │   └── SakuraOverlay/
+│   ├── layouts/
+│   │   └── DefaultLayout.vue
+│   ├── router/
+│   │   └── index.ts
+│   ├── stores/
+│   │   └── user.ts
+│   ├── types/
+│   │   └── index.ts
+│   ├── utils/
+│   │   ├── format.ts
+│   │   ├── mock.ts
+│   │   └── validation.ts
+│   └── views/
+│       ├── Home/
+│       ├── Article/
+│       ├── Archive/
+│       ├── Category/
+│       ├── Tag/
+│       ├── Guestbook/
+│       ├── Friends/
+│       ├── About/
+│       ├── Auth/
+│       ├── Profile/
+│       ├── Admin/
+│       └── NotFound/
+├── doc/
+│   └── architecture.md
+└── package.json
+```
+
+## 与后端对接状态
+
+### 已基本对接的模块
+
+- 认证：登录、注册、刷新令牌、用户信息、修改资料、修改密码
+- 文章：列表、详情、我的文章、创建、更新、删除、热门、推荐、点赞
+- 分类：列表、详情、创建、更新、删除
+- 标签：列表
+- 上传：图片、封面、头像、文件删除
+- 首页：聚合数据、Banner、站点配置
+
+### 需要注意的当前状态
+
+- `comment.ts`、`friend.ts`、部分 `home.ts` 中存在接口封装，但当前后端仓库里未看到完整对应控制器实现
+- `Guestbook`、`Friends`、`Tag`、`Archive` 等页面仍混合使用静态展示或模拟数据逻辑
+- 文档中所有说明均以当前代码为准，不代表所有设计目标都已落地
 
 ## 主要特性
 
-- **清新动漫风**: 樱花粉(#fb7299)主题色，二次元氛围
-- **Live2D 看板娘**: 左侧固定的交互式看板娘
-- **响应式布局**: 完美适配 PC、平板、手机
-- **明暗主题**: 支持亮色/暗色主题切换
-- **Markdown 编辑器**: 支持文章编写和代码高亮
-- **性能优化**: 路由懒加载、图片懒加载、代码分割
+- 动漫风首页 Hero、樱花动画与 Live2D 看板娘
+- 亮色 / 暗色主题切换
+- JWT + refresh token 静默续期
+- 个人中心与文章管理
+- 管理员后台入口
+- 文章编辑器与封面上传
 
 ## 文档
 
-- [架构设计](doc/architecture.md) - 详细架构设计说明
+- [架构设计](doc/architecture.md)
