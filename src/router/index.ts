@@ -1,6 +1,8 @@
 import { createRouter, createWebHistory } from 'vue-router';
 import type { RouteRecordRaw } from 'vue-router';
 import { ElMessage } from 'element-plus';
+import { isAdminUser } from '@/utils/permission';
+import type { User } from '@/types';
 
 const routes: RouteRecordRaw[] = [
   {
@@ -140,7 +142,7 @@ const routes: RouteRecordRaw[] = [
 const router = createRouter({
   history: createWebHistory(),
   routes,
-  scrollBehavior(to, from, savedPosition) {
+  scrollBehavior(_to, _from, savedPosition) {
     if (savedPosition) {
       return savedPosition;
     } else {
@@ -150,7 +152,7 @@ const router = createRouter({
 });
 
 // 路由守卫
-router.beforeEach((to, from, next) => {
+router.beforeEach((to, _from, next) => {
   // 设置页面标题
   const title = to.meta.title as string;
   if (title) {
@@ -170,18 +172,26 @@ router.beforeEach((to, from, next) => {
     }
   }
 
-  // 检查是否需要管理员权限（与 Header/Profile 的角色判定保持一致：role === 1）
+  if (to.meta.guest) {
+    const token = localStorage.getItem('token');
+    if (token) {
+      next({ path: '/' });
+      return;
+    }
+  }
+
+  // 检查是否需要管理员权限
   if (to.meta.requiresAdmin) {
     const savedUser = localStorage.getItem('user');
-    let role: unknown = null;
+    let user: User | null = null;
     if (savedUser) {
       try {
-        role = JSON.parse(savedUser)?.role;
+        user = JSON.parse(savedUser) as User;
       } catch {
-        role = null;
+        user = null;
       }
     }
-    if (role !== 1) {
+    if (!isAdminUser(user)) {
       ElMessage.error('仅管理员可访问');
       next({ path: '/' });
       return;

@@ -32,6 +32,8 @@ export interface User {
   avatar: string;
   bio?: string;
   role: UserRole;
+  roleCode?: UserRoleCode;
+  trustLevel?: UserTrustLevel;
   status: UserStatus;
   createTime: string;
   lastLoginTime?: string;
@@ -41,6 +43,16 @@ export interface User {
 export enum UserRole {
   USER = 0,
   ADMIN = 1,
+}
+
+export enum UserRoleCode {
+  USER = 'user',
+  ADMIN = 'admin',
+}
+
+export enum UserTrustLevel {
+  NORMAL = 0,
+  FRIEND = 1,
 }
 
 export enum UserStatus {
@@ -181,6 +193,10 @@ export interface Article {
   isTop: number;
   /** 是否推荐：0-否 1-是 */
   isRecommend: number;
+  /** 可见性：0-公开 1-登录可见 2-好友可见 3-私密 */
+  visibility?: ArticleVisibility;
+  /** 评论策略：0-关闭 1-登录可评论 2-好友可评论 3-游客可评论 */
+  commentPolicy?: ArticleCommentPolicy;
   publishTime: string;
   createTime: string;
   updateTime: string;
@@ -192,12 +208,32 @@ export interface Article {
   tagIds?: number[];
   /** 创建/更新时提交的新标签名称（后端会 findOrCreate） */
   tagNames?: string[];
+  /** 当前登录用户是否可编辑 */
+  canEdit?: boolean;
+  /** 当前登录用户是否可删除 */
+  canDelete?: boolean;
+  /** 当前登录用户是否可评论 */
+  canComment?: boolean;
 }
 
 export enum ArticleStatus {
   DRAFT = 0,
   PUBLISHED = 1,
   RECYCLED = 2,
+}
+
+export enum ArticleVisibility {
+  PUBLIC = 0,
+  LOGIN = 1,
+  FRIEND = 2,
+  PRIVATE = 3,
+}
+
+export enum ArticleCommentPolicy {
+  CLOSED = 0,
+  REGISTERED = 1,
+  FRIEND = 2,
+  PUBLIC = 3,
 }
 
 export interface Category {

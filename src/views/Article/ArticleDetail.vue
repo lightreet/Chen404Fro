@@ -6,10 +6,21 @@
       <div class="article-content-wrapper" v-else-if="article">
         <!-- 文章头部 -->
         <div class="article-header">
-          <el-button text @click="$router.back()" class="back-btn">
-            <el-icon><ArrowLeft /></el-icon>
-            返回
-          </el-button>
+          <div class="header-actions">
+            <el-button text @click="$router.back()" class="back-btn">
+              <el-icon><ArrowLeft /></el-icon>
+              返回
+            </el-button>
+            <el-button
+              v-if="article.canEdit"
+              text
+              type="primary"
+              @click="router.push(`/article/edit/${article.id}`)"
+              class="edit-btn"
+            >
+              编辑文章
+            </el-button>
+          </div>
 
           <h1 class="article-title">{{ article.title }}</h1>
 
@@ -62,7 +73,7 @@
 
       <!-- 文章不存在 -->
       <div v-else class="article-not-found">
-        <p>文章不存在或已被删除</p>
+        <p>{{ errorMessage }}</p>
         <el-button type="primary" @click="$router.push('/')">返回首页</el-button>
       </div>
     </div>
@@ -71,7 +82,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue';
-import { useRoute } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 import { ArrowLeft, Calendar, View, ChatDotRound } from '@element-plus/icons-vue';
 import { MdPreview } from 'md-editor-v3';
 import 'md-editor-v3/lib/preview.css';
@@ -81,10 +92,12 @@ import { formatDate } from '@/utils/format';
 import { getArticleById, getArticleNeighbors } from '@/api/article';
 
 const route = useRoute();
+const router = useRouter();
 const loading = ref(true);
 const article = ref<Article | null>(null);
 const prevArticle = ref<{ id: number | string; title: string } | null>(null);
 const nextArticle = ref<{ id: number | string; title: string } | null>(null);
+const errorMessage = ref('文章不存在或已被删除');
 
 const previewTheme = computed(() => {
   return localStorage.getItem('theme') === 'dark' ? 'dark' : 'light';
@@ -117,6 +130,8 @@ const loadArticle = async () => {
     }
   } catch (err) {
     console.error('加载文章失败', err);
+    const status = (err as any)?.response?.status;
+    errorMessage.value = status === 403 ? '当前文章仅对特定用户开放' : '文章不存在或已被删除';
     article.value = null;
     prevArticle.value = null;
     nextArticle.value = null;
@@ -147,8 +162,14 @@ onMounted(() => {
   border-bottom: 1px solid var(--border-color);
 }
 
+.header-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
 .back-btn {
-  margin-bottom: 16px;
   padding: 0;
   color: var(--text-secondary);
 
@@ -157,11 +178,15 @@ onMounted(() => {
   }
 }
 
+.edit-btn {
+  padding: 0;
+}
+
 .article-title {
   font-size: 28px;
   font-weight: 600;
   color: var(--text-primary);
-  margin: 0 0 16px;
+  margin: 16px 0;
   line-height: 1.4;
 }
 
@@ -187,6 +212,14 @@ onMounted(() => {
   font-size: 16px;
   line-height: 1.8;
   color: var(--text-primary);
+
+  :deep(img) {
+    max-width: min(100%, 720px);
+    height: auto;
+    display: block;
+    margin: 24px auto;
+    border-radius: 12px;
+  }
 
   :deep(h2) {
     font-size: 24px;
@@ -251,6 +284,14 @@ onMounted(() => {
 .markdown-preview {
   :deep(.md-editor-preview-wrapper) {
     padding: 0;
+  }
+
+  :deep(img) {
+    max-width: min(100%, 720px);
+    height: auto;
+    display: block;
+    margin: 24px auto;
+    border-radius: 12px;
   }
 }
 

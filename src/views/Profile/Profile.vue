@@ -210,7 +210,8 @@
                     <el-descriptions-item label="邮箱">{{ user.email || '未绑定' }}</el-descriptions-item>
                     <el-descriptions-item label="手机">{{ user.phone || '未绑定' }}</el-descriptions-item>
                     <el-descriptions-item label="状态">{{ user.status === 1 ? '启用' : '禁用' }}</el-descriptions-item>
-                    <el-descriptions-item label="角色">{{ user.role === UserRole.ADMIN ? '管理员' : '普通用户' }}</el-descriptions-item>
+                    <el-descriptions-item label="角色">{{ roleText }}</el-descriptions-item>
+                    <el-descriptions-item label="信任级别">{{ trustLevelText }}</el-descriptions-item>
                     <el-descriptions-item label="注册时间">{{ formatDate(user.createTime ?? '') || '—' }}</el-descriptions-item>
                     <el-descriptions-item label="最后登录">{{ formatDateTime(user.lastLoginTime ?? '') || '—' }}</el-descriptions-item>
                     <el-descriptions-item label="最后登录 IP">{{ user.lastLoginIp || '—' }}</el-descriptions-item>
@@ -301,10 +302,10 @@ import { useUserStore } from '@/stores/user';
 import { getUserInfo, changePassword, updateProfile } from '@/api/auth';
 import { uploadAvatar } from '@/api/upload';
 import { formatDate, formatDateTime } from '@/utils/format';
+import { getTrustLevelLabel, isAdminUser, isFriendUser } from '@/utils/permission';
 import { createConfirmPasswordRule, validateImageFile, AVATAR_MAX_MB } from '@/utils/validation';
 import { getMyArticles, deleteArticle } from '@/api/article';
 import ArticleCard from '@/components/ArticleCard/ArticleCard.vue';
-import { UserRole } from '@/types';
 
 const userStore = useUserStore();
 const router = useRouter();
@@ -313,9 +314,11 @@ const user = ref(userStore.user);
 
 const activeMenu = ref<'articles' | 'favorites' | 'settings'>('articles');
 
-const roleText = computed(() => {
+const roleText = computed(() => getTrustLevelLabel(user.value));
+const trustLevelText = computed(() => {
   if (!user.value) return '—';
-  return user.value.role === UserRole.ADMIN ? '管理员' : '普通用户';
+  if (isAdminUser(user.value)) return '管理员';
+  return isFriendUser(user.value) ? '好友 / 受信用户' : '普通用户';
 });
 
 const profileFormRef = ref<FormInstance>();

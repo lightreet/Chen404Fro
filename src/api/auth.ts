@@ -13,7 +13,6 @@ import type {
   ForgotPasswordParams,
   ChangePasswordParams,
   UpdateProfileParams,
-  ApiResponse,
 } from '@/types';
 
 /**
@@ -63,7 +62,6 @@ export function refreshToken(refreshToken: string): Promise<{
  * @param params 发送验证码参数 { phone/email, type }
  */
 export function sendVerifyCode(params: SendCodeParams): Promise<{
-  code: string; // 测试环境返回，生产环境不返回
   expireSeconds: number;
 }> {
   return post('/auth/send-code', params);

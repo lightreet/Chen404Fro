@@ -41,10 +41,12 @@
           </div>
           <div class="form-item editor-wrapper">
             <MdEditor
+              ref="editorRef"
               v-model="form.content"
               :theme="editorTheme"
               :toolbars="toolbars"
               :preview="true"
+              :previewComponent="MdResizablePreview"
               placeholder="开始编写文章内容..."
               @on-upload-img="onUploadImg"
             />
@@ -197,6 +199,38 @@
               </button>
               <Transition name="slide-down">
                 <div v-show="advancedOpen" class="advanced-content">
+                  <div class="advanced-field">
+                    <label class="advanced-field-label">文章可见性</label>
+                    <el-select v-model="form.visibility" class="advanced-select">
+                      <el-option
+                        v-for="item in visibilityOptions"
+                        :key="item.value"
+                        :label="item.label"
+                        :value="item.value"
+                      >
+                        <div class="advanced-option">
+                          <span>{{ item.label }}</span>
+                          <small>{{ item.tip }}</small>
+                        </div>
+                      </el-option>
+                    </el-select>
+                  </div>
+                  <div class="advanced-field">
+                    <label class="advanced-field-label">评论策略</label>
+                    <el-select v-model="form.commentPolicy" class="advanced-select">
+                      <el-option
+                        v-for="item in commentPolicyOptions"
+                        :key="item.value"
+                        :label="item.label"
+                        :value="item.value"
+                      >
+                        <div class="advanced-option">
+                          <span>{{ item.label }}</span>
+                          <small>{{ item.tip }}</small>
+                        </div>
+                      </el-option>
+                    </el-select>
+                  </div>
                   <el-checkbox v-model="form.isTop" :true-value="1" :false-value="0">置顶文章</el-checkbox>
                   <el-checkbox v-model="form.isRecommend" :true-value="1" :false-value="0">推荐文章</el-checkbox>
                   <el-radio-group v-model="form.status" size="small">
@@ -220,9 +254,10 @@ import { ElMessage, ElMessageBox } from 'element-plus';
 import { Icon } from '@iconify/vue';
 import { ArrowLeft, ArrowDown, Plus } from '@element-plus/icons-vue';
 import { MdEditor } from 'md-editor-v3';
+import type { ExposeParam } from 'md-editor-v3';
 import 'md-editor-v3/lib/style.css';
 import type { Article, Category, Tag } from '@/types';
-import { ArticleStatus } from '@/types';
+import { ArticleStatus, ArticleVisibility, ArticleCommentPolicy } from '@/types';
 import {
   getArticleById,
   createArticle,
@@ -234,6 +269,8 @@ import {
 } from '@/api';
 import type { RequestConfig } from '@/api';
 import { validateImageFile, DEFAULT_IMAGE_MAX_MB } from '@/utils/validation';
+import MdResizablePreview from '@/components/MdResizablePreview/MdResizablePreview.vue';
+import { mdImageResizeEmitter } from '@/utils/mdImageResizeEmitter';
 
 type DraftSaveSource = 'manual' | 'auto' | 'leave';
 type AutoSaveState = 'idle' | 'dirty' | 'saving' | 'saved' | 'error';
@@ -244,6 +281,9 @@ const AUTO_SAVE_REQUEST_CONFIG: RequestConfig = { suppressErrorMessage: true };
 
 const route = useRoute();
 const router = useRouter();
+const editorRef = ref<ExposeParam>();
+
+let offResizeListener: (() => void) | null = null;
 
 // 判断是否为编辑模式
 const articleId = computed(() => {
@@ -290,6 +330,50 @@ const toolbars = [
   'catalog',
 ];
 
+const escapeHtmlAttr = (value: string) => value.replace(/"/g, '&quot;');
+
+const upsertImageWidthBySrc = (src: string, width: string) => {
+  const content = form.content ?? '';
+  if (!content) return;
+
+  // 优先更新已存在的 HTML <img ...>（避免重复转换）
+  const imgTagRegex = new RegExp(`<img\\s+[^>]*?src="${src.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\\\$&')}"[^>]*?>`, 'i');
+  const match = content.match(imgTagRegex);
+  if (match && match[0]) {
+    const tag = match[0];
+    const hasStyle = /\sstyle="[^"]*"/i.test(tag);
+    const nextTag = hasStyle
+      ? tag.replace(/\sstyle="[^"]*"/i, (styleAttr) => {
+          const style = styleAttr.replace(/^ style="/i, '').replace(/"$/i, '');
+          const cleaned = style
+            .split(';')
+            .map((s) => s.trim())
+            .filter(Boolean)
+            .filter((s) => !s.toLowerCase().startsWith('width:'));
+          cleaned.unshift(`width: ${width}`);
+          cleaned.push('max-width: 100%');
+          cleaned.push('height: auto');
+          return ` style="${cleaned.join('; ')}"`;
+        })
+      : tag.replace(/<img/i, `<img style="width: ${width}; max-width: 100%; height: auto;"`);
+
+    form.content = content.replace(tag, nextTag);
+    return;
+  }
+
+  // 否则尝试把 markdown 图片语法转换为 HTML img（按 src 匹配）
+  const mdImgRegex = new RegExp(`!\\[[^\\]]*\\]\\(\\s*${src.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\\\$&')}\\s*(?:\"[^\"]*\")?\\)`, 'i');
+  const mdMatch = content.match(mdImgRegex);
+  if (!mdMatch || !mdMatch[0]) return;
+
+  const mdToken = mdMatch[0];
+  const alt = mdToken.match(/^!\[([^\]]*)\]/)?.[1] ?? '';
+  const title = mdToken.match(/"([^"]*)"\s*\)$/)?.[1] ?? '';
+  const titleAttr = title ? ` title="${escapeHtmlAttr(title)}"` : '';
+  const nextTag = `<img src="${src}" alt="${escapeHtmlAttr(alt)}"${titleAttr} style="width: ${width}; max-width: 100%; height: auto;" />`;
+  form.content = content.replace(mdToken, nextTag);
+};
+
 // 表单数据（与后端/数据库一致：置顶、推荐为 0/1 整型）
 const form = reactive<Partial<Article>>({
   title: '',
@@ -300,7 +384,23 @@ const form = reactive<Partial<Article>>({
   status: ArticleStatus.DRAFT,
   isTop: 0,
   isRecommend: 0,
+  visibility: ArticleVisibility.PUBLIC,
+  commentPolicy: ArticleCommentPolicy.REGISTERED,
 });
+
+const visibilityOptions = [
+  { label: '公开', value: ArticleVisibility.PUBLIC, tip: '任何人都可以查看' },
+  { label: '登录可见', value: ArticleVisibility.LOGIN, tip: '只有登录用户可查看' },
+  { label: '好友可见', value: ArticleVisibility.FRIEND, tip: '仅好友 / 受信用户可查看' },
+  { label: '私密', value: ArticleVisibility.PRIVATE, tip: '仅作者本人和管理员可查看' },
+];
+
+const commentPolicyOptions = [
+  { label: '关闭评论', value: ArticleCommentPolicy.CLOSED, tip: '不允许任何评论' },
+  { label: '登录可评论', value: ArticleCommentPolicy.REGISTERED, tip: '默认推荐策略' },
+  { label: '好友可评论', value: ArticleCommentPolicy.FRIEND, tip: '仅好友 / 受信用户可评论' },
+  { label: '游客可评论', value: ArticleCommentPolicy.PUBLIC, tip: '开放评论，请谨慎使用' },
+];
 
 // 标签云已选 ID
 const formTagIds = ref<number[]>([]);
@@ -839,6 +939,10 @@ onBeforeRouteLeave(async () => {
 });
 
 onMounted(async () => {
+  offResizeListener = mdImageResizeEmitter.on(({ src, width }) => {
+    upsertImageWidthBySrc(src, width);
+  });
+
   await fetchCategoriesAndTags();
   if (isEdit.value) {
     await fetchArticleDetail();
@@ -856,6 +960,11 @@ onMounted(async () => {
 });
 
 onUnmounted(() => {
+  if (offResizeListener) {
+    offResizeListener();
+    offResizeListener = null;
+  }
+
   clearAutoSaveDebounce();
   if (autoSaveIntervalId) {
     clearInterval(autoSaveIntervalId);
@@ -1104,6 +1213,31 @@ onUnmounted(() => {
     flex-direction: column;
     gap: 10px;
   }
+
+  .advanced-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .advanced-field-label {
+    font-size: 12px;
+    color: var(--text-secondary, #64748b);
+  }
+
+  .advanced-select {
+    width: 100%;
+  }
+
+  .advanced-option {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+
+    small {
+      color: var(--text-secondary, #94a3b8);
+    }
+  }
 }
 
 .slide-down-enter-active,
@@ -1344,6 +1478,15 @@ onUnmounted(() => {
       &[data-theme='dark'] {
         background: var(--bg-secondary);
       }
+    }
+
+    :deep(.md-editor-preview img),
+    :deep(.md-editor-html-preview img) {
+      max-width: min(100%, 720px);
+      height: auto;
+      display: block;
+      margin: 20px auto;
+      border-radius: 12px;
     }
   }
 }

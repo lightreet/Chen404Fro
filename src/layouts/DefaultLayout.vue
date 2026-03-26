@@ -9,7 +9,10 @@
       <!-- 可选：全宽 Hero 插槽（用于首页等） -->
       <slot name="hero" />
       <div class="container">
-        <div class="content-wrapper" :class="{ 'has-live2d': !isMobile }">
+        <div
+          class="content-wrapper"
+          :class="{ 'has-live2d': !isMobile, 'no-right-sidebar': isMobile || !showRightSidebar }"
+        >
           <!-- 左侧 Live2D：固定到视口左侧，处于屏幕左与文章卡片之间的位置 -->
           <aside class="sidebar-left" v-if="!isMobile">
             <Live2D />
@@ -84,13 +87,14 @@ onUnmounted(() => {
 }
 
 .content-wrapper {
+  --live2d-reserved-space: 328px;
   display: flex;
   gap: 24px;
   align-items: flex-start;
 
   /* 有 Live2D 时为主内容预留左侧空间，避免与固定侧栏重叠 */
   &.has-live2d {
-    padding-left: 328px; /* 280 侧栏 + 48 与卡片的间距 */
+    padding-left: var(--live2d-reserved-space); /* 280 侧栏 + 48 与卡片的间距 */
   }
 }
 
@@ -107,6 +111,12 @@ onUnmounted(() => {
 .main-area {
   flex: 1;
   min-width: 0;
+  width: 100%;
+}
+
+.content-wrapper.no-right-sidebar .main-area {
+  max-width: 980px;
+  margin: 0 auto;
 }
 
 .sidebar-right {

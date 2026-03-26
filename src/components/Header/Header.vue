@@ -184,7 +184,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, computed } from 'vue';
-import { useRoute, useRouter } from 'vue-router';
+import { useRouter } from 'vue-router';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import {
   HomeFilled,
@@ -204,30 +204,19 @@ import {
   Setting,
 } from '@element-plus/icons-vue';
 import { useUserStore } from '@/stores/user';
-import { UserRole } from '@/types';
 import { storeToRefs } from 'pinia';
 import { logout as logoutApi } from '@/api/auth';
+import { getTrustLevelLabel, isAdminUser } from '@/utils/permission';
 
-const route = useRoute();
 const router = useRouter();
 const userStore = useUserStore();
 const { isLoggedIn, user } = storeToRefs(userStore);
 
 // 角色文本
-const roleText = computed(() => {
-  if (!user.value) return '';
-  switch (user.value.role) {
-    case UserRole.ADMIN:
-      return '管理员';
-    default:
-      return '用户';
-  }
-});
+const roleText = computed(() => getTrustLevelLabel(user.value));
 
 // 是否为管理员
-const isAdmin = computed(() => {
-  return user.value?.role === UserRole.ADMIN;
-});
+const isAdmin = computed(() => isAdminUser(user.value));
 
 // 导航项
 const navItems = [
