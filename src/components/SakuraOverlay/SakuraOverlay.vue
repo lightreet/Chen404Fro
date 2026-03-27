@@ -56,7 +56,7 @@ type DepthRanges = {
 
 const DEPTH_RANGES: Record<SakuraDepth, DepthRanges> = {
   background: {
-    size: [4.2, 8],
+    size: [4.2, 6.8],
     scaleX: [0.66, 0.86],
     scaleY: [0.82, 1.02],
     blur: [1.45, 3.35],
@@ -68,7 +68,7 @@ const DEPTH_RANGES: Record<SakuraDepth, DepthRanges> = {
     opacity: [0.18, 0.38],
   },
   midground: {
-    size: [7.5, 15.5],
+    size: [7.5, 13.2],
     scaleX: [0.76, 1.02],
     scaleY: [0.94, 1.18],
     blur: [0.2, 1.6],
@@ -80,7 +80,7 @@ const DEPTH_RANGES: Record<SakuraDepth, DepthRanges> = {
     opacity: [0.5, 0.84],
   },
   foreground: {
-    size: [9.8, 18],
+    size: [9.8, 15.3],
     scaleX: [0.84, 1.08],
     scaleY: [1.02, 1.24],
     blur: [0.06, 0.52],
@@ -173,6 +173,33 @@ let dpr = 1;
 let prefersReducedMotion: MediaQueryList | null = null;
 
 const random = (min: number, max: number) => min + Math.random() * (max - min);
+const clamp = (v: number, min: number, max: number) => Math.max(min, Math.min(max, v));
+
+// Low-discrepancy sampling to avoid “bursty” size clusters.
+const PHI = 0.61803398875;
+const depthSeeds: Record<SakuraDepth, { size: number }> = {
+  background: { size: Math.random() },
+  midground: { size: Math.random() },
+  foreground: { size: Math.random() },
+};
+const nextUniform01 = (depth: SakuraDepth) => {
+  const s = depthSeeds[depth];
+  s.size = (s.size + PHI) % 1;
+  return s.size;
+};
+
+const spawnX = () => random(-viewportWidth * 0.05, viewportWidth * 1.05);
+
+/**
+ * Spawn Y with a wide distribution above the viewport.
+ * This avoids many petals re-entering at the same time (wave/batch feeling).
+ */
+const spawnYAboveViewport = (size: number) => {
+  // Most petals start within ~1 viewport height above, some start further.
+  const u = Math.random();
+  const maxAbove = viewportHeight * (0.9 + u * u * 0.9); // ~0.9h .. ~1.8h
+  return -random(size, maxAbove + size);
+};
 
 const getPetalCount = () => {
   const area = viewportWidth * viewportHeight;
@@ -183,17 +210,14 @@ const createPetal = (startInViewport = false): SakuraPetal => {
   const depth = pickDepth();
   const r = DEPTH_RANGES[depth];
   const [colorStart, colorEnd] = PETAL_COLORS[Math.floor(Math.random() * PETAL_COLORS.length)];
-  const size = random(r.size[0], r.size[1]);
+  const size = r.size[0] + (r.size[1] - r.size[0]) * nextUniform01(depth);
 
   return {
     depth,
     // 顶部从左到右生成概率尽量接近一致，整体略向左下飘
-    x: startInViewport
-      ? random(-viewportWidth * 0.05, viewportWidth * 1.05)
-      : random(-viewportWidth * 0.04, viewportWidth * 1.06),
-    y: startInViewport
-      ? random(-viewportHeight * 0.22, viewportHeight * 0.2)
-      : random(-viewportHeight * 0.48, -size),
+    x: spawnX(),
+    // 初始化时尽量打散在更长的 y 区间，避免一开始就“成团成波”
+    y: startInViewport ? random(-viewportHeight * 0.9, viewportHeight * 0.35) : spawnYAboveViewport(size),
     size,
     scaleX: random(r.scaleX[0], r.scaleX[1]),
     scaleY: random(r.scaleY[0], r.scaleY[1]),
@@ -214,9 +238,17 @@ const createPetal = (startInViewport = false): SakuraPetal => {
 const resetPetal = (petal: SakuraPetal) => {
   const nextPetal = createPetal(false);
   Object.assign(petal, nextPetal);
-  // 从顶部横向均匀回补，保证左到右出现概率接近一致
-  petal.x = random(-viewportWidth * 0.05, viewportWidth * 1.05);
-  petal.y = random(-viewportHeight * 0.3, -petal.size * 0.2);
+
+  // 从顶部横向均匀回补（与之前一致）
+  petal.x = spawnX();
+
+  // 关键：回补时把 y 分布拉宽到更远的上方，破除“批量重生”的波浪感
+  petal.y = spawnYAboveViewport(petal.size);
+
+  // 轻微扰动速度，进一步去同步
+  const r = DEPTH_RANGES[petal.depth];
+  petal.speedY = clamp(petal.speedY + random(-10, 10), r.speedY[0], r.speedY[1]);
+  petal.speedX = clamp(petal.speedX + random(-10, 10), r.speedX[0], r.speedX[1]);
 };
 
 const syncCanvasSize = () => {

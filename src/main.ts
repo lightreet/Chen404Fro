@@ -20,10 +20,17 @@ for (const [key, component] of Object.entries(ElementPlusIconsVue)) {
   app.component(key, component)
 }
 
-useUserStore(pinia).initUser()
+const userStore = useUserStore(pinia)
+userStore.initUser()
 
 app.use(pinia)
 app.use(router)
 app.use(ElementPlus)
 
-app.mount('#app')
+async function bootstrap() {
+  // 启动时先与后端同步一次登录态，避免“本地显示已登录但服务端判匿名”
+  await userStore.syncAuthState()
+  app.mount('#app')
+}
+
+bootstrap()

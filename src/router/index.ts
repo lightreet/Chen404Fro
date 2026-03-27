@@ -2,7 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router';
 import type { RouteRecordRaw } from 'vue-router';
 import { ElMessage } from 'element-plus';
 import { isAdminUser } from '@/utils/permission';
-import type { User } from '@/types';
+import { useUserStore } from '@/stores/user';
 
 const routes: RouteRecordRaw[] = [
   {
@@ -152,7 +152,8 @@ const router = createRouter({
 });
 
 // 路由守卫
-router.beforeEach((to, _from, next) => {
+router.beforeEach(async (to, _from, next) => {
+  const userStore = useUserStore();
   // 设置页面标题
   const title = to.meta.title as string;
   if (title) {
@@ -161,8 +162,8 @@ router.beforeEach((to, _from, next) => {
 
   // 检查是否需要登录
   if (to.meta.requiresAuth) {
-    const token = localStorage.getItem('token');
-    if (!token) {
+    const ok = await userStore.syncAuthState();
+    if (!ok) {
       ElMessage.warning('请先登录');
       next({
         path: '/login',
@@ -173,8 +174,8 @@ router.beforeEach((to, _from, next) => {
   }
 
   if (to.meta.guest) {
-    const token = localStorage.getItem('token');
-    if (token) {
+    const ok = await userStore.syncAuthState();
+    if (ok) {
       next({ path: '/' });
       return;
     }
@@ -182,16 +183,8 @@ router.beforeEach((to, _from, next) => {
 
   // 检查是否需要管理员权限
   if (to.meta.requiresAdmin) {
-    const savedUser = localStorage.getItem('user');
-    let user: User | null = null;
-    if (savedUser) {
-      try {
-        user = JSON.parse(savedUser) as User;
-      } catch {
-        user = null;
-      }
-    }
-    if (!isAdminUser(user)) {
+    const ok = await userStore.syncAuthState();
+    if (!ok || !isAdminUser(userStore.user)) {
       ElMessage.error('仅管理员可访问');
       next({ path: '/' });
       return;

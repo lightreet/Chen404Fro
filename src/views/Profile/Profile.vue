@@ -206,7 +206,15 @@
                   <el-descriptions :column="2" border class="profile-desc">
                     <el-descriptions-item label="昵称">{{ user.nickname || user.username }}</el-descriptions-item>
                     <el-descriptions-item label="用户名">{{ user.username }}</el-descriptions-item>
-                    <el-descriptions-item label="简介">{{ user.bio || '—' }}</el-descriptions-item>
+                    <el-descriptions-item label="简介">
+                      <template v-if="signatureTokens.length > 0">
+                        <span v-for="(token, idx) in signatureTokens" :key="idx">
+                          <span v-if="token.type === 'text'">{{ token.value }}</span>
+                          <span v-else class="emoji-token" :title="token.emoji.label">{{ token.emoji.unicode || '🙂' }}</span>
+                        </span>
+                      </template>
+                      <template v-else>—</template>
+                    </el-descriptions-item>
                     <el-descriptions-item label="邮箱">{{ user.email || '未绑定' }}</el-descriptions-item>
                     <el-descriptions-item label="手机">{{ user.phone || '未绑定' }}</el-descriptions-item>
                     <el-descriptions-item label="状态">{{ user.status === 1 ? '启用' : '禁用' }}</el-descriptions-item>
@@ -306,6 +314,7 @@ import { getTrustLevelLabel, isAdminUser, isFriendUser } from '@/utils/permissio
 import { createConfirmPasswordRule, validateImageFile, AVATAR_MAX_MB } from '@/utils/validation';
 import { getMyArticles, deleteArticle } from '@/api/article';
 import ArticleCard from '@/components/ArticleCard/ArticleCard.vue';
+import { renderSignatureTokens } from '@/emoji/renderers/signatureRenderer';
 
 const userStore = useUserStore();
 const router = useRouter();
@@ -320,6 +329,8 @@ const trustLevelText = computed(() => {
   if (isAdminUser(user.value)) return '管理员';
   return isFriendUser(user.value) ? '好友 / 受信用户' : '普通用户';
 });
+
+const signatureTokens = computed(() => renderSignatureTokens(user.value?.bio || ''));
 
 const profileFormRef = ref<FormInstance>();
 const profileSaving = ref(false);
@@ -963,6 +974,12 @@ onMounted(() => {
   :deep(.el-descriptions__label) {
     color: var(--text-secondary);
   }
+}
+
+.emoji-token {
+  display: inline-block;
+  margin: 0 1px;
+  font-size: 1.1em;
 }
 
 /* 修改密码表单 */

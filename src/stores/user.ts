@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
 import type { User } from '@/types';
+import { getUserInfo } from '@/api/auth';
 
 export const useUserStore = defineStore('user', () => {
   // 用户信息
@@ -11,6 +12,7 @@ export const useUserStore = defineStore('user', () => {
 
   // 是否已登录
   const isLoggedIn = computed(() => !!token.value && !!user.value);
+  const sessionChecked = ref(false);
 
   // 设置用户信息
   const setUser = (userData: User | null) => {
@@ -53,6 +55,33 @@ export const useUserStore = defineStore('user', () => {
         user.value = null;
       }
     }
+    sessionChecked.value = false;
+  };
+
+  // 与服务端同步登录态，确保“显示已登录”与“后端识别已登录”一致
+  const syncAuthState = async (force = false) => {
+    if (sessionChecked.value && !force) {
+      return isLoggedIn.value;
+    }
+
+    const savedToken = localStorage.getItem('token');
+    if (!savedToken) {
+      logout();
+      sessionChecked.value = true;
+      return false;
+    }
+
+    token.value = savedToken;
+    try {
+      const latestUser = await getUserInfo({ suppressErrorMessage: true });
+      setUser(latestUser);
+      sessionChecked.value = true;
+      return true;
+    } catch {
+      logout();
+      sessionChecked.value = true;
+      return false;
+    }
   };
 
   // 获取当前存储的 token（供请求拦截器使用）
@@ -77,6 +106,7 @@ export const useUserStore = defineStore('user', () => {
   const logout = () => {
     setUser(null);
     setToken('');
+    sessionChecked.value = true;
   };
 
   // 更新用户信息
@@ -94,8 +124,10 @@ export const useUserStore = defineStore('user', () => {
     setUser,
     setToken,
     initUser,
+    syncAuthState,
     login,
     logout,
     updateUserInfo,
+    sessionChecked,
   };
 });

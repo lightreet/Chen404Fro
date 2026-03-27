@@ -288,20 +288,26 @@ export interface ArchiveMonth {
 
 export interface Comment {
   id: number;
-  articleId?: number;
+  articleId?: number | string;
   parentId: number;
+  rootId: number;
   content: string;
   authorName: string;
   authorEmail?: string;
   authorWebsite?: string;
+  authorAvatar?: string;
+  authorId?: number;
   authorIp?: string;
+  isAdmin: number;
+  likeCount: number;
   status: CommentStatus;
   createTime: string;
   updateTime: string;
   children?: Comment[];
-  // 关联数据
+  replyToAuthorName?: string;
+  replyToUserId?: number;
   article?: {
-    id: number;
+    id: number | string;
     title: string;
   };
 }
@@ -314,7 +320,7 @@ export enum CommentStatus {
 
 // 发表评论请求
 export interface CreateCommentParams {
-  articleId?: number;
+  articleId?: number | string;
   parentId?: number;
   content: string;
   authorName: string;

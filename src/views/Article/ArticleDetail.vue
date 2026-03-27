@@ -22,7 +22,7 @@
             </el-button>
           </div>
 
-          <h1 class="article-title">{{ article.title }}</h1>
+          <h1 class="article-title">{{ renderedArticleTitle }}</h1>
 
           <div class="article-meta">
             <span class="meta-item">
@@ -42,8 +42,8 @@
 
         <!-- 文章内容：优先后端 contentHtml，否则用 MdPreview 渲染 Markdown -->
         <div class="article-body">
-          <div v-if="article.contentHtml" class="markdown-content" v-html="article.contentHtml"></div>
-          <MdPreview v-else :model-value="article.content ?? ''" :theme="previewTheme" class="markdown-preview" />
+          <div v-if="article.contentHtml" class="markdown-content" v-html="renderedContentHtml"></div>
+          <MdPreview v-else :model-value="renderedMarkdownContent" :theme="previewTheme" class="markdown-preview" />
         </div>
 
         <!-- 文章标签 -->
@@ -69,6 +69,13 @@
             <router-link :to="`/article/${nextArticle.id}`">{{ nextArticle.title }}</router-link>
           </div>
         </div>
+
+        <!-- 评论区 -->
+        <CommentSection
+          :article-id="article.id"
+          :can-comment="article.canComment ?? false"
+          :comment-policy="article.commentPolicy ?? 0"
+        />
       </div>
 
       <!-- 文章不存在 -->
@@ -87,9 +94,11 @@ import { ArrowLeft, Calendar, View, ChatDotRound } from '@element-plus/icons-vue
 import { MdPreview } from 'md-editor-v3';
 import 'md-editor-v3/lib/preview.css';
 import DefaultLayout from '@/layouts/DefaultLayout.vue';
+import CommentSection from '@/components/Comment/CommentSection.vue';
 import type { Article } from '@/types';
 import { formatDate } from '@/utils/format';
 import { getArticleById, getArticleNeighbors } from '@/api/article';
+import { renderArticleText } from '@/emoji/renderers/articleRenderer';
 
 const route = useRoute();
 const router = useRouter();
@@ -101,6 +110,18 @@ const errorMessage = ref('文章不存在或已被删除');
 
 const previewTheme = computed(() => {
   return localStorage.getItem('theme') === 'dark' ? 'dark' : 'light';
+});
+
+const renderedArticleTitle = computed(() => {
+  return renderArticleText(article.value?.title ?? '');
+});
+
+const renderedMarkdownContent = computed(() => {
+  return renderArticleText(article.value?.content ?? '');
+});
+
+const renderedContentHtml = computed(() => {
+  return renderArticleText(article.value?.contentHtml ?? '');
 });
 
 // 加载文章详情与上一篇/下一篇（对接 GET /api/articles/:id 与 GET /api/articles/:id/neighbors）

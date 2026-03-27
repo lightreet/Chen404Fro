@@ -5,6 +5,7 @@
       <section class="home-hero" data-hero>
         <div class="hero-bg" />
         <div class="hero-overlay" />
+        <div class="hero-fade" aria-hidden="true" />
         <div class="hero-content">
           <h1 class="hero-title">
             Hi，<span class="hero-accent">Chen404</span> 的小站
@@ -12,9 +13,7 @@
           <p class="hero-slogan">「 记录技术、生活与想法，欢迎来玩 ~ 」</p>
         </div>
         <div class="hero-wave" aria-hidden="true">
-          <svg viewBox="0 0 1200 120" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M0,0V46.29c47.79,22.2,103.59,32.17,158,28,70.36-5.37,136.33-33.31,206.8-37.5C438.64,32.43,512.34,53.67,583,72.05c69.27,18,138.3,24.88,209.4,13.08,36.15-6,69.85-17.84,104.45-29.34C989.49,25,1113-14.29,1200,52.47V0Z" fill="var(--bg-primary)"/>
-          </svg>
+          <HeroWave color="white" :height="92" :intensity="1.08" />
         </div>
         <a href="#discovery" class="hero-scroll-hint" aria-label="向下滚动">
           <span class="hero-scroll-chevron">↓</span>
@@ -72,6 +71,7 @@ import { ElMessage } from 'element-plus';
 import { Compass } from '@element-plus/icons-vue';
 import DefaultLayout from '@/layouts/DefaultLayout.vue';
 import ArticleCard from '@/components/ArticleCard/ArticleCard.vue';
+import HeroWave from '@/components/HeroWave/HeroWave.vue';
 import type { Article } from '@/types';
 import { getArticles } from '@/api/article';
 
@@ -168,6 +168,23 @@ onMounted(() => {
   pointer-events: none;
 }
 
+.hero-fade {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 228px;
+  z-index: 1;
+  pointer-events: none;
+  background: linear-gradient(
+    to bottom,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0) 20%,
+    var(--bg-primary) 100%
+  );
+  filter: blur(0.2px);
+}
+
 .hero-content {
   position: relative;
   z-index: 1;
@@ -201,15 +218,9 @@ onMounted(() => {
   bottom: 0;
   left: 0;
   right: 0;
-  height: 60px;
+  height: 92px;
   z-index: 1;
   line-height: 0;
-
-  svg {
-    width: 100%;
-    height: 100%;
-    display: block;
-  }
 }
 
 .hero-scroll-hint {

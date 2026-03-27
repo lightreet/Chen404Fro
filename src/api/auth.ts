@@ -3,7 +3,7 @@
  * 包含登录、注册、密码重置等功能
  */
 
-import { get, post, put } from './request';
+import { get, post, put, type RequestConfig } from './request';
 import type {
   LoginParams,
   LoginResult,
@@ -41,8 +41,8 @@ export function logout(): Promise<void> {
 /**
  * 获取当前登录用户信息
  */
-export function getUserInfo(): Promise<User> {
-  return get('/auth/info');
+export function getUserInfo(config?: RequestConfig): Promise<User> {
+  return get('/auth/info', undefined, config);
 }
 
 /**

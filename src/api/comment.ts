@@ -17,7 +17,7 @@ import type {
  * @param params 分页参数
  */
 export function getComments(
-  articleId?: number,
+  articleId?: number | string,
   params?: PageParams
 ): Promise<PageResult<Comment>> {
   return get('/comments', { articleId, ...params });
@@ -35,7 +35,7 @@ export function getGuestbookComments(params?: PageParams): Promise<PageResult<Co
  * 获取文章的评论数
  * @param articleId 文章ID
  */
-export function getCommentCount(articleId: number): Promise<{ count: number }> {
+export function getCommentCount(articleId: number | string): Promise<{ count: number }> {
   return get(`/articles/${articleId}/comment-count`);
 }
 
