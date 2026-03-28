@@ -221,8 +221,14 @@
                       />
                     </el-select>
                   </div>
-                  <el-checkbox v-model="form.isTop" :true-value="1" :false-value="0">置顶文章</el-checkbox>
-                  <el-checkbox v-model="form.isRecommend" :true-value="1" :false-value="0">推荐文章</el-checkbox>
+                  <el-checkbox
+                    v-if="canSetArticleTop"
+                    v-model="form.isTop"
+                    :true-value="1"
+                    :false-value="0"
+                  >
+                    置顶文章
+                  </el-checkbox>
                   <el-radio-group v-model="form.status" size="small">
                     <el-radio-button :value="ArticleStatus.DRAFT">草稿</el-radio-button>
                     <el-radio-button :value="ArticleStatus.PUBLISHED">发布</el-radio-button>
@@ -261,6 +267,8 @@ import type { RequestConfig } from '@/api';
 import { validateImageFile, DEFAULT_IMAGE_MAX_MB } from '@/utils/validation';
 import MdResizablePreview from '@/components/MdResizablePreview/MdResizablePreview.vue';
 import { mdImageResizeEmitter } from '@/utils/mdImageResizeEmitter';
+import { useUserStore } from '@/stores/user';
+import { isAdminUser } from '@/utils/permission';
 
 type DraftSaveSource = 'manual' | 'auto' | 'leave';
 type AutoSaveState = 'idle' | 'dirty' | 'saving' | 'saved' | 'error';
@@ -271,6 +279,9 @@ const AUTO_SAVE_REQUEST_CONFIG: RequestConfig = { suppressErrorMessage: true };
 
 const route = useRoute();
 const router = useRouter();
+const userStore = useUserStore();
+/** 仅管理员可设置置顶 */
+const canSetArticleTop = computed(() => isAdminUser(userStore.user));
 const editorRef = ref<ExposeParam>();
 defineExpose({ editorRef });
 
@@ -365,7 +376,7 @@ const upsertImageWidthBySrc = (src: string, width: string) => {
   form.content = content.replace(mdToken, nextTag);
 };
 
-// 表单数据（与后端/数据库一致：置顶、推荐为 0/1 整型）
+// 表单数据；置顶 isTop 仅管理员可在界面修改（受信用户新建时后端也会强制为 0）。推荐 isRecommend 不在此编辑
 const form = reactive<Partial<Article>>({
   title: '',
   content: '',
@@ -374,7 +385,6 @@ const form = reactive<Partial<Article>>({
   categoryId: undefined,
   status: ArticleStatus.DRAFT,
   isTop: 0,
-  isRecommend: 0,
   visibility: ArticleVisibility.PUBLIC,
   commentPolicy: ArticleCommentPolicy.REGISTERED,
 });
@@ -974,12 +984,15 @@ onUnmounted(() => {
   min-height: 100vh;
   background: var(--bg-primary);
   padding: 0;
+  overflow-x: visible;
+  overflow-y: visible;
 }
 
 .edit-container {
   max-width: 1400px;
   margin: 0 auto;
   padding: 0 24px 24px;
+  overflow: visible;
 }
 
 // 顶部栏：状态 + 保存/发布
@@ -1071,6 +1084,7 @@ onUnmounted(() => {
   gap: 32px;
   margin-top: 24px;
   align-items: flex-start;
+  overflow: visible;
 }
 
 .edit-main {
@@ -1085,11 +1099,16 @@ onUnmounted(() => {
 .edit-sidebar {
   flex-shrink: 0;
   width: 320px;
-  position: sticky;
-  top: calc(var(--header-height, 64px) + 16px);
+  align-self: flex-start;
 }
 
 .sidebar-card {
+  position: sticky;
+  /* 编写页无站点顶栏，贴近视口顶部；侧栏过高时在卡片内滚动 */
+  top: 16px;
+  max-height: calc(100vh - 32px);
+  overflow-x: hidden;
+  overflow-y: auto;
   padding: 20px;
   border-radius: 12px;
   border: 1px solid var(--border-color, #e2e8f0);
@@ -1500,10 +1519,14 @@ onUnmounted(() => {
   .edit-sidebar {
     width: 100%;
     max-width: 100%;
-    position: static;
+    align-self: stretch;
   }
 
   .sidebar-card {
+    position: static;
+    top: auto;
+    max-height: none;
+    overflow: visible;
     max-width: 480px;
   }
 }
