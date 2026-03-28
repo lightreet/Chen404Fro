@@ -74,8 +74,8 @@
       <!-- 阅读详情 / 管理操作 -->
       <div class="article-action">
         <template v-if="mode === 'manage'">
-          <el-button text type="primary" @click="$emit('edit', article.id)">编辑</el-button>
-          <el-button text type="danger" @click="$emit('delete', article.id)">删除</el-button>
+          <el-button v-if="article.canEdit" text type="primary" @click="$emit('edit', article.id)">编辑</el-button>
+          <el-button v-if="article.canDelete" text type="danger" @click="$emit('delete', article.id)">删除</el-button>
         </template>
         <router-link v-else :to="articleDetailUrl" class="read-more" @click.stop>
           <span>阅读详情</span>

@@ -16,8 +16,5 @@ export * from './article';
 // 评论相关 API（评论列表、发表评论）
 export * from './comment';
 
-// 友链相关 API（友链列表、申请友链）
-export * from './friend';
-
 // 文件上传相关 API
 export * from './upload';

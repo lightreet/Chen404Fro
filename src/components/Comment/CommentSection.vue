@@ -110,6 +110,7 @@
         @reply="handleReply"
         @delete="handleDelete"
         @like="handleLike"
+        @guest-delete="handleGuestDelete"
       />
     </div>
 
@@ -137,13 +138,45 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
 import type { Comment, CreateCommentParams } from '@/types'
-import { getComments, getGuestbookComments, createComment, deleteComment } from '@/api/comment'
+import { getComments, getGuestbookComments, createComment, deleteComment, deleteCommentAsGuest } from '@/api/comment'
 import { useUserStore } from '@/stores/user'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import CommentItem from './CommentItem.vue'
 import { queryByScene, getEmojiByShortcode } from '@/emoji/registry'
 import { countEmojiTokens, renderShortcodesToText } from '@/emoji/parser'
 import { scenePolicies } from '@/emoji/scenePolicy'
+
+// 本地存储游客评论删除 key 的 key
+const GUEST_DELETE_KEYS_KEY = 'comment_guest_delete_keys';
+
+// 获取本地存储的游客删除 keys
+function getStoredGuestDeleteKeys(): Record<string, string> {
+  try {
+    const stored = localStorage.getItem(GUEST_DELETE_KEYS_KEY);
+    return stored ? JSON.parse(stored) : {};
+  } catch {
+    return {};
+  }
+}
+
+// 保存游客删除 key
+function storeGuestDeleteKey(commentId: number | string, deleteKey: string): void {
+  const keys = getStoredGuestDeleteKeys();
+  keys[String(commentId)] = deleteKey;
+  localStorage.setItem(GUEST_DELETE_KEYS_KEY, JSON.stringify(keys));
+}
+
+// 获取游客删除 key
+function getGuestDeleteKey(commentId: number | string): string | undefined {
+  return getStoredGuestDeleteKeys()[String(commentId)];
+}
+
+// 移除已使用的游客删除 key
+function removeGuestDeleteKey(commentId: number | string): void {
+  const keys = getStoredGuestDeleteKeys();
+  delete keys[String(commentId)];
+  localStorage.setItem(GUEST_DELETE_KEYS_KEY, JSON.stringify(keys));
+}
 
 const props = withDefaults(defineProps<{
   articleId?: number | string
@@ -231,7 +264,12 @@ async function submitComment() {
       params.parentId = replyTarget.value.id
     }
 
-    await createComment(params)
+    const result = await createComment(params)
+
+    // 保存游客评论的删除 key（仅在创建时返回一次）
+    if (!userStore.isLoggedIn && result.guestDeleteKey) {
+      storeGuestDeleteKey(result.id, result.guestDeleteKey);
+    }
 
     form.value.content = ''
     replyTarget.value = null
@@ -286,6 +324,23 @@ async function handleDelete(comment: Comment) {
       type: 'warning',
     })
     await deleteComment(comment.id)
+    ElMessage.success('评论已删除')
+    await fetchComments()
+  } catch {
+    // cancelled or error
+  }
+}
+
+async function handleGuestDelete(comment: Comment, deleteKey: string) {
+  try {
+    await ElMessageBox.confirm('确定要删除这条评论吗？', '删除确认', {
+      confirmButtonText: '删除',
+      cancelButtonText: '取消',
+      type: 'warning',
+    })
+    await deleteCommentAsGuest(comment.id, deleteKey)
+    // 删除成功后移除本地存储的 key
+    removeGuestDeleteKey(comment.id)
     ElMessage.success('评论已删除')
     await fetchComments()
   } catch {

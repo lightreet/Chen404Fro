@@ -76,14 +76,6 @@ const routes: RouteRecordRaw[] = [
     },
   },
   {
-    path: '/friends',
-    name: 'Friends',
-    component: () => import('@/views/Friends/Friends.vue'),
-    meta: {
-      title: '友人帐',
-    },
-  },
-  {
     path: '/about',
     name: 'About',
     component: () => import('@/views/About/About.vue'),

@@ -25,9 +25,9 @@
 
         <!-- 右侧操作区 -->
         <div class="header-actions">
-          <!-- 编写文章按钮（已登录显示） -->
+          <!-- 编写文章按钮（仅管理员和受信任用户显示） -->
           <router-link
-            v-if="isLoggedIn && !isMobile"
+            v-if="isLoggedIn && canCreateArticle && !isMobile"
             to="/article/edit"
             class="write-btn"
           >
@@ -122,6 +122,7 @@
             <span class="mobile-nickname">{{ user?.nickname || user?.username }}</span>
           </div>
           <router-link
+            v-if="canCreateArticle"
             to="/article/edit"
             class="mobile-nav-item"
             @click="closeMobileMenu"
@@ -191,7 +192,6 @@ import {
   Folder,
   List,
   ChatDotRound,
-  Link,
   InfoFilled,
   Search,
   Sunny,
@@ -206,7 +206,7 @@ import {
 import { useUserStore } from '@/stores/user';
 import { storeToRefs } from 'pinia';
 import { logout as logoutApi } from '@/api/auth';
-import { getTrustLevelLabel, isAdminUser } from '@/utils/permission';
+import { getTrustLevelLabel, isAdminUser, isFriendUser } from '@/utils/permission';
 
 const router = useRouter();
 const userStore = useUserStore();
@@ -218,13 +218,18 @@ const roleText = computed(() => getTrustLevelLabel(user.value));
 // 是否为管理员
 const isAdmin = computed(() => isAdminUser(user.value));
 
+// 是否可以创建文章（管理员或受信任用户）
+const canCreateArticle = computed(() => {
+  if (!user.value) return false;
+  return isAdminUser(user.value) || isFriendUser(user.value);
+});
+
 // 导航项
 const navItems = [
   { name: '首页', path: '/', icon: HomeFilled },
   { name: '归档', path: '/archive', icon: Folder },
   { name: '清单', path: '/category', icon: List },
   { name: '留言板', path: '/guestbook', icon: ChatDotRound },
-  { name: '友人帐', path: '/friends', icon: Link },
   { name: '关于', path: '/about', icon: InfoFilled },
 ];
 

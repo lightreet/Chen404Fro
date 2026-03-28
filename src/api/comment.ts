@@ -56,6 +56,15 @@ export function deleteComment(id: number): Promise<void> {
 }
 
 /**
+ * 游客删除自己的评论（使用创建时返回的 guestDeleteKey）
+ * @param id 评论ID
+ * @param guestDeleteKey 游客删除密钥
+ */
+export function deleteCommentAsGuest(id: number, guestDeleteKey: string): Promise<void> {
+  return del(`/comments/${id}`, { guestDeleteKey });
+}
+
+/**
  * 审核评论（管理员）
  * @param id 评论ID
  * @param status 审核状态 1-通过 2-拒绝

@@ -310,6 +310,8 @@ export interface Comment {
     id: number | string;
     title: string;
   };
+  /** 游客评论的自助删除 key（仅在创建评论时返回一次） */
+  guestDeleteKey?: string;
 }
 
 export enum CommentStatus {
@@ -328,31 +330,3 @@ export interface CreateCommentParams {
   authorWebsite?: string;
 }
 
-// ==================== 友链相关类型 ====================
-
-export interface FriendLink {
-  id: number;
-  siteName: string;
-  siteUrl: string;
-  siteLogo?: string;
-  description?: string;
-  email?: string;
-  status: FriendLinkStatus;
-  sortOrder: number;
-  createTime: string;
-}
-
-export enum FriendLinkStatus {
-  PENDING = 0,
-  APPROVED = 1,
-  REJECTED = 2,
-}
-
-// 申请友链请求
-export interface ApplyFriendLinkParams {
-  siteName: string;
-  siteUrl: string;
-  siteLogo?: string;
-  description?: string;
-  email?: string;
-}

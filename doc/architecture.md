@@ -11,7 +11,7 @@ Components (Header / Footer / ArticleCard / Live2D / SakuraOverlay)
   ↓
 Stores + Utils (Pinia / request / format / validation / mock)
   ↓
-API Layer (auth / article / home / upload / comment / friend)
+API Layer (auth / article / home / upload / comment)
   ↓
 Spring Boot Backend (/api)
 ```
@@ -42,7 +42,6 @@ src/
 │   ├── home.ts
 │   ├── upload.ts
 │   ├── comment.ts
-│   ├── friend.ts
 │   └── request.ts
 ├── assets/
 │   └── styles/
@@ -72,7 +71,6 @@ src/
     ├── Category/
     ├── Tag/
     ├── Guestbook/
-    ├── Friends/
     ├── About/
     ├── Auth/
     ├── Profile/
@@ -90,7 +88,6 @@ src/
 - 标签：`Tag.vue`
 - 归档：`Archive.vue`
 - 留言板：`Guestbook.vue`
-- 友人帐：`Friends.vue`
 - 认证：`Login.vue`、`Register.vue`
 - 个人中心：`Profile.vue`
 - 后台：`AdminLayout.vue`、`AdminCategories.vue`
@@ -105,7 +102,6 @@ src/
 | 标签 | 部分使用模拟数据 |
 | 归档 | 包含模拟数据逻辑 |
 | 留言板 | 当前为前端展示版本 |
-| 友人帐 | 当前为前端展示版本 |
 | 上传 | 已接后端 |
 | 首页聚合 | 已接后端 |
 
@@ -131,7 +127,6 @@ src/
 /category/:id          分类详情
 /tag                   标签
 /guestbook             留言板
-/friends               友人帐
 /about                 关于
 /login                 登录
 /register              注册

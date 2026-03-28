@@ -38,7 +38,7 @@
         <button v-if="canComment" class="action-btn reply-btn" @click="$emit('reply', comment)">
           回复
         </button>
-        <button v-if="canDelete" class="action-btn delete-btn" @click="$emit('delete', comment)">
+        <button v-if="canDelete" class="action-btn delete-btn" @click="handleDelete">
           删除
         </button>
       </div>
@@ -59,6 +59,7 @@
           @reply="$emit('reply', $event)"
           @delete="$emit('delete', $event)"
           @like="$emit('like', $event)"
+          @guest-delete="$emit('guestDelete', $event.comment, $event.deleteKey)"
         >
           <template #replyForm>
             <slot name="childReplyForm" />
@@ -75,6 +76,24 @@ import type { Comment } from '@/types'
 import { likeComment } from '@/api/comment'
 import { renderCommentTokens } from '@/emoji/renderers/commentRenderer'
 
+// 本地存储游客评论删除 key 的 key
+const GUEST_DELETE_KEYS_KEY = 'comment_guest_delete_keys';
+
+// 获取本地存储的游客删除 keys
+function getStoredGuestDeleteKeys(): Record<string, string> {
+  try {
+    const stored = localStorage.getItem(GUEST_DELETE_KEYS_KEY);
+    return stored ? JSON.parse(stored) : {};
+  } catch {
+    return {};
+  }
+}
+
+// 获取游客删除 key
+function getGuestDeleteKey(commentId: number | string): string | undefined {
+  return getStoredGuestDeleteKeys()[String(commentId)];
+}
+
 const props = defineProps<{
   comment: Comment
   currentUserId?: number | null
@@ -84,10 +103,11 @@ const props = defineProps<{
   replyingTo?: number | null
 }>()
 
-defineEmits<{
+const emit = defineEmits<{
   (e: 'reply', comment: Comment): void
   (e: 'delete', comment: Comment): void
   (e: 'like', comment: Comment): void
+  (e: 'guestDelete', comment: Comment, deleteKey: string): void
 }>()
 
 const defaultAvatar = 'https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png'
@@ -97,10 +117,24 @@ const localLikeCount = ref(props.comment.likeCount || 0)
 
 const isCurrentUserAdmin = computed(() => props.isAdmin ?? false)
 
+// 获取当前评论的删除 key（如果是游客评论）
+const guestDeleteKey = computed(() => getGuestDeleteKey(props.comment.id));
+
 const canDelete = computed(() => {
-  if (!props.currentUserId) return false
-  if (isCurrentUserAdmin.value) return true
-  return props.currentUserId === props.comment.authorId
+  // 登录用户：管理员或本人可删
+  if (props.currentUserId) {
+    if (isCurrentUserAdmin.value) return true
+    return props.currentUserId === props.comment.authorId
+  }
+  // 游客：如果本地有存储的删除 key，且该评论无 authorId（游客评论），则可删
+  if (guestDeleteKey.value && !props.comment.authorId) {
+    return true
+  }
+  return false
+})
+
+const isGuestDeletable = computed(() => {
+  return !props.currentUserId && !!guestDeleteKey.value && !props.comment.authorId
 })
 
 const contentTokens = computed(() => renderCommentTokens(props.comment.content))
@@ -113,6 +147,16 @@ async function handleLike() {
     isLiked.value = true
   } catch {
     // ignore
+  }
+}
+
+function handleDelete() {
+  if (isGuestDeletable.value && props.guestDeleteKey) {
+    // 游客删除
+    emit('guestDelete', props.comment, props.guestDeleteKey)
+  } else {
+    // 登录用户删除
+    emit('delete', props.comment)
   }
 }
 

@@ -75,7 +75,6 @@ VITE_API_BASE_URL=https://your-domain.com/api
 | `/category/:id` | 分类详情 | 分类下文章列表 |
 | `/tag` | 标签页 | 当前包含模拟数据逻辑 |
 | `/guestbook` | 留言板 | 当前页面为前端展示版本 |
-| `/friends` | 友人帐 | 当前页面为前端展示版本 |
 | `/about` | 关于页 | 站点介绍 |
 | `/login` | 登录 | 支持游客访问 |
 | `/register` | 注册 | 支持游客访问 |
@@ -97,7 +96,6 @@ Chen404Fro/
 │   │   ├── home.ts
 │   │   ├── upload.ts
 │   │   ├── comment.ts
-│   │   ├── friend.ts
 │   │   └── request.ts
 │   ├── assets/
 │   │   └── styles/             # 主题变量与全局样式
@@ -126,7 +124,6 @@ Chen404Fro/
 │       ├── Category/
 │       ├── Tag/
 │       ├── Guestbook/
-│       ├── Friends/
 │       ├── About/
 │       ├── Auth/
 │       ├── Profile/
@@ -150,8 +147,8 @@ Chen404Fro/
 
 ### 需要注意的当前状态
 
-- `comment.ts`、`friend.ts`、部分 `home.ts` 中存在接口封装，但当前后端仓库里未看到完整对应控制器实现
-- `Guestbook`、`Friends`、`Tag`、`Archive` 等页面仍混合使用静态展示或模拟数据逻辑
+- `comment.ts`、部分 `home.ts` 中存在接口封装，部分链路仍在持续迭代
+- `Guestbook`、`Tag`、`Archive` 等页面仍混合使用静态展示或模拟数据逻辑
 - 文档中所有说明均以当前代码为准，不代表所有设计目标都已落地
 
 ## 主要特性
