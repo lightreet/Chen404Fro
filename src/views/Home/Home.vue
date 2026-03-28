@@ -49,6 +49,7 @@
           :key="article.id"
           :article="article"
           :index="index"
+          :cover-priority="index < 2"
         />
       </div>
 

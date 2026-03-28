@@ -143,6 +143,22 @@ const router = createRouter({
   },
 });
 
+// 发版后旧标签页仍引用已删除的 chunk 时会触发；提示并刷新以加载新入口（见 main.ts 挂载后清除标记）
+export const CHUNK_RELOAD_KEY = 'chen404_chunk_reload';
+const chunkLoadFailed =
+  /Failed to fetch dynamically imported module|Loading chunk \d+ failed|Importing a module script failed/i;
+router.onError((err) => {
+  if (!chunkLoadFailed.test(String(err?.message ?? err))) return;
+  if (sessionStorage.getItem(CHUNK_RELOAD_KEY)) {
+    sessionStorage.removeItem(CHUNK_RELOAD_KEY);
+    ElMessage.error('静态资源加载失败，请强制刷新 (Ctrl+Shift+R) 或检查服务端是否已完整部署前端');
+    return;
+  }
+  sessionStorage.setItem(CHUNK_RELOAD_KEY, '1');
+  ElMessage.warning('页面已更新，正在刷新…');
+  window.location.reload();
+});
+
 // 路由守卫
 router.beforeEach(async (to, _from, next) => {
   const userStore = useUserStore();

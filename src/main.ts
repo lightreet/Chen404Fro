@@ -6,7 +6,7 @@ import 'element-plus/dist/index.css'
 import 'virtual:uno.css'
 
 import App from './App.vue'
-import router from './router'
+import router, { CHUNK_RELOAD_KEY } from './router'
 import { useUserStore } from './stores/user'
 
 // 全局样式
@@ -31,6 +31,7 @@ async function bootstrap() {
   // 启动时先与后端同步一次登录态，避免“本地显示已登录但服务端判匿名”
   await userStore.syncAuthState()
   app.mount('#app')
+  sessionStorage.removeItem(CHUNK_RELOAD_KEY)
 }
 
 bootstrap()

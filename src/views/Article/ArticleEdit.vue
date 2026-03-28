@@ -224,8 +224,8 @@
                   <el-checkbox v-model="form.isTop" :true-value="1" :false-value="0">置顶文章</el-checkbox>
                   <el-checkbox v-model="form.isRecommend" :true-value="1" :false-value="0">推荐文章</el-checkbox>
                   <el-radio-group v-model="form.status" size="small">
-                    <el-radio-button :label="ArticleStatus.DRAFT">草稿</el-radio-button>
-                    <el-radio-button :label="ArticleStatus.PUBLISHED">发布</el-radio-button>
+                    <el-radio-button :value="ArticleStatus.DRAFT">草稿</el-radio-button>
+                    <el-radio-button :value="ArticleStatus.PUBLISHED">发布</el-radio-button>
                   </el-radio-group>
                 </div>
               </Transition>

@@ -72,9 +72,9 @@
                     </div>
                     <div class="content-actions">
                       <el-radio-group v-model="articleStatus" size="default" class="status-radio" @change="loadMyArticles(1)">
-                        <el-radio-button :label="-1">全部</el-radio-button>
-                        <el-radio-button :label="0">草稿</el-radio-button>
-                        <el-radio-button :label="1">已发布</el-radio-button>
+                        <el-radio-button :value="-1">全部</el-radio-button>
+                        <el-radio-button :value="0">草稿</el-radio-button>
+                        <el-radio-button :value="1">已发布</el-radio-button>
                       </el-radio-group>
                       <div class="search-row">
                         <el-input

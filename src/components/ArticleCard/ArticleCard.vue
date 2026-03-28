@@ -7,8 +7,8 @@
       {
         'manage-mode': mode === 'manage',
         'profile-feed': profileFeed,
-        'has-cover': !!article.coverImage,
-        'no-cover': !article.coverImage,
+        'has-cover': showCover,
+        'no-cover': !showCover,
       },
     ]"
   >
@@ -107,22 +107,36 @@
       </div>
     </div>
 
-    <!-- 封面图 -->
-    <div class="card-image" v-if="article.coverImage">
+    <!-- 封面图（加载失败时收起，避免大块空白） -->
+    <div class="card-image" v-if="showCover">
       <router-link v-if="mode !== 'manage'" :to="`/article/${article.id}`" class="image-link">
-        <img :src="article.coverImage" :alt="article.title" loading="lazy" />
-        <div class="image-overlay"></div>
+        <img
+          :src="article.coverImage"
+          :alt="article.title"
+          :loading="coverPriority ? 'eager' : 'lazy'"
+          :fetchpriority="coverPriority ? 'high' : undefined"
+          decoding="async"
+          @error="onCoverError"
+        />
+        <div class="image-overlay" aria-hidden="true"></div>
       </router-link>
       <div v-else class="image-link">
-        <img :src="article.coverImage" :alt="article.title" loading="lazy" />
-        <div class="image-overlay"></div>
+        <img
+          :src="article.coverImage"
+          :alt="article.title"
+          :loading="coverPriority ? 'eager' : 'lazy'"
+          :fetchpriority="coverPriority ? 'high' : undefined"
+          decoding="async"
+          @error="onCoverError"
+        />
+        <div class="image-overlay" aria-hidden="true"></div>
       </div>
     </div>
   </article>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { Icon } from '@iconify/vue';
 import { Calendar, View, ChatDotRound, ArrowRight, User } from '@element-plus/icons-vue';
@@ -145,6 +159,8 @@ interface Props {
   compact?: boolean;
   /** 个人中心「点赞/收藏」等与「我的文章」同规格：固定左文右图、封面宽度与 manage 紧凑态一致 */
   profileFeed?: boolean;
+  /** 首屏条目可设为 true：eager + fetchpriority=high */
+  coverPriority?: boolean;
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -152,7 +168,23 @@ const props = withDefaults(defineProps<Props>(), {
   mode: 'home',
   compact: false,
   profileFeed: false,
+  coverPriority: false,
 });
+
+const coverLoadFailed = ref(false);
+
+watch(
+  () => [props.article.id, props.article.coverImage] as const,
+  () => {
+    coverLoadFailed.value = false;
+  }
+);
+
+const showCover = computed(() => !!(props.article.coverImage && !coverLoadFailed.value));
+
+function onCoverError() {
+  coverLoadFailed.value = true;
+}
 
 // 根据索引决定图片位置（奇数左，偶数右）；个人中心 profile-feed 与 manage 一致，始终左文右图
 const isImageLeft = computed(() => {
@@ -510,6 +542,7 @@ const authorName = computed(() => {
     }
 
     .image-overlay {
+      pointer-events: none;
       position: absolute;
       top: 0;
       left: 0;
