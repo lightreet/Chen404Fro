@@ -37,9 +37,6 @@
             </el-button>
           </router-link>
 
-          <button class="action-btn" @click="toggleSearch">
-            <el-icon><Search /></el-icon>
-          </button>
           <button class="action-btn" @click="toggleTheme">
             <el-icon v-if="isDark"><Sunny /></el-icon>
             <el-icon v-else><Moon /></el-icon>
@@ -160,26 +157,6 @@
       </div>
     </div>
 
-    <!-- 搜索对话框 -->
-    <el-dialog
-      v-model="isSearchOpen"
-      title="搜索文章"
-      width="600px"
-      :show-close="false"
-      class="search-dialog"
-    >
-      <el-input
-        v-model="searchKeyword"
-        placeholder="输入关键词搜索..."
-        size="large"
-        clearable
-        @keyup.enter="handleSearch"
-      >
-        <template #prefix>
-          <el-icon><Search /></el-icon>
-        </template>
-      </el-input>
-    </el-dialog>
   </header>
 </template>
 
@@ -193,7 +170,6 @@ import {
   List,
   ChatDotRound,
   InfoFilled,
-  Search,
   Sunny,
   Moon,
   User,
@@ -263,23 +239,6 @@ onUnmounted(() => {
   window.removeEventListener('resize', checkMobile);
   window.removeEventListener('scroll', handleScroll);
 });
-
-// 搜索
-const isSearchOpen = ref(false);
-const searchKeyword = ref('');
-
-const toggleSearch = () => {
-  isSearchOpen.value = !isSearchOpen.value;
-};
-
-const handleSearch = () => {
-  if (searchKeyword.value.trim()) {
-    // TODO: 实现搜索逻辑
-    console.log('搜索:', searchKeyword.value);
-    isSearchOpen.value = false;
-    searchKeyword.value = '';
-  }
-};
 
 // 主题切换
 const isDark = ref(false);
@@ -631,16 +590,6 @@ const handleLogout = async () => {
 }
 
 // 搜索对话框
-:deep(.search-dialog) {
-  .el-dialog__header {
-    padding-bottom: 16px;
-  }
-
-  .el-dialog__body {
-    padding-top: 0;
-  }
-}
-
 // 下拉菜单样式
 :deep(.el-dropdown-menu) {
   min-width: 160px;

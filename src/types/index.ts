@@ -214,6 +214,10 @@ export interface Article {
   canDelete?: boolean;
   /** 当前登录用户是否可评论 */
   canComment?: boolean;
+  /** 当前登录用户是否已点赞该文章 */
+  liked?: boolean;
+  /** 当前登录用户是否已收藏 */
+  favorited?: boolean;
 }
 
 export enum ArticleStatus {
@@ -312,6 +316,8 @@ export interface Comment {
   };
   /** 游客评论的自助删除 key（仅在创建评论时返回一次） */
   guestDeleteKey?: string;
+  /** 当前登录用户是否已点赞该评论 */
+  likedByMe?: boolean;
 }
 
 export enum CommentStatus {

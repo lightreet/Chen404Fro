@@ -38,6 +38,39 @@
               {{ article.commentCount ?? 0 }} 评论
             </span>
           </div>
+
+          <div class="article-interactions">
+            <button
+              type="button"
+              class="interaction-btn like-btn"
+              :class="{ active: article.liked }"
+              :disabled="likeLoading"
+              @click="handleArticleLike"
+            >
+              <span class="heart-icon" aria-hidden="true">♥</span>
+              <span>{{ article.likeCount ?? 0 }}</span>
+            </button>
+            <button
+              v-if="userStore.isLoggedIn"
+              type="button"
+              class="interaction-btn fav-btn"
+              :class="{ active: article.favorited }"
+              :disabled="favLoading"
+              @click="handleArticleFavorite"
+            >
+              <el-icon><StarFilled v-if="article.favorited" /><Star v-else /></el-icon>
+              <span>{{ article.favorited ? '已收藏' : '收藏' }}</span>
+            </button>
+            <button
+              v-else
+              type="button"
+              class="interaction-btn fav-btn"
+              @click="promptLoginForFavorite"
+            >
+              <el-icon><Star /></el-icon>
+              <span>收藏</span>
+            </button>
+          </div>
         </div>
 
         <!-- 文章内容：优先后端 contentHtml，否则用 MdPreview 渲染 Markdown -->
@@ -90,19 +123,24 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { ArrowLeft, Calendar, View, ChatDotRound } from '@element-plus/icons-vue';
+import { ArrowLeft, Calendar, View, ChatDotRound, Star, StarFilled } from '@element-plus/icons-vue';
 import { MdPreview } from 'md-editor-v3';
 import 'md-editor-v3/lib/preview.css';
 import DefaultLayout from '@/layouts/DefaultLayout.vue';
 import CommentSection from '@/components/Comment/CommentSection.vue';
 import type { Article } from '@/types';
 import { formatDate } from '@/utils/format';
-import { getArticleById, getArticleNeighbors } from '@/api/article';
+import { getArticleById, getArticleNeighbors, likeArticle, toggleArticleFavorite } from '@/api/article';
 import { renderArticleText } from '@/emoji/renderers/articleRenderer';
+import { useUserStore } from '@/stores/user';
+import { ElMessage } from 'element-plus';
 
 const route = useRoute();
 const router = useRouter();
+const userStore = useUserStore();
 const loading = ref(true);
+const likeLoading = ref(false);
+const favLoading = ref(false);
 const article = ref<Article | null>(null);
 const prevArticle = ref<{ id: number | string; title: string } | null>(null);
 const nextArticle = ref<{ id: number | string; title: string } | null>(null);
@@ -159,6 +197,40 @@ const loadArticle = async () => {
   } finally {
     loading.value = false;
   }
+};
+
+const handleArticleLike = async () => {
+  if (!article.value || likeLoading.value) return;
+  likeLoading.value = true;
+  try {
+    const res = await likeArticle(article.value.id);
+    article.value.likeCount = res.likes;
+    if (typeof res.liked === 'boolean') {
+      article.value.liked = res.liked;
+    }
+  } catch {
+    // 错误提示由 axios 拦截器统一展示（避免与拦截器各弹一次）
+  } finally {
+    likeLoading.value = false;
+  }
+};
+
+const handleArticleFavorite = async () => {
+  if (!article.value || favLoading.value || !userStore.isLoggedIn) return;
+  favLoading.value = true;
+  try {
+    const res = await toggleArticleFavorite(article.value.id);
+    article.value.favorited = res.favorited;
+  } catch {
+    ElMessage.error('收藏失败，请确认已登录');
+  } finally {
+    favLoading.value = false;
+  }
+};
+
+const promptLoginForFavorite = () => {
+  ElMessage.info('请先登录后再收藏');
+  router.push({ path: '/login', query: { redirect: route.fullPath } });
 };
 
 onMounted(() => {
@@ -223,6 +295,54 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: 6px;
+}
+
+.article-interactions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.interaction-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--border-color);
+  background: color-mix(in srgb, var(--bg-primary) 88%, transparent);
+  color: var(--text-secondary);
+  font-size: 14px;
+  cursor: pointer;
+  transition: color 0.2s, border-color 0.2s, background 0.2s;
+
+  &:hover:not(:disabled) {
+    border-color: rgba(251, 114, 153, 0.45);
+    color: var(--primary);
+  }
+
+  &:disabled {
+    opacity: 0.65;
+    cursor: not-allowed;
+  }
+
+  &.like-btn.active {
+    color: var(--primary);
+    border-color: rgba(251, 114, 153, 0.5);
+    background: rgba(251, 114, 153, 0.08);
+  }
+
+  &.fav-btn.active {
+    color: var(--primary);
+    border-color: rgba(251, 114, 153, 0.5);
+  }
+
+  .heart-icon {
+    font-size: 16px;
+    line-height: 1;
+  }
 }
 
 .article-body {

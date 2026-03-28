@@ -39,6 +39,10 @@
                 <el-icon><Document /></el-icon>
                 <span>我的文章</span>
               </el-menu-item>
+              <el-menu-item index="likes">
+                <el-icon><Medal /></el-icon>
+                <span>我的点赞</span>
+              </el-menu-item>
               <el-menu-item index="favorites">
                 <el-icon><Star /></el-icon>
                 <span>收藏</span>
@@ -125,22 +129,84 @@
               </el-card>
             </div>
 
-            <!-- 收藏（当前后端尚未提供收藏接口，这里先做“对齐样式/预留入口”） -->
-            <div v-else-if="activeMenu === 'favorites'" class="article-panel">
-              <el-card class="info-card" shadow="never">
+            <!-- 我的点赞 -->
+            <div v-else-if="activeMenu === 'likes'" class="article-panel">
+              <el-card class="info-card article-list-card" shadow="never">
                 <template #header>
-                  <span class="card-title">
-                    <el-icon class="card-icon"><Star /></el-icon>
-                    我的收藏
-                  </span>
+                  <div class="content-header">
+                    <span class="card-title">
+                      <el-icon class="card-icon"><Medal /></el-icon>
+                      我的点赞
+                    </span>
+                    <span class="article-total">共 {{ likedTotal }} 篇</span>
+                  </div>
                 </template>
-
-                <div class="empty-state">
-                  暂无收藏内容（当前项目收藏接口尚未接入）。
+                <el-skeleton v-if="likedLoading" :rows="6" animated />
+                <div v-else-if="myLikedArticles.length === 0" class="empty-state">暂无点赞文章</div>
+                <div v-else class="article-list-shell">
+                  <div class="article-scroll-area">
+                    <div class="article-list">
+                      <ArticleCard
+                        v-for="(a, idx) in myLikedArticles"
+                        :key="String(a.id)"
+                        :article="a"
+                        :index="idx"
+                        mode="home"
+                        compact
+                      />
+                    </div>
+                  </div>
+                  <div class="pager">
+                    <el-pagination
+                      background
+                      layout="prev, pager, next"
+                      :current-page="likedPage"
+                      :page-size="likedPageSize"
+                      :total="likedTotal"
+                      @current-change="loadMyLikedArticles"
+                    />
+                  </div>
                 </div>
+              </el-card>
+            </div>
 
-                <div class="placeholder">
-                  你可以在文章页使用“收藏/点赞”（如果已实现）后续扩展这里。
+            <!-- 我的收藏 -->
+            <div v-else-if="activeMenu === 'favorites'" class="article-panel">
+              <el-card class="info-card article-list-card" shadow="never">
+                <template #header>
+                  <div class="content-header">
+                    <span class="card-title">
+                      <el-icon class="card-icon"><Star /></el-icon>
+                      我的收藏
+                    </span>
+                    <span class="article-total">共 {{ favTotal }} 篇</span>
+                  </div>
+                </template>
+                <el-skeleton v-if="favLoading" :rows="6" animated />
+                <div v-else-if="myFavoriteArticles.length === 0" class="empty-state">暂无收藏</div>
+                <div v-else class="article-list-shell">
+                  <div class="article-scroll-area">
+                    <div class="article-list">
+                      <ArticleCard
+                        v-for="(a, idx) in myFavoriteArticles"
+                        :key="String(a.id)"
+                        :article="a"
+                        :index="idx"
+                        mode="home"
+                        compact
+                      />
+                    </div>
+                  </div>
+                  <div class="pager">
+                    <el-pagination
+                      background
+                      layout="prev, pager, next"
+                      :current-page="favPage"
+                      :page-size="favPageSize"
+                      :total="favTotal"
+                      @current-change="loadMyFavoriteArticles"
+                    />
+                  </div>
                 </div>
               </el-card>
             </div>
@@ -300,10 +366,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted, nextTick } from 'vue';
+import { ref, reactive, computed, onMounted, nextTick, watch } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import type { FormInstance, FormRules } from 'element-plus';
-import { User, Lock, Link, Document, Star, Upload, Search } from '@element-plus/icons-vue';
+import { User, Lock, Link, Document, Star, Upload, Search, Medal } from '@element-plus/icons-vue';
 import { useRoute, useRouter } from 'vue-router';
 import DefaultLayout from '@/layouts/DefaultLayout.vue';
 import { useUserStore } from '@/stores/user';
@@ -312,7 +378,7 @@ import { uploadAvatar } from '@/api/upload';
 import { formatDate, formatDateTime } from '@/utils/format';
 import { getTrustLevelLabel, isAdminUser, isFriendUser } from '@/utils/permission';
 import { createConfirmPasswordRule, validateImageFile, AVATAR_MAX_MB } from '@/utils/validation';
-import { getMyArticles, deleteArticle } from '@/api/article';
+import { getMyArticles, deleteArticle, getMyLikedArticles, getMyFavoriteArticles } from '@/api/article';
 import ArticleCard from '@/components/ArticleCard/ArticleCard.vue';
 import { renderSignatureTokens } from '@/emoji/renderers/signatureRenderer';
 
@@ -321,7 +387,7 @@ const router = useRouter();
 const route = useRoute();
 const user = ref(userStore.user);
 
-const activeMenu = ref<'articles' | 'favorites' | 'settings'>('articles');
+const activeMenu = ref<'articles' | 'likes' | 'favorites' | 'settings'>('articles');
 
 const roleText = computed(() => getTrustLevelLabel(user.value));
 const trustLevelText = computed(() => {
@@ -380,16 +446,16 @@ const loadUser = async () => {
 };
 
 const handleMenuSelect = (index: string) => {
-  activeMenu.value = index as any;
-  if (activeMenu.value === 'articles') {
-    loadMyArticles(1);
-  }
+  activeMenu.value = index as typeof activeMenu.value;
+  router.replace({ query: { ...route.query, tab: index } });
 };
 
 const syncActiveMenuFromRoute = () => {
   const tab = route.query.tab;
   const nextTab =
-    tab === 'articles' || tab === 'favorites' || tab === 'settings' ? tab : undefined;
+    tab === 'articles' || tab === 'likes' || tab === 'favorites' || tab === 'settings'
+      ? tab
+      : undefined;
   if (nextTab) activeMenu.value = nextTab;
 };
 
@@ -479,6 +545,46 @@ const loadMyArticles = async (page: number = 1) => {
   }
 };
 
+const likedLoading = ref(false);
+const myLikedArticles = ref<any[]>([]);
+const likedPage = ref(1);
+const likedPageSize = 8;
+const likedTotal = ref(0);
+
+const loadMyLikedArticles = async (page: number = 1) => {
+  likedPage.value = page;
+  likedLoading.value = true;
+  try {
+    const res = await getMyLikedArticles({ page, size: likedPageSize });
+    myLikedArticles.value = res?.list ?? [];
+    likedTotal.value = res?.total ?? 0;
+  } catch (err) {
+    console.error('加载点赞文章失败', err);
+  } finally {
+    likedLoading.value = false;
+  }
+};
+
+const favLoading = ref(false);
+const myFavoriteArticles = ref<any[]>([]);
+const favPage = ref(1);
+const favPageSize = 8;
+const favTotal = ref(0);
+
+const loadMyFavoriteArticles = async (page: number = 1) => {
+  favPage.value = page;
+  favLoading.value = true;
+  try {
+    const res = await getMyFavoriteArticles({ page, size: favPageSize });
+    myFavoriteArticles.value = res?.list ?? [];
+    favTotal.value = res?.total ?? 0;
+  } catch (err) {
+    console.error('加载收藏失败', err);
+  } finally {
+    favLoading.value = false;
+  }
+};
+
 const handleEditArticle = (id: number | string) => {
   router.push(`/article/edit/${String(id)}`);
 };
@@ -522,6 +628,18 @@ const handleChangePassword = async () => {
   }
 };
 
+watch(
+  () => route.query.tab,
+  (tab) => {
+    if (tab === 'articles' || tab === 'likes' || tab === 'favorites' || tab === 'settings') {
+      activeMenu.value = tab;
+      if (tab === 'articles') loadMyArticles(1);
+      else if (tab === 'likes') loadMyLikedArticles(1);
+      else if (tab === 'favorites') loadMyFavoriteArticles(1);
+    }
+  }
+);
+
 onMounted(() => {
   if (userStore.user) {
     user.value = userStore.user;
@@ -531,6 +649,8 @@ onMounted(() => {
   syncActiveMenuFromRoute();
   loadUser();
   if (activeMenu.value === 'articles') loadMyArticles(1);
+  else if (activeMenu.value === 'likes') loadMyLikedArticles(1);
+  else if (activeMenu.value === 'favorites') loadMyFavoriteArticles(1);
 });
 </script>
 

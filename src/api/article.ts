@@ -78,12 +78,34 @@ export function getMyArticles(params?: {
   return get('/articles/mine', params);
 }
 
+/** 文章点赞接口返回（匿名无 liked 字段） */
+export interface ArticleLikeResponse {
+  likes: number;
+  liked?: boolean;
+}
+
 /**
- * 点赞文章
- * @param id 文章ID
+ * 点赞文章：匿名每次 +1（限流）；登录为切换赞/取消
  */
-export function likeArticle(id: number): Promise<{ likes: number }> {
-  return post(`/articles/${id}/like`);
+export function likeArticle(id: number | string): Promise<ArticleLikeResponse> {
+  return post(`/articles/${String(id)}/like`);
+}
+
+/**
+ * 切换收藏（需登录）
+ */
+export function toggleArticleFavorite(id: number | string): Promise<{ favorited: boolean }> {
+  return post(`/articles/${String(id)}/favorite`);
+}
+
+/** 个人中心：我点赞的文章 */
+export function getMyLikedArticles(params?: PageParams): Promise<PageResult<Article>> {
+  return get('/articles/mine/liked', params);
+}
+
+/** 个人中心：我的收藏 */
+export function getMyFavoriteArticles(params?: PageParams): Promise<PageResult<Article>> {
+  return get('/articles/mine/favorites', params);
 }
 
 // ==================== 分类相关 ====================

@@ -73,10 +73,14 @@ export function reviewComment(id: number, status: 1 | 2): Promise<Comment> {
   return put(`/admin/comments/${id}/review`, { status });
 }
 
+export interface CommentLikeResponse {
+  likes: number;
+  liked: boolean;
+}
+
 /**
- * 点赞评论
- * @param id 评论ID
+ * 点赞评论（登录去重；匿名可重复计数，服务端限流）
  */
-export function likeComment(id: number): Promise<{ likes: number }> {
+export function likeComment(id: number): Promise<CommentLikeResponse> {
   return post(`/comments/${id}/like`);
 }

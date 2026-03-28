@@ -38,10 +38,28 @@
           {{ formatNumber(article.viewCount ?? 0) }}
         </span>
         <span class="stat-item">
+          <Icon class="stat-iconify" icon="mdi:heart-outline" width="14" height="14" aria-hidden="true" />
+          {{ formatNumber(article.likeCount ?? 0) }}
+        </span>
+        <span class="stat-item">
           <el-icon><ChatDotRound /></el-icon>
           {{ article.commentCount ?? 0 }}
         </span>
-        <span class="stat-item category-tag" v-if="article.category">
+        <router-link
+          v-if="mode !== 'manage' && article.category"
+          :to="`/category/${article.category.id}`"
+          class="stat-item category-tag"
+          @click.stop
+        >
+          <Icon
+            class="category-icon-iconify"
+            :icon="article.category.icon || 'mdi:folder'"
+            width="14"
+            height="14"
+          />
+          {{ article.category.name }}
+        </router-link>
+        <span v-else-if="article.category" class="stat-item category-tag">
           <Icon
             class="category-icon-iconify"
             :icon="article.category.icon || 'mdi:folder'"
@@ -378,10 +396,17 @@ const authorName = computed(() => {
     font-size: 14px;
   }
 
+  .stat-iconify {
+    flex-shrink: 0;
+    color: var(--text-secondary);
+    vertical-align: middle;
+  }
+
   &.category-tag {
-    /* 与评论等统计项统一为次要文字色 */
+    /* 与评论等统计项统一为次要文字色；链接态与清单页 /category/:id 一致 */
     color: inherit;
     cursor: pointer;
+    text-decoration: none;
 
     .category-icon-iconify {
       flex-shrink: 0;
@@ -389,6 +414,7 @@ const authorName = computed(() => {
     }
 
     &:hover {
+      color: var(--primary);
       text-decoration: underline;
     }
   }

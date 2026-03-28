@@ -6,7 +6,11 @@
         <p class="page-desc">共计 {{ total }} 篇文章</p>
       </div>
 
-      <div class="timeline">
+      <el-skeleton v-if="loading" :rows="8" animated />
+
+      <div v-else-if="archiveData.length === 0" class="empty-state">暂无公开文章归档</div>
+
+      <div v-else class="timeline">
         <div
           v-for="year in archiveData"
           :key="year.year"
@@ -25,7 +29,7 @@
             >
               <div class="month-header">
                 <span class="month-title">{{ month.month }} 月</span>
-                <span class="month-count">({{ month.articles.length }} 篇)</span>
+                <span class="month-count">({{ month.count ?? month.articles.length }} 篇)</span>
               </div>
 
               <div class="article-list">
@@ -38,10 +42,10 @@
                   <span class="article-date">{{ formatDate(article.publishTime, 'MM-DD') }}</span>
                   <span class="article-title-text">{{ article.title }}</span>
                   <span
-                    v-for="tag in article.tags"
+                    v-for="tag in article.tags || []"
                     :key="tag.id"
                     class="article-tag"
-                    :style="{ backgroundColor: tag.color + '20', color: tag.color }"
+                    :style="{ backgroundColor: (tag.color || '#fb7299') + '20', color: tag.color || '#fb7299' }"
                   >
                     {{ tag.name }}
                   </span>
@@ -58,65 +62,30 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
 import DefaultLayout from '@/layouts/DefaultLayout.vue';
-import type { Article } from '@/types';
+import type { ArchiveYear } from '@/types';
 import { formatDate } from '@/utils/format';
-import { generateMockArticles } from '@/utils/mock';
+import { getArchives } from '@/api/article';
 
-interface MonthData {
-  month: number;
-  articles: Article[];
-}
-
-interface YearData {
-  year: number;
-  count: number;
-  months: MonthData[];
-}
-
-const archiveData = ref<YearData[]>([]);
+const archiveData = ref<ArchiveYear[]>([]);
 const total = ref(0);
+const loading = ref(true);
 
-// 生成归档数据
-const generateArchiveData = () => {
-  const articles = generateMockArticles(1, 30);
-  total.value = articles.length;
-
-  const yearMap = new Map<number, Map<number, Article[]>>();
-
-  articles.forEach(article => {
-    const date = new Date(article.publishTime);
-    const year = date.getFullYear();
-    const month = date.getMonth() + 1;
-
-    if (!yearMap.has(year)) {
-      yearMap.set(year, new Map());
-    }
-    const monthMap = yearMap.get(year)!;
-
-    if (!monthMap.has(month)) {
-      monthMap.set(month, []);
-    }
-    monthMap.get(month)!.push(article);
-  });
-
-  archiveData.value = Array.from(yearMap.entries())
-    .sort(([a], [b]) => b - a)
-    .map(([year, monthMap]) => ({
-      year,
-      count: Array.from(monthMap.values()).flat().length,
-      months: Array.from(monthMap.entries())
-        .sort(([a], [b]) => b - a)
-        .map(([month, articles]) => ({
-          month,
-          articles: articles.sort((a, b) =>
-            new Date(b.publishTime).getTime() - new Date(a.publishTime).getTime()
-          ),
-        })),
-    }));
+const loadArchives = async () => {
+  loading.value = true;
+  try {
+    const data = await getArchives();
+    archiveData.value = data ?? [];
+    total.value = archiveData.value.reduce((sum, y) => sum + (y.count ?? 0), 0);
+  } catch {
+    archiveData.value = [];
+    total.value = 0;
+  } finally {
+    loading.value = false;
+  }
 };
 
 onMounted(() => {
-  generateArchiveData();
+  loadArchives();
 });
 </script>
 
@@ -140,6 +109,15 @@ onMounted(() => {
 .page-desc {
   font-size: 14px;
   color: var(--text-secondary);
+}
+
+.empty-state {
+  text-align: center;
+  padding: 48px 24px;
+  color: var(--text-tertiary);
+  font-size: 15px;
+  background: var(--bg-secondary);
+  border-radius: var(--radius-lg);
 }
 
 .timeline {

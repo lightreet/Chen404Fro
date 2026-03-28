@@ -22,11 +22,25 @@
     </template>
 
     <div class="home-page">
-      <!-- Discovery 标题 -->
-      <div id="discovery" class="jp-section-title section-header">
-        <el-icon class="jp-section-icon"><Compass /></el-icon>
-        <h2 class="!m-0">Discovery</h2>
+      <!-- Discovery 标题与搜索同一行 -->
+      <div id="discovery" class="discovery-head">
+        <div class="jp-section-title section-header discovery-head__title">
+          <el-icon class="jp-section-icon"><Compass /></el-icon>
+          <h2 class="!m-0">Discovery</h2>
+        </div>
+        <HomeDiscoverySearch
+          :model-value="searchDraft"
+          :expanded="searchExpanded"
+          @update:model-value="searchDraft = $event"
+          @update:expanded="searchExpanded = $event"
+          @search="handleSearchSubmit"
+        />
       </div>
+
+      <p v-if="activeKeyword" class="search-active-hint">
+        <span>标题包含「{{ activeKeyword }}」</span>
+        <button type="button" class="search-clear" @click="clearTitleSearch">清除</button>
+      </p>
 
       <!-- 文章列表 -->
       <div class="article-list">
@@ -40,7 +54,7 @@
 
       <!-- 空状态 -->
       <div class="empty-state" v-if="!loading && articleList.length === 0">
-        <p>暂无文章，快去写一篇吧 ~</p>
+        <p>{{ activeKeyword ? '没有找到匹配标题的文章 ~' : '暂无文章，快去写一篇吧 ~' }}</p>
       </div>
 
       <!-- 加载更多 -->
@@ -72,6 +86,7 @@ import { Compass } from '@element-plus/icons-vue';
 import DefaultLayout from '@/layouts/DefaultLayout.vue';
 import ArticleCard from '@/components/ArticleCard/ArticleCard.vue';
 import HeroWave from '@/components/HeroWave/HeroWave.vue';
+import HomeDiscoverySearch from '@/components/HomeDiscoverySearch/HomeDiscoverySearch.vue';
 import type { Article } from '@/types';
 import { getArticles } from '@/api/article';
 
@@ -84,14 +99,21 @@ const total = ref(0);
 const loading = ref(false);
 const hasMore = ref(true);
 
-// 加载文章列表（仅已发布文章，对接后端 GET /api/articles）
+/** 标题搜索：已生效的关键词（回车后提交） */
+const activeKeyword = ref('');
+const searchDraft = ref('');
+const searchExpanded = ref(false);
+
+// 加载文章列表（仅已发布文章，对接后端 GET /api/articles；keyword 仅匹配标题）
 const loadArticles = async (page: number = 1) => {
   loading.value = true;
   try {
+    const kw = activeKeyword.value.trim();
     const res = await getArticles({
       page,
       size: pageSize,
       status: 1, // 仅已发布
+      ...(kw ? { keyword: kw } : {}),
     });
     const list = res?.list ?? [];
     const totalCount = res?.total ?? 0;
@@ -113,6 +135,22 @@ const loadArticles = async (page: number = 1) => {
     loading.value = false;
   }
 };
+
+function handleSearchSubmit(raw: string) {
+  const q = raw.trim();
+  activeKeyword.value = q;
+  searchExpanded.value = false;
+  currentPage.value = 1;
+  void loadArticles(1);
+}
+
+function clearTitleSearch() {
+  activeKeyword.value = '';
+  searchDraft.value = '';
+  searchExpanded.value = false;
+  currentPage.value = 1;
+  void loadArticles(1);
+}
 
 // 加载更多
 const loadMore = () => {
@@ -262,10 +300,20 @@ onMounted(() => {
   padding-top: 24px;
 }
 
-// 区块标题（UnoCSS jp-section-title 已提供基础样式，此处仅保留下划线与间距）
-.section-header {
+.discovery-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
   margin-bottom: 24px;
   padding: 0 4px;
+}
+
+.discovery-head__title.section-header {
+  margin-bottom: 0;
+  flex: 1;
+  min-width: 200px;
 
   h2 {
     position: relative;
@@ -280,6 +328,31 @@ onMounted(() => {
     height: 3px;
     background: linear-gradient(90deg, var(--primary), var(--primary-light));
     border-radius: 2px;
+  }
+}
+
+.search-active-hint {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin: -8px 4px 16px;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.search-clear {
+  border: none;
+  background: none;
+  padding: 0;
+  cursor: pointer;
+  color: var(--primary);
+  font-size: 13px;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+
+  &:hover {
+    opacity: 0.85;
   }
 }
 
@@ -319,7 +392,7 @@ onMounted(() => {
     padding-top: 16px;
   }
 
-  .section-header {
+  .discovery-head {
     margin-bottom: 16px;
   }
 

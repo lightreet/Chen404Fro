@@ -71,7 +71,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import type { Comment } from '@/types'
 import { likeComment } from '@/api/comment'
 import { renderCommentTokens } from '@/emoji/renderers/commentRenderer'
@@ -112,8 +112,21 @@ const emit = defineEmits<{
 
 const defaultAvatar = 'https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png'
 
-const isLiked = ref(false)
+const isLiked = ref(!!props.comment.likedByMe)
 const localLikeCount = ref(props.comment.likeCount || 0)
+
+watch(
+  () => props.comment.likeCount,
+  (v) => {
+    localLikeCount.value = v ?? 0
+  }
+)
+watch(
+  () => props.comment.likedByMe,
+  (v) => {
+    if (v === true || v === false) isLiked.value = v
+  }
+)
 
 const isCurrentUserAdmin = computed(() => props.isAdmin ?? false)
 
@@ -144,7 +157,7 @@ async function handleLike() {
   try {
     const res = await likeComment(props.comment.id)
     localLikeCount.value = res.likes
-    isLiked.value = true
+    isLiked.value = res.liked !== false
   } catch {
     // ignore
   }
