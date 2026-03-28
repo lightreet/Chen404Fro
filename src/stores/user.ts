@@ -84,11 +84,6 @@ export const useUserStore = defineStore('user', () => {
     }
   };
 
-  // 获取当前存储的 token（供请求拦截器使用）
-  const getToken = () => {
-    return token.value || localStorage.getItem('token') || '';
-  };
-
   // 登录（token/refreshToken/remember 均由 store 持久化，视图层不直接操作 localStorage）
   const login = (userData: User, newToken: string, options?: { remember?: boolean; refreshToken?: string }) => {
     setUser(userData);

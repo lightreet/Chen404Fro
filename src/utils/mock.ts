@@ -106,6 +106,7 @@ export function generateMockArticles(page = 1, pageSize = 10): Article[] {
       ...template,
       content: '',
       authorId: 1,
+      likeCount: 0,
       status: 1,
       isTop: i === 0 ? 1 : 0,
       isRecommend: i < 2 ? 1 : 0,

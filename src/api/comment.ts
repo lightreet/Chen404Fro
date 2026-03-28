@@ -61,7 +61,7 @@ export function deleteComment(id: number): Promise<void> {
  * @param guestDeleteKey 游客删除密钥
  */
 export function deleteCommentAsGuest(id: number, guestDeleteKey: string): Promise<void> {
-  return del(`/comments/${id}`, { guestDeleteKey });
+  return del(`/comments/${id}`, { params: { guestDeleteKey } });
 }
 
 /**

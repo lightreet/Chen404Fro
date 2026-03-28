@@ -51,12 +51,15 @@ npm run preview
 # .env.development
 VITE_API_BASE_URL=http://localhost:10404/api
 
-# .env.production
-VITE_API_BASE_URL=https://your-domain.com/api
+# .env.production（可从模板生成）
+cp .env.production.example .env.production
+# 编辑 VITE_API_BASE_URL，例如：
+# VITE_API_BASE_URL=https://api.chen404.com/api
 ```
 
 说明：
 
+- 生产构建**必须**配置 `VITE_API_BASE_URL`（API 与主站不同域名时）；模板见根目录 `.env.production.example`
 - 当前仓库已提交的 `.env.development` / `.env.example` 默认直连 `http://localhost:10404/api`
 - 当前 `vite.config.ts` 未配置 `server.proxy`
 - 如果你希望开发环境走同源 `/api`，需要自行补充代理配置

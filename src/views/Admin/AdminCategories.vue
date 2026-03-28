@@ -117,7 +117,7 @@ const openCategoryDialog = (row?: Category) => {
     categoryForm.description = row.description || '';
     categoryForm.icon = row.icon || '';
     categoryForm.sortOrder = row.sortOrder ?? 0;
-    categoryForm.status = (row as any).status ?? 1;
+    categoryForm.status = row.status ?? 1;
   } else {
     editingCategoryId.value = null;
     resetCategoryForm();

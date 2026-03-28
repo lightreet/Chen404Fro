@@ -59,7 +59,7 @@
           @reply="$emit('reply', $event)"
           @delete="$emit('delete', $event)"
           @like="$emit('like', $event)"
-          @guest-delete="$emit('guestDelete', $event.comment, $event.deleteKey)"
+          @guest-delete="(c, k) => emit('guestDelete', c, k)"
         >
           <template #replyForm>
             <slot name="childReplyForm" />
@@ -164,11 +164,9 @@ async function handleLike() {
 }
 
 function handleDelete() {
-  if (isGuestDeletable.value && props.guestDeleteKey) {
-    // 游客删除
-    emit('guestDelete', props.comment, props.guestDeleteKey)
+  if (isGuestDeletable.value && guestDeleteKey.value) {
+    emit('guestDelete', props.comment, guestDeleteKey.value)
   } else {
-    // 登录用户删除
     emit('delete', props.comment)
   }
 }

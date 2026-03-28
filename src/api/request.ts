@@ -144,6 +144,12 @@ request.interceptors.response.use(
             ElMessage.error('请求的资源不存在');
           }
           break;
+        case 429:
+          // 点赞限流等：业务提示而非错误（如「已点过赞，无需重复点赞」）
+          if (!shouldSuppressError(error.config)) {
+            ElMessage.info(data?.message || '请稍后再试');
+          }
+          break;
         case 500:
           if (!shouldSuppressError(error.config)) {
             ElMessage.error('服务器内部错误');

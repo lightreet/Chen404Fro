@@ -4,7 +4,12 @@
     :class="[
       { 'image-left': isImageLeft, 'image-right': !isImageLeft },
       { compact },
-      { 'manage-mode': mode === 'manage', 'has-cover': !!article.coverImage, 'no-cover': !article.coverImage },
+      {
+        'manage-mode': mode === 'manage',
+        'profile-feed': profileFeed,
+        'has-cover': !!article.coverImage,
+        'no-cover': !article.coverImage,
+      },
     ]"
   >
     <div
@@ -138,16 +143,22 @@ interface Props {
   mode?: 'home' | 'manage';
   /** 紧凑态：缩小内边距与字号（用于个人中心列表） */
   compact?: boolean;
+  /** 个人中心「点赞/收藏」等与「我的文章」同规格：固定左文右图、封面宽度与 manage 紧凑态一致 */
+  profileFeed?: boolean;
 }
 
 const props = withDefaults(defineProps<Props>(), {
   index: 0,
   mode: 'home',
   compact: false,
+  profileFeed: false,
 });
 
-// 根据索引决定图片位置（奇数左，偶数右）
-const isImageLeft = computed(() => props.index % 2 === 1);
+// 根据索引决定图片位置（奇数左，偶数右）；个人中心 profile-feed 与 manage 一致，始终左文右图
+const isImageLeft = computed(() => {
+  if (props.mode === 'manage' || props.profileFeed) return false;
+  return props.index % 2 === 1;
+});
 
 // 文章详情页路径（首页/列表点击卡片或「阅读详情」跳转）
 const articleDetailUrl = computed(() => `/article/${props.article.id}`);
@@ -187,7 +198,8 @@ const authorName = computed(() => {
   }
 }
 
-.article-card.manage-mode {
+.article-card.manage-mode,
+.article-card.profile-feed {
   align-items: stretch;
   overflow: hidden;
 
@@ -267,7 +279,8 @@ const authorName = computed(() => {
   }
 }
 
-.article-card.compact.manage-mode {
+.article-card.compact.manage-mode,
+.article-card.compact.profile-feed {
   border: 1px solid rgba(226, 232, 240, 0.85);
   box-shadow: 0 18px 36px rgba(15, 23, 42, 0.06);
 
@@ -541,7 +554,8 @@ const authorName = computed(() => {
     }
   }
 
-  .article-card.compact.manage-mode {
+  .article-card.compact.manage-mode,
+  .article-card.compact.profile-feed {
     .card-image {
       width: 100%;
       min-height: 150px;

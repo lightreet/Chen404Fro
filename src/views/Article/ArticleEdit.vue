@@ -207,12 +207,7 @@
                         :key="item.value"
                         :label="item.label"
                         :value="item.value"
-                      >
-                        <div class="advanced-option">
-                          <span>{{ item.label }}</span>
-                          <small>{{ item.tip }}</small>
-                        </div>
-                      </el-option>
+                      />
                     </el-select>
                   </div>
                   <div class="advanced-field">
@@ -223,12 +218,7 @@
                         :key="item.value"
                         :label="item.label"
                         :value="item.value"
-                      >
-                        <div class="advanced-option">
-                          <span>{{ item.label }}</span>
-                          <small>{{ item.tip }}</small>
-                        </div>
-                      </el-option>
+                      />
                     </el-select>
                   </div>
                   <el-checkbox v-model="form.isTop" :true-value="1" :false-value="0">置顶文章</el-checkbox>
@@ -254,7 +244,7 @@ import { ElMessage, ElMessageBox } from 'element-plus';
 import { Icon } from '@iconify/vue';
 import { ArrowLeft, ArrowDown, Plus } from '@element-plus/icons-vue';
 import { MdEditor } from 'md-editor-v3';
-import type { ExposeParam } from 'md-editor-v3';
+import type { ExposeParam, ToolbarNames } from 'md-editor-v3';
 import 'md-editor-v3/lib/style.css';
 import type { Article, Category, Tag } from '@/types';
 import { ArticleStatus, ArticleVisibility, ArticleCommentPolicy } from '@/types';
@@ -282,6 +272,7 @@ const AUTO_SAVE_REQUEST_CONFIG: RequestConfig = { suppressErrorMessage: true };
 const route = useRoute();
 const router = useRouter();
 const editorRef = ref<ExposeParam>();
+defineExpose({ editorRef });
 
 let offResizeListener: (() => void) | null = null;
 
@@ -299,7 +290,7 @@ const editorTheme = computed(() => {
 });
 
 // 编辑器工具栏配置
-const toolbars = [
+const toolbars: ToolbarNames[] = [
   'bold',
   'underline',
   'italic',
@@ -389,17 +380,17 @@ const form = reactive<Partial<Article>>({
 });
 
 const visibilityOptions = [
-  { label: '公开', value: ArticleVisibility.PUBLIC, tip: '任何人都可以查看' },
-  { label: '登录可见', value: ArticleVisibility.LOGIN, tip: '只有登录用户可查看' },
-  { label: '好友可见', value: ArticleVisibility.FRIEND, tip: '仅好友 / 受信用户可查看' },
-  { label: '私密', value: ArticleVisibility.PRIVATE, tip: '仅作者本人和管理员可查看' },
+  { label: '公开', value: ArticleVisibility.PUBLIC },
+  { label: '登录可见', value: ArticleVisibility.LOGIN },
+  { label: '好友可见', value: ArticleVisibility.FRIEND },
+  { label: '私密', value: ArticleVisibility.PRIVATE },
 ];
 
 const commentPolicyOptions = [
-  { label: '关闭评论', value: ArticleCommentPolicy.CLOSED, tip: '不允许任何评论' },
-  { label: '登录可评论', value: ArticleCommentPolicy.REGISTERED, tip: '默认推荐策略' },
-  { label: '好友可评论', value: ArticleCommentPolicy.FRIEND, tip: '仅好友 / 受信用户可评论' },
-  { label: '游客可评论', value: ArticleCommentPolicy.PUBLIC, tip: '开放评论，请谨慎使用' },
+  { label: '关闭评论', value: ArticleCommentPolicy.CLOSED },
+  { label: '登录可评论', value: ArticleCommentPolicy.REGISTERED },
+  { label: '好友可评论', value: ArticleCommentPolicy.FRIEND },
+  { label: '游客可评论', value: ArticleCommentPolicy.PUBLIC },
 ];
 
 // 标签云已选 ID
@@ -1227,16 +1218,6 @@ onUnmounted(() => {
 
   .advanced-select {
     width: 100%;
-  }
-
-  .advanced-option {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-
-    small {
-      color: var(--text-secondary, #94a3b8);
-    }
   }
 }
 

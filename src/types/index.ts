@@ -248,6 +248,8 @@ export interface Category {
   icon?: string;
   articleCount?: number;
   sortOrder: number;
+  /** 管理端：0 禁用 1 启用 */
+  status?: number;
 }
 
 export interface Tag {

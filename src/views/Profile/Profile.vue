@@ -153,6 +153,7 @@
                         :index="idx"
                         mode="home"
                         compact
+                        profile-feed
                       />
                     </div>
                   </div>
@@ -194,6 +195,7 @@
                         :index="idx"
                         mode="home"
                         compact
+                        profile-feed
                       />
                     </div>
                   </div>

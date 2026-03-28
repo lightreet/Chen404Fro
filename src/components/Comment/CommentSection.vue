@@ -166,11 +166,6 @@ function storeGuestDeleteKey(commentId: number | string, deleteKey: string): voi
   localStorage.setItem(GUEST_DELETE_KEYS_KEY, JSON.stringify(keys));
 }
 
-// 获取游客删除 key
-function getGuestDeleteKey(commentId: number | string): string | undefined {
-  return getStoredGuestDeleteKeys()[String(commentId)];
-}
-
 // 移除已使用的游客删除 key
 function removeGuestDeleteKey(commentId: number | string): void {
   const keys = getStoredGuestDeleteKeys();

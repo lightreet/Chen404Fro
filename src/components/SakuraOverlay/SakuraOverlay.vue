@@ -277,62 +277,63 @@ const syncCanvasSize = () => {
 };
 
 const drawPetal = (petal: SakuraPetal) => {
-  if (!ctx) return;
+  const c = ctx;
+  if (!c) return;
 
   const paint = DEPTH_PAINT[petal.depth];
 
-  ctx.save();
-  ctx.translate(petal.x, petal.y);
-  ctx.rotate(petal.rotation);
-  ctx.scale(petal.scaleX, petal.scaleY);
-  ctx.globalAlpha = petal.opacity;
-  ctx.shadowColor = paint.shadowColor;
-  ctx.shadowBlur = petal.blur * paint.shadowBlurScale;
+  c.save();
+  c.translate(petal.x, petal.y);
+  c.rotate(petal.rotation);
+  c.scale(petal.scaleX, petal.scaleY);
+  c.globalAlpha = petal.opacity;
+  c.shadowColor = paint.shadowColor;
+  c.shadowBlur = petal.blur * paint.shadowBlurScale;
 
   // 更接近 boxmoe 的轻柔花瓣：轮廓简单、颜色通透、弱描边感；远近层用 mid-stop 与阴影区分层次
-  const bodyGradient = ctx.createLinearGradient(0, -petal.size * 1.1, 0, petal.size * 1.15);
+  const bodyGradient = c.createLinearGradient(0, -petal.size * 1.1, 0, petal.size * 1.15);
   bodyGradient.addColorStop(0, petal.colorStart);
   bodyGradient.addColorStop(0.36, paint.bodyMid0);
   bodyGradient.addColorStop(0.72, paint.bodyMid1);
   bodyGradient.addColorStop(1, petal.colorEnd);
-  ctx.fillStyle = bodyGradient;
+  c.fillStyle = bodyGradient;
 
   const s = petal.size;
   // Same sakura silhouette at scale `mul` (1 = outer body, <1 = inner highlight) so highlight stays concentric with the contour.
   const traceSakuraContour = (mul: number) => {
     const m = s * mul;
-    ctx.moveTo(0, -m * 0.96);
-    ctx.bezierCurveTo(m * 0.3, -m * 0.93, m * 0.56, -m * 0.72, m * 0.72, -m * 0.44);
-    ctx.bezierCurveTo(m * 0.9, -m * 0.1, m * 0.93, m * 0.3, m * 0.78, m * 0.52);
-    ctx.bezierCurveTo(m * 0.66, m * 0.66, m * 0.38, m * 0.79, m * 0.14, m * 0.84);
-    ctx.bezierCurveTo(m * 0.055, m * 0.868, m * 0.02, m * 0.895, 0, m * 0.912);
-    ctx.bezierCurveTo(-m * 0.022, m * 0.892, -m * 0.06, m * 0.865, -m * 0.15, m * 0.835);
-    ctx.bezierCurveTo(-m * 0.4, m * 0.78, -m * 0.68, m * 0.64, -m * 0.79, m * 0.5);
-    ctx.bezierCurveTo(-m * 0.94, m * 0.26, -m * 0.9, -m * 0.12, -m * 0.69, -m * 0.46);
-    ctx.bezierCurveTo(-m * 0.53, -m * 0.74, -m * 0.27, -m * 0.93, 0, -m * 0.96);
-    ctx.closePath();
+    c.moveTo(0, -m * 0.96);
+    c.bezierCurveTo(m * 0.3, -m * 0.93, m * 0.56, -m * 0.72, m * 0.72, -m * 0.44);
+    c.bezierCurveTo(m * 0.9, -m * 0.1, m * 0.93, m * 0.3, m * 0.78, m * 0.52);
+    c.bezierCurveTo(m * 0.66, m * 0.66, m * 0.38, m * 0.79, m * 0.14, m * 0.84);
+    c.bezierCurveTo(m * 0.055, m * 0.868, m * 0.02, m * 0.895, 0, m * 0.912);
+    c.bezierCurveTo(-m * 0.022, m * 0.892, -m * 0.06, m * 0.865, -m * 0.15, m * 0.835);
+    c.bezierCurveTo(-m * 0.4, m * 0.78, -m * 0.68, m * 0.64, -m * 0.79, m * 0.5);
+    c.bezierCurveTo(-m * 0.94, m * 0.26, -m * 0.9, -m * 0.12, -m * 0.69, -m * 0.46);
+    c.bezierCurveTo(-m * 0.53, -m * 0.74, -m * 0.27, -m * 0.93, 0, -m * 0.96);
+    c.closePath();
   };
 
   // Outer contour: sakura-like — domed top, fuller waist, shallow basal notch (not a droplet tip).
-  ctx.beginPath();
+  c.beginPath();
   traceSakuraContour(1);
-  ctx.fill();
+  c.fill();
 
-  ctx.shadowBlur = 0;
-  ctx.shadowColor = 'transparent';
+  c.shadowBlur = 0;
+  c.shadowColor = 'transparent';
 
   // Inner glow: scaled copy of outer silhouette + clip + tighter pink radial (DEPTH_PAINT), avoids misaligned teardrop and white blob.
   const highlightScale = 0.52;
-  ctx.save();
-  ctx.beginPath();
+  c.save();
+  c.beginPath();
   traceSakuraContour(1);
-  ctx.clip();
+  c.clip();
 
   const gx0 = -s * 0.07;
   const gy0 = -s * 0.34;
   const gx1 = -s * 0.02;
   const gy1 = -s * 0.2;
-  const centerGlow = ctx.createRadialGradient(
+  const centerGlow = c.createRadialGradient(
     gx0,
     gy0,
     s * paint.glowInnerR * 0.42,
@@ -345,14 +346,14 @@ const drawPetal = (petal: SakuraPetal) => {
   centerGlow.addColorStop(0.62, paint.glowFalloff);
   centerGlow.addColorStop(1, paint.glowTransparent);
 
-  ctx.fillStyle = centerGlow;
-  ctx.beginPath();
+  c.fillStyle = centerGlow;
+  c.beginPath();
   traceSakuraContour(highlightScale);
-  ctx.fill();
+  c.fill();
 
-  ctx.restore();
+  c.restore();
 
-  ctx.restore();
+  c.restore();
 };
 
 const animate = (timestamp: number) => {
