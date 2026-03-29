@@ -58,7 +58,7 @@
         >
           <Icon
             class="category-icon-iconify"
-            :icon="article.category.icon || 'mdi:folder'"
+            :icon="resolveCategoryIcon(article.category.icon)"
             width="14"
             height="14"
           />
@@ -67,7 +67,7 @@
         <span v-else-if="article.category" class="stat-item category-tag">
           <Icon
             class="category-icon-iconify"
-            :icon="article.category.icon || 'mdi:folder'"
+            :icon="resolveCategoryIcon(article.category.icon)"
             width="14"
             height="14"
           />
@@ -142,6 +142,7 @@ import { Icon } from '@iconify/vue';
 import { Calendar, View, ChatDotRound, ArrowRight, User } from '@element-plus/icons-vue';
 import type { Article } from '@/types';
 import { formatDate, formatNumber } from '@/utils/format';
+import { resolveCategoryIcon } from '@/utils/categoryIcon';
 
 const router = useRouter();
 

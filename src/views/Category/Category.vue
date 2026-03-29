@@ -23,7 +23,7 @@
             <router-link :to="`/category/${category.id}`">
               <div class="category-icon">
                 <Icon
-                  :icon="category.icon || 'mdi:folder-open'"
+                  :icon="resolveCategoryIcon(category.icon || 'mdi:folder-open')"
                   width="28"
                   height="28"
                 />
@@ -61,6 +61,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
 import { ElMessage } from 'element-plus';
+import { resolveCategoryIcon } from '@/utils/categoryIcon';
 import { Icon } from '@iconify/vue';
 import { Loading } from '@element-plus/icons-vue';
 import DefaultLayout from '@/layouts/DefaultLayout.vue';

@@ -1,17 +1,17 @@
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'
-import ElementPlus from 'element-plus'
 import * as ElementPlusIconsVue from '@element-plus/icons-vue'
-import 'element-plus/dist/index.css'
 import 'virtual:uno.css'
 
 import App from './App.vue'
 import router, { CHUNK_RELOAD_KEY } from './router'
 import { useUserStore } from './stores/user'
-import { addCollection } from '@iconify/vue'
+import { registerMdiSubset } from '@/iconify/registerMdiSubset'
 
 // 全局样式
 import './assets/styles/global.scss'
+
+registerMdiSubset()
 
 const app = createApp(App)
 const pinia = createPinia()
@@ -26,17 +26,8 @@ const userStore = useUserStore()
 userStore.initUser()
 
 app.use(router)
-app.use(ElementPlus)
 
 async function bootstrap() {
-  try {
-    // 异步 chunk + 同源加载：避免把整套 MDI 打进主包，也不走 api.iconify.design（跨域 TLS 易卡顿）
-    const { default: mdi } = await import('@iconify-json/mdi/icons.json')
-    addCollection(mdi as Parameters<typeof addCollection>[0])
-  } catch (e) {
-    console.warn('[Chen404] 本地 MDI 图标集加载失败，分类/Like 等 Iconify 可能回退网络请求', e)
-  }
-
   try {
     app.mount('#app')
   } catch (e) {

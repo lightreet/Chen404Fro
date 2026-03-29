@@ -101,7 +101,7 @@
                 >
                   <Icon
                     class="category-card-icon"
-                    :icon="category.icon || 'mdi:folder'"
+                    :icon="resolveCategoryIcon(category.icon || 'mdi:folder')"
                     width="14"
                     height="14"
                   />
@@ -248,6 +248,7 @@ import { ref, reactive, computed, onMounted, onUnmounted, watch } from 'vue';
 import { useRoute, useRouter, onBeforeRouteLeave } from 'vue-router';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { Icon } from '@iconify/vue';
+import { resolveCategoryIcon } from '@/utils/categoryIcon';
 import { ArrowLeft, ArrowDown, Plus } from '@element-plus/icons-vue';
 import { MdEditor } from 'md-editor-v3';
 import type { ExposeParam, ToolbarNames } from 'md-editor-v3';
