@@ -20,18 +20,33 @@ for (const [key, component] of Object.entries(ElementPlusIconsVue)) {
   app.component(key, component)
 }
 
-const userStore = useUserStore(pinia)
+app.use(pinia)
+const userStore = useUserStore()
 userStore.initUser()
 
-app.use(pinia)
 app.use(router)
 app.use(ElementPlus)
 
 async function bootstrap() {
-  // 启动时先与后端同步一次登录态，避免“本地显示已登录但服务端判匿名”
-  await userStore.syncAuthState()
-  app.mount('#app')
+  try {
+    app.mount('#app')
+  } catch (e) {
+    console.error('[Chen404] 应用挂载失败', e)
+    const el = document.getElementById('app')
+    if (el) {
+      el.innerHTML =
+        '<p style="padding:2rem;font-family:sans-serif">页面加载失败，请尝试强制刷新 (Ctrl+Shift+R) 或稍后再试。</p>'
+    }
+    return
+  }
   sessionStorage.removeItem(CHUNK_RELOAD_KEY)
+
+  // 不在 mount 前 await：避免 /auth/info 慢/超时导致长时间白屏；路由守卫仍会校验需登录页
+  try {
+    await userStore.syncAuthState()
+  } catch (e) {
+    console.warn('[Chen404] 启动同步登录态失败（已用本地缓存继续）', e)
+  }
 }
 
-bootstrap()
+void bootstrap()
