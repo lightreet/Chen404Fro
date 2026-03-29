@@ -37,11 +37,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue';
 import Header from '@/components/Header/Header.vue';
 import Footer from '@/components/Footer/Footer.vue';
 import Live2D from '@/components/Live2D/Live2D.vue';
 import SakuraOverlay from '@/components/SakuraOverlay/SakuraOverlay.vue';
+import { useLayoutMobile } from '@/composables/useLayoutMobile';
 
 interface Props {
   showRightSidebar?: boolean;
@@ -51,21 +51,7 @@ withDefaults(defineProps<Props>(), {
   showRightSidebar: false,
 });
 
-// 响应式断点
-const isMobile = ref(false);
-
-const checkMobile = () => {
-  isMobile.value = window.innerWidth < 1024;
-};
-
-onMounted(() => {
-  checkMobile();
-  window.addEventListener('resize', checkMobile);
-});
-
-onUnmounted(() => {
-  window.removeEventListener('resize', checkMobile);
-});
+const { isMobile } = useLayoutMobile();
 </script>
 
 <style scoped lang="scss">

@@ -183,6 +183,7 @@ import { useUserStore } from '@/stores/user';
 import { storeToRefs } from 'pinia';
 import { logout as logoutApi } from '@/api/auth';
 import { getTrustLevelLabel, isAdminUser, isFriendUser } from '@/utils/permission';
+import { useLayoutMobile } from '@/composables/useLayoutMobile';
 
 const router = useRouter();
 const userStore = useUserStore();
@@ -221,22 +222,14 @@ const handleScroll = () => {
   lastScrollY = currentScrollY;
 };
 
-// 响应式
-const isMobile = ref(false);
-const checkMobile = () => {
-  isMobile.value = window.innerWidth < 768;
-};
+const { isMobile } = useLayoutMobile();
 
 onMounted(() => {
-  checkMobile();
-  window.addEventListener('resize', checkMobile);
   window.addEventListener('scroll', handleScroll);
-  // 初始化用户状态
   userStore.initUser();
 });
 
 onUnmounted(() => {
-  window.removeEventListener('resize', checkMobile);
   window.removeEventListener('scroll', handleScroll);
 });
 
