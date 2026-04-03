@@ -48,12 +48,10 @@ declare module 'vue' {
     HeroWave: typeof import('./components/HeroWave/HeroWave.vue')['default']
     HomeDiscoverySearch: typeof import('./components/HomeDiscoverySearch/HomeDiscoverySearch.vue')['default']
     Live2D: typeof import('./components/Live2D/Live2D.vue')['default']
+    MdEditorEmojiToolbar: typeof import('./components/Editor/MdEditorEmojiToolbar.vue')['default']
     MdResizablePreview: typeof import('./components/MdResizablePreview/MdResizablePreview.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
     SakuraOverlay: typeof import('./components/SakuraOverlay/SakuraOverlay.vue')['default']
-  }
-  export interface GlobalDirectives {
-    vLoading: typeof import('element-plus/es')['ElLoadingDirective']
   }
 }

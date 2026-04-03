@@ -1,62 +1,63 @@
 <template>
-  <div class="article-edit-page">
-    <div class="edit-container">
-      <!-- 顶部栏：左侧状态 + 返回，右侧保存/发布 -->
-      <header class="edit-header">
-        <div class="header-left">
-          <router-link to="/" class="back-link">
-            <el-icon><ArrowLeft /></el-icon>
-            <span>返回</span>
-          </router-link>
-          <span class="status-text">
-            状态：{{ form.status === ArticleStatus.PUBLISHED ? '已发布' : '草稿' }}
+  <div ref="articleEditRootRef" class="article-edit-page">
+    <!-- 顶部 fixed 栏（返回与草稿状态）；Markdown 工具栏在正文内 sticky，避免迁出 DOM 导致下拉失效 -->
+    <header ref="editTopDockRef" class="edit-top-dock">
+      <div class="edit-dock-row edit-dock-row--back">
+        <button type="button" class="back-link" @click="goBack">
+          <el-icon><ArrowLeft /></el-icon>
+          <span>返回</span>
+        </button>
+        <div class="dock-back-meta">
+          <span class="draft-hint">
+            {{ form.status === ArticleStatus.PUBLISHED ? '已发布' : '草稿' }}
+            · {{ form.title?.trim() ? form.title : '无标题' }}
           </span>
           <span class="autosave-text" :class="`is-${autoSaveState}`">
             {{ autoSaveStatusText }}
           </span>
         </div>
-        <div class="header-actions">
-          <button type="button" class="header-link" @click="handleSaveDraft" :disabled="isDraftSaving">
-            保存草稿
-          </button>
-          <el-button type="primary" @click="handlePublish" :loading="publishing">
-            {{ form.status === ArticleStatus.PUBLISHED ? '更新发布' : '发布文章' }}
-          </el-button>
+      </div>
+    </header>
+
+    <div class="edit-container">
+      <!-- 正文纸媒：标题 → 分割线 → 编辑器（目录由 md-editor catalog 固定在左侧） -->
+      <main class="edit-paper">
+        <div class="paper-title-block">
+          <el-input
+            v-model="form.title"
+            placeholder="请输入文章标题（5～100 个字）"
+            size="large"
+            class="paper-title-input"
+            maxlength="100"
+            show-word-limit
+          />
         </div>
-      </header>
+        <div class="paper-title-divider"></div>
 
-      <!-- 主体：左侧编辑区 + 右侧设置栏 -->
-      <div class="edit-body">
-        <!-- 左侧：标题 + 正文 -->
-        <main class="edit-main">
-          <div class="form-item title-row">
-            <el-input
-              v-model="form.title"
-              placeholder="请输入文章标题"
-              size="large"
-              class="title-input"
-              maxlength="100"
-              show-word-limit
-            />
-          </div>
-          <div class="form-item editor-wrapper">
-            <MdEditor
-              ref="editorRef"
-              v-model="form.content"
-              :theme="editorTheme"
-              :toolbars="toolbars"
-              :preview="true"
-              :previewComponent="MdResizablePreview"
-              placeholder="开始编写文章内容..."
-              @on-upload-img="onUploadImg"
-            />
-          </div>
-        </main>
+        <div
+          ref="paperEditorHostRef"
+          class="paper-editor-host"
+          @click.capture="onMdToolbarItemClickOpenDropdown"
+        >
+          <MdEditor
+            ref="editorRef"
+            v-model="form.content"
+            :theme="editorTheme"
+            :toolbars="toolbars"
+            :preview="true"
+            :previewComponent="MdResizablePreview"
+            catalog-layout="flat"
+            :catalog-max-depth="4"
+            placeholder="开始编写正文，支持 Markdown…"
+            @on-upload-img="onUploadImg"
+          />
+        </div>
+      </main>
 
-        <!-- 右侧：文章设置 -->
-        <aside class="edit-sidebar">
-          <div class="sidebar-card">
-            <h2 class="sidebar-title">文章设置</h2>
+      <!-- 文章设置：始终在正文之后 -->
+      <aside ref="settingsAnchorRef" class="edit-settings-after" id="article-edit-settings">
+        <div class="sidebar-card settings-card">
+          <h2 class="sidebar-title">文章设置</h2>
 
             <!-- 封面 -->
             <section class="sidebar-section cover-section">
@@ -229,22 +230,41 @@
                   >
                     置顶文章
                   </el-checkbox>
-                  <el-radio-group v-model="form.status" size="small">
-                    <el-radio-button :value="ArticleStatus.DRAFT">草稿</el-radio-button>
-                    <el-radio-button :value="ArticleStatus.PUBLISHED">发布</el-radio-button>
-                  </el-radio-group>
                 </div>
               </Transition>
             </section>
-          </div>
-        </aside>
-      </div>
+        </div>
+      </aside>
     </div>
+
+    <!-- 底部固定操作栏（参考 CSDN 发文条） -->
+    <footer ref="editFooterRef" class="edit-footer-bar">
+      <div class="footer-left">
+        <span class="footer-word-count">共 {{ contentCharCount }} 字</span>
+        <span class="footer-hint">正文与设置修改后请及时保存</span>
+        <button type="button" class="footer-settings-link" @click="scrollToArticleSettings">
+          发文设置
+        </button>
+      </div>
+      <div class="footer-actions">
+        <button
+          type="button"
+          class="footer-btn footer-btn--ghost"
+          @click="handleSaveDraft"
+          :disabled="isDraftSaving"
+        >
+          保存草稿
+        </button>
+        <el-button type="primary" class="footer-publish" @click="handlePublish" :loading="publishing">
+          {{ form.status === ArticleStatus.PUBLISHED ? '更新发布' : '发布文章' }}
+        </el-button>
+      </div>
+    </footer>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted, onUnmounted, watch } from 'vue';
+import { ref, reactive, computed, onMounted, onUnmounted, onUpdated, watch, nextTick } from 'vue';
 import { useRoute, useRouter, onBeforeRouteLeave } from 'vue-router';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { Icon } from '@iconify/vue';
@@ -276,6 +296,8 @@ type AutoSaveState = 'idle' | 'dirty' | 'saving' | 'saved' | 'error';
 
 const AUTO_SAVE_DEBOUNCE_MS = 5000;
 const AUTO_SAVE_INTERVAL_MS = 30000;
+/** 草稿快照 JSON 对比防抖，避免长文每次按键都 stringify */
+const DRAFT_COMPARE_DEBOUNCE_MS = 250;
 const AUTO_SAVE_REQUEST_CONFIG: RequestConfig = { suppressErrorMessage: true };
 
 const route = useRoute();
@@ -285,6 +307,62 @@ const userStore = useUserStore();
 const canSetArticleTop = computed(() => isAdminUser(userStore.user));
 const editorRef = ref<ExposeParam>();
 defineExpose({ editorRef });
+
+const articleEditRootRef = ref<HTMLElement | null>(null);
+const editTopDockRef = ref<HTMLElement | null>(null);
+const editFooterRef = ref<HTMLElement | null>(null);
+const settingsAnchorRef = ref<HTMLElement | null>(null);
+const paperEditorHostRef = ref<HTMLElement | null>(null);
+
+/**
+ * md-editor-v3 下拉类工具栏（标题、表格、图片、公式等）仅用 mouseenter 打开菜单，单击无悬停轨迹时无效。
+ * 在捕获阶段对工具栏按钮补发一次 mouseenter，使点击与触摸也能展开下拉。
+ */
+const onMdToolbarItemClickOpenDropdown = (e: MouseEvent) => {
+  if (e.button !== 0) return;
+  const target = e.target;
+  if (!(target instanceof HTMLElement)) return;
+  const item = target.closest('.md-editor-toolbar-item');
+  if (!(item instanceof HTMLElement)) return;
+  if (!paperEditorHostRef.value?.contains(item)) return;
+  item.dispatchEvent(
+    new MouseEvent('mouseenter', { bubbles: false, cancelable: true, view: window }),
+  );
+};
+
+let chromeResizeObserver: ResizeObserver | null = null;
+
+function applyLayoutMetrics() {
+  const root = articleEditRootRef.value;
+  if (!root) return;
+  const dock = editTopDockRef.value;
+  /*
+   * 顶栏 fixed + z-index 高于目录(298)，若 --article-edit-top-h 小于顶栏实际底边，左侧大纲首条会被返回栏盖住。
+   * +2 消除亚像素/边框误差；须在首屏尽早测量（见 onMounted），勿长期沿用 96px 默认值。
+   */
+  const topH = dock
+    ? Math.max(56, Math.ceil(dock.getBoundingClientRect().bottom) + 2)
+    : 96;
+  const footEl = editFooterRef.value;
+  const footH = footEl ? Math.max(48, Math.ceil(footEl.getBoundingClientRect().height)) : 72;
+  root.style.setProperty('--article-edit-top-h', `${topH}px`);
+  root.style.setProperty('--article-edit-footer-h', `${footH}px`);
+}
+
+const TITLE_LEN_MIN = 5;
+const TITLE_LEN_MAX = 100;
+
+const goBack = () => {
+  if (typeof window !== 'undefined' && window.history.length > 1) {
+    router.back();
+    return;
+  }
+  router.push('/');
+};
+
+const scrollToArticleSettings = () => {
+  settingsAnchorRef.value?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+};
 
 let offResizeListener: (() => void) | null = null;
 
@@ -390,6 +468,8 @@ const form = reactive<Partial<Article>>({
   commentPolicy: ArticleCommentPolicy.REGISTERED,
 });
 
+const contentCharCount = computed(() => (form.content ?? '').length);
+
 const visibilityOptions = [
   { label: '公开', value: ArticleVisibility.PUBLIC },
   { label: '登录可见', value: ArticleVisibility.LOGIN },
@@ -431,9 +511,37 @@ const loadedArticleStatus = ref<ArticleStatus | null>(null);
 
 let activeSavePromise: Promise<boolean> | null = null;
 let autoSaveDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+let draftCompareDebounceTimer: ReturnType<typeof setTimeout> | null = null;
 let autoSaveIntervalId: ReturnType<typeof setInterval> | null = null;
 let lastSavedSnapshot = '';
 let queuedAutoSave = false;
+/** 合并 MdEditor 等高频更新触发的布局测量，避免每帧多次 getBoundingClientRect */
+let layoutMetricsRaf = 0;
+
+/** md-editor-v3 默认 catalogVisible 为 false，需 toggleCatalog(true) 才会挂载左侧目录；单次调用若早于内部 onMounted 注册会无效 */
+function ensureCatalogShown() {
+  editorRef.value?.toggleCatalog?.(true);
+}
+
+let catalogShownRetryTimer: ReturnType<typeof setTimeout> | null = null;
+
+function scheduleEnsureCatalogShown() {
+  ensureCatalogShown();
+  void nextTick(ensureCatalogShown);
+  requestAnimationFrame(() => {
+    ensureCatalogShown();
+    requestAnimationFrame(ensureCatalogShown);
+  });
+  if (catalogShownRetryTimer) {
+    clearTimeout(catalogShownRetryTimer);
+  }
+  catalogShownRetryTimer = setTimeout(() => {
+    catalogShownRetryTimer = null;
+    ensureCatalogShown();
+  }, 150);
+}
+
+let layoutMetricsLateTimer: ReturnType<typeof setTimeout> | null = null;
 
 // 获取分类和标签列表
 const fetchCategoriesAndTags = async () => {
@@ -545,8 +653,17 @@ const onUploadImg = async (files: File[], callback: (urls: string[]) => void) =>
 
 // 表单验证
 const validateForm = (): boolean => {
-  if (!form.title?.trim()) {
+  const title = form.title?.trim() ?? '';
+  if (!title) {
     ElMessage.warning('请输入文章标题');
+    return false;
+  }
+  if (title.length < TITLE_LEN_MIN) {
+    ElMessage.warning(`文章标题至少 ${TITLE_LEN_MIN} 个字`);
+    return false;
+  }
+  if (title.length > TITLE_LEN_MAX) {
+    ElMessage.warning(`文章标题不能超过 ${TITLE_LEN_MAX} 个字`);
     return false;
   }
   if (!form.categoryId) {
@@ -588,7 +705,8 @@ const buildDraftSubmitData = (): Partial<Article> => {
   };
 };
 
-const currentDraftSnapshot = computed(() => JSON.stringify(buildDraftSubmitData()));
+/** 全量序列化开销大，避免用 computed 在每次按键时重复 stringify */
+const computeDraftSnapshot = () => JSON.stringify(buildDraftSubmitData());
 
 const isAutoSaveEnabled = computed(() => {
   return !(isEdit.value && loadedArticleStatus.value === ArticleStatus.PUBLISHED);
@@ -660,8 +778,16 @@ const clearAutoSaveDebounce = () => {
   }
 };
 
+const clearDraftCompareDebounce = () => {
+  if (draftCompareDebounceTimer) {
+    clearTimeout(draftCompareDebounceTimer);
+    draftCompareDebounceTimer = null;
+  }
+};
+
 const syncSavedSnapshot = (state: AutoSaveState = 'idle') => {
-  lastSavedSnapshot = currentDraftSnapshot.value;
+  clearDraftCompareDebounce();
+  lastSavedSnapshot = computeDraftSnapshot();
   hasPendingChanges.value = false;
   autoSaveState.value = state;
 };
@@ -785,7 +911,7 @@ const saveDraftCore = async ({
     return false;
   }
 
-  if (source !== 'manual' && !hasPendingChanges.value && currentDraftSnapshot.value === lastSavedSnapshot) {
+  if (source !== 'manual' && !hasPendingChanges.value && computeDraftSnapshot() === lastSavedSnapshot) {
     return true;
   }
 
@@ -896,26 +1022,56 @@ const handlePublish = async () => {
 };
 
 // 页面加载时获取数据
-watch(currentDraftSnapshot, (newSnapshot) => {
+/** 防抖后对比快照：用于「改回与上次保存一致」时取消未保存态，避免每键一次 stringify */
+const runDraftSnapshotReconcile = () => {
   if (!editorReady.value) return;
 
+  const newSnapshot = computeDraftSnapshot();
   if (newSnapshot === lastSavedSnapshot) {
     hasPendingChanges.value = false;
     autoSaveState.value = lastSavedAt.value ? 'saved' : 'idle';
     clearAutoSaveDebounce();
-    return;
   }
+};
 
-  hasPendingChanges.value = true;
+const scheduleDraftSnapshotReconcile = () => {
+  if (!editorReady.value) return;
+  clearDraftCompareDebounce();
+  draftCompareDebounceTimer = setTimeout(() => {
+    draftCompareDebounceTimer = null;
+    runDraftSnapshotReconcile();
+  }, DRAFT_COMPARE_DEBOUNCE_MS);
+};
 
-  if (isDraftSaving.value) {
-    queuedAutoSave = true;
-    return;
-  }
+watch(
+  [
+    () => form.title,
+    () => form.content,
+    () => form.summary,
+    () => form.coverImage,
+    () => form.categoryId,
+    () => form.status,
+    () => form.visibility,
+    () => form.commentPolicy,
+    () => form.isTop,
+    formTagIds,
+    customTagNames,
+  ],
+  () => {
+    if (!editorReady.value) return;
 
-  autoSaveState.value = 'dirty';
-  scheduleAutoSave();
-});
+    hasPendingChanges.value = true;
+
+    if (isDraftSaving.value) {
+      queuedAutoSave = true;
+    } else {
+      autoSaveState.value = 'dirty';
+      scheduleAutoSave();
+    }
+
+    scheduleDraftSnapshotReconcile();
+  },
+);
 
 onBeforeRouteLeave(async () => {
   if (!shouldWarnBeforeUnload()) {
@@ -940,18 +1096,60 @@ onBeforeRouteLeave(async () => {
   return window.confirm('草稿还有未同步的改动，确定离开当前页面吗？');
 });
 
+const scheduleLayoutMetricsRaf = () => {
+  if (layoutMetricsRaf) return;
+  layoutMetricsRaf = requestAnimationFrame(() => {
+    layoutMetricsRaf = 0;
+    applyLayoutMetrics();
+  });
+};
+
+onUpdated(() => {
+  scheduleLayoutMetricsRaf();
+});
+
 onMounted(async () => {
   offResizeListener = mdImageResizeEmitter.on(({ src, width }) => {
     upsertImageWidthBySrc(src, width);
   });
 
-  await fetchCategoriesAndTags();
-  if (isEdit.value) {
-    await fetchArticleDetail();
-  }
+  await nextTick();
+  applyLayoutMetrics();
+  requestAnimationFrame(() => {
+    applyLayoutMetrics();
+    requestAnimationFrame(applyLayoutMetrics);
+  });
+  window.addEventListener('resize', scheduleLayoutMetricsRaf);
+
+  await Promise.all([
+    fetchCategoriesAndTags(),
+    isEdit.value ? fetchArticleDetail() : Promise.resolve(),
+  ]);
 
   syncSavedSnapshot();
   editorReady.value = true;
+  runDraftSnapshotReconcile();
+
+  await nextTick();
+  scheduleEnsureCatalogShown();
+  applyLayoutMetrics();
+  requestAnimationFrame(() => {
+    applyLayoutMetrics();
+    requestAnimationFrame(applyLayoutMetrics);
+  });
+  if (layoutMetricsLateTimer) clearTimeout(layoutMetricsLateTimer);
+  layoutMetricsLateTimer = window.setTimeout(() => {
+    layoutMetricsLateTimer = null;
+    applyLayoutMetrics();
+  }, 320);
+
+  chromeResizeObserver = new ResizeObserver(() => applyLayoutMetrics());
+  if (editTopDockRef.value) {
+    chromeResizeObserver.observe(editTopDockRef.value);
+  }
+  if (editFooterRef.value) {
+    chromeResizeObserver.observe(editFooterRef.value);
+  }
 
   autoSaveIntervalId = setInterval(() => {
     if (!hasPendingChanges.value || !isAutoSaveEnabled.value || !canSaveDraft()) return;
@@ -962,12 +1160,33 @@ onMounted(async () => {
 });
 
 onUnmounted(() => {
+  if (catalogShownRetryTimer) {
+    clearTimeout(catalogShownRetryTimer);
+    catalogShownRetryTimer = null;
+  }
+
+  if (layoutMetricsLateTimer) {
+    clearTimeout(layoutMetricsLateTimer);
+    layoutMetricsLateTimer = null;
+  }
+
+  if (layoutMetricsRaf) {
+    cancelAnimationFrame(layoutMetricsRaf);
+    layoutMetricsRaf = 0;
+  }
+
+  if (chromeResizeObserver) {
+    chromeResizeObserver.disconnect();
+    chromeResizeObserver = null;
+  }
+
   if (offResizeListener) {
     offResizeListener();
     offResizeListener = null;
   }
 
   clearAutoSaveDebounce();
+  clearDraftCompareDebounce();
   if (autoSaveIntervalId) {
     clearInterval(autoSaveIntervalId);
     autoSaveIntervalId = null;
@@ -976,154 +1195,518 @@ onUnmounted(() => {
     clearTimeout(tagSuggestionsBlurTimer);
     tagSuggestionsBlurTimer = null;
   }
+  window.removeEventListener('resize', scheduleLayoutMetricsRaf);
   window.removeEventListener('beforeunload', handleBeforeUnload);
 });
 </script>
 
 <style scoped lang="scss">
 .article-edit-page {
+  /* JS 未跑通前兜底：接近安全区 + 一行顶栏；实测由 applyLayoutMetrics 覆盖 */
+  --article-edit-top-h: calc(56px + env(safe-area-inset-top, 0px));
+  --article-edit-footer-h: 72px;
+  --article-edit-catalog-w: 200px;
+  /* 目录右缘与正文区之间的间距 */
+  --article-edit-catalog-gap: 1vw;
+  /* 正文+设置块在「目录以右」区域内居中时的最大宽度 */
+  --article-edit-content-max: 1600px;
+  --article-edit-accent: var(--primary, #fb7299);
+  --article-edit-accent-soft: color-mix(in srgb, var(--primary, #fb7299) 9%, var(--bg-secondary, #ffffff));
+  --article-edit-accent-border: color-mix(in srgb, var(--primary, #fb7299) 12%, var(--border-color, #e3e5e7));
+  --article-edit-surface: var(--bg-secondary, #ffffff);
+  /* 编辑页背景：中性灰，不显粉色调 */
+  --article-edit-title-color: #475569;
+  --article-edit-title-placeholder: #94a3b8;
+
   min-height: 100vh;
-  background: var(--bg-primary);
+  background-color: #ffffff;
+  background-image: none;
   padding: 0;
+  padding-top: var(--article-edit-top-h);
+  padding-left: 0;
+  padding-bottom: calc(var(--article-edit-footer-h) + env(safe-area-inset-bottom, 0));
+  /* visible：避免 clip 在部分环境下裁切 position:fixed 的左侧目录 */
   overflow-x: visible;
-  overflow-y: visible;
+  box-sizing: border-box;
+  position: relative;
 }
 
-.edit-container {
-  max-width: 1400px;
-  margin: 0 auto;
-  padding: 0 24px 24px;
-  overflow: visible;
+[data-theme='dark'] .article-edit-page {
+  --article-edit-accent-soft: color-mix(in srgb, var(--primary) 13%, #ffffff);
+  --article-edit-accent-border: color-mix(in srgb, var(--primary) 12%, var(--border-color, #e3e5e7));
+  --article-edit-title-color: #475569;
+  --article-edit-title-placeholder: #94a3b8;
+  --bg-primary: #ffffff;
+  --bg-secondary: #ffffff;
+  --text-primary: #212121;
+  --text-secondary: #666666;
+  --text-tertiary: #999999;
+  --border-color: #e3e5e7;
+  --border-light: #f1f2f3;
+  background-color: #ffffff;
+  background-image: none;
 }
 
-// 顶部栏：状态 + 保存/发布
-.edit-header {
+@media (min-width: 769px) {
+  .article-edit-page {
+    padding-left: calc(
+      env(safe-area-inset-left, 0px) + var(--article-edit-catalog-w) + var(--article-edit-catalog-gap)
+    );
+  }
+}
+
+// ---------- 顶栏双层（fixed，与 CSDN 顶栏一致）----------
+.edit-top-dock {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 300;
+  background: #ffffff;
+  border-bottom: 1px solid var(--border-color, #e2e8f0);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.65) inset,
+    0 10px 32px rgba(15, 23, 42, 0.06);
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-left: env(safe-area-inset-left, 0);
+  padding-right: env(safe-area-inset-right, 0);
+  box-sizing: border-box;
+}
+
+[data-theme='dark'] .edit-top-dock {
+  background: #ffffff;
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.65) inset,
+    0 10px 32px rgba(15, 23, 42, 0.06);
+}
+
+.edit-dock-row {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  height: 56px;
-  padding: 0 8px;
-  border-bottom: 1px solid var(--border-color);
-  background: var(--bg-primary);
+  gap: 16px;
+  padding: 0 20px;
+  min-height: 48px;
 
-  .header-left {
-    display: flex;
-    align-items: center;
-    gap: 20px;
-  }
-
-  .back-link {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    color: var(--text-secondary);
-    text-decoration: none;
-    font-size: 14px;
-    transition: color 0.2s;
-
-    &:hover {
-      color: var(--primary);
-    }
-  }
-
-  .status-text {
-    font-size: 13px;
-    color: var(--text-tertiary, #94a3b8);
-  }
-
-  .autosave-text {
-    font-size: 13px;
-    color: var(--text-tertiary, #94a3b8);
-    transition: color 0.2s ease;
-
-    &.is-dirty,
-    &.is-saving {
-      color: var(--primary, #ec4899);
-    }
-
-    &.is-saved {
-      color: var(--success, #10b981);
-    }
-
-    &.is-error {
-      color: var(--danger, #ef4444);
-    }
-  }
-
-  .header-actions {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-  }
-
-  .header-link {
-    padding: 8px 12px;
-    border: 1px solid var(--border-color, #e2e8f0);
-    background: var(--bg-primary, #fff);
-    color: var(--text-secondary, #64748b);
-    font-size: 14px;
-    cursor: pointer;
-    border-radius: 10px;
-    transition: border-color 0.2s ease, background-color 0.2s ease, color 0.2s ease, opacity 0.2s ease;
-
-    &:hover:not(:disabled) {
-      border-color: rgba(0, 0, 0, 0.12);
-      background: var(--bg-secondary, #f1f5f9);
-      color: var(--text-primary, #334155);
-    }
-
-    &:disabled {
-      opacity: 0.6;
-      cursor: not-allowed;
-    }
+  &--back {
+    justify-content: space-between;
+    border-bottom: 1px solid var(--border-color, #e3e5e7);
   }
 }
 
-// 主体：左编辑区 + 右侧边栏
-.edit-body {
+.back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font: inherit;
+  color: var(--text-secondary, #666666);
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 500;
+  transition: color 0.2s;
+
+  &:hover {
+    color: var(--primary);
+  }
+}
+
+.dock-back-meta {
   display: flex;
-  gap: 32px;
-  margin-top: 24px;
-  align-items: flex-start;
-  overflow: visible;
-}
-
-.edit-main {
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
   flex: 1;
   min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-  align-items: stretch;
 }
 
-.edit-sidebar {
-  flex-shrink: 0;
-  width: 320px;
-  align-self: flex-start;
+.draft-hint {
+  font-size: 13px;
+  color: var(--text-secondary, #666666);
+  max-width: 280px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.autosave-text {
+  font-size: 13px;
+  color: var(--text-tertiary, #999999);
+  transition: color 0.2s ease;
+  white-space: nowrap;
+
+  &.is-dirty,
+  &.is-saving {
+    color: var(--primary);
+  }
+
+  &.is-saved {
+    color: var(--success, #10b981);
+  }
+
+  &.is-error {
+    color: var(--danger, #ef4444);
+  }
+}
+
+// ---------- 主内容区（在目录以右的可用宽度内水平居中，宽度上限见 --article-edit-content-max）----------
+.edit-container {
+  width: 100%;
+  max-width: var(--article-edit-content-max);
+  margin-left: auto;
+  margin-right: auto;
+  /* 顶边与 fixed 返回栏盒底对齐（页面 padding-r-top 已为顶栏留位，此处不再额外下推） */
+  padding: 0 24px 32px;
+  box-sizing: border-box;
+  background: #ffffff;
+}
+
+[data-theme='dark'] .edit-container {
+  background: #ffffff;
+}
+
+.edit-paper {
+  /* 与工具栏左右内边距对齐 */
+  --article-edit-paper-pad-x: 32px;
+
+  background: #ffffff;
+  border-radius: var(--radius-xl, 16px);
+  border-block: none;
+  border-inline: 1px solid var(--border-color, #e3e5e7);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.55) inset,
+    0 10px 36px rgba(15, 23, 42, 0.04),
+    0 2px 12px rgba(15, 23, 42, 0.03);
+  /* 减小上内边距，让标题→工具栏→正文整体上移，与顶栏盒底、左侧目录更齐 */
+  padding: 4px var(--article-edit-paper-pad-x) 20px;
+  margin-bottom: 24px;
+}
+
+[data-theme='dark'] .edit-paper {
+  background: #ffffff;
+  border-inline-color: var(--border-color, #e3e5e7);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.55) inset,
+    0 10px 36px rgba(15, 23, 42, 0.04),
+    0 2px 12px rgba(15, 23, 42, 0.03);
+}
+
+.paper-title-block {
+  margin-bottom: 4px;
+}
+
+.paper-title-input {
+  :deep(.el-input__wrapper) {
+    box-shadow: none;
+    border: none;
+    padding: 4px 4px;
+    background: transparent;
+  }
+
+  :deep(.el-input__inner) {
+    font-size: 26px;
+    font-weight: 700;
+    line-height: 1.3;
+    color: var(--article-edit-title-color);
+    letter-spacing: -0.02em;
+  }
+
+  :deep(.el-input__inner::placeholder) {
+    color: var(--article-edit-title-placeholder);
+  }
+}
+
+.paper-title-divider {
+  height: 1px;
+  border-radius: 0;
+  margin: 4px 0 8px;
+  background: var(--border-color, #e2e8f0);
+  opacity: 1;
+}
+
+.paper-editor-host {
+  min-height: 520px;
+
+  /*
+   * 工具栏必须保留在 MdEditor 内部，Vue 才能正确 patch DOM；下拉（标题等）依赖 offsetParent 与库内定位。
+   * 使用 sticky 贴在固定顶栏下方；需让 .md-editor 对 sticky 不设为裁剪根（默认 overflow:hidden 会失效 sticky）。
+   */
+  :deep(.md-editor) {
+    border: none;
+    border-radius: 0;
+    min-height: 500px;
+    box-shadow: none;
+    overflow: visible;
+
+    &[data-theme='dark'] {
+      background: transparent;
+    }
+  }
+
+  :deep(.md-editor-toolbar-wrapper) {
+    position: sticky;
+    top: var(--article-edit-top-h);
+    z-index: 295;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-wrap: wrap;
+    row-gap: 8px;
+    column-gap: 2px;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    padding-block: 6px;
+    padding-inline: 6px;
+    background: #ffffff;
+    border: 1px solid var(--md-border-color, var(--border-color, #e3e5e7));
+    border-radius: 12px;
+    box-shadow:
+      0 4px 18px rgba(15, 23, 42, 0.07),
+      0 1px 0 rgba(255, 255, 255, 0.45) inset;
+    /*
+     * 库默认 .md-editor-toolbar-wrapper 为 overflow-y:hidden，会把标题/表格等绝对定位下拉裁掉，悬停看不见菜单。
+     * 本页工具栏已 flex-wrap，无需再隐藏纵向溢出。
+     */
+    overflow-x: visible;
+    overflow-y: visible;
+  }
+
+  :deep(.md-editor-toolbar) {
+    flex-direction: row;
+    flex-wrap: wrap;
+    max-height: none;
+    overflow: visible;
+    justify-content: center;
+    align-items: center;
+    width: auto;
+    max-width: 100%;
+    gap: 2px;
+  }
+
+  :deep(.md-editor-toolbar-left),
+  :deep(.md-editor-toolbar-right) {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    align-content: center;
+  }
+
+  /*
+   * 库默认 .md-editor-toolbar-item 为 flex-direction:column（图标上、文字下），
+   * 再叠加固定 height 时容易图标不垂直居中。改为横向工具条：单行 flex + 图标与文字并排，
+   * 仅图标时也在按钮内绝对几何居中。
+   */
+  :deep(.md-editor-toolbar-item) {
+    display: inline-flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: auto;
+    min-width: 34px;
+    min-height: 34px;
+    height: auto !important;
+    padding: 6px 8px;
+    margin-block: 0;
+    margin-inline: 1px;
+    line-height: 1;
+    border-radius: 8px;
+    box-sizing: border-box;
+    gap: 4px;
+    transition:
+      background-color 0.2s ease,
+      color 0.2s ease,
+      box-shadow 0.2s ease;
+  }
+
+  :deep(.md-editor-toolbar-item svg) {
+    display: block;
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+    vertical-align: middle;
+  }
+
+  :deep(.md-editor-toolbar-item-name) {
+    font-size: 11px;
+    line-height: 1.2;
+    margin: 0;
+    max-width: 7em;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  :deep(.md-editor-toolbar-item:not([disabled]):hover) {
+    box-shadow: 0 0 0 1px rgba(148, 163, 184, 0.35);
+  }
+
+  :deep(.md-editor-toolbar-item.md-editor-toolbar-active) {
+    box-shadow: 0 0 0 1px rgba(100, 116, 139, 0.45);
+    background-color: color-mix(in srgb, #64748b 12%, var(--md-bk-color-outstand, #ececec)) !important;
+  }
+
+  :deep(.md-editor-divider) {
+    position: relative;
+    width: 1px;
+    height: 18px;
+    align-self: center;
+    margin-block: 0;
+    margin-inline: 6px;
+    inset-block-start: 0;
+    flex-shrink: 0;
+    display: inline-block;
+    vertical-align: middle;
+    opacity: 0.85;
+  }
+
+  :deep(.md-editor-preview img),
+  :deep(.md-editor-html-preview img) {
+    max-width: 100%;
+    height: auto;
+    display: block;
+    margin: 20px auto;
+    border-radius: 12px;
+  }
+
+  /* 大纲目录：覆盖 md-editor 默认 #73d13d，与全站中性灰文案一致 */
+  :deep(.md-editor-catalog-link span) {
+    color: var(--text-secondary, #64748b);
+  }
+
+  :deep(.md-editor-catalog-link span:hover) {
+    color: var(--text-primary, #475569);
+  }
+
+  :deep(.md-editor-catalog-active > span) {
+    color: var(--text-primary, #334155);
+    font-weight: 600;
+  }
+
+  :deep(.md-editor-catalog-indicator) {
+    background-color: var(--text-tertiary, #94a3b8);
+  }
+}
+
+[data-theme='dark'] .paper-editor-host {
+  :deep(.md-editor-catalog-link span) {
+    color: #94a3b8;
+  }
+
+  :deep(.md-editor-catalog-link span:hover) {
+    color: #cbd5e1;
+  }
+
+  :deep(.md-editor-catalog-active > span) {
+    color: #e2e8f0;
+  }
+
+  :deep(.md-editor-catalog-indicator) {
+    background-color: #64748b;
+  }
+}
+
+@media (min-width: 769px) {
+  .paper-editor-host {
+    :deep(.md-editor-content) {
+      flex-direction: row;
+      align-items: stretch;
+    }
+
+    /* 视口左侧固定目录（与 CSDN 一致），不占正文流宽度 */
+    :deep(.md-editor-catalog-flat) {
+      position: fixed;
+      left: env(safe-area-inset-left, 0);
+      /* 须严格等于顶栏底边距（见 applyLayoutMetrics），否则会与 z-index:300 的返回栏重叠 */
+      top: var(--article-edit-top-h);
+      bottom: var(--article-edit-footer-h);
+      width: var(--article-edit-catalog-w);
+      /* 高于 sticky 工具栏(295)，低于返回顶栏(300)，避免大纲被正文区盖住又压在返回栏下 */
+      z-index: 298;
+      max-height: none;
+      align-self: stretch;
+      border-radius: 0;
+      box-shadow: 4px 0 24px rgba(15, 23, 42, 0.07);
+      background: #ffffff;
+      border-right: 1px solid var(--border-color, #e3e5e7);
+      box-sizing: border-box;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    :deep(.md-editor-catalog-editor) {
+      flex: 1;
+      min-height: 0;
+      height: auto !important;
+      max-height: none !important;
+      border-inline-start: none !important;
+      border-inline-end: none !important;
+    }
+
+    /* 与正文区一并上移后略减顶留白，避免左右「第一条大纲 / 工具栏」高低差过大 */
+    :deep(.md-editor-catalog-container > .md-editor-catalog-link:first-child) {
+      padding-top: 30px;
+    }
+  }
+}
+
+// 文末设置（与正文同宽、同居中）
+.edit-settings-after {
+  width: 100%;
+  max-width: var(--article-edit-content-max);
+  margin-left: auto;
+  margin-right: auto;
+  scroll-margin-top: calc(var(--article-edit-top-h, 96px) + 12px);
+  box-sizing: border-box;
 }
 
 .sidebar-card {
-  position: sticky;
-  /* 编写页无站点顶栏，贴近视口顶部；侧栏过高时在卡片内滚动 */
-  top: 16px;
-  max-height: calc(100vh - 32px);
-  overflow-x: hidden;
-  overflow-y: auto;
-  padding: 20px;
-  border-radius: 12px;
-  border: 1px solid var(--border-color, #e2e8f0);
-  background: var(--bg-primary, #fff);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  padding: 20px 24px;
+  border-radius: var(--radius-xl, 16px);
+  border: 1px solid var(--border-color, #e3e5e7);
+  background: #ffffff;
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.78) inset,
+    0 12px 40px rgba(15, 23, 42, 0.06),
+    0 2px 10px rgba(15, 23, 42, 0.04);
+  position: relative;
+  overflow: hidden;
+}
+
+[data-theme='dark'] .sidebar-card {
+  box-shadow: 0 10px 36px rgba(0, 0, 0, 0.35);
+}
+
+.settings-card {
+  position: static;
+  max-height: none;
+  overflow: visible;
 }
 
 .sidebar-title {
   font-size: 15px;
   font-weight: 600;
-  color: var(--text-primary, #334155);
+  color: var(--text-primary, #212121);
   margin: 0 0 20px;
   padding-bottom: 12px;
-  border-bottom: 1px solid var(--border-color, #e2e8f0);
+  padding-left: 10px;
+  border-bottom: 1px solid var(--border-color, #e3e5e7);
+  position: relative;
+
+  &::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0.15em;
+    bottom: 0.15em;
+    width: 3px;
+    border-radius: 999px;
+    background: #cbd5e1;
+  }
 }
 
 .sidebar-section {
@@ -1137,7 +1720,7 @@ onUnmounted(() => {
     display: block;
     font-size: 13px;
     font-weight: 500;
-    color: var(--text-secondary, #64748b);
+    color: var(--text-secondary, #666666);
     margin-bottom: 8px;
   }
 }
@@ -1156,7 +1739,8 @@ onUnmounted(() => {
   }
 
   .cover-placeholder {
-    border: 2px dashed var(--border-color);
+    border: 2px dashed var(--border-color, #e2e8f0);
+    background: #ffffff;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -1185,6 +1769,13 @@ onUnmounted(() => {
   :deep(.el-textarea__inner) {
     border-radius: 10px;
     font-size: 13px;
+    border-color: var(--border-color, #e2e8f0);
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  }
+
+  :deep(.el-textarea__inner:focus) {
+    border-color: var(--border-color, #94a3b8);
+    box-shadow: 0 0 0 1px rgba(148, 163, 184, 0.35);
   }
 }
 
@@ -1199,12 +1790,12 @@ onUnmounted(() => {
     background: none;
     font-size: 13px;
     font-weight: 500;
-    color: var(--text-secondary, #64748b);
+    color: var(--text-secondary, #666666);
     cursor: pointer;
     transition: color 0.2s;
 
     &:hover {
-      color: var(--text-primary, #334155);
+      color: var(--text-primary, #212121);
     }
 
     .toggle-icon {
@@ -1219,7 +1810,7 @@ onUnmounted(() => {
   .advanced-content {
     margin-top: 12px;
     padding-top: 12px;
-    border-top: 1px solid var(--border-color, #e2e8f0);
+    border-top: 1px solid var(--border-color, #e3e5e7);
     display: flex;
     flex-direction: column;
     gap: 10px;
@@ -1233,7 +1824,7 @@ onUnmounted(() => {
 
   .advanced-field-label {
     font-size: 12px;
-    color: var(--text-secondary, #64748b);
+    color: var(--text-secondary, #666666);
   }
 
   .advanced-select {
@@ -1272,7 +1863,7 @@ onUnmounted(() => {
     display: block;
     font-size: 13px;
     font-weight: 500;
-    color: var(--text-secondary, #64748b);
+    color: var(--text-secondary, #666666);
     margin-bottom: 8px;
   }
 
@@ -1281,7 +1872,7 @@ onUnmounted(() => {
   }
 }
 
-.edit-sidebar .meta-section {
+.settings-card .meta-section {
   margin-bottom: 18px;
 }
 
@@ -1297,9 +1888,9 @@ onUnmounted(() => {
     align-items: center;
     padding: 6px 14px;
     border-radius: 12px;
-    border: 1px solid var(--border-color, #e2e8f0);
-    background: var(--bg-primary, #fff);
-    color: var(--text-secondary, #64748b);
+    border: 1px solid var(--border-color, #e3e5e7);
+    background: #ffffff;
+    color: var(--text-secondary, #666666);
     font-size: 13px;
     font-weight: 500;
     cursor: pointer;
@@ -1312,13 +1903,13 @@ onUnmounted(() => {
 
     &:hover {
       border-color: var(--primary);
-      color: var(--text-primary, #334155);
-      background: rgba(251, 114, 153, 0.04);
+      color: var(--text-primary, #212121);
+      background: #ffffff;
     }
 
     &.selected {
       border-color: var(--primary);
-      background: rgba(251, 114, 153, 0.1);
+      background: #ffffff;
       color: var(--primary);
     }
   }
@@ -1338,14 +1929,14 @@ onUnmounted(() => {
     z-index: 10;
     padding: 10px 12px;
     border-radius: 12px;
-    border: 1px solid var(--border-color, #e2e8f0);
-    background: var(--bg-primary, #fff);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    border: 1px solid var(--border-color, #e3e5e7);
+    background: #ffffff;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.06);
   }
 
   .tag-suggestions-title {
     font-size: 12px;
-    color: var(--text-tertiary, #94a3b8);
+    color: var(--text-tertiary, #999999);
     margin-bottom: 8px;
     padding: 0 4px;
   }
@@ -1359,9 +1950,9 @@ onUnmounted(() => {
   .tag-suggestion-item {
     padding: 6px 12px;
     border-radius: 12px;
-    border: none;
-    background: var(--bg-secondary, #f1f5f9);
-    color: var(--text-secondary, #64748b);
+    border: 1px solid var(--border-color, #e3e5e7);
+    background: #ffffff;
+    color: var(--text-secondary, #666666);
     font-size: 13px;
     font-weight: 500;
     cursor: pointer;
@@ -1369,15 +1960,16 @@ onUnmounted(() => {
   }
 
   .tag-suggestion-item:hover {
-    background: rgba(251, 114, 153, 0.12);
+    background: #ffffff;
+    border-color: var(--primary);
     color: var(--primary);
   }
 
   .tags-input {
     :deep(.el-input__wrapper) {
       border-radius: 12px;
-      border: 1px solid var(--border-color, #e2e8f0);
-      background: var(--bg-primary, #fff);
+      border: 1px solid var(--border-color, #e3e5e7);
+      background: #ffffff;
       box-shadow: none;
       transition: border-color 0.2s ease;
     }
@@ -1400,11 +1992,11 @@ onUnmounted(() => {
     gap: 6px;
     padding: 6px 12px;
     border-radius: 12px;
-    background: var(--bg-secondary, #f1f5f9);
-    color: var(--text-secondary, #64748b);
+    border: 1px solid var(--border-color, #e3e5e7);
+    background: #ffffff;
+    color: var(--text-secondary, #666666);
     font-size: 13px;
     font-weight: 500;
-    border: none;
   }
 
   .chip-remove {
@@ -1443,53 +2035,106 @@ onUnmounted(() => {
   transform: translateY(-4px);
 }
 
-.edit-main .form-item {
-  &.title-row {
-    min-height: 64px;
+// 底部固定栏
+.edit-footer-bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 290;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 12px calc(24px + env(safe-area-inset-right, 0)) calc(12px + env(safe-area-inset-bottom, 0))
+    calc(24px + env(safe-area-inset-left, 0));
+  background: #ffffff;
+  border-top: 1px solid var(--border-color, #e3e5e7);
+  box-shadow: 0 -8px 32px rgba(15, 23, 42, 0.04);
+  box-sizing: border-box;
+}
+
+[data-theme='dark'] .edit-footer-bar {
+  background: #ffffff;
+  border-top-color: var(--border-color, #e3e5e7);
+  box-shadow: 0 -8px 32px rgba(15, 23, 42, 0.04);
+}
+
+.footer-left {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.footer-settings-link {
+  margin: 6px 0 0;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--text-secondary, #64748b);
+  font-weight: 500;
+  text-align: left;
+  width: fit-content;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+
+  &:hover {
+    opacity: 0.85;
   }
+}
 
-  &.title-row .title-input :deep(.el-input__wrapper) {
-    border: 1px solid var(--border-color, #e2e8f0);
-    box-shadow: none;
-    padding: 12px 14px;
-    min-height: 56px;
-    font-size: 22px;
-    font-weight: 600;
-    line-height: 1.35;
-    border-radius: 12px;
-    background: var(--bg-primary, #fff);
-  }
+.footer-word-count {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary, #212121);
+}
 
-  &.title-row .title-input :deep(.el-input__inner) {
-    --el-input-placeholder-color: var(--text-tertiary, #94a3b8);
-  }
+.footer-hint {
+  font-size: 12px;
+  color: var(--text-tertiary, #999999);
+}
 
-  &.editor-wrapper {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    min-height: 560px;
+.footer-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
 
-    :deep(.md-editor) {
-      flex: 1;
-      min-height: 560px;
-      border-radius: 12px;
-      border: 1px solid var(--border-color);
+.footer-btn {
+  padding: 8px 18px;
+  border-radius: 8px;
+  font-size: 14px;
+  cursor: pointer;
+  transition:
+    background 0.2s,
+    border-color 0.2s,
+    color 0.2s;
 
-      &[data-theme='dark'] {
-        background: var(--bg-secondary);
-      }
+  &--ghost {
+    border: 1px solid var(--border-color, #e3e5e7);
+    background: #ffffff;
+    color: var(--text-secondary, #666666);
+
+    &:hover:not(:disabled) {
+      border-color: var(--primary);
+      color: var(--primary);
     }
 
-    :deep(.md-editor-preview img),
-    :deep(.md-editor-html-preview img) {
-      max-width: min(100%, 720px);
-      height: auto;
-      display: block;
-      margin: 20px auto;
-      border-radius: 12px;
+    &:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
     }
   }
+}
+
+.footer-publish {
+  min-width: 120px;
+  font-weight: 600;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.12);
 }
 
 .form-tip {
@@ -1511,45 +2156,78 @@ onUnmounted(() => {
 }
 
 
-// 响应式：小屏改为单栏，侧栏在下
 @media (max-width: 1024px) {
-  .edit-body {
-    flex-direction: column;
-  }
+  .paper-editor-host {
+    min-height: 420px;
 
-  .edit-sidebar {
-    width: 100%;
-    max-width: 100%;
-    align-self: stretch;
-  }
-
-  .sidebar-card {
-    position: static;
-    top: auto;
-    max-height: none;
-    overflow: visible;
-    max-width: 480px;
+    :deep(.md-editor) {
+      min-height: 400px;
+    }
   }
 }
 
 @media (max-width: 768px) {
-  .edit-container {
-    padding: 0 16px 16px;
+  .article-edit-page {
+    padding-left: 0;
   }
 
-  .edit-header {
-    flex-wrap: wrap;
-    height: auto;
-    padding: 12px 0;
-    gap: 12px;
+  .edit-container {
+    padding: 0 16px 24px;
+  }
 
-    .header-left {
-      flex-wrap: wrap;
+  .edit-paper {
+    --article-edit-paper-pad-x: 16px;
+    padding: 8px var(--article-edit-paper-pad-x) 16px;
+  }
+
+  .edit-dock-row {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+
+  .dock-back-meta {
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 6px;
+  }
+
+  .paper-editor-host {
+    :deep(.md-editor-content) {
+      flex-direction: column;
+    }
+
+    :deep(.md-editor-catalog-flat) {
+      position: relative;
+      left: auto;
+      top: auto;
+      bottom: auto;
+      max-height: min(220px, 40vh);
+      width: 100% !important;
+      order: -1;
+      border-radius: 10px 10px 0 0;
+      box-shadow: none;
+      background: #ffffff;
+      border-right: none;
+      display: block;
+      overflow: visible;
+    }
+
+    :deep(.md-editor-catalog-editor) {
+      width: 100% !important;
+      flex: none;
+      min-height: unset;
+      border-inline-end: none !important;
+      border-block-end: 1px solid var(--md-border-color, var(--border-color, #e3e5e7)) !important;
     }
   }
 
-  .edit-main .form-item.editor-wrapper :deep(.md-editor) {
-    min-height: 400px;
+  .paper-editor-host :deep(.md-editor) {
+    min-height: 360px;
+  }
+
+  .edit-footer-bar {
+    padding-left: 16px;
+    padding-right: 16px;
   }
 }
 </style>
