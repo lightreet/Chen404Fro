@@ -1,5 +1,4 @@
 // 统一导出所有类型
-
 // 基础响应类型
 export interface ApiResponse<T = unknown> {
   code: number;
@@ -64,16 +63,16 @@ export enum UserStatus {
 
 // 登录请求参数
 export interface LoginParams {
-  username: string; // 用户名/邮箱/手机号
+  username: string;
   password: string;
-  captcha?: string; // 图形验证码（可选）
+  captcha?: string;
 }
 
 // 登录响应
 export interface LoginResult {
   token: string;
   refreshToken: string;
-  expires: number; // token 过期时间（秒）
+  expires: number;
   user: User;
 }
 
@@ -84,7 +83,7 @@ export interface RegisterParams {
   nickname?: string;
   email?: string;
   phone?: string;
-  code?: string; // 短信/邮箱验证码
+  code?: string;
   registerType: 'email' | 'phone';
 }
 
@@ -113,7 +112,6 @@ export interface UpdateProfileParams {
   nickname: string;
   avatar: string;
 }
-
 // ==================== 首页相关类型 ====================
 
 // 站点统计信息
@@ -131,12 +129,21 @@ export interface SiteConfig {
   siteDescription: string;
   siteLogo: string;
   siteFavicon: string;
-  icp: string; // ICP备案号
+  icp: string;
   github?: string;
   email?: string;
+  heroImages?: Record<string, string>;
 }
 
-// 轮播图/Banner
+export interface SiteOwner {
+  id: number;
+  username: string;
+  nickname: string;
+  avatar: string;
+  bio?: string;
+}
+
+// 轮播图 Banner
 export interface Banner {
   id: number;
   title: string;
@@ -195,7 +202,7 @@ export interface Article {
   isRecommend: number;
   /** 可见性：0-公开 1-登录可见 2-好友可见 3-私密 */
   visibility?: ArticleVisibility;
-  /** 评论策略：0-关闭 1-登录可评论 2-好友可评论 3-游客可评论 */
+  /** 评论策略：0-关闭 1-登录可评 2-好友可评 3-游客可评 */
   commentPolicy?: ArticleCommentPolicy;
   publishTime: string;
   createTime: string;
@@ -206,7 +213,7 @@ export interface Article {
   author?: Author;
   /** 创建/更新时提交的标签 ID 列表 */
   tagIds?: number[];
-  /** 创建/更新时提交的新标签名称（后端会 findOrCreate） */
+  /** 创建/更新时提交的新标签名称（后端 findOrCreate） */
   tagNames?: string[];
   /** 当前登录用户是否可编辑 */
   canEdit?: boolean;
@@ -337,4 +344,9 @@ export interface CreateCommentParams {
   authorEmail?: string;
   authorWebsite?: string;
 }
+
+
+
+
+
 

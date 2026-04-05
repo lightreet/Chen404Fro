@@ -1,30 +1,32 @@
-import { ref, reactive, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
-import { useRoute, useRouter, onBeforeRouteLeave } from 'vue-router'
-import { ElMessage, ElMessageBox } from 'element-plus'
-import type { ExposeParam, ToolbarNames } from 'md-editor-v3'
-import type { Article, Category, Tag } from '@/types'
-import { ArticleStatus, ArticleVisibility, ArticleCommentPolicy } from '@/types'
+import { ref, reactive, computed, onMounted, onUnmounted, onUpdated, watch, nextTick } from 'vue';
+import { useRoute, useRouter, onBeforeRouteLeave } from 'vue-router';
+import { ElMessage, ElMessageBox } from 'element-plus';
+import type { ExposeParam, ToolbarNames } from 'md-editor-v3';
+import type { Article, Category, Tag } from '@/types';
+import { ArticleStatus, ArticleVisibility, ArticleCommentPolicy } from '@/types';
 import {
   getArticleById,
   createArticle,
   updateArticle,
   getCategories,
   getTags,
-} from '@/api/article'
-import { uploadImage, uploadCover } from '@/api/upload'
-import type { RequestConfig } from '@/api/request'
-import { validateImageFile, DEFAULT_IMAGE_MAX_MB } from '@/utils/validation'
-import { mdImageResizeEmitter } from '@/utils/mdImageResizeEmitter'
-import { useUserStore } from '@/stores/user'
-import { isAdminUser } from '@/utils/permission'
+  uploadImage,
+  uploadCover,
+} from '@/api';
+import type { RequestConfig } from '@/api';
+import { validateImageFile, DEFAULT_IMAGE_MAX_MB } from '@/utils/validation';
+import { mdImageResizeEmitter } from '@/utils/mdImageResizeEmitter';
+import { useUserStore } from '@/stores/user';
+import { isAdminUser } from '@/utils/permission';
 
-
-export function useArticleEditPage() {
+export function useArticleEdit() {
 type DraftSaveSource = 'manual' | 'auto' | 'leave';
 type AutoSaveState = 'idle' | 'dirty' | 'saving' | 'saved' | 'error';
 
 const AUTO_SAVE_DEBOUNCE_MS = 5000;
 const AUTO_SAVE_INTERVAL_MS = 30000;
+/** 草稿快照 JSON 对比防抖，避免长文每次按键都 stringify */
+const DRAFT_COMPARE_DEBOUNCE_MS = 250;
 const AUTO_SAVE_REQUEST_CONFIG: RequestConfig = { suppressErrorMessage: true };
 
 const route = useRoute();
@@ -33,266 +35,65 @@ const userStore = useUserStore();
 /** 仅管理员可设置置顶 */
 const canSetArticleTop = computed(() => isAdminUser(userStore.user));
 const editorRef = ref<ExposeParam>();
-// ---------------------------------------------------------------------------
-// 桌面端竖条 Markdown 工具栏（FAB + fixed 面板）：毛玻璃 wrapper 与库内下拉定位需补丁
-// ---------------------------------------------------------------------------
-const isToolbarOpen = ref(false);
-const editorWrapperRef = ref<HTMLElement | null>(null);
-const toolbarFloatTipRef = ref<HTMLElement | null>(null);
-const toolbarDockPos = reactive({ topPx: 96, leftPx: 16 });
-const toolbarFloatTip = reactive({
-  visible: false,
-  text: '',
-  top: 0,
-  left: 0,
-});
-
-let toolbarTipCurrentButton: HTMLElement | null = null;
-let toolbarTipScrollBar: HTMLElement | null = null;
-let onToolbarTipScroll: (() => void) | null = null;
-
-function detachToolbarTipScrollListener() {
-  if (toolbarTipScrollBar && onToolbarTipScroll) {
-    toolbarTipScrollBar.removeEventListener('scroll', onToolbarTipScroll);
-  }
-  toolbarTipScrollBar = null;
-  onToolbarTipScroll = null;
-}
-
-function updateToolbarFloatTipPosition(btn: HTMLElement) {
-  const r = btn.getBoundingClientRect();
-  const margin = 10;
-  const pad = 8;
-  const cy = r.top + r.height / 2;
-  toolbarFloatTip.top = cy;
-  const tipEl = toolbarFloatTipRef.value;
-  const w = tipEl?.getBoundingClientRect().width || 180;
-  let left = r.right + margin;
-  const rightEdge = left + w;
-  if (rightEdge > window.innerWidth - pad) {
-    left = r.left - margin - w;
-  }
-  if (left < pad) left = pad;
-  toolbarFloatTip.left = left;
-}
-
-function hideToolbarFloatTip() {
-  toolbarFloatTip.visible = false;
-  toolbarFloatTip.text = '';
-  toolbarTipCurrentButton = null;
-  detachToolbarTipScrollListener();
-}
-
-function showToolbarFloatTip(btn: HTMLElement) {
-  const text = btn.getAttribute('aria-label') || btn.getAttribute('title') || '';
-  if (!text) {
-    hideToolbarFloatTip();
-    return;
-  }
-  toolbarTipCurrentButton = btn;
-  toolbarFloatTip.text = text;
-  toolbarFloatTip.visible = true;
-  void nextTick(() => {
-    updateToolbarFloatTipPosition(btn);
-    requestAnimationFrame(() => updateToolbarFloatTipPosition(btn));
-    const root = editorWrapperRef.value;
-    const bar = root?.querySelector('.md-editor-toolbar') as HTMLElement | null;
-    if (!bar) return;
-    detachToolbarTipScrollListener();
-    toolbarTipScrollBar = bar;
-    onToolbarTipScroll = () => {
-      if (toolbarTipCurrentButton) updateToolbarFloatTipPosition(toolbarTipCurrentButton);
-    };
-    bar.addEventListener('scroll', onToolbarTipScroll, { passive: true });
-  });
-}
-
-function onToolbarTipMouseOver(ev: MouseEvent) {
-  if (!isToolbarOpen.value) return;
-  const t = ev.target;
-  if (!(t instanceof Element)) return;
-  const root = editorWrapperRef.value;
-  const mdWrap = root?.querySelector('[id$="-toolbar-wrapper"]');
-  if (mdWrap?.contains(t)) scheduleRepositionDropdown();
-  const btn = t.closest('.md-editor-toolbar-item') as HTMLElement | null;
-  if (btn && !btn.closest('.md-editor-menu')) {
-    mdToolbarItemHoverAnchor = btn;
-  }
-  if (!btn || btn.closest('.md-editor-menu')) return;
-  if (!root || !root.contains(btn)) return;
-  if (btn.hasAttribute('disabled') || btn.classList.contains('md-editor-disabled')) return;
-  showToolbarFloatTip(btn);
-}
-
-function onToolbarTipMouseOut(ev: MouseEvent) {
-  if (!isToolbarOpen.value) return;
-  const t = ev.target;
-  if (!(t instanceof Element)) return;
-  const btn = t.closest('.md-editor-toolbar-item') as HTMLElement | null;
-  if (!btn) return;
-  const rel = ev.relatedTarget;
-  if (rel instanceof Node && btn.contains(rel)) return;
-  // 移入 md-editor 子菜单（与触发按钮为兄弟节点）时不要当作离开按钮；库内仅用 10ms 衔接 hover
-  if (
-    rel instanceof Element &&
-    (rel.closest('.md-editor-dropdown') || rel.closest('.md-editor-menu'))
-  ) {
-    return;
-  }
-  hideToolbarFloatTip();
-}
-
-function onWindowResizeToolbarTip() {
-  if (toolbarTipCurrentButton && toolbarFloatTip.visible) {
-    updateToolbarFloatTipPosition(toolbarTipCurrentButton);
-  }
-}
-
-let resizeObserver: ResizeObserver | null = null;
-let removeResizeListener: (() => void) | null = null;
-let removeDocPointerListener: (() => void) | null = null;
-let removeKeydownListener: (() => void) | null = null;
-
-let offResizeListener: (() => void) | null = null;
-
-let mdToolbarDropdownObserver: MutationObserver | null = null;
-let repositionDropdownRaf = 0;
-let dropdownFollowRafId = 0;
-let dropdownFollowFrames = 0;
-let removeDropdownRepositionListeners: (() => void) | null = null;
-
-/** 当前指针下的工具栏按钮；仅一条可见下拉时用其 rect 对齐菜单 */
-let mdToolbarItemHoverAnchor: HTMLElement | null = null;
-
-/** 覆盖过渡与库晚写入的 style；少量帧即可，避免多帧改写 top 造成持续漂移（见调试 H3） */
-const DROPDOWN_FOLLOW_MAX_FRAMES = 3;
-
-function cancelDropdownFollowLoop() {
-  if (dropdownFollowRafId) {
-    cancelAnimationFrame(dropdownFollowRafId);
-    dropdownFollowRafId = 0;
-  }
-  dropdownFollowFrames = 0;
-}
-
-/** 下拉可见期间短时跟帧重贴，抵消库对 inset 的回写 */
-function startDropdownFollowLoop() {
-  cancelDropdownFollowLoop();
-  const step = () => {
-    repositionMdEditorDropdownFix();
-    const root = editorWrapperRef.value;
-    const hasVisible =
-      isToolbarOpen.value &&
-      !!root?.querySelector('[id$="-toolbar-wrapper"] .md-editor-dropdown:not(.md-editor-dropdown-hidden)');
-    dropdownFollowFrames += 1;
-    if (hasVisible && dropdownFollowFrames < DROPDOWN_FOLLOW_MAX_FRAMES) {
-      dropdownFollowRafId = requestAnimationFrame(step);
-    } else {
-      cancelDropdownFollowLoop();
-    }
-  };
-  dropdownFollowRafId = requestAnimationFrame(step);
-}
-
-/** 图片等工具在 fragment 中前置 label/input，dropdown 的前一个兄弟未必是按钮。 */
-function resolveMdDropdownTrigger(dd: Element): HTMLElement | null {
-  let el: Element | null = dd.previousElementSibling;
-  let steps = 0;
-  while (el && steps < 14) {
-    if (el instanceof HTMLElement) {
-      if (el.matches?.('.md-editor-toolbar-item')) return el;
-      const inner = el.querySelector?.('.md-editor-toolbar-item');
-      if (inner instanceof HTMLElement) return inner;
-    }
-    el = el.previousElementSibling;
-    steps++;
-  }
-  return null;
-}
+const articleEditRootRef = ref<HTMLElement | null>(null);
+const editTopDockRef = ref<HTMLElement | null>(null);
+const editFooterRef = ref<HTMLElement | null>(null);
+const settingsAnchorRef = ref<HTMLElement | null>(null);
+const paperEditorHostRef = ref<HTMLElement | null>(null);
+const articleEditTopOffset = ref(96);
 
 /**
- * 必须相对 .md-editor-toolbar-wrapper 定位：该节点有 backdrop-filter，子元素 position:fixed 会相对此层而非视口；
- * 若仍用视口坐标的 top/left，菜单会整块偏到编辑区（与「公式 / 图片」等现象一致）。
+ * md-editor-v3 下拉类工具栏（标题、表格、图片、公式等）仅用 mouseenter 打开菜单，单击无悬停轨迹时无效。
+ * 在捕获阶段对工具栏按钮补发一次 mouseenter，使点击与触摸也能展开下拉。
  */
-function applyMdDropdownPositionInWrapper(dd: HTMLElement, trigger: HTMLElement, wrap: HTMLElement) {
-  const tr = trigger.getBoundingClientRect();
-  const wr = wrap.getBoundingClientRect();
-  /** 略小可缩短「按钮 → 下拉」移动距离，配合 vite 中延长的 hover 关闭延迟，减少误关 */
-  const gap = 2;
-  const pad = 4;
-  dd.style.setProperty('position', 'absolute', 'important');
-  dd.style.setProperty('transform', 'none', 'important');
-  dd.style.setProperty('inset-block-start', 'auto', 'important');
-  dd.style.setProperty('inset-inline-start', 'auto', 'important');
-  dd.style.setProperty('inset', 'auto', 'important');
-  dd.style.setProperty('right', 'auto', 'important');
-  dd.style.setProperty('bottom', 'auto', 'important');
-  let dw = dd.offsetWidth;
-  if (!dw) dw = 160;
-  let left = tr.left - wr.left + tr.width / 2 - dw / 2;
-  const maxLeft = Math.max(pad, wr.width - dw - pad);
-  left = Math.min(Math.max(pad, left), maxLeft);
-  let top = tr.bottom - wr.top + gap;
-  const dh = dd.offsetHeight || 0;
-  const innerH = wrap.clientHeight || wr.height;
-  let usedFlip = false;
-  /** 表格格点展开时高度剧变，上下翻转阈值反复越过会导致 top/usedFlip 抖动，故表格选择器固定向下展开 */
-  const isTablePicker = Boolean(dd.querySelector('.md-editor-table-shape'));
-  if (!isTablePicker && dh > 0 && top + dh > innerH - pad) {
-    top = Math.max(pad, tr.top - wr.top - gap - dh);
-    usedFlip = true;
+const onMdToolbarItemClickOpenDropdown = (e: MouseEvent) => {
+  if (e.button !== 0) return;
+  const target = e.target;
+  if (!(target instanceof HTMLElement)) return;
+  const item = target.closest('.md-editor-toolbar-item');
+  if (!(item instanceof HTMLElement)) return;
+  if (!paperEditorHostRef.value?.contains(item)) return;
+  item.dispatchEvent(
+    new MouseEvent('mouseenter', { bubbles: false, cancelable: true, view: window }),
+  );
+};
+
+let chromeResizeObserver: ResizeObserver | null = null;
+
+function applyLayoutMetrics() {
+  const root = articleEditRootRef.value;
+  if (!root) return;
+  const dock = editTopDockRef.value;
+  /*
+   * 顶栏 fixed + z-index 高于目录(298)，若 --article-edit-top-h 小于顶栏实际底边，左侧大纲首条会被返回栏盖住。
+   * +2 消除亚像素/边框误差；须在首屏尽早测量（见 onMounted），勿长期沿用 96px 默认值。
+   */
+  const topH = dock
+    ? Math.max(56, Math.ceil(dock.getBoundingClientRect().bottom) + 2)
+    : 96;
+  const footEl = editFooterRef.value;
+  const footH = footEl ? Math.max(48, Math.ceil(footEl.getBoundingClientRect().height)) : 72;
+  root.style.setProperty('--article-edit-top-h', `${topH}px`);
+  root.style.setProperty('--article-edit-footer-h', `${footH}px`);
+  articleEditTopOffset.value = topH;
+}
+
+const TITLE_LEN_MIN = 5;
+const TITLE_LEN_MAX = 100;
+
+const goBack = () => {
+  if (typeof window !== 'undefined' && window.history.length > 1) {
+    router.back();
+    return;
   }
-  dd.style.setProperty('left', `${left}px`, 'important');
-  dd.style.setProperty('top', `${top}px`, 'important');
-  dd.style.setProperty('z-index', '14000', 'important');
+  router.push('/');
+};
 
-  dd.classList.toggle('md-editor-dropdown-open-up', usedFlip);
-}
+const scrollToArticleSettings = () => {
+  settingsAnchorRef.value?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+};
 
-/** md-editor 下拉：库内 offsetTop 与竖栏滚动不一致 + wrapper 上 backdrop-filter 使 fixed 参照错误；用 wrapper 内 absolute 纠正。 */
-function repositionMdEditorDropdownFix() {
-  const root = editorWrapperRef.value;
-  if (!root || !isToolbarOpen.value) return;
-  const wrap = root.querySelector('[id$="-toolbar-wrapper"]');
-  if (!wrap || !(wrap instanceof HTMLElement)) return;
-  const dropdowns = wrap.querySelectorAll('.md-editor-dropdown:not(.md-editor-dropdown-hidden)');
-  if (!dropdowns.length) return;
-
-  const anchorOk =
-    mdToolbarItemHoverAnchor instanceof HTMLElement && wrap.contains(mdToolbarItemHoverAnchor);
-  let list = Array.from(dropdowns).filter((n): n is HTMLElement => n instanceof HTMLElement);
-
-  /** 过渡期可能同时有两个「未 hidden」的下拉；只重贴与当前 hover 按钮匹配的那一项，避免串台（见调试 H5） */
-  if (anchorOk && mdToolbarItemHoverAnchor && list.length > 1) {
-    const matched = list.filter((node) => resolveMdDropdownTrigger(node) === mdToolbarItemHoverAnchor);
-    if (matched.length >= 1) list = matched;
-  }
-
-  list.forEach((node) => {
-    const resolved = resolveMdDropdownTrigger(node);
-    const trigger =
-      list.length === 1 && anchorOk
-        ? mdToolbarItemHoverAnchor
-        : resolved ?? (anchorOk ? mdToolbarItemHoverAnchor : null);
-    if (!trigger) return;
-    applyMdDropdownPositionInWrapper(node, trigger, wrap);
-  });
-}
-
-function scheduleRepositionDropdown() {
-  if (repositionDropdownRaf) cancelAnimationFrame(repositionDropdownRaf);
-  const run = () => {
-    repositionMdEditorDropdownFix();
-    requestAnimationFrame(() => repositionMdEditorDropdownFix());
-  };
-  repositionDropdownRaf = requestAnimationFrame(() => {
-    requestAnimationFrame(() => {
-      repositionDropdownRaf = 0;
-      run();
-      startDropdownFollowLoop();
-    });
-  });
-}
+let offResizeListener: (() => void) | null = null;
 
 // 判断是否为编辑模式
 const articleId = computed(() => {
@@ -307,7 +108,7 @@ const editorTheme = computed(() => {
   return savedTheme === 'dark' ? 'dark' : 'light';
 });
 
-// 编辑器工具栏配置（0 = #defToolbars 第一项：表情面板，数据来自 @/emoji registry + article 场景策略）
+// 编辑器工具栏配置
 const toolbars: ToolbarNames[] = [
   'bold',
   'underline',
@@ -326,8 +127,6 @@ const toolbars: ToolbarNames[] = [
   'code',
   'link',
   'image',
-  '-',
-  0,
   'table',
   'mermaid',
   'katex',
@@ -340,29 +139,6 @@ const toolbars: ToolbarNames[] = [
   'htmlPreview',
   'catalog',
 ];
-
-const toggleToolbar = () => {
-  isToolbarOpen.value = !isToolbarOpen.value;
-};
-
-watch(isToolbarOpen, (open) => {
-  if (!open) {
-    hideToolbarFloatTip();
-    cancelDropdownFollowLoop();
-    mdToolbarItemHoverAnchor = null;
-  }
-});
-
-const computeToolbarDock = async () => {
-  await nextTick();
-  const el = editorWrapperRef.value;
-  if (!el) return;
-  const rect = el.getBoundingClientRect();
-  // 顶部与正文编辑框对齐（只在布局变化时重新计算；滚动时保持相对视口静止）
-  toolbarDockPos.topPx = Math.max(80, Math.round(rect.top));
-  // 左侧悬浮：toolbar(56px) + gap(12px)
-  toolbarDockPos.leftPx = Math.max(12, Math.round(rect.left) - 68);
-};
 
 const escapeHtmlAttr = (value: string) => value.replace(/"/g, '&quot;');
 
@@ -421,6 +197,8 @@ const form = reactive<Partial<Article>>({
   commentPolicy: ArticleCommentPolicy.REGISTERED,
 });
 
+const contentCharCount = computed(() => (form.content ?? '').length);
+
 const visibilityOptions = [
   { label: '公开', value: ArticleVisibility.PUBLIC },
   { label: '登录可见', value: ArticleVisibility.LOGIN },
@@ -462,9 +240,37 @@ const loadedArticleStatus = ref<ArticleStatus | null>(null);
 
 let activeSavePromise: Promise<boolean> | null = null;
 let autoSaveDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+let draftCompareDebounceTimer: ReturnType<typeof setTimeout> | null = null;
 let autoSaveIntervalId: ReturnType<typeof setInterval> | null = null;
 let lastSavedSnapshot = '';
 let queuedAutoSave = false;
+/** 合并 MdEditor 等高频更新触发的布局测量，避免每帧多次 getBoundingClientRect */
+let layoutMetricsRaf = 0;
+
+/** md-editor-v3 默认 catalogVisible 为 false，需 toggleCatalog(true) 才会挂载左侧目录；单次调用若早于内部 onMounted 注册会无效 */
+function ensureCatalogShown() {
+  editorRef.value?.toggleCatalog?.(true);
+}
+
+let catalogShownRetryTimer: ReturnType<typeof setTimeout> | null = null;
+
+function scheduleEnsureCatalogShown() {
+  ensureCatalogShown();
+  void nextTick(ensureCatalogShown);
+  requestAnimationFrame(() => {
+    ensureCatalogShown();
+    requestAnimationFrame(ensureCatalogShown);
+  });
+  if (catalogShownRetryTimer) {
+    clearTimeout(catalogShownRetryTimer);
+  }
+  catalogShownRetryTimer = setTimeout(() => {
+    catalogShownRetryTimer = null;
+    ensureCatalogShown();
+  }, 150);
+}
+
+let layoutMetricsLateTimer: ReturnType<typeof setTimeout> | null = null;
 
 // 获取分类和标签列表
 const fetchCategoriesAndTags = async () => {
@@ -576,8 +382,17 @@ const onUploadImg = async (files: File[], callback: (urls: string[]) => void) =>
 
 // 表单验证
 const validateForm = (): boolean => {
-  if (!form.title?.trim()) {
+  const title = form.title?.trim() ?? '';
+  if (!title) {
     ElMessage.warning('请输入文章标题');
+    return false;
+  }
+  if (title.length < TITLE_LEN_MIN) {
+    ElMessage.warning(`文章标题至少 ${TITLE_LEN_MIN} 个字`);
+    return false;
+  }
+  if (title.length > TITLE_LEN_MAX) {
+    ElMessage.warning(`文章标题不能超过 ${TITLE_LEN_MAX} 个字`);
     return false;
   }
   if (!form.categoryId) {
@@ -619,7 +434,8 @@ const buildDraftSubmitData = (): Partial<Article> => {
   };
 };
 
-const currentDraftSnapshot = computed(() => JSON.stringify(buildDraftSubmitData()));
+/** 全量序列化开销大，避免用 computed 在每次按键时重复 stringify */
+const computeDraftSnapshot = () => JSON.stringify(buildDraftSubmitData());
 
 const isAutoSaveEnabled = computed(() => {
   return !(isEdit.value && loadedArticleStatus.value === ArticleStatus.PUBLISHED);
@@ -691,8 +507,16 @@ const clearAutoSaveDebounce = () => {
   }
 };
 
+const clearDraftCompareDebounce = () => {
+  if (draftCompareDebounceTimer) {
+    clearTimeout(draftCompareDebounceTimer);
+    draftCompareDebounceTimer = null;
+  }
+};
+
 const syncSavedSnapshot = (state: AutoSaveState = 'idle') => {
-  lastSavedSnapshot = currentDraftSnapshot.value;
+  clearDraftCompareDebounce();
+  lastSavedSnapshot = computeDraftSnapshot();
   hasPendingChanges.value = false;
   autoSaveState.value = state;
 };
@@ -816,7 +640,7 @@ const saveDraftCore = async ({
     return false;
   }
 
-  if (source !== 'manual' && !hasPendingChanges.value && currentDraftSnapshot.value === lastSavedSnapshot) {
+  if (source !== 'manual' && !hasPendingChanges.value && computeDraftSnapshot() === lastSavedSnapshot) {
     return true;
   }
 
@@ -927,26 +751,56 @@ const handlePublish = async () => {
 };
 
 // 页面加载时获取数据
-watch(currentDraftSnapshot, (newSnapshot) => {
+/** 防抖后对比快照：用于「改回与上次保存一致」时取消未保存态，避免每键一次 stringify */
+const runDraftSnapshotReconcile = () => {
   if (!editorReady.value) return;
 
+  const newSnapshot = computeDraftSnapshot();
   if (newSnapshot === lastSavedSnapshot) {
     hasPendingChanges.value = false;
     autoSaveState.value = lastSavedAt.value ? 'saved' : 'idle';
     clearAutoSaveDebounce();
-    return;
   }
+};
 
-  hasPendingChanges.value = true;
+const scheduleDraftSnapshotReconcile = () => {
+  if (!editorReady.value) return;
+  clearDraftCompareDebounce();
+  draftCompareDebounceTimer = setTimeout(() => {
+    draftCompareDebounceTimer = null;
+    runDraftSnapshotReconcile();
+  }, DRAFT_COMPARE_DEBOUNCE_MS);
+};
 
-  if (isDraftSaving.value) {
-    queuedAutoSave = true;
-    return;
-  }
+watch(
+  [
+    () => form.title,
+    () => form.content,
+    () => form.summary,
+    () => form.coverImage,
+    () => form.categoryId,
+    () => form.status,
+    () => form.visibility,
+    () => form.commentPolicy,
+    () => form.isTop,
+    formTagIds,
+    customTagNames,
+  ],
+  () => {
+    if (!editorReady.value) return;
 
-  autoSaveState.value = 'dirty';
-  scheduleAutoSave();
-});
+    hasPendingChanges.value = true;
+
+    if (isDraftSaving.value) {
+      queuedAutoSave = true;
+    } else {
+      autoSaveState.value = 'dirty';
+      scheduleAutoSave();
+    }
+
+    scheduleDraftSnapshotReconcile();
+  },
+);
 
 onBeforeRouteLeave(async () => {
   if (!shouldWarnBeforeUnload()) {
@@ -971,50 +825,30 @@ onBeforeRouteLeave(async () => {
   return window.confirm('草稿还有未同步的改动，确定离开当前页面吗？');
 });
 
+const scheduleLayoutMetricsRaf = () => {
+  if (layoutMetricsRaf) return;
+  layoutMetricsRaf = requestAnimationFrame(() => {
+    layoutMetricsRaf = 0;
+    applyLayoutMetrics();
+  });
+};
+
+onUpdated(() => {
+  scheduleLayoutMetricsRaf();
+});
+
 onMounted(async () => {
-  await computeToolbarDock();
-  const onWindowResize = () => {
-    void computeToolbarDock();
-    if (isToolbarOpen.value) {
-      scheduleRepositionDropdown();
-      onWindowResizeToolbarTip();
-    }
-  };
-  window.addEventListener('resize', onWindowResize);
-  removeResizeListener = () => window.removeEventListener('resize', onWindowResize);
-
-  if (typeof ResizeObserver !== 'undefined') {
-    resizeObserver = new ResizeObserver(() => void computeToolbarDock());
-    if (editorWrapperRef.value) resizeObserver.observe(editorWrapperRef.value);
-  }
-
-  const onDocPointerDown = (ev: MouseEvent) => {
-    if (!isToolbarOpen.value) return;
-    const target = ev.target as HTMLElement | null;
-    if (!target) return;
-    if (target.closest('.md-toolbar-fab')) return;
-    if (target.closest('.md-editor-toolbar-wrapper')) return;
-    // 正文/预览编辑区：继续写作不应收起工具栏（否则一点击输入区就关闭）
-    if (target.closest('.md-editor-content')) return;
-    // 工具栏下拉/弹层可能挂到 body，需排除
-    if (target.closest('.md-editor-dropdown')) return;
-    if (target.closest('.md-editor-modal-mask')) return;
-    if (target.closest('.md-editor-modal')) return;
-    isToolbarOpen.value = false;
-  };
-  document.addEventListener('mousedown', onDocPointerDown);
-  removeDocPointerListener = () => document.removeEventListener('mousedown', onDocPointerDown);
-
-  const onKeydown = (ev: KeyboardEvent) => {
-    if (!isToolbarOpen.value) return;
-    if (ev.key === 'Escape') isToolbarOpen.value = false;
-  };
-  window.addEventListener('keydown', onKeydown);
-  removeKeydownListener = () => window.removeEventListener('keydown', onKeydown);
-
   offResizeListener = mdImageResizeEmitter.on(({ src, width }) => {
     upsertImageWidthBySrc(src, width);
   });
+
+  await nextTick();
+  applyLayoutMetrics();
+  requestAnimationFrame(() => {
+    applyLayoutMetrics();
+    requestAnimationFrame(applyLayoutMetrics);
+  });
+  window.addEventListener('resize', scheduleLayoutMetricsRaf);
 
   await Promise.all([
     fetchCategoriesAndTags(),
@@ -1023,37 +857,28 @@ onMounted(async () => {
 
   syncSavedSnapshot();
   editorReady.value = true;
+  runDraftSnapshotReconcile();
 
-  void nextTick(() => {
-    const wrap = editorWrapperRef.value;
-    if (!wrap) return;
-
-    const barScroll = wrap.querySelector('.md-editor-toolbar') as HTMLElement | null;
-    const onBarScroll = () => scheduleRepositionDropdown();
-    barScroll?.addEventListener('scroll', onBarScroll, { passive: true });
-
-    wrap.addEventListener('mouseover', onToolbarTipMouseOver, true);
-    wrap.addEventListener('mouseout', onToolbarTipMouseOut, true);
-
-    const mdToolbarWrapper = wrap.querySelector('[id$="-toolbar-wrapper"]');
-    if (mdToolbarWrapper && typeof MutationObserver !== 'undefined') {
-      mdToolbarDropdownObserver = new MutationObserver(() => scheduleRepositionDropdown());
-      mdToolbarDropdownObserver.observe(mdToolbarWrapper, {
-        subtree: true,
-        attributes: true,
-        attributeFilter: ['class', 'style'],
-      });
-    }
-
-    removeDropdownRepositionListeners = () => {
-      mdToolbarDropdownObserver?.disconnect();
-      mdToolbarDropdownObserver = null;
-      barScroll?.removeEventListener('scroll', onBarScroll);
-      wrap.removeEventListener('mouseover', onToolbarTipMouseOver, true);
-      wrap.removeEventListener('mouseout', onToolbarTipMouseOut, true);
-      hideToolbarFloatTip();
-    };
+  await nextTick();
+  scheduleEnsureCatalogShown();
+  applyLayoutMetrics();
+  requestAnimationFrame(() => {
+    applyLayoutMetrics();
+    requestAnimationFrame(applyLayoutMetrics);
   });
+  if (layoutMetricsLateTimer) clearTimeout(layoutMetricsLateTimer);
+  layoutMetricsLateTimer = window.setTimeout(() => {
+    layoutMetricsLateTimer = null;
+    applyLayoutMetrics();
+  }, 320);
+
+  chromeResizeObserver = new ResizeObserver(() => applyLayoutMetrics());
+  if (editTopDockRef.value) {
+    chromeResizeObserver.observe(editTopDockRef.value);
+  }
+  if (editFooterRef.value) {
+    chromeResizeObserver.observe(editFooterRef.value);
+  }
 
   autoSaveIntervalId = setInterval(() => {
     if (!hasPendingChanges.value || !isAutoSaveEnabled.value || !canSaveDraft()) return;
@@ -1064,37 +889,33 @@ onMounted(async () => {
 });
 
 onUnmounted(() => {
-  if (removeResizeListener) {
-    removeResizeListener();
-    removeResizeListener = null;
+  if (catalogShownRetryTimer) {
+    clearTimeout(catalogShownRetryTimer);
+    catalogShownRetryTimer = null;
   }
-  if (removeDocPointerListener) {
-    removeDocPointerListener();
-    removeDocPointerListener = null;
+
+  if (layoutMetricsLateTimer) {
+    clearTimeout(layoutMetricsLateTimer);
+    layoutMetricsLateTimer = null;
   }
-  if (removeKeydownListener) {
-    removeKeydownListener();
-    removeKeydownListener = null;
+
+  if (layoutMetricsRaf) {
+    cancelAnimationFrame(layoutMetricsRaf);
+    layoutMetricsRaf = 0;
   }
-  if (resizeObserver) {
-    resizeObserver.disconnect();
-    resizeObserver = null;
+
+  if (chromeResizeObserver) {
+    chromeResizeObserver.disconnect();
+    chromeResizeObserver = null;
   }
 
   if (offResizeListener) {
     offResizeListener();
     offResizeListener = null;
   }
-  if (removeDropdownRepositionListeners) {
-    removeDropdownRepositionListeners();
-    removeDropdownRepositionListeners = null;
-  }
-  mdToolbarDropdownObserver?.disconnect();
-  mdToolbarDropdownObserver = null;
-  cancelDropdownFollowLoop();
-  mdToolbarItemHoverAnchor = null;
 
   clearAutoSaveDebounce();
+  clearDraftCompareDebounce();
   if (autoSaveIntervalId) {
     clearInterval(autoSaveIntervalId);
     autoSaveIntervalId = null;
@@ -1103,37 +924,43 @@ onUnmounted(() => {
     clearTimeout(tagSuggestionsBlurTimer);
     tagSuggestionsBlurTimer = null;
   }
+  window.removeEventListener('resize', scheduleLayoutMetricsRaf);
   window.removeEventListener('beforeunload', handleBeforeUnload);
 });
-
   return {
+    articleEditRootRef,
+    editTopDockRef,
+    editFooterRef,
+    articleEditTopOffset,
+    settingsAnchorRef,
+    paperEditorHostRef,
     editorRef,
     canSetArticleTop,
-    isToolbarOpen,
-    editorWrapperRef,
-    toolbarFloatTipRef,
-    toolbarDockPos,
-    toolbarFloatTip,
-    toggleToolbar,
+    onMdToolbarItemClickOpenDropdown,
+    goBack,
+    scrollToArticleSettings,
     editorTheme,
     toolbars,
     form,
+    contentCharCount,
     visibilityOptions,
     commentPolicyOptions,
+    formTagIds,
     customTagNames,
     newTagName,
     showTagSuggestions,
     advancedOpen,
     categories,
+    tags,
     isDraftSaving,
     publishing,
     autoSaveState,
-    autoSaveStatusText,
     handleCoverUpload,
     beforeCoverUpload,
     onUploadImg,
     handleSaveDraft,
     handlePublish,
+    autoSaveStatusText,
     addCustomTag,
     removeCustomTag,
     selectedTagNames,
@@ -1143,6 +970,5 @@ onUnmounted(() => {
     onTagsInputBlur,
     onTagsWrapMouseEnter,
     onTagsWrapMouseLeave,
-    ArticleStatus,
-  }
+  };
 }

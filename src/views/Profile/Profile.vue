@@ -2,7 +2,7 @@
   <DefaultLayout>
     <div class="profile-page">
       <div class="profile-center">
-        <!-- 顶部用户信息卡（参考 boxmoe.com/user 的“个人中心头部”样式） -->
+        <!-- 顶部用户信息区（参考 boxmoe.com/user 的「个人中心头部」样式） -->
         <div class="profile-banner">
           <div class="banner-decoration">
             <div class="circle circle-1" />
@@ -18,7 +18,7 @@
                 <div class="profile-nickname">
                   {{ user?.nickname || user?.username || '未登录' }}
                 </div>
-                <div class="profile-username">账号：@{{ user?.username || '—' }}</div>
+                <div class="profile-username">账号：@{{ user?.username || '--' }}</div>
                 <div class="profile-subtitle">{{ roleText }}</div>
               </div>
             </div>
@@ -45,7 +45,7 @@
               </el-menu-item>
               <el-menu-item index="favorites">
                 <el-icon><Star /></el-icon>
-                <span>收藏</span>
+                <span>我的收藏</span>
               </el-menu-item>
               <el-menu-item index="settings">
                 <el-icon><User /></el-icon>
@@ -213,7 +213,7 @@
               </el-card>
             </div>
 
-            <!-- 个人信息：头像、昵称、修改密码等统一在此修改 -->
+            <!-- 个人信息：头像、昵称、修改密码等统一在此维护 -->
             <div v-else-if="activeMenu === 'settings'">
               <el-card class="info-card" shadow="never">
                 <template #header>
@@ -272,8 +272,8 @@
                   <el-divider />
 
                   <el-descriptions :column="2" border class="profile-desc">
-                    <el-descriptions-item label="昵称">{{ user.nickname || user.username }}</el-descriptions-item>
-                    <el-descriptions-item label="用户名">{{ user.username }}</el-descriptions-item>
+                    <el-descriptions-item label="昵称">{{ user?.nickname || user?.username || '--' }}</el-descriptions-item>
+                    <el-descriptions-item label="用户名">{{ user?.username || '--' }}</el-descriptions-item>
                     <el-descriptions-item label="简介">
                       <template v-if="signatureTokens.length > 0">
                         <span v-for="(token, idx) in signatureTokens" :key="idx">
@@ -281,16 +281,16 @@
                           <span v-else class="emoji-token" :title="token.emoji.label">{{ token.emoji.unicode || '🙂' }}</span>
                         </span>
                       </template>
-                      <template v-else>—</template>
+                      <template v-else>--</template>
                     </el-descriptions-item>
-                    <el-descriptions-item label="邮箱">{{ user.email || '未绑定' }}</el-descriptions-item>
-                    <el-descriptions-item label="手机">{{ user.phone || '未绑定' }}</el-descriptions-item>
-                    <el-descriptions-item label="状态">{{ user.status === 1 ? '启用' : '禁用' }}</el-descriptions-item>
+                    <el-descriptions-item label="邮箱">{{ user?.email || '未绑定' }}</el-descriptions-item>
+                    <el-descriptions-item label="手机">{{ user?.phone || '未绑定' }}</el-descriptions-item>
+                    <el-descriptions-item label="状态">{{ user?.status === 1 ? '启用' : '禁用' }}</el-descriptions-item>
                     <el-descriptions-item label="角色">{{ roleText }}</el-descriptions-item>
                     <el-descriptions-item label="信任级别">{{ trustLevelText }}</el-descriptions-item>
-                    <el-descriptions-item label="注册时间">{{ formatDate(user.createTime ?? '') || '—' }}</el-descriptions-item>
-                    <el-descriptions-item label="最后登录">{{ formatDateTime(user.lastLoginTime ?? '') || '—' }}</el-descriptions-item>
-                    <el-descriptions-item label="最后登录 IP">{{ user.lastLoginIp || '—' }}</el-descriptions-item>
+                    <el-descriptions-item label="注册时间">{{ formatDate(user?.createTime ?? '') || '--' }}</el-descriptions-item>
+                    <el-descriptions-item label="最后登录">{{ user?.lastLoginTime || '--' }}</el-descriptions-item>
+                    <el-descriptions-item label="最后登录 IP">{{ user?.lastLoginIp || '--' }}</el-descriptions-item>
                   </el-descriptions>
                 </div>
                 <el-skeleton v-else :rows="6" animated />
@@ -377,7 +377,7 @@ import DefaultLayout from '@/layouts/DefaultLayout.vue';
 import { useUserStore } from '@/stores/user';
 import { getUserInfo, changePassword, updateProfile } from '@/api/auth';
 import { uploadAvatar } from '@/api/upload';
-import { formatDate, formatDateTime } from '@/utils/format';
+import { formatDate } from '@/utils/format';
 import { getTrustLevelLabel, isAdminUser, isFriendUser } from '@/utils/permission';
 import { createConfirmPasswordRule, validateImageFile, AVATAR_MAX_MB } from '@/utils/validation';
 import { getMyArticles, deleteArticle, getMyLikedArticles, getMyFavoriteArticles } from '@/api/article';
@@ -393,7 +393,7 @@ const activeMenu = ref<'articles' | 'likes' | 'favorites' | 'settings'>('article
 
 const roleText = computed(() => getTrustLevelLabel(user.value));
 const trustLevelText = computed(() => {
-  if (!user.value) return '—';
+  if (!user.value) return '--';
   if (isAdminUser(user.value)) return '管理员';
   return isFriendUser(user.value) ? '好友 / 受信用户' : '普通用户';
 });
@@ -525,7 +525,7 @@ const articleKeyword = ref('');
 const articleLoading = ref(false);
 const myArticles = ref<any[]>([]);
 const articlePage = ref(1);
-const articlePageSize = 8;
+const articlePageSize = 3;
 const articleTotal = ref(0);
 
 const loadMyArticles = async (page: number = 1) => {
@@ -672,7 +672,7 @@ onMounted(() => {
   min-width: 0;
 }
 
-/* 顶部信息卡：与登录页一致的二次元渐变 + 装饰 */
+/* 顶部信息区：与登录页一致的二次渐变 + 装饰 */
 .profile-banner {
   position: relative;
   background: linear-gradient(135deg, var(--primary), var(--primary-light));
@@ -765,6 +765,7 @@ onMounted(() => {
   margin: 0;
 }
 
+
 /* 下方主体区：左侧菜单 + 右侧内容 */
 .profile-main {
   min-width: 0;
@@ -773,20 +774,16 @@ onMounted(() => {
 .profile-split-scroll-box {
   display: flex;
   gap: var(--spacing-lg);
-  align-items: stretch;
-  overflow-y: auto;
-  max-height: calc(100vh - 210px);
-  padding-right: 0;
-  min-height: 0;
+  align-items: flex-start;
 }
 
 .profile-nav {
   position: static;
   display: block;
-  min-height: 0;
   flex: 0 0 240px;
   width: 240px;
   min-width: 240px;
+  align-self: flex-start;
 }
 
 .nav-menu {
@@ -795,13 +792,13 @@ onMounted(() => {
   border-right: none;
   background: rgba(255, 255, 255, 0.92);
   overflow: hidden;
-  min-height: 100%;
   padding: 14px 10px;
   box-shadow: 0 18px 40px rgba(15, 23, 42, 0.06);
 }
 
 .nav-menu :deep(.el-menu) {
   border-right: none;
+  background: transparent;
 }
 
 .nav-menu :deep(.el-menu-item) {
@@ -821,7 +818,6 @@ onMounted(() => {
 
 .profile-content {
   min-width: 0;
-  min-height: 0;
   flex: 1;
 }
 
@@ -934,7 +930,7 @@ onMounted(() => {
   padding-right: 0;
 }
 
-/* 文章卡片与首页一致，由 ArticleCard compact 展示 */
+/* 文章卡片与首页一致，用 ArticleCard compact 展示 */
 
 .pager {
   display: flex;
@@ -963,9 +959,6 @@ onMounted(() => {
 
   .profile-split-scroll-box {
     flex-direction: column;
-    max-height: none;
-    overflow: visible;
-    padding-right: 0;
   }
 
   .profile-nav {
@@ -1059,6 +1052,7 @@ onMounted(() => {
   :deep(.el-input__wrapper) {
     border-radius: var(--radius-md);
   }
+
 }
 
 .avatar-edit-row {
@@ -1139,3 +1133,5 @@ onMounted(() => {
   font-size: 20px;
 }
 </style>
+
+

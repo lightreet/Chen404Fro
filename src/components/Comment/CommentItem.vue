@@ -27,7 +27,15 @@
       <div class="comment-content">
         <span v-for="(token, idx) in contentTokens" :key="idx">
           <span v-if="token.type === 'text'">{{ token.value }}</span>
-          <span v-else class="emoji-token" :title="token.emoji.label">{{ token.emoji.unicode || '🙂' }}</span>
+          <span v-else class="emoji-token" :title="token.emoji.label">
+            <img
+              v-if="token.emoji.type === 'image' && token.emoji.asset"
+              :src="token.emoji.asset"
+              :alt="token.emoji.label"
+              class="emoji-token-image"
+            />
+            <span v-else>{{ token.emoji.unicode || '\u{1F642}' }}</span>
+          </span>
         </span>
       </div>
       <div class="comment-actions">
@@ -282,6 +290,13 @@ function formatTime(time: string): string {
   font-size: 1.1em;
   vertical-align: baseline;
   margin: 0 1px;
+}
+
+.emoji-token-image {
+  width: 1.5em;
+  height: 1.5em;
+  object-fit: contain;
+  vertical-align: text-bottom;
 }
 
 .comment-actions {

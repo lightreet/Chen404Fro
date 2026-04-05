@@ -61,7 +61,13 @@
             :title="emoji.label"
             @click="insertEmoji(emoji.shortcode)"
           >
-            {{ emoji.unicode || '🙂' }}
+            <img
+              v-if="emoji.type === 'image' && emoji.asset"
+              :src="emoji.asset"
+              :alt="emoji.label"
+              class="emoji-preview-image"
+            />
+            <span v-else>{{ emoji.unicode || '\u{1F642}' }}</span>
           </button>
         </div>
       </div>
@@ -195,7 +201,7 @@ const loading = ref(false)
 const submitting = ref(false)
 const replyTarget = ref<Comment | null>(null)
 const showEmojiPanel = ref(false)
-const sceneEmojis = queryByScene('comment')
+const sceneEmojis = computed(() => queryByScene('comment'))
 
 const totalPages = computed(() => Math.ceil(total.value / pageSize))
 const currentUserId = computed(() => userStore.user?.id ?? null)
@@ -494,22 +500,41 @@ onMounted(fetchComments)
   border-radius: var(--radius-md);
   background: var(--bg-secondary);
   padding: 8px;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(38px, 38px));
+  gap: 8px;
   max-height: 180px;
   overflow-y: auto;
+  align-content: start;
 }
 
 .emoji-item-btn {
-  width: 32px;
-  height: 32px;
+  width: 38px;
+  height: 38px;
   border: 1px solid var(--border-light);
   border-radius: var(--radius-sm);
   background: var(--bg-primary);
   cursor: pointer;
-  font-size: 18px;
+  font-size: 22px;
   line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  overflow: hidden;
+  font-family:
+    'Apple Color Emoji',
+    'Segoe UI Emoji',
+    'Noto Color Emoji',
+    sans-serif;
+  text-rendering: optimizeLegibility;
+  flex-shrink: 0;
+}
+
+.emoji-preview-image {
+  width: 26px;
+  height: 26px;
+  object-fit: contain;
 }
 
 .form-footer {

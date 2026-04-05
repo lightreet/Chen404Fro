@@ -34,6 +34,7 @@ declare module 'vue' {
     ElMenuItem: typeof import('element-plus/es')['ElMenuItem']
     ElOption: typeof import('element-plus/es')['ElOption']
     ElPagination: typeof import('element-plus/es')['ElPagination']
+    ElRadio: typeof import('element-plus/es')['ElRadio']
     ElRadioButton: typeof import('element-plus/es')['ElRadioButton']
     ElRadioGroup: typeof import('element-plus/es')['ElRadioGroup']
     ElSelect: typeof import('element-plus/es')['ElSelect']
@@ -50,8 +51,12 @@ declare module 'vue' {
     Live2D: typeof import('./components/Live2D/Live2D.vue')['default']
     MdEditorEmojiToolbar: typeof import('./components/Editor/MdEditorEmojiToolbar.vue')['default']
     MdResizablePreview: typeof import('./components/MdResizablePreview/MdResizablePreview.vue')['default']
+    PageHero: typeof import('./components/PageHero/PageHero.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
     SakuraOverlay: typeof import('./components/SakuraOverlay/SakuraOverlay.vue')['default']
+  }
+  export interface GlobalDirectives {
+    vLoading: typeof import('element-plus/es')['ElLoadingDirective']
   }
 }

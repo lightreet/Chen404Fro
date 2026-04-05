@@ -40,7 +40,7 @@ const routes: RouteRecordRaw[] = [
     name: 'Archive',
     component: () => import('@/views/Archive/Archive.vue'),
     meta: {
-      title: '归档',
+      title: '时光轴',
     },
   },
   {

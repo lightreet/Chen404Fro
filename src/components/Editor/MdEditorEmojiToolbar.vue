@@ -19,7 +19,13 @@
           :title="emoji.label"
           @click="onPick(emoji)"
         >
-          {{ emoji.unicode || '🙂' }}
+          <img
+            v-if="emoji.type === 'image' && emoji.asset"
+            :src="emoji.asset"
+            :alt="emoji.label"
+            class="article-editor-emoji-image"
+          />
+          <span v-else>{{ emoji.unicode || '\u{1F642}' }}</span>
         </button>
       </div>
     </template>
@@ -118,5 +124,11 @@ function onPick(item: EmojiItem) {
 .article-editor-emoji-btn:hover {
   border-color: var(--primary, #6366f1);
   background: var(--bg-secondary, #f1f5f9);
+}
+
+.article-editor-emoji-image {
+  width: 22px;
+  height: 22px;
+  object-fit: contain;
 }
 </style>

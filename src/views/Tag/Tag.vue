@@ -1,11 +1,25 @@
 <template>
   <DefaultLayout>
-    <div class="tag-page">
-      <div class="page-header">
-        <h1 class="page-title">标签</h1>
-        <p class="page-desc">{{ tags.length }} 个标签</p>
-      </div>
+    <template #hero>
+      <PageHero
+        title="标签"
+        eyebrow="Tags"
+        subtitle="通过更细粒度的标签快速定位感兴趣的话题和关键词。"
+        :bg-image="heroBgImage"
+        bg-position="center 38%"
+        min-height="320px"
+        :overlay-opacity="0.5"
+        compact
+      >
+        <template #meta>
+          <div class="hero-meta">
+            <span class="hero-stat">{{ tags.length }} 个标签</span>
+          </div>
+        </template>
+      </PageHero>
+    </template>
 
+    <div class="tag-page">
       <div class="tags-cloud">
         <router-link
           v-for="tag in tags"
@@ -25,36 +39,49 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
 import DefaultLayout from '@/layouts/DefaultLayout.vue';
+import PageHero from '@/components/PageHero/PageHero.vue';
+import { useSiteConfig } from '@/composables/useSiteConfig';
 import type { Tag } from '@/types';
 import { mockTags } from '@/utils/mock';
 
+const DEFAULT_TAG_HERO =
+  'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=1920&q=80';
 const tags = ref<Tag[]>([]);
+const heroBgImage = ref(DEFAULT_TAG_HERO);
+const { loadSiteConfig } = useSiteConfig();
 
 onMounted(() => {
+  void loadSiteConfig(true).then((config) => {
+    heroBgImage.value = config.heroImages?.tag || DEFAULT_TAG_HERO;
+  });
   tags.value = mockTags;
 });
 </script>
 
 <style scoped lang="scss">
 .tag-page {
-  padding-top: 24px;
+  width: 100%;
+  max-width: 960px;
+  margin: 0 auto;
+  padding-top: 20px;
 }
 
-.page-header {
-  text-align: center;
-  margin-bottom: 40px;
+.hero-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
 }
 
-.page-title {
-  font-size: 32px;
-  font-weight: 600;
-  color: var(--text-primary);
-  margin: 0 0 8px;
-}
-
-.page-desc {
-  font-size: 14px;
-  color: var(--text-secondary);
+.hero-stat {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.45rem 0.9rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.16);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: rgba(255, 255, 255, 0.94);
+  font-size: 13px;
+  backdrop-filter: blur(10px);
 }
 
 .tags-cloud {

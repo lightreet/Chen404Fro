@@ -73,7 +73,10 @@ export const useUserStore = defineStore('user', () => {
 
     token.value = savedToken;
     try {
-      const latestUser = await getUserInfo({ suppressErrorMessage: true });
+      const latestUser = await getUserInfo({
+        suppressErrorMessage: true,
+        skipAuthRedirect: true,
+      });
       setUser(latestUser);
       sessionChecked.value = true;
       return true;

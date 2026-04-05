@@ -1,13 +1,14 @@
-/**
+﻿/**
  * 首页相关 API
  * 包含站点统计、Banner、热门文章等首页展示数据
  */
 
-import { get } from './request';
+import { get, put } from './request';
 import type {
   HomeData,
   SiteStats,
   SiteConfig,
+  SiteOwner,
   Banner,
   HotArticle,
   RecentComment,
@@ -29,6 +30,14 @@ export function getSiteConfig(): Promise<SiteConfig> {
   return get('/site/config');
 }
 
+export function getSiteOwner(): Promise<SiteOwner | null> {
+  return get('/site/owner');
+}
+
+export function updateSiteConfig(data: Partial<SiteConfig>): Promise<SiteConfig> {
+  return put('/site/config', data);
+}
+
 /**
  * 获取站点统计数据
  * 包含：文章数、分类数、标签数、评论数、访问数
@@ -38,7 +47,7 @@ export function getSiteStats(): Promise<SiteStats> {
 }
 
 /**
- * 获取首页轮播图/Banner列表
+ * 获取首页轮播图 Banner 列表
  */
 export function getBanners(): Promise<Banner[]> {
   return get('/site/banners');
@@ -46,7 +55,7 @@ export function getBanners(): Promise<Banner[]> {
 
 /**
  * 获取热门文章列表
- * @param limit 数量限制，默认10条
+ * @param limit 数量限制，默认 10 条
  */
 export function getHotArticles(limit: number = 10): Promise<HotArticle[]> {
   return get('/articles/hot', { limit });
@@ -54,7 +63,7 @@ export function getHotArticles(limit: number = 10): Promise<HotArticle[]> {
 
 /**
  * 获取最新评论列表
- * @param limit 数量限制，默认5条
+ * @param limit 数量限制，默认 5 条
  */
 export function getRecentComments(limit: number = 5): Promise<RecentComment[]> {
   return get('/comments/recent', { limit });
@@ -62,7 +71,7 @@ export function getRecentComments(limit: number = 5): Promise<RecentComment[]> {
 
 /**
  * 获取推荐文章列表
- * @param limit 数量限制，默认6条
+ * @param limit 数量限制，默认 6 条
  */
 export function getRecommendArticles(limit: number = 6): Promise<{
   id: number;

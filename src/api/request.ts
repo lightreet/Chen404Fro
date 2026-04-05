@@ -6,6 +6,7 @@ import { refreshToken as refreshTokenApi } from './auth';
 
 export interface RequestConfig extends AxiosRequestConfig {
   suppressErrorMessage?: boolean;
+  skipAuthRedirect?: boolean;
 }
 
 // 创建 axios 实例
@@ -29,10 +30,19 @@ function shouldSuppressError(config?: AxiosRequestConfig) {
   return Boolean((config as RequestConfig | undefined)?.suppressErrorMessage);
 }
 
+function shouldSkipAuthRedirect(config?: AxiosRequestConfig) {
+  return Boolean((config as RequestConfig | undefined)?.skipAuthRedirect);
+}
+
 // 请求拦截器
 request.interceptors.request.use(
   (config) => {
     // 从 localStorage 获取 token
+    if (config.data instanceof FormData) {
+      config.headers = config.headers || {};
+      delete (config.headers as Record<string, unknown>)['Content-Type'];
+    }
+
     const token = localStorage.getItem('token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
@@ -75,6 +85,9 @@ request.interceptors.response.use(
 
             // refresh 接口本身 / 或没有 refreshToken / 或已重试过 -> 直接跳登录
             if (originalConfig._retry || !refreshToken || reqUrl.includes('/auth/refresh')) {
+              if (shouldSkipAuthRedirect(originalConfig)) {
+                return Promise.reject(error);
+              }
               if (!shouldSuppressError(originalConfig)) {
                 ElMessage.error('未授权，请重新登录');
               }
@@ -93,6 +106,9 @@ request.interceptors.response.use(
                 refreshWaiters.push(resolve);
               });
               if (!newToken) {
+                if (shouldSkipAuthRedirect(originalConfig)) {
+                  return Promise.reject(error);
+                }
                 if (!shouldSuppressError(originalConfig)) {
                   ElMessage.error('登录已过期，请重新登录');
                 }
@@ -122,6 +138,9 @@ request.interceptors.response.use(
               return request(originalConfig);
             } catch (e) {
               notifyRefreshWaiters('');
+              if (shouldSkipAuthRedirect(originalConfig)) {
+                return Promise.reject(error);
+              }
               if (!shouldSuppressError(originalConfig)) {
                 ElMessage.error('登录已过期，请重新登录');
               }

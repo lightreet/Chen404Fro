@@ -118,6 +118,10 @@ export function getCategories(withArticleCount: boolean = true): Promise<Categor
   return get('/categories', { withArticleCount });
 }
 
+export function getAdminCategories(params?: PageParams): Promise<PageResult<Category>> {
+  return get('/admin/categories', params);
+}
+
 /**
  * 获取分类详情
  * @param id 分类ID或slug

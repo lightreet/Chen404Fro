@@ -10,8 +10,6 @@ export interface UploadResult {
   size?: string;
 }
 
-const UPLOAD_HEADERS = { 'Content-Type': 'multipart/form-data' as const };
-
 type UploadEndpoint = 'image' | 'cover' | 'avatar';
 
 /**
@@ -20,7 +18,7 @@ type UploadEndpoint = 'image' | 'cover' | 'avatar';
 function uploadFile(file: File, endpoint: UploadEndpoint): Promise<UploadResult> {
   const formData = new FormData();
   formData.append('file', file);
-  return request.post(`/upload/${endpoint}`, formData, { headers: UPLOAD_HEADERS });
+  return request.post(`/upload/${endpoint}`, formData, { timeout: 60000 });
 }
 
 /** 上传单张图片（编辑器内） */

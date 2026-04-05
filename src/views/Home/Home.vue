@@ -1,24 +1,14 @@
 <template>
   <DefaultLayout>
-    <!-- 全宽 Hero：背景图 + 遮罩 + 居中标语 + 底部波浪 -->
     <template #hero>
-      <section class="home-hero" data-hero>
-        <div class="hero-bg" />
-        <div class="hero-overlay" />
-        <div class="hero-fade" aria-hidden="true" />
-        <div class="hero-content">
-          <h1 class="hero-title">
-            Hi，<span class="hero-accent">Chen404</span> 的小站
-          </h1>
-          <p class="hero-slogan">「 记录技术、生活与想法，欢迎来玩 ~ 」</p>
-        </div>
-        <div class="hero-wave" aria-hidden="true">
-          <HeroWave color="white" :height="92" :intensity="1.08" />
-        </div>
-        <a href="#discovery" class="hero-scroll-hint" aria-label="向下滚动">
-          <span class="hero-scroll-chevron">↓</span>
-        </a>
-      </section>
+      <PageHero
+        title="Hi，Chen404 的小站"
+        highlight-text="Chen404"
+        subtitle="「 记录技术、生活与想法，欢迎来玩 ~ 」"
+        :bg-image="heroBgImage"
+        min-height="70vh"
+        scroll-target="#discovery"
+      />
     </template>
 
     <div class="home-page">
@@ -42,16 +32,25 @@
         <button type="button" class="search-clear" @click="clearTitleSearch">清除</button>
       </p>
 
-      <!-- 文章列表 -->
-      <div class="article-list">
+      <!-- 文章列表（滚动时视口垂直中心附近的卡片会「漂浮」高亮） -->
+      <div ref="articleListRef" class="article-list">
         <ArticleCard
           v-for="(article, index) in articleList"
           :key="article.id"
           :article="article"
           :index="index"
           :cover-priority="index < 2"
+          :scroll-float-strength="scrollFloatById[String(article.id)] ?? 0"
+          :scroll-wheel-phase="scrollWheelPhaseById[String(article.id)] ?? 0"
         />
       </div>
+
+      <div
+        v-if="articleList.length > 0 && hasMore"
+        ref="loadTriggerRef"
+        class="infinite-trigger"
+        aria-hidden="true"
+      />
 
       <!-- 空状态 -->
       <div class="empty-state" v-if="!loading && articleList.length === 0">
@@ -59,7 +58,7 @@
       </div>
 
       <!-- 加载更多 -->
-      <div class="load-more" v-if="hasMore">
+      <div class="load-more" v-if="false && hasMore">
         <el-button
           type="primary"
           :loading="loading"
@@ -71,6 +70,10 @@
       </div>
 
       <!-- 没有更多了 -->
+      <div class="loading-state" v-else-if="loading && articleList.length > 0">
+        <span>加载中...</span>
+      </div>
+
       <div class="no-more" v-else-if="articleList.length > 0">
         <el-divider>
           <span class="no-more-text">已经到底啦 ~</span>
@@ -81,17 +84,20 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, onUnmounted, watch, nextTick } from 'vue';
 import { ElMessage } from 'element-plus';
 import { Compass } from '@element-plus/icons-vue';
 import DefaultLayout from '@/layouts/DefaultLayout.vue';
 import ArticleCard from '@/components/ArticleCard/ArticleCard.vue';
-import HeroWave from '@/components/HeroWave/HeroWave.vue';
 import HomeDiscoverySearch from '@/components/HomeDiscoverySearch/HomeDiscoverySearch.vue';
+import PageHero from '@/components/PageHero/PageHero.vue';
+import { useSiteConfig } from '@/composables/useSiteConfig';
 import type { Article } from '@/types';
 import { getArticles } from '@/api/article';
 
 const pageSize = 6;
+const DEFAULT_HOME_HERO =
+  'https://images.unsplash.com/photo-1522383225653-ed111181a951?w=1920&q=80';
 
 // 文章列表
 const articleList = ref<Article[]>([]);
@@ -104,9 +110,90 @@ const hasMore = ref(true);
 const activeKeyword = ref('');
 const searchDraft = ref('');
 const searchExpanded = ref(false);
+const heroBgImage = ref(DEFAULT_HOME_HERO);
+const { loadSiteConfig } = useSiteConfig();
+
+/**
+ * 首页「摩天轮」滚动：strength 距中心衰减；phase = (cardMidY - midY) / R，上负下正。
+ * key 与 data-article-id 一致（String(article.id)）
+ */
+const scrollFloatById = ref<Record<string, number>>({});
+const scrollWheelPhaseById = ref<Record<string, number>>({});
+const articleListRef = ref<HTMLElement | null>(null);
+const loadTriggerRef = ref<HTMLElement | null>(null);
+let scrollRaf = 0;
+let loadObserver: IntersectionObserver | null = null;
+
+/** 略收紧半径，相邻卡片 strength 对比更强 */
+const SCROLL_FLOAT_R_VH = 0.52;
+/** 远处更快「落地」，中心更突出 */
+const SCROLL_FLOAT_CURVE = 0.68;
+
+function computeScrollWheelState(): {
+  strengths: Record<string, number>;
+  phases: Record<string, number>;
+} {
+  const root = articleListRef.value;
+  if (!root) {
+    return { strengths: {}, phases: {} };
+  }
+  const cards = root.querySelectorAll<HTMLElement>('[data-article-id]');
+  if (!cards.length) {
+    return { strengths: {}, phases: {} };
+  }
+
+  const vh = window.innerHeight;
+  const midY = vh * 0.5;
+  const R = Math.max(240, vh * SCROLL_FLOAT_R_VH);
+
+  const raw = new Map<string, { s: number; phase: number }>();
+  let minDist = Infinity;
+  let minId: string | null = null;
+
+  cards.forEach((el) => {
+    const r = el.getBoundingClientRect();
+    if (r.bottom < 0 || r.top > vh) return;
+    const id = el.dataset.articleId;
+    if (id == null || id === '') return;
+    const cardMidY = r.top + r.height / 2;
+    const d = Math.abs(cardMidY - midY);
+    const s = Math.max(0, 1 - d / R);
+    const phase = Math.max(-1, Math.min(1, (cardMidY - midY) / R));
+    raw.set(id, { s, phase });
+    if (d < minDist) {
+      minDist = d;
+      minId = id;
+    }
+  });
+
+  if (minId != null) {
+    const row = raw.get(minId);
+    if (row) row.s = 1;
+  }
+
+  const strengths: Record<string, number> = {};
+  const phases: Record<string, number> = {};
+  raw.forEach((row, id) => {
+    const curved = Math.pow(Math.min(1, Math.max(0, row.s)), SCROLL_FLOAT_CURVE);
+    strengths[id] = Math.round(curved * 1000) / 1000;
+    phases[id] = Math.round(row.phase * 1000) / 1000;
+  });
+  return { strengths, phases };
+}
+
+function scheduleCenterUpdate() {
+  if (scrollRaf) cancelAnimationFrame(scrollRaf);
+  scrollRaf = requestAnimationFrame(() => {
+    scrollRaf = 0;
+    const { strengths, phases } = computeScrollWheelState();
+    scrollFloatById.value = strengths;
+    scrollWheelPhaseById.value = phases;
+  });
+}
 
 // 加载文章列表（仅已发布文章，对接后端 GET /api/articles；keyword 仅匹配标题）
 const loadArticles = async (page: number = 1) => {
+  currentPage.value = page;
   loading.value = true;
   try {
     const kw = activeKeyword.value.trim();
@@ -134,6 +221,7 @@ const loadArticles = async (page: number = 1) => {
     }
   } finally {
     loading.value = false;
+    void nextTick(() => scheduleCenterUpdate());
   }
 };
 
@@ -156,146 +244,77 @@ function clearTitleSearch() {
 // 加载更多
 const loadMore = () => {
   if (loading.value || !hasMore.value) return;
-  currentPage.value++;
-  loadArticles(currentPage.value);
+  void loadArticles(currentPage.value + 1);
 };
 
+function teardownLoadObserver() {
+  if (!loadObserver) return;
+  loadObserver.disconnect();
+  loadObserver = null;
+}
+
+function setupLoadObserver() {
+  teardownLoadObserver();
+  if (!loadTriggerRef.value) return;
+
+  loadObserver = new IntersectionObserver(
+    (entries) => {
+      if (!entries[0]?.isIntersecting) return;
+      loadMore();
+    },
+    {
+      root: null,
+      rootMargin: '0px 0px 320px 0px',
+      threshold: 0,
+    }
+  );
+
+  loadObserver.observe(loadTriggerRef.value);
+}
+
 onMounted(() => {
-  loadArticles();
+  void loadSiteConfig(true).then((config) => {
+    heroBgImage.value = config.heroImages?.home || DEFAULT_HOME_HERO;
+  });
+  void loadArticles(1);
+  window.addEventListener('scroll', scheduleCenterUpdate, { passive: true });
+  window.addEventListener('resize', scheduleCenterUpdate, { passive: true });
 });
+
+onUnmounted(() => {
+  window.removeEventListener('scroll', scheduleCenterUpdate);
+  window.removeEventListener('resize', scheduleCenterUpdate);
+  if (scrollRaf) cancelAnimationFrame(scrollRaf);
+  teardownLoadObserver();
+});
+
+watch(
+  () => articleList.value.length,
+  () => {
+    void nextTick(() => scheduleCenterUpdate());
+  }
+);
+
+watch(loading, (v) => {
+  if (!v) void nextTick(() => scheduleCenterUpdate());
+});
+
+watch(
+  () => [articleList.value.length, hasMore.value, loading.value],
+  () => {
+    void nextTick(() => {
+      if (articleList.value.length > 0 && hasMore.value) {
+        setupLoadObserver();
+      } else {
+        teardownLoadObserver();
+      }
+    });
+  },
+  { immediate: true }
+);
 </script>
 
 <style scoped lang="scss">
-/* ========== 全宽 Hero：背景图 + 遮罩 + 标语 + 波浪 ========== */
-.home-hero {
-  /* 默认使用 Unsplash 樱花粉风格图（可替换为本地 public/hero-bg.jpg 或其它 URL） */
-  --hero-bg-image: url('https://images.unsplash.com/photo-1522383225653-ed111181a951?w=1920&q=80');
-  position: relative;
-  min-height: 70vh;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-  overflow: hidden;
-  padding: calc(64px + 2rem) 1.5rem 5rem;
-}
-
-.hero-bg {
-  position: absolute;
-  inset: 0;
-  background-image: var(--hero-bg-image), linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
-}
-
-/* 可选：点阵纹理叠加（参考图效果） */
-.hero-bg::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background-image: radial-gradient(rgba(255, 255, 255, 0.06) 1px, transparent 1px);
-  background-size: 20px 20px;
-  pointer-events: none;
-}
-
-.hero-overlay {
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(to bottom, rgba(0, 0, 0, 0.3) 0%, rgba(0, 0, 0, 0.55) 100%);
-  pointer-events: none;
-}
-
-.hero-fade {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  height: 228px;
-  z-index: 1;
-  pointer-events: none;
-  background: linear-gradient(
-    to bottom,
-    rgba(255, 255, 255, 0) 0%,
-    rgba(255, 255, 255, 0) 20%,
-    var(--bg-primary) 100%
-  );
-  filter: blur(0.2px);
-}
-
-.hero-content {
-  position: relative;
-  z-index: 1;
-  max-width: 720px;
-}
-
-.hero-title {
-  font-size: clamp(2rem, 6vw, 3.5rem);
-  font-weight: 700;
-  color: #fff;
-  margin: 0 0 0.75rem;
-  letter-spacing: 0.02em;
-  text-shadow: 0 2px 20px rgba(0, 0, 0, 0.3);
-}
-
-.hero-accent {
-  color: #ff9eb3;
-  font-weight: 700;
-}
-
-.hero-slogan {
-  font-size: clamp(0.95rem, 2.5vw, 1.15rem);
-  color: rgba(255, 255, 255, 0.92);
-  margin: 0;
-  line-height: 1.6;
-  font-weight: 400;
-}
-
-.hero-wave {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 92px;
-  z-index: 1;
-  line-height: 0;
-}
-
-.hero-scroll-hint {
-  position: absolute;
-  bottom: 1.25rem;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 2;
-  color: rgba(255, 255, 255, 0.8);
-  text-decoration: none;
-  font-size: 1.25rem;
-  transition: transform 0.2s;
-
-  &:hover {
-    color: #fff;
-    transform: translateX(-50%) translateY(4px);
-  }
-}
-
-.hero-scroll-chevron {
-  display: block;
-  animation: hero-bounce 2s ease-in-out infinite;
-}
-
-@keyframes hero-bounce {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(6px); }
-}
-
-@media (max-width: 768px) {
-  .home-hero {
-    min-height: 60vh;
-    padding: calc(64px + 1.5rem) 1rem 4rem;
-  }
-}
-
 /* ========== 首页正文 ========== */
 .home-page {
   padding-top: 24px;
@@ -357,9 +376,14 @@ onMounted(() => {
   }
 }
 
-// 文章列表
+// 文章列表：perspective 增强纵深感；padding 减少阴影裁切
 .article-list {
   margin-bottom: 32px;
+  position: relative;
+  padding-top: 8px;
+  padding-bottom: 12px;
+  perspective: 1500px;
+  perspective-origin: 50% 42%;
 }
 
 .empty-state {
@@ -406,5 +430,16 @@ onMounted(() => {
   .home-page {
     padding-top: 16px;
   }
+}
+.loading-state {
+  text-align: center;
+  padding: 24px 0;
+  color: var(--text-secondary);
+  font-size: 14px;
+}
+
+.infinite-trigger {
+  width: 100%;
+  height: 1px;
 }
 </style>

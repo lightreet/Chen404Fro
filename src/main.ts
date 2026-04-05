@@ -5,6 +5,7 @@ import 'virtual:uno.css'
 
 import App from './App.vue'
 import router, { CHUNK_RELOAD_KEY } from './router'
+import { loadEmojiRegistry } from '@/emoji/provider'
 import { useUserStore } from './stores/user'
 import { registerMdiSubset } from '@/iconify/registerMdiSubset'
 
@@ -29,6 +30,7 @@ app.use(router)
 
 async function bootstrap() {
   try {
+    await loadEmojiRegistry()
     app.mount('#app')
   } catch (e) {
     console.error('[Chen404] 应用挂载失败', e)

@@ -73,6 +73,9 @@
           </div>
         </div>
 
+        <!-- 摘要：列表与 SEO 常用；与正文区分展示 -->
+        <p v-if="renderedSummary" class="article-summary-lead">{{ renderedSummary }}</p>
+
         <!-- 文章内容：优先后端 contentHtml，否则用 MdPreview 渲染 Markdown -->
         <div class="article-body">
           <div v-if="article.contentHtml" class="markdown-content" v-html="renderedContentHtml"></div>
@@ -121,7 +124,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue';
+import { ref, computed, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { ArrowLeft, Calendar, View, ChatDotRound, Star, StarFilled } from '@element-plus/icons-vue';
 import { MdPreview } from 'md-editor-v3';
@@ -160,6 +163,13 @@ const renderedMarkdownContent = computed(() => {
 
 const renderedContentHtml = computed(() => {
   return renderArticleText(article.value?.contentHtml ?? '');
+});
+
+/** 详情页展示用摘要（与卡片一致走表情渲染；无内容则不占行） */
+const renderedSummary = computed(() => {
+  const s = article.value?.summary?.trim();
+  if (!s) return '';
+  return renderArticleText(s);
 });
 
 // 加载文章详情与上一篇/下一篇（对接 GET /api/articles/:id 与 GET /api/articles/:id/neighbors）
@@ -233,9 +243,15 @@ const promptLoginForFavorite = () => {
   router.push({ path: '/login', query: { redirect: route.fullPath } });
 };
 
-onMounted(() => {
-  loadArticle();
-});
+watch(
+  () => route.params.id,
+  (id) => {
+    const raw = Array.isArray(id) ? id[0] : id;
+    if (raw == null || raw === '') return;
+    void loadArticle();
+  },
+  { immediate: true },
+);
 </script>
 
 <style scoped lang="scss">
@@ -343,6 +359,17 @@ onMounted(() => {
     font-size: 16px;
     line-height: 1;
   }
+}
+
+.article-summary-lead {
+  margin: 0 0 24px;
+  padding: 14px 18px;
+  font-size: 15px;
+  line-height: 1.75;
+  color: var(--text-secondary);
+  background: color-mix(in srgb, var(--bg-primary) 92%, var(--text-tertiary));
+  border-left: 3px solid rgba(251, 114, 153, 0.45);
+  border-radius: 0 var(--radius-md) var(--radius-md) 0;
 }
 
 .article-body {

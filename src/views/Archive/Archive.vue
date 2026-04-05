@@ -1,14 +1,28 @@
 <template>
   <DefaultLayout>
-    <div class="archive-page">
-      <div class="page-header">
-        <h1 class="page-title">归档</h1>
-        <p class="page-desc">共计 {{ total }} 篇文章</p>
-      </div>
+    <template #hero>
+      <PageHero
+        title="时光轴"
+        eyebrow="Timeline"
+        subtitle="沿着时间回看已经发布的内容，看看这个站点一路留下了哪些记录。"
+        :bg-image="heroBgImage"
+        bg-position="center 44%"
+        min-height="320px"
+        :overlay-opacity="0.48"
+        compact
+      >
+        <template #meta>
+          <div class="hero-meta">
+            <span class="hero-stat">{{ total }} 篇文章</span>
+          </div>
+        </template>
+      </PageHero>
+    </template>
 
+    <div class="archive-page">
       <el-skeleton v-if="loading" :rows="8" animated />
 
-      <div v-else-if="archiveData.length === 0" class="empty-state">暂无公开文章归档</div>
+      <div v-else-if="archiveData.length === 0" class="empty-state">暂无公开文章记录</div>
 
       <div v-else class="timeline">
         <div
@@ -62,13 +76,19 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
 import DefaultLayout from '@/layouts/DefaultLayout.vue';
+import PageHero from '@/components/PageHero/PageHero.vue';
+import { useSiteConfig } from '@/composables/useSiteConfig';
 import type { ArchiveYear } from '@/types';
 import { formatDate } from '@/utils/format';
 import { getArchives } from '@/api/article';
 
+const DEFAULT_ARCHIVE_HERO =
+  'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?w=1920&q=80';
 const archiveData = ref<ArchiveYear[]>([]);
 const total = ref(0);
 const loading = ref(true);
+const heroBgImage = ref(DEFAULT_ARCHIVE_HERO);
+const { loadSiteConfig } = useSiteConfig();
 
 const loadArchives = async () => {
   loading.value = true;
@@ -85,30 +105,37 @@ const loadArchives = async () => {
 };
 
 onMounted(() => {
+  void loadSiteConfig(true).then((config) => {
+    heroBgImage.value = config.heroImages?.archive || DEFAULT_ARCHIVE_HERO;
+  });
   loadArchives();
 });
 </script>
 
 <style scoped lang="scss">
 .archive-page {
-  padding-top: 24px;
+  width: 100%;
+  max-width: 960px;
+  margin: 0 auto;
+  padding-top: 20px;
 }
 
-.page-header {
-  text-align: center;
-  margin-bottom: 40px;
+.hero-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
 }
 
-.page-title {
-  font-size: 32px;
-  font-weight: 600;
-  color: var(--text-primary);
-  margin: 0 0 8px;
-}
-
-.page-desc {
-  font-size: 14px;
-  color: var(--text-secondary);
+.hero-stat {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.45rem 0.9rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.16);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: rgba(255, 255, 255, 0.94);
+  font-size: 13px;
+  backdrop-filter: blur(10px);
 }
 
 .empty-state {

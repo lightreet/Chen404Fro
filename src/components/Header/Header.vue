@@ -204,8 +204,8 @@ const canCreateArticle = computed(() => {
 // 导航项
 const navItems = [
   { name: '首页', path: '/', icon: HomeFilled },
-  { name: '归档', path: '/archive', icon: Folder },
-  { name: '清单', path: '/category', icon: List },
+  { name: '分类', path: '/category', icon: List },
+  { name: '时光轴', path: '/archive', icon: Folder },
   { name: '留言板', path: '/guestbook', icon: ChatDotRound },
   { name: '关于', path: '/about', icon: InfoFilled },
 ];

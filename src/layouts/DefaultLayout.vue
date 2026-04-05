@@ -11,9 +11,9 @@
       <div class="container">
         <div
           class="content-wrapper"
-          :class="{ 'has-live2d': !isMobile, 'no-right-sidebar': isMobile || !showRightSidebar }"
+          :class="{ 'no-right-sidebar': isMobile || !showRightSidebar }"
         >
-          <!-- 左侧 Live2D：固定到视口左侧，处于屏幕左与文章卡片之间的位置 -->
+          <!-- 左侧 Live2D：纯悬浮层，不参与主内容布局，后续可扩展为拖拽定位 -->
           <aside class="sidebar-left" v-if="!isMobile">
             <Live2D />
           </aside>
@@ -73,25 +73,18 @@ const { isMobile } = useLayoutMobile();
 }
 
 .content-wrapper {
-  --live2d-reserved-space: 328px;
   display: flex;
   gap: 24px;
   align-items: flex-start;
-
-  /* 有 Live2D 时为主内容预留左侧空间，避免与固定侧栏重叠 */
-  &.has-live2d {
-    padding-left: var(--live2d-reserved-space); /* 280 侧栏 + 48 与卡片的间距 */
-  }
 }
 
 .sidebar-left {
-  width: 280px;
-  flex-shrink: 0;
   position: fixed;
   left: 24px;
   bottom: 24px;
   top: auto;
-  z-index: 10;
+  z-index: 20;
+  pointer-events: auto;
 }
 
 .main-area {
@@ -123,8 +116,7 @@ const { isMobile } = useLayoutMobile();
   }
 
   .sidebar-left {
-    width: 100%;
-    position: static;
+    display: none;
   }
 }
 </style>

@@ -1,6 +1,7 @@
 <template>
   <article
     class="article-card jp-card jp-card-hover"
+    :data-article-id="String(article.id)"
     :class="[
       { 'image-left': isImageLeft, 'image-right': !isImageLeft },
       { compact },
@@ -9,8 +10,10 @@
         'profile-feed': profileFeed,
         'has-cover': showCover,
         'no-cover': !showCover,
+        'article-card--has-scroll-float': hasScrollFloat,
       },
     ]"
+    :style="scrollFloatStyles"
   >
     <div
       class="card-content"
@@ -162,6 +165,14 @@ interface Props {
   profileFeed?: boolean;
   /** 首屏条目可设为 true：eager + fetchpriority=high */
   coverPriority?: boolean;
+  /**
+   * 首页滚动：距视口垂直中心的悬浮强度 0~1（由 Home 按距离衰减计算；中心为 1）
+   */
+  scrollFloatStrength?: number;
+  /**
+   * 首页摩天轮相位：(cardMidY - midY) / R，约 -1~1；视口上方为负、下方为正
+   */
+  scrollWheelPhase?: number;
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -170,6 +181,27 @@ const props = withDefaults(defineProps<Props>(), {
   compact: false,
   profileFeed: false,
   coverPriority: false,
+  scrollFloatStrength: 0,
+  scrollWheelPhase: 0,
+});
+
+const hasScrollFloat = computed(() => props.scrollFloatStrength > 0.002);
+
+/**
+ * CSS 变量驱动 translateZ / translateY / scale / rotateX；rotateX 在脚本中算好角度避免 calc 与 deg 嵌套问题。
+ * 覆盖 jp-card-hover 的 hover:translateY：在 SCSS 里对 :hover 写完整 transform。
+ */
+const scrollFloatStyles = computed((): Record<string, string | number> => {
+  const s = Math.min(1, Math.max(0, props.scrollFloatStrength));
+  if (s <= 0.002) return {};
+  const ph = Math.min(1, Math.max(-1, props.scrollWheelPhase));
+  const rotateXDeg = -ph * (10 - 6 * s);
+  return {
+    '--scroll-float': String(s),
+    '--scroll-wheel-phase': String(ph),
+    '--scroll-rotate-x': `${rotateXDeg}deg`,
+    zIndex: Math.round(2 + 10 * s),
+  };
 });
 
 const coverLoadFailed = ref(false);
@@ -212,7 +244,61 @@ const authorName = computed(() => {
 .article-card {
   display: flex;
   margin-bottom: 24px;
+  position: relative;
+  z-index: 0;
   /* 卡片视觉由 UnoCSS jp-card / jp-card-hover 提供 */
+  transition:
+    transform 0.45s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+
+  // 首页摩天轮：translateZ + 强 scale + phase*rotateX；与 jp-card-hover 的 hover 位移合并到下方 :hover
+  &.article-card--has-scroll-float {
+    /*
+     * translateZ 会把命中盒拉向相机，未抬升的卡片区域仍占原布局盒，易出现「点了阅读详情却点到上一张卡」或看似无响应。
+     * 外壳不接收事件，仅正文区与封面链接可点（与内部 router-link / 整块 goToDetail 一致）。
+     */
+    pointer-events: none;
+    .card-content,
+    .card-image .image-link {
+      pointer-events: auto;
+    }
+
+    transform-style: preserve-3d;
+    backface-visibility: hidden;
+    transform:
+      translateZ(calc(60px * var(--scroll-float, 0)))
+      translateY(calc(-4px - 22px * var(--scroll-float, 0)))
+      scale(calc(0.9 + 0.12 * var(--scroll-float, 0)))
+      rotateX(var(--scroll-rotate-x, 0deg));
+    box-shadow:
+      0 calc(10px + 28px * var(--scroll-float, 0)) calc(28px + 52px * var(--scroll-float, 0))
+        rgba(15, 23, 42, 0.14),
+      0 calc(4px + 12px * var(--scroll-float, 0)) calc(16px + 28px * var(--scroll-float, 0))
+        rgba(251, 114, 153, 0.14),
+      0 0 0 calc(1px * var(--scroll-float, 0)) rgba(251, 114, 153, 0.16);
+
+    // 等价于 Uno `hover:-translate-y-1`（4px），避免覆盖整条 transform
+    &:hover {
+      transform:
+        translateZ(calc(60px * var(--scroll-float, 0)))
+        translateY(calc(-8px - 22px * var(--scroll-float, 0)))
+        scale(calc(0.9 + 0.12 * var(--scroll-float, 0)))
+        rotateX(var(--scroll-rotate-x, 0deg));
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
+    &.article-card--has-scroll-float {
+      transform: none;
+      &:hover {
+        transform: none;
+      }
+      box-shadow:
+        0 8px 24px rgba(15, 23, 42, 0.08),
+        0 0 0 1px rgba(251, 114, 153, 0.1);
+    }
+  }
 
   // 图片在左
   &.image-left {

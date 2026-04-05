@@ -1,11 +1,25 @@
 <template>
   <DefaultLayout>
-    <div class="category-page">
-      <div class="page-header">
-        <h1 class="page-title">分类</h1>
-        <p class="page-desc">探索不同主题的文章</p>
-      </div>
+    <template #hero>
+      <PageHero
+        title="分类"
+        eyebrow="Category"
+        subtitle="按主题浏览内容，把零散文章组织成更清晰的知识地图。"
+        :bg-image="heroBgImage"
+        bg-position="center 40%"
+        min-height="320px"
+        :overlay-opacity="0.5"
+        compact
+      >
+        <template #meta>
+          <div class="hero-meta">
+            <span class="hero-stat">{{ categories.length }} 个分类</span>
+          </div>
+        </template>
+      </PageHero>
+    </template>
 
+    <div class="category-page">
       <!-- 加载中 -->
       <div v-if="loading" class="loading-state">
         <el-icon class="loading-icon"><Loading /></el-icon>
@@ -65,14 +79,20 @@ import { resolveCategoryIcon } from '@/utils/categoryIcon';
 import { Icon } from '@iconify/vue';
 import { Loading } from '@element-plus/icons-vue';
 import DefaultLayout from '@/layouts/DefaultLayout.vue';
+import PageHero from '@/components/PageHero/PageHero.vue';
+import { useSiteConfig } from '@/composables/useSiteConfig';
 import type { Category } from '@/types';
 import { getCategories } from '@/api/article';
 
 const pageSize = 9;
+const DEFAULT_CATEGORY_HERO =
+  'https://images.unsplash.com/photo-1497366754035-f200968a6e72?w=1920&q=80';
 
 const categories = ref<Category[]>([]);
 const displayCount = ref(pageSize);
-const loading = ref(false);
+const loading = ref(true);
+const heroBgImage = ref(DEFAULT_CATEGORY_HERO);
+const { loadSiteConfig } = useSiteConfig();
 
 const displayedCategories = computed(() =>
   categories.value.slice(0, displayCount.value)
@@ -101,30 +121,37 @@ const fetchCategories = async () => {
 };
 
 onMounted(() => {
+  void loadSiteConfig(true).then((config) => {
+    heroBgImage.value = config.heroImages?.category || DEFAULT_CATEGORY_HERO;
+  });
   fetchCategories();
 });
 </script>
 
 <style scoped lang="scss">
 .category-page {
-  padding-top: 24px;
+  width: 100%;
+  max-width: 960px;
+  margin: 0 auto;
+  padding-top: 20px;
 }
 
-.page-header {
-  text-align: center;
-  margin-bottom: 40px;
+.hero-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
 }
 
-.page-title {
-  font-size: 32px;
-  font-weight: 600;
-  color: var(--text-primary);
-  margin: 0 0 8px;
-}
-
-.page-desc {
-  font-size: 14px;
-  color: var(--text-secondary);
+.hero-stat {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.45rem 0.9rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.16);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: rgba(255, 255, 255, 0.94);
+  font-size: 13px;
+  backdrop-filter: blur(10px);
 }
 
 .loading-state {

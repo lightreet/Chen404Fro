@@ -1,7 +1,6 @@
-<template>
+﻿<template>
   <div class="auth-page">
     <div class="auth-container">
-      <!-- 左侧装饰 -->
       <div class="auth-banner">
         <div class="banner-content">
           <img src="/Chen404logo.svg" alt="Chen404" class="banner-logo" />
@@ -15,7 +14,6 @@
         </div>
       </div>
 
-      <!-- 右侧表单 -->
       <div class="auth-form-wrapper">
         <div class="auth-form">
           <h3 class="form-title">账号登录</h3>
@@ -88,6 +86,7 @@ import { ElMessage } from 'element-plus';
 import { User, Lock, ArrowLeft } from '@element-plus/icons-vue';
 import { login } from '@/api/auth';
 import { useUserStore } from '@/stores/user';
+import { isValidUsername } from '@/utils/validation';
 
 const router = useRouter();
 const route = useRoute();
@@ -107,16 +106,16 @@ const rules = {
       validator: (_rule: unknown, value: string, callback: (err?: Error) => void) => {
         if (!value) return callback();
         const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
-        const isUsername = /^[a-zA-Z0-9_]{3,20}$/.test(value);
+        const isUsername = isValidUsername(value);
         if (isEmail || isUsername) return callback();
-        callback(new Error('请输入正确的用户名（3-20位字母数字下划线）或邮箱'));
+        callback(new Error('请输入正确的用户名（3-20 位字母、数字、下划线）或邮箱'));
       },
       trigger: 'blur',
     },
   ],
   password: [
     { required: true, message: '请输入密码', trigger: 'blur' },
-    { min: 6, message: '密码至少6位', trigger: 'blur' },
+    { min: 6, message: '密码至少 6 位', trigger: 'blur' },
   ],
 };
 
@@ -168,7 +167,6 @@ const handleLogin = async () => {
   box-shadow: var(--shadow-lg);
 }
 
-/* 左侧装饰 */
 .auth-banner {
   width: 380px;
   background: linear-gradient(135deg, var(--primary), var(--primary-light));
@@ -206,7 +204,6 @@ const handleLogin = async () => {
   margin: 0;
 }
 
-/* 装饰圆圈 */
 .banner-decoration {
   position: absolute;
   top: 0;
@@ -244,7 +241,6 @@ const handleLogin = async () => {
   background: rgba(255, 255, 255, 0.15);
 }
 
-/* 右侧表单 */
 .auth-form-wrapper {
   flex: 1;
   display: flex;
@@ -266,7 +262,6 @@ const handleLogin = async () => {
   text-align: center;
 }
 
-/* 表单样式 */
 .login-form {
   :deep(.el-input__wrapper) {
     border-radius: var(--radius-md);
@@ -304,7 +299,6 @@ const handleLogin = async () => {
   }
 }
 
-/* 底部链接 */
 .auth-footer {
   margin-top: 24px;
   text-align: center;
@@ -340,7 +334,6 @@ const handleLogin = async () => {
   }
 }
 
-/* 响应式 */
 @media (max-width: 768px) {
   .auth-container {
     flex-direction: column;
