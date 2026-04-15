@@ -7,7 +7,7 @@
         subtitle="路过这里时，留下一个想法、一句问候，或者一段你正在思考的东西。"
         :bg-image="heroBgImage"
         bg-position="center 40%"
-        min-height="320px"
+        min-height="70vh"
         :overlay-opacity="0.5"
         compact
       />

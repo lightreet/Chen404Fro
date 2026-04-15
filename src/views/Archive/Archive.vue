@@ -7,7 +7,7 @@
         subtitle="沿着时间回看已经发布的内容，看看这个站点一路留下了哪些记录。"
         :bg-image="heroBgImage"
         bg-position="center 44%"
-        min-height="320px"
+        min-height="70vh"
         :overlay-opacity="0.48"
         compact
       >

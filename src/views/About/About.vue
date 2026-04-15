@@ -7,7 +7,7 @@
         subtitle="这里不只是文章集合，更像一份持续更新的个人技术与生活切片。"
         :bg-image="heroBgImage"
         bg-position="center 42%"
-        min-height="320px"
+        min-height="70vh"
         :overlay-opacity="0.48"
         compact
       />

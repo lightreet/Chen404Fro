@@ -7,7 +7,7 @@
         subtitle="通过更细粒度的标签快速定位感兴趣的话题和关键词。"
         :bg-image="heroBgImage"
         bg-position="center 38%"
-        min-height="320px"
+        min-height="70vh"
         :overlay-opacity="0.5"
         compact
       >

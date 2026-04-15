@@ -1,8 +1,9 @@
 <template>
   <article
-    class="article-card jp-card jp-card-hover"
+    class="article-card jp-card"
     :data-article-id="String(article.id)"
     :class="[
+      { 'jp-card-hover': !disableHoverLift },
       { 'image-left': isImageLeft, 'image-right': !isImageLeft },
       { compact },
       {
@@ -10,6 +11,7 @@
         'profile-feed': profileFeed,
         'has-cover': showCover,
         'no-cover': !showCover,
+        'article-card--home-balanced': disableHoverLift,
         'article-card--has-scroll-float': hasScrollFloat,
       },
     ]"
@@ -165,6 +167,7 @@ interface Props {
   profileFeed?: boolean;
   /** 首屏条目可设为 true：eager + fetchpriority=high */
   coverPriority?: boolean;
+  disableHoverLift?: boolean;
   /**
    * 首页滚动：距视口垂直中心的悬浮强度 0~1（由 Home 按距离衰减计算；中心为 1）
    */
@@ -181,17 +184,19 @@ const props = withDefaults(defineProps<Props>(), {
   compact: false,
   profileFeed: false,
   coverPriority: false,
+  disableHoverLift: false,
   scrollFloatStrength: 0,
   scrollWheelPhase: 0,
 });
 
-const hasScrollFloat = computed(() => props.scrollFloatStrength > 0.002);
+const hasScrollFloat = computed(() => !props.disableHoverLift && props.scrollFloatStrength > 0.002);
 
 /**
  * CSS 变量驱动 translateZ / translateY / scale / rotateX；rotateX 在脚本中算好角度避免 calc 与 deg 嵌套问题。
  * 覆盖 jp-card-hover 的 hover:translateY：在 SCSS 里对 :hover 写完整 transform。
  */
 const scrollFloatStyles = computed((): Record<string, string | number> => {
+  if (props.disableHoverLift) return {};
   const s = Math.min(1, Math.max(0, props.scrollFloatStrength));
   if (s <= 0.002) return {};
   const ph = Math.min(1, Math.max(-1, props.scrollWheelPhase));
@@ -345,6 +350,84 @@ const authorName = computed(() => {
 
   &.is-clickable {
     cursor: pointer;
+  }
+}
+
+.article-card.article-card--home-balanced {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  align-items: stretch;
+  width: min(100%, 735px);
+  min-height: 300px;
+  overflow: hidden;
+  margin-left: auto;
+  margin-right: auto;
+  transition:
+    transform 0.28s ease,
+    box-shadow 0.28s ease;
+
+  &:hover {
+    transform: translateY(-6px);
+    box-shadow:
+      0 18px 40px rgba(15, 23, 42, 0.12),
+      0 6px 20px rgba(251, 114, 153, 0.12);
+  }
+
+  .card-content {
+    max-width: none;
+    min-height: 100%;
+    padding: 30px 36px;
+  }
+
+  .card-image {
+    width: 100%;
+    min-width: 0;
+    min-height: 100%;
+    border-radius: 0;
+
+    .image-link,
+    img {
+      width: 100%;
+      height: 100%;
+    }
+  }
+
+  &.image-left {
+    .card-content {
+      order: 2;
+    }
+
+    .card-image {
+      order: 1;
+    }
+  }
+
+  &.image-right {
+    .card-content {
+      order: 1;
+    }
+
+    .card-image {
+      order: 2;
+    }
+  }
+
+  &.no-cover {
+    display: block;
+
+    .card-content {
+      min-height: 300px;
+    }
+  }
+
+  .image-link:hover {
+    img {
+      transform: scale(1.08) rotate(1.8deg);
+    }
+
+    .image-overlay {
+      opacity: 1;
+    }
   }
 }
 
@@ -671,6 +754,21 @@ const authorName = computed(() => {
 
     .card-content {
       padding: 20px 24px;
+    }
+  }
+
+  .article-card.article-card--home-balanced {
+    display: flex;
+
+    .card-content {
+      flex: 1 1 auto;
+      min-height: auto;
+      padding: 20px 24px;
+    }
+
+    .card-image {
+      width: 100%;
+      min-height: 220px;
     }
   }
 

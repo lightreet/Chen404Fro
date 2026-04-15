@@ -6,7 +6,7 @@
         highlight-text="Chen404"
         subtitle="「 记录技术、生活与想法，欢迎来玩 ~ 」"
         :bg-image="heroBgImage"
-        min-height="70vh"
+        min-height="80vh"
         scroll-target="#discovery"
       />
     </template>
@@ -40,6 +40,7 @@
           :article="article"
           :index="index"
           :cover-priority="index < 2"
+          :disable-hover-lift="true"
           :scroll-float-strength="scrollFloatById[String(article.id)] ?? 0"
           :scroll-wheel-phase="scrollWheelPhaseById[String(article.id)] ?? 0"
         />
@@ -378,12 +379,19 @@ watch(
 
 // 文章列表：perspective 增强纵深感；padding 减少阴影裁切
 .article-list {
+  display: flex;
+  flex-direction: column;
+  gap: 40px;
   margin-bottom: 32px;
   position: relative;
   padding-top: 8px;
   padding-bottom: 12px;
   perspective: 1500px;
   perspective-origin: 50% 42%;
+
+  > .article-card {
+    margin-bottom: 0;
+  }
 }
 
 .empty-state {

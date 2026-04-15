@@ -7,7 +7,7 @@
         subtitle="按主题浏览内容，把零散文章组织成更清晰的知识地图。"
         :bg-image="heroBgImage"
         bg-position="center 40%"
-        min-height="320px"
+        min-height="70vh"
         :overlay-opacity="0.5"
         compact
       >
