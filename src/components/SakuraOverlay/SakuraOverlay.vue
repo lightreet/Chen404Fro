@@ -26,6 +26,9 @@ interface SakuraPetal {
   swayOffset: number;
   rotation: number;
   rotationSpeed: number;
+  flipRotation: number;
+  flipSpeed: number;
+  flipTilt: number;
   opacity: number;
   colorStart: string;
   colorEnd: string;
@@ -51,6 +54,8 @@ type DepthRanges = {
   sway: readonly [number, number];
   swaySpeed: readonly [number, number];
   rotationSpeed: readonly [number, number];
+  flipSpeed: readonly [number, number];
+  flipTilt: readonly [number, number];
   opacity: readonly [number, number];
 };
 
@@ -65,6 +70,8 @@ const DEPTH_RANGES: Record<SakuraDepth, DepthRanges> = {
     sway: [6, 14],
     swaySpeed: [0.85, 1.7],
     rotationSpeed: [-0.5, 0.5],
+    flipSpeed: [0, 0],
+    flipTilt: [0, 0],
     opacity: [0.18, 0.38],
   },
   midground: {
@@ -77,6 +84,8 @@ const DEPTH_RANGES: Record<SakuraDepth, DepthRanges> = {
     sway: [6, 15],
     swaySpeed: [1.15, 2.35],
     rotationSpeed: [-0.85, 0.85],
+    flipSpeed: [0, 0],
+    flipTilt: [0, 0],
     opacity: [0.5, 0.84],
   },
   foreground: {
@@ -89,6 +98,8 @@ const DEPTH_RANGES: Record<SakuraDepth, DepthRanges> = {
     sway: [7, 16],
     swaySpeed: [1.4, 2.75],
     rotationSpeed: [-1.05, 1.05],
+    flipSpeed: [1.9, 3.15],
+    flipTilt: [0.08, 0.2],
     opacity: [0.52, 0.86],
   },
 };
@@ -146,6 +157,55 @@ const DEPTH_PAINT: Record<
     glowTransparent: 'rgba(226, 105, 152, 0)',
     glowInnerR: 0.082,
     glowOuterR: 0.84,
+  },
+};
+
+const FOREGROUND_BACKFACE_PAINT = {
+  bodyTop: 'rgba(248, 202, 218, 0.84)',
+  bodyMid: 'rgba(232, 154, 184, 0.78)',
+  bodyBottom: 'rgba(210, 118, 150, 0.7)',
+  glowInner: 'rgba(255, 214, 226, 0.08)',
+  glowOuter: 'rgba(220, 132, 166, 0)',
+};
+
+const DEPTH_FINISH: Record<
+  SakuraDepth,
+  {
+    bloomInner: string;
+    bloomOuter: string;
+    pearlLight: string;
+    pearlPink: string;
+    rimLight: string;
+    veinColor: string;
+    coreGlow: string;
+  }
+> = {
+  background: {
+    bloomInner: 'rgba(255, 224, 237, 0.09)',
+    bloomOuter: 'rgba(255, 225, 242, 0)',
+    pearlLight: 'rgba(255, 251, 255, 0.16)',
+    pearlPink: 'rgba(255, 226, 238, 0.08)',
+    rimLight: 'rgba(255, 245, 250, 0.18)',
+    veinColor: 'rgba(244, 171, 201, 0.14)',
+    coreGlow: 'rgba(255, 240, 245, 0.12)',
+  },
+  midground: {
+    bloomInner: 'rgba(255, 218, 236, 0.14)',
+    bloomOuter: 'rgba(255, 220, 244, 0)',
+    pearlLight: 'rgba(255, 250, 255, 0.24)',
+    pearlPink: 'rgba(255, 223, 238, 0.13)',
+    rimLight: 'rgba(255, 245, 251, 0.28)',
+    veinColor: 'rgba(242, 158, 194, 0.22)',
+    coreGlow: 'rgba(255, 236, 244, 0.18)',
+  },
+  foreground: {
+    bloomInner: 'rgba(255, 214, 236, 0.2)',
+    bloomOuter: 'rgba(255, 216, 244, 0)',
+    pearlLight: 'rgba(255, 252, 255, 0.32)',
+    pearlPink: 'rgba(255, 224, 238, 0.16)',
+    rimLight: 'rgba(255, 246, 252, 0.36)',
+    veinColor: 'rgba(240, 148, 188, 0.3)',
+    coreGlow: 'rgba(255, 238, 246, 0.24)',
   },
 };
 
@@ -229,6 +289,9 @@ const createPetal = (startInViewport = false): SakuraPetal => {
     swayOffset: random(0, Math.PI * 2),
     rotation: random(0, Math.PI * 2),
     rotationSpeed: random(r.rotationSpeed[0], r.rotationSpeed[1]),
+    flipRotation: random(0, Math.PI * 2),
+    flipSpeed: random(r.flipSpeed[0], r.flipSpeed[1]),
+    flipTilt: random(r.flipTilt[0], r.flipTilt[1]),
     opacity: random(r.opacity[0], r.opacity[1]),
     colorStart,
     colorEnd,
@@ -281,24 +344,39 @@ const drawPetal = (petal: SakuraPetal) => {
   if (!c) return;
 
   const paint = DEPTH_PAINT[petal.depth];
+  const finish = DEPTH_FINISH[petal.depth];
+  const isForeground = petal.depth === 'foreground';
+  const flipCos = isForeground ? Math.cos(petal.flipRotation) : 1;
+  const flipSin = isForeground ? Math.sin(petal.flipRotation) : 0;
+  const isBackFace = isForeground && flipCos < 0;
+  const flipWidth = isForeground ? 0.18 + Math.abs(flipCos) * 0.82 : 1;
+  const flipHeight = isForeground ? 0.96 + Math.abs(flipSin) * 0.1 : 1;
+  const flipSkew = isForeground ? flipSin * petal.flipTilt : 0;
+  const surfaceAlpha = isForeground ? 0.76 + flipWidth * 0.24 : 1;
+  const s = petal.size;
 
   c.save();
   c.translate(petal.x, petal.y);
   c.rotate(petal.rotation);
-  c.scale(petal.scaleX, petal.scaleY);
-  c.globalAlpha = petal.opacity;
+  if (flipSkew !== 0) {
+    c.transform(1, flipSkew, 0, 1, 0, 0);
+  }
+  c.scale(
+    petal.scaleX * flipWidth * (isBackFace ? -1 : 1),
+    petal.scaleY * flipHeight
+  );
+  c.globalAlpha = petal.opacity * surfaceAlpha;
   c.shadowColor = paint.shadowColor;
   c.shadowBlur = petal.blur * paint.shadowBlurScale;
 
   // 更接近 boxmoe 的轻柔花瓣：轮廓简单、颜色通透、弱描边感；远近层用 mid-stop 与阴影区分层次
   const bodyGradient = c.createLinearGradient(0, -petal.size * 1.1, 0, petal.size * 1.15);
-  bodyGradient.addColorStop(0, petal.colorStart);
-  bodyGradient.addColorStop(0.36, paint.bodyMid0);
-  bodyGradient.addColorStop(0.72, paint.bodyMid1);
-  bodyGradient.addColorStop(1, petal.colorEnd);
+  bodyGradient.addColorStop(0, isBackFace ? FOREGROUND_BACKFACE_PAINT.bodyTop : petal.colorStart);
+  bodyGradient.addColorStop(0.36, isBackFace ? FOREGROUND_BACKFACE_PAINT.bodyMid : paint.bodyMid0);
+  bodyGradient.addColorStop(0.72, isBackFace ? FOREGROUND_BACKFACE_PAINT.bodyBottom : paint.bodyMid1);
+  bodyGradient.addColorStop(1, isBackFace ? FOREGROUND_BACKFACE_PAINT.bodyBottom : petal.colorEnd);
   c.fillStyle = bodyGradient;
 
-  const s = petal.size;
   // Same sakura silhouette at scale `mul` (1 = outer body, <1 = inner highlight) so highlight stays concentric with the contour.
   const traceSakuraContour = (mul: number) => {
     const m = s * mul;
@@ -314,13 +392,85 @@ const drawPetal = (petal: SakuraPetal) => {
     c.closePath();
   };
 
+  c.save();
+  c.shadowBlur = 0;
+  c.shadowColor = 'transparent';
+  const bloomGradient = c.createRadialGradient(-s * 0.08, -s * 0.18, s * 0.08, 0, 0, s * 1.34);
+  bloomGradient.addColorStop(0, isBackFace ? FOREGROUND_BACKFACE_PAINT.glowInner : finish.bloomInner);
+  bloomGradient.addColorStop(0.58, isBackFace ? FOREGROUND_BACKFACE_PAINT.glowOuter : finish.bloomOuter);
+  bloomGradient.addColorStop(1, 'rgba(255, 220, 242, 0)');
+  c.fillStyle = bloomGradient;
+  c.beginPath();
+  traceSakuraContour(1.22);
+  c.fill();
+  c.restore();
+
   // Outer contour: sakura-like — domed top, fuller waist, shallow basal notch (not a droplet tip).
   c.beginPath();
   traceSakuraContour(1);
+  c.fillStyle = bodyGradient;
   c.fill();
 
   c.shadowBlur = 0;
   c.shadowColor = 'transparent';
+
+  c.save();
+  c.beginPath();
+  traceSakuraContour(1);
+  c.clip();
+
+  const pearlGradient = c.createLinearGradient(-s * 0.56, -s * 0.94, s * 0.5, s * 0.88);
+  pearlGradient.addColorStop(0, isBackFace ? 'rgba(255, 232, 240, 0.2)' : finish.pearlLight);
+  pearlGradient.addColorStop(0.42, isBackFace ? 'rgba(255, 219, 232, 0.12)' : finish.pearlPink);
+  pearlGradient.addColorStop(0.82, 'rgba(255, 208, 228, 0)');
+  c.fillStyle = pearlGradient;
+  c.beginPath();
+  traceSakuraContour(0.96);
+  c.fill();
+
+  const subsurfaceGlow = c.createRadialGradient(-s * 0.16, -s * 0.26, s * 0.05, -s * 0.02, -s * 0.04, s * 0.72);
+  subsurfaceGlow.addColorStop(0, isBackFace ? 'rgba(255, 230, 238, 0.18)' : finish.coreGlow);
+  subsurfaceGlow.addColorStop(0.46, isBackFace ? 'rgba(255, 210, 226, 0.08)' : finish.pearlPink);
+  subsurfaceGlow.addColorStop(1, 'rgba(255, 214, 232, 0)');
+  c.fillStyle = subsurfaceGlow;
+  c.beginPath();
+  traceSakuraContour(0.84);
+  c.fill();
+  c.restore();
+
+  const rimGradient = c.createLinearGradient(-s * 0.55, -s, s * 0.62, s * 0.92);
+  rimGradient.addColorStop(0, isBackFace ? 'rgba(255, 235, 244, 0.22)' : finish.rimLight);
+  rimGradient.addColorStop(0.45, isBackFace ? 'rgba(255, 225, 236, 0.08)' : finish.pearlPink);
+  rimGradient.addColorStop(1, 'rgba(255, 215, 232, 0)');
+  c.strokeStyle = rimGradient;
+  c.lineWidth = Math.max(0.9, s * 0.085);
+  c.beginPath();
+  traceSakuraContour(0.985);
+  c.stroke();
+
+  c.save();
+  c.beginPath();
+  traceSakuraContour(1);
+  c.clip();
+  c.strokeStyle = isBackFace ? 'rgba(236, 170, 196, 0.14)' : finish.veinColor;
+  c.lineCap = 'round';
+  c.lineWidth = Math.max(0.55, s * 0.04);
+
+  c.beginPath();
+  c.moveTo(0, -s * 0.58);
+  c.quadraticCurveTo(s * 0.06, -s * 0.08, 0, s * 0.52);
+  c.stroke();
+
+  c.beginPath();
+  c.moveTo(-s * 0.18, -s * 0.3);
+  c.quadraticCurveTo(-s * 0.06, s * 0.04, -s * 0.12, s * 0.42);
+  c.stroke();
+
+  c.beginPath();
+  c.moveTo(s * 0.16, -s * 0.34);
+  c.quadraticCurveTo(s * 0.04, s * 0.02, s * 0.1, s * 0.4);
+  c.stroke();
+  c.restore();
 
   // Inner glow: scaled copy of outer silhouette + clip + tighter pink radial (DEPTH_PAINT), avoids misaligned teardrop and white blob.
   const highlightScale = 0.52;
@@ -341,14 +491,22 @@ const drawPetal = (petal: SakuraPetal) => {
     gy1,
     s * paint.glowOuterR * 0.46
   );
-  centerGlow.addColorStop(0, paint.glowInner);
-  centerGlow.addColorStop(0.28, paint.glowMid);
-  centerGlow.addColorStop(0.62, paint.glowFalloff);
-  centerGlow.addColorStop(1, paint.glowTransparent);
+  centerGlow.addColorStop(0, isBackFace ? FOREGROUND_BACKFACE_PAINT.glowInner : paint.glowInner);
+  centerGlow.addColorStop(0.28, isBackFace ? FOREGROUND_BACKFACE_PAINT.glowInner : paint.glowMid);
+  centerGlow.addColorStop(0.62, isBackFace ? FOREGROUND_BACKFACE_PAINT.glowOuter : paint.glowFalloff);
+  centerGlow.addColorStop(1, isBackFace ? FOREGROUND_BACKFACE_PAINT.glowOuter : paint.glowTransparent);
 
   c.fillStyle = centerGlow;
   c.beginPath();
   traceSakuraContour(highlightScale);
+  c.fill();
+
+  const heartGlow = c.createRadialGradient(0, s * 0.1, s * 0.02, 0, s * 0.12, s * 0.2);
+  heartGlow.addColorStop(0, isBackFace ? 'rgba(255, 227, 236, 0.16)' : finish.coreGlow);
+  heartGlow.addColorStop(1, 'rgba(255, 214, 230, 0)');
+  c.fillStyle = heartGlow;
+  c.beginPath();
+  traceSakuraContour(0.26);
   c.fill();
 
   c.restore();
@@ -384,6 +542,7 @@ const animate = (timestamp: number) => {
       + Math.sin(timestamp / 1000 * petal.swaySpeed + petal.swayOffset) * petal.sway
     ) * delta;
     petal.rotation += petal.rotationSpeed * delta;
+    petal.flipRotation += petal.flipSpeed * delta;
 
     if (
       petal.y - petal.size > viewportHeight + 24
