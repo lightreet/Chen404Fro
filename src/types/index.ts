@@ -111,6 +111,7 @@ export interface ChangePasswordParams {
 export interface UpdateProfileParams {
   nickname: string;
   avatar: string;
+  bio?: string;
 }
 // ==================== 首页相关类型 ====================
 
@@ -344,7 +345,6 @@ export interface CreateCommentParams {
   authorEmail?: string;
   authorWebsite?: string;
 }
-
 
 
 

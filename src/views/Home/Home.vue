@@ -327,8 +327,9 @@ watch(
   justify-content: space-between;
   gap: 16px;
   flex-wrap: wrap;
-  margin-bottom: 24px;
-  padding: 0 4px;
+  width: min(100%, 860px);
+  margin: 0 auto 18px;
+  padding: 0 8px;
 }
 
 .discovery-head__title.section-header {
@@ -357,7 +358,9 @@ watch(
   align-items: center;
   gap: 10px;
   flex-wrap: wrap;
-  margin: -8px 4px 16px;
+  width: min(100%, 860px);
+  margin: -2px auto 16px;
+  padding: 0 8px;
   font-size: 13px;
   color: var(--text-secondary);
 }
@@ -381,7 +384,10 @@ watch(
 .article-list {
   display: flex;
   flex-direction: column;
-  gap: 40px;
+  gap: 44px;
+  width: min(100%, 860px);
+  margin-left: auto;
+  margin-right: auto;
   margin-bottom: 32px;
   position: relative;
   padding-top: 8px;
@@ -395,6 +401,8 @@ watch(
 }
 
 .empty-state {
+  width: min(100%, 860px);
+  margin: 0 auto;
   text-align: center;
   padding: 48px 24px;
   color: var(--text-tertiary);
@@ -440,6 +448,8 @@ watch(
   }
 }
 .loading-state {
+  width: min(100%, 860px);
+  margin: 0 auto;
   text-align: center;
   padding: 24px 0;
   color: var(--text-secondary);

@@ -26,6 +26,11 @@ export default defineConfig({
       '@': resolve(__dirname, 'src'),
     },
   },
+  server: {
+    host: '0.0.0.0',
+    port: 5173,
+    strictPort: true,
+  },
   build: {
     rollupOptions: {
       output: {
@@ -57,6 +62,7 @@ export default defineConfig({
             /[\\/]src[\\/]components[\\/]Live2D[\\/]/.test(id) ||
             /[\\/]src[\\/]components[\\/]SakuraOverlay[\\/]/.test(id) ||
             /[\\/]src[\\/]composables[\\/]useLayoutMobile/.test(id)
+
           if (isLayoutShell) {
             return 'chunk-layout-shell'
           }

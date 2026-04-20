@@ -13,8 +13,8 @@
           class="content-wrapper"
           :class="{ 'no-right-sidebar': isMobile || !showRightSidebar }"
         >
-          <!-- 左侧 Live2D：纯悬浮层，不参与主内容布局，后续可扩展为拖拽定位 -->
-          <aside class="sidebar-left" v-if="!isMobile">
+          <!-- 左侧 Live2D：当前先隐藏，保留结构便于后续恢复 -->
+          <aside class="sidebar-left" v-if="showLive2D && !isMobile">
             <Live2D />
           </aside>
 
@@ -52,6 +52,7 @@ withDefaults(defineProps<Props>(), {
 });
 
 const { isMobile } = useLayoutMobile();
+const showLive2D = false;
 </script>
 
 <style scoped lang="scss">

@@ -22,94 +22,200 @@
       :class="{ 'is-clickable': mode !== 'manage' }"
       @click="mode !== 'manage' ? goToDetail() : undefined"
     >
-      <!-- 日期与作者 -->
-      <div class="article-meta">
-        <el-icon class="meta-date-icon"><Calendar /></el-icon>
-        <span>{{ formatDate(article.publishTime ?? article.createTime ?? '') }}</span>
-        <template v-if="authorName">
-          <span class="meta-sep">·</span>
-          <el-icon class="author-icon"><User /></el-icon>
-          <span class="author-name">{{ authorName }}</span>
-        </template>
-      </div>
+      <template v-if="isProfileLayout">
+        <div class="profile-meta-row">
+          <div class="article-meta article-meta--profile">
+            <el-icon class="meta-date-icon"><Calendar /></el-icon>
+            <span>{{ formatDate(article.publishTime ?? article.createTime ?? '') }}</span>
+            <template v-if="authorName">
+              <span class="meta-sep">·</span>
+              <el-icon class="author-icon"><User /></el-icon>
+              <span class="author-name">{{ authorName }}</span>
+            </template>
+          </div>
 
-      <!-- 标题 -->
-      <h3 class="article-title">
-        <router-link v-if="mode !== 'manage'" :to="articleDetailUrl" @click.stop>
-          {{ article.title }}
-        </router-link>
-        <span v-else>{{ article.title }}</span>
-      </h3>
+          <div class="profile-meta-extra">
+            <router-link
+              v-if="mode !== 'manage' && article.category"
+              :to="`/category/${article.category.id}`"
+              class="meta-pill meta-pill--link"
+              @click.stop
+            >
+              <Icon
+                class="category-icon-iconify"
+                :icon="resolveCategoryIcon(article.category.icon)"
+                width="14"
+                height="14"
+              />
+              {{ article.category.name }}
+            </router-link>
+            <span v-else-if="article.category" class="meta-pill">
+              <Icon
+                class="category-icon-iconify"
+                :icon="resolveCategoryIcon(article.category.icon)"
+                width="14"
+                height="14"
+              />
+              {{ article.category.name }}
+            </span>
+            <span v-if="mode === 'manage'" class="meta-pill" :class="`status-pill status-pill--${article.status ?? 'other'}`">
+              {{ article.status === 0 ? '草稿' : article.status === 1 ? '已发布' : '其他' }}
+            </span>
+          </div>
+        </div>
 
-      <!-- 统计信息 -->
-      <div class="article-stats">
-        <span class="stat-item">
-          <el-icon><View /></el-icon>
-          {{ formatNumber(article.viewCount ?? 0) }}
-        </span>
-        <span class="stat-item">
-          <Icon class="stat-iconify" icon="mdi:heart-outline" width="14" height="14" aria-hidden="true" />
-          {{ formatNumber(article.likeCount ?? 0) }}
-        </span>
-        <span class="stat-item">
-          <el-icon><ChatDotRound /></el-icon>
-          {{ article.commentCount ?? 0 }}
-        </span>
-        <router-link
-          v-if="mode !== 'manage' && article.category"
-          :to="`/category/${article.category.id}`"
-          class="stat-item category-tag"
-          @click.stop
-        >
-          <Icon
-            class="category-icon-iconify"
-            :icon="resolveCategoryIcon(article.category.icon)"
-            width="14"
-            height="14"
-          />
-          {{ article.category.name }}
-        </router-link>
-        <span v-else-if="article.category" class="stat-item category-tag">
-          <Icon
-            class="category-icon-iconify"
-            :icon="resolveCategoryIcon(article.category.icon)"
-            width="14"
-            height="14"
-          />
-          {{ article.category.name }}
-        </span>
-        <template v-if="mode === 'manage'">
-          <el-tag v-if="article.status === 0" type="info" size="small">草稿</el-tag>
-          <el-tag v-else-if="article.status === 1" type="success" size="small">已发布</el-tag>
-          <el-tag v-else type="warning" size="small">其他</el-tag>
-        </template>
-      </div>
+        <h3 class="article-title article-title--profile">
+          <router-link v-if="mode !== 'manage'" :to="articleDetailUrl" @click.stop>
+            {{ article.title }}
+          </router-link>
+          <span v-else>{{ article.title }}</span>
+        </h3>
 
-      <!-- 摘要 -->
-      <p class="article-summary">{{ article.summary || '暂无摘要' }}</p>
+        <p class="article-summary article-summary--profile">{{ article.summary || '暂无摘要' }}</p>
 
-      <!-- 标签：统一 jp-chip 灰色系 -->
-      <div class="article-tags" v-if="article.tags && article.tags.length > 0">
-        <span
-          v-for="tag in article.tags"
-          :key="tag.id"
-          class="tag jp-chip"
-        >
-          {{ tag.name }}
-        </span>
-      </div>
+        <div class="profile-bottom-row">
+          <div class="article-tags article-tags--profile" v-if="article.tags && article.tags.length > 0">
+            <span
+              v-for="tag in article.tags"
+              :key="tag.id"
+              class="tag jp-chip"
+            >
+              {{ tag.name }}
+            </span>
+          </div>
 
-      <!-- 阅读详情 / 管理操作 -->
-      <div class="article-action">
-        <template v-if="mode === 'manage'">
-          <el-button v-if="article.canEdit" text type="primary" @click="$emit('edit', article.id)">编辑</el-button>
-          <el-button v-if="article.canDelete" text type="danger" @click="$emit('delete', article.id)">删除</el-button>
-        </template>
-        <router-link v-else :to="articleDetailUrl" class="read-more" @click.stop>
-          <span>阅读详情</span>
-          <el-icon><ArrowRight /></el-icon>
-        </router-link>
-      </div>
+          <div class="article-stats article-stats--profile">
+            <span class="stat-item">
+              <el-icon><View /></el-icon>
+              {{ formatNumber(article.viewCount ?? 0) }}
+            </span>
+            <span class="stat-item">
+              <Icon class="stat-iconify" icon="mdi:heart-outline" width="14" height="14" aria-hidden="true" />
+              {{ formatNumber(article.likeCount ?? 0) }}
+            </span>
+            <span class="stat-item">
+              <el-icon><ChatDotRound /></el-icon>
+              {{ article.commentCount ?? 0 }}
+            </span>
+          </div>
+        </div>
+
+        <div class="article-action article-action--profile">
+          <div v-if="mode === 'manage'" class="profile-manage-actions">
+            <el-button
+              v-if="article.canEdit"
+              text
+              class="action-link action-link--edit"
+              @click.stop="$emit('edit', article.id)"
+            >
+              编辑
+            </el-button>
+            <el-button
+              v-if="article.canDelete"
+              text
+              class="action-link action-link--delete"
+              @click.stop="$emit('delete', article.id)"
+            >
+              删除
+            </el-button>
+          </div>
+          <router-link :to="articleDetailUrl" class="read-more read-more--profile" @click.stop>
+            <span>阅读详情</span>
+            <el-icon><ArrowRight /></el-icon>
+          </router-link>
+        </div>
+      </template>
+
+      <template v-else>
+        <!-- 日期与作者 -->
+        <div class="article-meta">
+          <el-icon class="meta-date-icon"><Calendar /></el-icon>
+          <span>{{ formatDate(article.publishTime ?? article.createTime ?? '') }}</span>
+          <template v-if="authorName">
+            <span class="meta-sep">·</span>
+            <el-icon class="author-icon"><User /></el-icon>
+            <span class="author-name">{{ authorName }}</span>
+          </template>
+        </div>
+
+        <!-- 标题 -->
+        <h3 class="article-title">
+          <router-link v-if="mode !== 'manage'" :to="articleDetailUrl" @click.stop>
+            {{ article.title }}
+          </router-link>
+          <span v-else>{{ article.title }}</span>
+        </h3>
+
+        <!-- 统计信息 -->
+        <div class="article-stats">
+          <span class="stat-item">
+            <el-icon><View /></el-icon>
+            {{ formatNumber(article.viewCount ?? 0) }}
+          </span>
+          <span class="stat-item">
+            <Icon class="stat-iconify" icon="mdi:heart-outline" width="14" height="14" aria-hidden="true" />
+            {{ formatNumber(article.likeCount ?? 0) }}
+          </span>
+          <span class="stat-item">
+            <el-icon><ChatDotRound /></el-icon>
+            {{ article.commentCount ?? 0 }}
+          </span>
+          <router-link
+            v-if="mode !== 'manage' && article.category"
+            :to="`/category/${article.category.id}`"
+            class="stat-item category-tag"
+            @click.stop
+          >
+            <Icon
+              class="category-icon-iconify"
+              :icon="resolveCategoryIcon(article.category.icon)"
+              width="14"
+              height="14"
+            />
+            {{ article.category.name }}
+          </router-link>
+          <span v-else-if="article.category" class="stat-item category-tag">
+            <Icon
+              class="category-icon-iconify"
+              :icon="resolveCategoryIcon(article.category.icon)"
+              width="14"
+              height="14"
+            />
+            {{ article.category.name }}
+          </span>
+          <template v-if="mode === 'manage'">
+            <el-tag v-if="article.status === 0" type="info" size="small">草稿</el-tag>
+            <el-tag v-else-if="article.status === 1" type="success" size="small">已发布</el-tag>
+            <el-tag v-else type="warning" size="small">其他</el-tag>
+          </template>
+        </div>
+
+        <!-- 摘要 -->
+        <p class="article-summary">{{ article.summary || '暂无摘要' }}</p>
+
+        <!-- 标签：统一 jp-chip 灰色系 -->
+        <div class="article-tags" v-if="article.tags && article.tags.length > 0">
+          <span
+            v-for="tag in article.tags"
+            :key="tag.id"
+            class="tag jp-chip"
+          >
+            {{ tag.name }}
+          </span>
+        </div>
+
+        <!-- 阅读详情 / 管理操作 -->
+        <div class="article-action">
+          <template v-if="mode === 'manage'">
+            <el-button v-if="article.canEdit" text type="primary" @click="$emit('edit', article.id)">编辑</el-button>
+            <el-button v-if="article.canDelete" text type="danger" @click="$emit('delete', article.id)">删除</el-button>
+          </template>
+          <router-link v-else :to="articleDetailUrl" class="read-more" @click.stop>
+            <span>阅读详情</span>
+            <el-icon><ArrowRight /></el-icon>
+          </router-link>
+        </div>
+      </template>
     </div>
 
     <!-- 封面图（加载失败时收起，避免大块空白） -->
@@ -219,6 +325,7 @@ watch(
 );
 
 const showCover = computed(() => !!(props.article.coverImage && !coverLoadFailed.value));
+const isProfileLayout = computed(() => props.mode === 'manage' || props.profileFeed);
 
 function onCoverError() {
   coverLoadFailed.value = true;
@@ -357,11 +464,14 @@ const authorName = computed(() => {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   align-items: stretch;
-  width: min(100%, 735px);
+  width: min(100%, 820px);
   min-height: 300px;
   overflow: hidden;
   margin-left: auto;
   margin-right: auto;
+  box-shadow:
+    0 20px 44px rgba(15, 23, 42, 0.09),
+    0 8px 22px rgba(251, 114, 153, 0.1);
   transition:
     transform 0.28s ease,
     box-shadow 0.28s ease;
@@ -369,26 +479,33 @@ const authorName = computed(() => {
   &:hover {
     transform: translateY(-6px);
     box-shadow:
-      0 18px 40px rgba(15, 23, 42, 0.12),
-      0 6px 20px rgba(251, 114, 153, 0.12);
+      0 24px 54px rgba(15, 23, 42, 0.14),
+      0 10px 28px rgba(251, 114, 153, 0.14);
   }
 
   .card-content {
     max-width: none;
     min-height: 100%;
-    padding: 30px 36px;
+    padding: 30px 34px;
   }
 
   .card-image {
     width: 100%;
     min-width: 0;
     min-height: 100%;
+    height: 100%;
+    aspect-ratio: 16 / 10;
     border-radius: 0;
 
     .image-link,
     img {
       width: 100%;
       height: 100%;
+    }
+
+    img {
+      object-fit: cover;
+      object-position: center;
     }
   }
 
@@ -436,109 +553,431 @@ const authorName = computed(() => {
   margin-bottom: 0;
 
   .card-content {
-    padding: 18px 22px;
+    padding: 14px 18px;
   }
 
   .article-meta {
-    font-size: 12px;
-    margin-bottom: 8px;
-  }
-
-  .article-title {
-    font-size: 17px;
-    margin-bottom: 10px;
-  }
-
-  .article-stats {
-    gap: 12px;
-    margin-bottom: 10px;
-    font-size: 12px;
-  }
-
-  .article-summary {
-    font-size: 13px;
-    margin-bottom: 10px;
-    -webkit-line-clamp: 2;
-  }
-
-  .article-tags {
-    gap: 6px;
-    margin-bottom: 10px;
-  }
-
-  .tag {
-    padding: 2px 8px;
     font-size: 11px;
-  }
-
-  .read-more,
-  .article-action .el-button {
-    font-size: 13px;
-  }
-
-  .card-image {
-    width: 280px;
-  }
-}
-
-.article-card.compact.manage-mode,
-.article-card.compact.profile-feed {
-  border: 1px solid rgba(226, 232, 240, 0.85);
-  box-shadow: 0 18px 36px rgba(15, 23, 42, 0.06);
-
-  .card-content {
-    padding: 12px 14px;
-  }
-
-  .article-meta {
-    gap: 6px;
     margin-bottom: 6px;
   }
 
   .article-title {
     font-size: 15px;
-    margin-bottom: 5px;
+    margin-bottom: 8px;
   }
 
   .article-stats {
-    gap: 6px 10px;
-    flex-wrap: wrap;
-    margin-bottom: 5px;
+    gap: 10px;
+    margin-bottom: 8px;
+    font-size: 11px;
   }
 
   .article-summary {
-    font-size: 13px;
-    line-height: 1.65;
-    margin-bottom: 7px;
+    font-size: 12px;
+    margin-bottom: 8px;
     -webkit-line-clamp: 2;
   }
 
   .article-tags {
-    margin-bottom: 7px;
+    gap: 5px;
+    margin-bottom: 8px;
   }
 
-  .article-action {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    padding-top: 6px;
-    border-top: 1px dashed var(--border-light);
+  .tag {
+    padding: 2px 7px;
+    font-size: 10px;
   }
 
-  .article-action .el-button + .el-button {
-    margin-left: 0;
+  .read-more,
+  .article-action .el-button {
+    font-size: 12px;
   }
 
   .card-image {
-    width: 180px;
-    min-height: 150px;
-    border-radius: 0;
-    background: var(--bg-hover);
+    width: 220px;
+  }
+}
 
-    .image-link,
-    img {
+.article-card.compact.manage-mode,
+.article-card.compact.profile-feed {
+  width: min(100%, 560px);
+  margin-left: auto;
+  margin-right: auto;
+  align-items: stretch;
+  min-height: 180px;
+  border: 1px solid rgba(245, 155, 188, 0.12);
+  border-radius: 22px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(255, 252, 254, 0.96)),
+    linear-gradient(135deg, rgba(255, 243, 248, 0.36), rgba(247, 244, 255, 0.24));
+  box-shadow:
+    0 12px 24px rgba(15, 23, 42, 0.05),
+    0 5px 14px rgba(245, 155, 188, 0.07);
+  overflow: hidden;
+  transition:
+    transform 0.28s ease,
+    box-shadow 0.28s ease,
+    border-color 0.28s ease;
+
+  &:hover {
+    transform: translateY(-3px);
+    border-color: rgba(245, 155, 188, 0.18);
+    box-shadow:
+      0 16px 28px rgba(15, 23, 42, 0.07),
+      0 7px 18px rgba(245, 155, 188, 0.1);
+  }
+
+  .card-content {
+    padding: 16px 18px 12px;
+  }
+
+  .profile-meta-row {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+
+  .article-meta--profile {
+    margin-bottom: 0;
+    color: #8f93a8;
+    font-size: 11px;
+  }
+
+  .profile-meta-extra {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 5px;
+    align-items: center;
+  }
+
+  .meta-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    min-height: 26px;
+    padding: 0 10px;
+    border-radius: 999px;
+    background: rgba(255, 244, 248, 0.92);
+    color: #7c8198;
+    font-size: 11px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: background 0.22s ease, color 0.22s ease, transform 0.22s ease;
+  }
+
+  .meta-pill--link:hover {
+    background: rgba(255, 235, 243, 0.98);
+    color: #f59bbc;
+    transform: translateY(-1px);
+  }
+
+  .status-pill--0 {
+    background: rgba(244, 240, 255, 0.95);
+    color: #8879b8;
+  }
+
+  .status-pill--1 {
+    background: rgba(238, 250, 238, 0.95);
+    color: #7aa36e;
+  }
+
+  .status-pill--other {
+    background: rgba(255, 246, 233, 0.95);
+    color: #c28c58;
+  }
+
+  .article-title--profile {
+    font-size: 17px;
+    font-weight: 700;
+    line-height: 1.4;
+    margin-bottom: 8px;
+    color: #4e5065;
+    width: 100%;
+  }
+
+  .article-title--profile a,
+  .article-title--profile span {
+    color: #4e5065;
+    text-decoration: none;
+    transition: color 0.22s ease;
+  }
+
+  .article-title--profile a:hover {
+    color: #f59bbc;
+  }
+
+  .article-summary--profile {
+    font-size: 12px;
+    line-height: 1.6;
+    color: #8f93a8;
+    width: 100%;
+    margin-bottom: 10px;
+    -webkit-line-clamp: 2;
+  }
+
+  .profile-bottom-row {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    margin-top: auto;
+    margin-bottom: 0;
+    width: 100%;
+    align-items: flex-start;
+  }
+
+  .article-tags--profile {
+    gap: 7px;
+    margin-bottom: 0;
+  }
+
+  .article-tags--profile .tag {
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: rgba(244, 241, 248, 0.9);
+    color: #7c8198;
+    font-size: 10px;
+  }
+
+  .article-stats--profile {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    gap: 7px 12px;
+    margin-bottom: 0;
+    margin-top: 0;
+    padding-left: 2px;
+    font-size: 11px;
+    color: #7f8499;
+    width: 100%;
+  }
+
+  .article-stats--profile .stat-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    min-height: 18px;
+    line-height: 1;
+  }
+
+  .article-stats--profile .stat-item .el-icon,
+  .article-stats--profile .stat-item .stat-iconify {
+    width: 13px;
+    height: 13px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .article-action--profile {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    min-height: 30px;
+    margin-top: 0;
+    padding-top: 7px;
+    border-top: 1px dashed rgba(245, 155, 188, 0.16);
+    width: 100%;
+  }
+
+  .profile-manage-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    justify-content: flex-start;
+  }
+
+  .action-link {
+    min-height: 28px;
+    padding: 0 10px;
+    margin: 0;
+    border-radius: 999px;
+    background: transparent;
+    color: #8185a0;
+    font-size: 12px;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+    transition:
+      color 0.22s ease,
+      background-color 0.22s ease,
+      box-shadow 0.22s ease,
+      transform 0.22s ease;
+  }
+
+  .action-link + .action-link {
+    margin-left: 0;
+  }
+
+  .action-link:hover,
+  .action-link:focus-visible,
+  .action-link--edit:hover,
+  .action-link--edit:focus-visible {
+    background: rgba(255, 241, 246, 0.82);
+    color: #f59bbc;
+    transform: translateY(-1px);
+    box-shadow: 0 10px 18px rgba(245, 155, 188, 0.12);
+  }
+
+  .action-link--delete:hover,
+  .action-link--delete:focus-visible {
+    background: rgba(255, 240, 244, 0.92);
+    color: #eb7f96;
+    box-shadow: 0 10px 18px rgba(235, 127, 150, 0.12);
+  }
+
+  .read-more--profile {
+    margin-left: auto;
+    color: #8185a0;
+    font-size: 12px;
+    font-weight: 600;
+  }
+
+  .read-more--profile:hover {
+    color: #f59bbc;
+  }
+
+  .card-image {
+    flex: 0 0 168px;
+    width: 168px;
+    min-width: 168px;
+    height: 118px;
+    min-height: 118px;
+    margin: 12px 12px 12px 0;
+    align-self: center;
+    border-radius: 16px;
+    overflow: hidden;
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0)),
+      var(--bg-hover);
+    box-shadow:
+      0 8px 18px rgba(15, 23, 42, 0.075),
+      0 4px 10px rgba(245, 155, 188, 0.075);
+    aspect-ratio: 16 / 10;
+    transition: transform 0.32s ease, box-shadow 0.32s ease;
+
+    .image-link {
+      display: flex;
       height: 100%;
+      width: 100%;
     }
+
+    img {
+      display: block;
+      height: 100%;
+      width: 100%;
+      object-fit: cover;
+      object-position: center;
+      transition: transform 0.38s ease;
+    }
+  }
+
+  &:hover .card-image {
+    box-shadow:
+      0 12px 24px rgba(15, 23, 42, 0.09),
+      0 5px 12px rgba(245, 155, 188, 0.1);
+  }
+
+  &:hover .card-image img {
+    transform: scale(1.04);
+  }
+}
+
+.article-card.compact.manage-mode,
+.article-card.compact.profile-feed {
+  border: none;
+  border-radius: 22px;
+  background: transparent;
+  box-shadow: inset 0 0 0 1px rgba(214, 206, 229, 0.08);
+  overflow: visible;
+  isolation: isolate;
+  transition:
+    transform 0.24s ease,
+    filter 0.24s ease,
+    box-shadow 0.24s ease,
+    border-color 0.24s ease;
+
+  &::before,
+  &::after {
+    content: '';
+    position: absolute;
+    pointer-events: none;
+    width: 88px;
+    height: 64px;
+    opacity: 0.92;
+    transition:
+      opacity 0.22s ease,
+      transform 0.22s ease,
+      box-shadow 0.22s ease;
+  }
+
+  &::before {
+    top: 0;
+    left: 0;
+    border-top: 2px solid rgba(245, 155, 188, 0.48);
+    border-left: 2px solid rgba(245, 155, 188, 0.48);
+    border-top-left-radius: 20px;
+    box-shadow: -2px -2px 16px rgba(245, 155, 188, 0.1);
+  }
+
+  &::after {
+    right: 0;
+    bottom: 0;
+    border-right: 2px solid rgba(245, 155, 188, 0.48);
+    border-bottom: 2px solid rgba(245, 155, 188, 0.48);
+    border-bottom-right-radius: 20px;
+    box-shadow: 2px 2px 16px rgba(245, 155, 188, 0.1);
+  }
+
+  &:hover {
+    transform: translateY(-4px);
+    box-shadow:
+      inset 0 0 0 1px rgba(245, 155, 188, 0.5),
+      0 16px 34px rgba(209, 186, 225, 0.16),
+      0 8px 24px rgba(245, 155, 188, 0.12);
+    filter: saturate(1.02);
+
+    &::before,
+    &::after {
+      opacity: 0;
+    }
+
+    &::before {
+      transform: translate(-3px, -3px);
+    }
+
+    &::after {
+      transform: translate(3px, 3px);
+    }
+  }
+
+  .card-content {
+    position: relative;
+    padding: 18px 20px 14px;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.3), rgba(255, 255, 255, 0.1));
+    transition: background 0.24s ease;
+  }
+
+  .article-action--profile {
+    border-top-color: rgba(245, 155, 188, 0.1);
+  }
+
+  .card-image {
+    margin: 16px 0 16px 0;
+    box-shadow:
+      0 10px 24px rgba(15, 23, 42, 0.06),
+      0 4px 10px rgba(245, 155, 188, 0.06);
+  }
+
+  &:hover .card-content {
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.38), rgba(255, 255, 255, 0.14));
   }
 }
 
@@ -580,7 +1019,7 @@ const authorName = computed(() => {
   font-size: 20px;
   font-weight: 600;
   line-height: 1.4;
-  margin: 0 0 16px;
+  margin: 0 0 14px;
 
   a {
     color: var(--text-primary);
@@ -597,7 +1036,7 @@ const authorName = computed(() => {
   display: flex;
   align-items: center;
   gap: 16px;
-  margin-bottom: 16px;
+  margin-bottom: 14px;
   font-size: 13px;
   color: var(--text-secondary);
 }
@@ -637,9 +1076,9 @@ const authorName = computed(() => {
 
 .article-summary {
   font-size: 14px;
-  line-height: 1.8;
+  line-height: 1.72;
   color: var(--text-secondary);
-  margin: 0 0 16px;
+  margin: 0 0 14px;
   flex: 1;
 
   // 多行截断
@@ -649,11 +1088,15 @@ const authorName = computed(() => {
   overflow: hidden;
 }
 
+.article-card.article-card--home-balanced .article-summary {
+  -webkit-line-clamp: 4;
+}
+
 .article-tags {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  margin-bottom: 16px;
+  margin-bottom: 14px;
 }
 
 .tag {
@@ -774,9 +1217,24 @@ const authorName = computed(() => {
 
   .article-card.compact.manage-mode,
   .article-card.compact.profile-feed {
+    min-height: auto;
+
+    .profile-meta-row {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+
+    .profile-meta-extra {
+      justify-content: flex-start;
+    }
+
     .card-image {
       width: 100%;
-      min-height: 150px;
+      min-width: 100%;
+      height: 180px;
+      min-height: 180px;
+      margin: 0;
+      aspect-ratio: auto;
       border-radius: 0 !important;
     }
   }
@@ -799,6 +1257,25 @@ const authorName = computed(() => {
 
     .card-image {
       height: 180px;
+    }
+  }
+
+  .article-card.compact.manage-mode,
+  .article-card.compact.profile-feed {
+    .card-content {
+      padding: 16px 16px 18px;
+    }
+
+    .article-title--profile {
+      font-size: 17px;
+    }
+
+    .profile-bottom-row {
+      gap: 8px;
+    }
+
+    .article-action--profile {
+      padding-top: 10px;
     }
   }
 }
