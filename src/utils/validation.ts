@@ -4,7 +4,7 @@
 import type { FormItemRule } from 'element-plus';
 
 export const DEFAULT_IMAGE_MAX_MB = 12;
-export const AVATAR_MAX_MB = 2;
+export const AVATAR_MAX_MB = 10;
 
 export const USERNAME_MIN_LENGTH = 3;
 export const USERNAME_MAX_LENGTH = 20;

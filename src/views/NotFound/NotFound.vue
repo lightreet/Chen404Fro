@@ -2,7 +2,7 @@
   <div class="not-found-page">
     <div class="not-found-content">
       <div class="error-logo">
-        <img src="/Chen404logo.svg" alt="404" />
+        <img src="/logo.png" alt="404" />
       </div>
       <h1 class="error-title">页面不存在</h1>
       <p class="error-desc">抱歉，您访问的页面找不到了</p>
@@ -35,8 +35,8 @@
   margin-bottom: 24px;
 
   img {
-    width: 120px;
-    height: 120px;
+    width: 240px;
+    height: 160px;
     object-fit: contain;
     filter: drop-shadow(0 8px 32px rgba(251, 114, 153, 0.3));
     animation: float 3s ease-in-out infinite;

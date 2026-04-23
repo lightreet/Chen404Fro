@@ -171,7 +171,7 @@
                         </el-avatar>
                         <div class="avatar-edit-copy">
                           <div class="avatar-edit-title">上传新的头像</div>
-                          <div class="avatar-edit-hint">建议使用清晰的正方形图片，展示会更精致。</div>
+                          <div class="avatar-edit-hint">建议使用清晰的正方形图片，最大支持 10MB，上传后会自动压缩。</div>
                           <el-upload
                             :show-file-list="false"
                             :before-upload="beforeAvatarUpload"

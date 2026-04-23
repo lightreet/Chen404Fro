@@ -4,7 +4,7 @@
       <div class="header-content">
         <!-- Logo -->
         <router-link to="/" class="logo">
-          <img src="/Chen404logo.svg" alt="Chen404" class="logo-img" />
+          <img src="/logo.png" alt="Chen404" class="logo-img" />
         </router-link>
 
         <!-- 导航菜单 -->
@@ -360,8 +360,8 @@ const handleLogout = async () => {
   text-decoration: none;
 
   .logo-img {
-    height: 28px;
-    width: auto;
+    width: 92px;
+    height: 42px;
     object-fit: contain;
     transition: transform 0.3s;
 

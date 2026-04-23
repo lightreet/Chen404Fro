@@ -15,70 +15,72 @@
 
     <div class="about-page">
       <section class="glass-panel community-panel">
-        <div class="community-head">
-          <div>
-            <span class="eyebrow">Member Constellation</span>
-            <h2 class="panel-title">把所有注册成员放进关于页，让“关于”不再只是一个人的独白</h2>
-          </div>
-          <div class="community-aside">
-            <p class="community-hint">鼠标悬浮头像即可切换预览，移动端也可以直接点击头像查看。</p>
-            <div class="community-stats">
-              <span class="community-stat">已注册 {{ memberCount }} 位成员</span>
-              <span class="community-stat">受信伙伴 {{ trustedCount }} 位</span>
-              <span class="community-stat">悬浮头像可预览成员卡片</span>
+        <div class="community-layout">
+          <div class="community-main">
+            <div class="community-copy">
+              <span class="eyebrow">Member Constellation</span>
+              <h2 class="panel-title">从一个人，到一片星群</h2>
             </div>
-          </div>
-        </div>
-
-        <div class="community-stage">
-          <article v-if="activeMember" class="member-preview" :class="memberIdentityClass(activeMember)">
-            <div class="member-preview__halo"></div>
-            <div class="member-preview__header">
-              <div class="member-preview__avatar">
-                <img :src="getMemberAvatar(activeMember)" :alt="getMemberDisplayName(activeMember)" />
-              </div>
-              <div class="member-preview__title">
-                <div class="member-preview__badges">
-                  <span class="member-chip member-chip--strong">{{ memberIdentityLabel(activeMember) }}</span>
-                  <span class="member-chip">加入于 {{ formatJoinTime(activeMember.createTime) }}</span>
+            <article v-if="activeMember" class="member-preview" :class="memberIdentityClass(activeMember)">
+              <div class="member-preview__halo"></div>
+              <div class="member-preview__header">
+                <div class="member-preview__avatar">
+                  <img :src="getMemberAvatar(activeMember)" :alt="getMemberDisplayName(activeMember)" />
                 </div>
-                <h3>{{ getMemberDisplayName(activeMember) }}</h3>
-                <p>@{{ activeMember.username }}</p>
+                <div class="member-preview__title">
+                  <div class="member-preview__badges">
+                    <span class="member-chip member-chip--strong">{{ memberIdentityLabel(activeMember) }}</span>
+                    <span class="member-chip">加入于 {{ formatJoinTime(activeMember.createTime) }}</span>
+                  </div>
+                  <h3>{{ getMemberDisplayName(activeMember) }}</h3>
+                  <p>@{{ activeMember.username }}</p>
+                </div>
+              </div>
+              <p class="member-preview__bio">
+                {{ activeMember.bio?.trim() || '正在这里安静留下自己的头像与名字，也让这片小站变得更完整一点。' }}
+              </p>
+              <div class="member-preview__meta">
+                <span class="member-preview__meta-item">
+                  <el-icon><UserFilled /></el-icon>
+                  <span>{{ owner?.id === activeMember.id ? '站点创建者' : '站点注册成员' }}</span>
+                </span>
+                <span v-if="activeMember.trustLevel === 1 && owner?.id !== activeMember.id" class="member-preview__meta-item">
+                  <el-icon><StarFilled /></el-icon>
+                  <span>受信伙伴</span>
+                </span>
+              </div>
+            </article>
+          </div>
+
+          <div class="community-side">
+            <div class="community-aside">
+              <p class="community-hint">鼠标悬浮头像即可切换预览，移动端也可以直接点击头像查看。</p>
+              <div class="community-stats">
+                <span class="community-stat">已注册 {{ memberCount }} 位成员</span>
+                <span class="community-stat">受信伙伴 {{ trustedCount }} 位</span>
+                <span class="community-stat">悬浮头像可预览成员卡片</span>
               </div>
             </div>
-            <p class="member-preview__bio">
-              {{ activeMember.bio?.trim() || '正在这里安静留下自己的头像与名字，也让这片小站变得更完整一点。' }}
-            </p>
-            <div class="member-preview__meta">
-              <span class="member-preview__meta-item">
-                <el-icon><UserFilled /></el-icon>
-                <span>{{ owner?.id === activeMember.id ? '站点创建者' : '站点注册成员' }}</span>
-              </span>
-              <span v-if="activeMember.trustLevel === 1 && owner?.id !== activeMember.id" class="member-preview__meta-item">
-                <el-icon><StarFilled /></el-icon>
-                <span>受信伙伴</span>
-              </span>
-            </div>
-          </article>
 
-          <div class="member-cloud">
-            <button
-              v-for="(member, index) in displayMembers"
-              :key="member.id"
-              type="button"
-              class="member-orb"
-              :class="[memberIdentityClass(member), { 'is-active': activeMember?.id === member.id }]"
-              :style="getMemberOrbStyle(index)"
-              :aria-label="`查看 ${getMemberDisplayName(member)} 的信息卡片`"
-              @mouseenter="setActiveMember(member.id)"
-              @focus="setActiveMember(member.id)"
-              @click="setActiveMember(member.id)"
-            >
-              <span class="member-orb__glow"></span>
-              <span class="member-orb__ring"></span>
-              <img :src="getMemberAvatar(member)" :alt="getMemberDisplayName(member)" />
-              <span class="member-orb__label">{{ getMemberDisplayName(member) }}</span>
-            </button>
+            <div class="member-cloud">
+              <button
+                v-for="(member, index) in displayMembers"
+                :key="member.id"
+                type="button"
+                class="member-orb"
+                :class="[memberIdentityClass(member), { 'is-active': activeMember?.id === member.id }]"
+                :style="getMemberOrbStyle(index)"
+                :aria-label="`查看 ${getMemberDisplayName(member)} 的信息卡片`"
+                @mouseenter="setActiveMember(member.id)"
+                @focus="setActiveMember(member.id)"
+                @click="setActiveMember(member.id)"
+              >
+                <span class="member-orb__glow"></span>
+                <span class="member-orb__ring"></span>
+                <img :src="getMemberAvatar(member)" :alt="getMemberDisplayName(member)" />
+                <span class="member-orb__label">{{ getMemberDisplayName(member) }}</span>
+              </button>
+            </div>
           </div>
         </div>
       </section>
@@ -86,11 +88,10 @@
       <div class="about-grid">
         <section class="glass-panel story-panel">
           <span class="eyebrow">Why We Gather</span>
-          <h2 class="panel-title">我想把它做成一片柔和、梦一点、但仍然真实可触的线上角落</h2>
+          <h2 class="panel-title">让“关于”不再只是一个人的独白</h2>
           <p class="panel-text">
-            所以这里的 About 不只写“我是谁”，也会认真展示每一位已经注册的成员。
-            你们不是冷冰冰的数字，而是这片站点气氛的一部分。有人只是刚来，有人已经成为同行伙伴，
-            这些头像放在一起，会比单纯的统计数字更有温度。
+            这里会认真展示每一位已经注册的成员。头像、名字和一点点介绍放在一起，
+            让这个小站从个人记录，慢慢变成一片有人停留的共同角落。
           </p>
           <div class="tech-tags">
             <span v-for="tech in techs" :key="tech" class="tech-tag">{{ tech }}</span>
@@ -258,7 +259,7 @@ function normalizeGithubLink(link?: string) {
 
 function memberIdentityLabel(member: SiteMember) {
   if (owner.value?.id === member.id) {
-    return '站点主理人';
+    return '主理人';
   }
   if (member.trustLevel === 1) {
     return '同频伙伴';
@@ -372,12 +373,35 @@ onMounted(() => {
   padding: 30px;
 }
 
-.community-head {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 20px;
-  margin-bottom: 26px;
+.community-layout {
+  display: grid;
+  grid-template-columns: minmax(320px, 0.86fr) minmax(0, 1.14fr);
+  gap: 26px;
+  align-items: stretch;
+}
+
+.community-main,
+.community-side {
+  display: grid;
+  align-content: start;
+  gap: 22px;
+  min-width: 0;
+}
+
+.community-copy {
+  max-width: 560px;
+}
+
+.community-copy .panel-title {
+  max-width: 460px;
+  font-size: clamp(30px, 3.2vw, 42px);
+  line-height: 1.22;
+  letter-spacing: -0.03em;
+  color: #5f3a4d;
+  background: linear-gradient(135deg, #5f3a4d 0%, #9d6680 54%, #d99ab2 100%);
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
 }
 
 .community-hint {
@@ -389,15 +413,15 @@ onMounted(() => {
 
 .community-aside {
   display: grid;
-  justify-items: end;
+  justify-items: start;
   gap: 12px;
-  max-width: 360px;
+  max-width: 520px;
 }
 
 .community-stats {
   display: flex;
   flex-wrap: wrap;
-  justify-content: flex-end;
+  justify-content: flex-start;
   gap: 10px;
 }
 
@@ -410,13 +434,6 @@ onMounted(() => {
   color: #9a6079;
   font-size: 13px;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.82);
-}
-
-.community-stage {
-  display: grid;
-  grid-template-columns: minmax(320px, 0.9fr) minmax(0, 1.1fr);
-  gap: 24px;
-  align-items: stretch;
 }
 
 .member-preview {
@@ -485,17 +502,22 @@ onMounted(() => {
 .member-preview__badges {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: 8px;
 }
 
 .member-chip {
   display: inline-flex;
   align-items: center;
-  padding: 8px 14px;
+  flex: 0 0 auto;
+  min-width: 72px;
+  justify-content: center;
+  padding: 8px 12px;
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.72);
   color: #9d6580;
   font-size: 12px;
+  line-height: 1;
+  white-space: nowrap;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.84);
 }
 
@@ -508,6 +530,10 @@ onMounted(() => {
   position: relative;
   z-index: 1;
   margin: 20px 0 0;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
   font-size: 15px;
   line-height: 1.9;
   color: rgba(89, 59, 72, 0.84);
@@ -754,14 +780,9 @@ onMounted(() => {
 }
 
 @media (max-width: 1024px) {
-  .community-stage,
+  .community-layout,
   .about-grid {
     grid-template-columns: 1fr;
-  }
-
-  .community-head {
-    align-items: flex-start;
-    flex-direction: column;
   }
 
   .community-aside,
@@ -791,6 +812,10 @@ onMounted(() => {
 
   .panel-title {
     font-size: 26px;
+  }
+
+  .community-copy .panel-title {
+    font-size: clamp(30px, 9vw, 38px);
   }
 
   .member-preview__header {

@@ -4,7 +4,7 @@
       <div class="footer-shell">
         <div class="footer-main">
           <div class="footer-brand" aria-label="站点信息">
-            <img src="/Chen404logo.svg" alt="Chen404" class="footer-logo" />
+            <img src="/logo.png" alt="Chen404" class="footer-logo" />
             <div>
               <p class="footer-title">{{ siteName }}</p>
               <p class="footer-subtitle">Chen404.cn</p>
@@ -22,7 +22,6 @@
           <a class="footer-chip" href="https://beian.miit.gov.cn/" target="_blank" rel="noreferrer">
             {{ icpNumber }}
           </a>
-          <span class="footer-chip">{{ publicSecurityPrimary }}</span>
           <span class="footer-chip">{{ siteDomain }} · {{ domainExpiresAt }}</span>
           <span class="footer-copyright">© {{ currentYear }} {{ siteName }}</span>
         </div>
@@ -40,8 +39,6 @@ const DEFAULT_GITHUB_LINK = 'https://github.com/lightreet';
 const DEFAULT_ICP_NUMBER = '湘ICP备2026010852号-1';
 const SITE_DOMAIN = 'chen404.cn';
 const DOMAIN_EXPIRES_AT = '2027.03.28';
-const PUBLIC_SECURITY_NUMBER = '';
-const PUBLIC_SECURITY_STATUS = '公安备案已完成';
 
 const currentYear = new Date().getFullYear();
 const { siteConfig, loadSiteConfig } = useSiteConfig();
@@ -49,7 +46,6 @@ const { siteConfig, loadSiteConfig } = useSiteConfig();
 const siteName = computed(() => siteConfig.value?.siteName?.trim() || DEFAULT_SITE_NAME);
 const githubLink = computed(() => siteConfig.value?.github?.trim() || DEFAULT_GITHUB_LINK);
 const icpNumber = computed(() => siteConfig.value?.icp?.trim() || DEFAULT_ICP_NUMBER);
-const publicSecurityPrimary = computed(() => PUBLIC_SECURITY_NUMBER || PUBLIC_SECURITY_STATUS);
 const siteDomain = SITE_DOMAIN;
 const domainExpiresAt = DOMAIN_EXPIRES_AT;
 
@@ -115,16 +111,10 @@ onMounted(() => {
 }
 
 .footer-logo {
-  width: 42px;
-  height: 42px;
+  width: 74px;
+  height: 48px;
   flex-shrink: 0;
-  padding: 8px;
-  border-radius: 16px;
-  background:
-    linear-gradient(145deg, rgba(255, 245, 249, 0.92), rgba(255, 255, 255, 0.9));
-  border: 1px solid rgba(255, 255, 255, 0.88);
   object-fit: contain;
-  box-shadow: 0 10px 20px rgba(213, 175, 191, 0.1);
 }
 
 .footer-title {
@@ -237,6 +227,11 @@ onMounted(() => {
 
   .footer-title {
     font-size: 16px;
+  }
+
+  .footer-logo {
+    width: 66px;
+    height: 42px;
   }
 
   .footer-links {

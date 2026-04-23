@@ -3,7 +3,7 @@
     <div class="auth-container">
       <div class="auth-banner">
         <div class="banner-content">
-          <img src="/Chen404logo.svg" alt="Chen404" class="banner-logo" />
+          <img src="/logo.png" alt="Chen404" class="banner-logo" />
           <h2 class="banner-title">欢迎回来</h2>
           <p class="banner-desc">登录以继续探索精彩内容</p>
         </div>
@@ -186,8 +186,9 @@ const handleLogin = async () => {
 }
 
 .banner-logo {
-  width: 80px;
-  height: 80px;
+  width: 180px;
+  height: 120px;
+  object-fit: contain;
   margin-bottom: 24px;
   filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.2));
 }
@@ -348,8 +349,8 @@ const handleLogin = async () => {
   }
 
   .banner-logo {
-    width: 60px;
-    height: 60px;
+    width: 132px;
+    height: 88px;
     margin-bottom: 16px;
   }
 

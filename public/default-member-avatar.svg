@@ -1,72 +1,58 @@
-<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">Default member avatar</title>
+  <desc id="desc">A soft neutral member avatar with a subtle sakura accent.</desc>
   <defs>
-    <linearGradient id="bg" x1="96" y1="68" x2="420" y2="454" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#FFF7FB"/>
-      <stop offset="0.5" stop-color="#F8E7F1"/>
-      <stop offset="1" stop-color="#EAEFFF"/>
+    <linearGradient id="bg" x1="88" y1="64" x2="424" y2="456" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFFCFD"/>
+      <stop offset="0.56" stop-color="#F7EEF3"/>
+      <stop offset="1" stop-color="#F2F0F5"/>
     </linearGradient>
-    <radialGradient id="glowA" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(162 146) rotate(38.5) scale(170 142)">
-      <stop stop-color="#FFD9E8"/>
-      <stop offset="1" stop-color="#FFD9E8" stop-opacity="0"/>
+    <radialGradient id="mist" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(176 154) rotate(42) scale(178 142)">
+      <stop stop-color="#FFE7F0" stop-opacity="0.74"/>
+      <stop offset="1" stop-color="#FFE7F0" stop-opacity="0"/>
     </radialGradient>
-    <radialGradient id="glowB" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(368 384) rotate(-148) scale(182 156)">
-      <stop stop-color="#DDE8FF"/>
-      <stop offset="1" stop-color="#DDE8FF" stop-opacity="0"/>
-    </radialGradient>
-    <linearGradient id="petal" x1="196" y1="166" x2="333" y2="327" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#FFF7FB"/>
-      <stop offset="0.45" stop-color="#FFC8DE"/>
-      <stop offset="1" stop-color="#F09ABB"/>
+    <linearGradient id="figure" x1="172" y1="160" x2="344" y2="378" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#DAB8C9"/>
+      <stop offset="1" stop-color="#A98498"/>
     </linearGradient>
-    <linearGradient id="petalCore" x1="248" y1="219" x2="288" y2="294" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#FFE8F0"/>
-      <stop offset="1" stop-color="#FF9AB9"/>
+    <linearGradient id="petal" x1="248" y1="205" x2="291" y2="262" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFF6FA"/>
+      <stop offset="1" stop-color="#E8A7BF"/>
     </linearGradient>
-    <radialGradient id="center" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(256 256) rotate(90) scale(36)">
-      <stop stop-color="#FFF8E7"/>
-      <stop offset="1" stop-color="#F2A26B"/>
-    </radialGradient>
+    <filter id="shadow" x="96" y="120" width="320" height="304" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="14" stdDeviation="18" flood-color="#B890A2" flood-opacity="0.18"/>
+    </filter>
   </defs>
 
-  <rect width="512" height="512" rx="168" fill="url(#bg)"/>
-  <circle cx="140" cy="132" r="136" fill="url(#glowA)"/>
-  <circle cx="388" cy="392" r="146" fill="url(#glowB)"/>
+  <rect width="512" height="512" rx="156" fill="url(#bg)"/>
+  <rect x="14" y="14" width="484" height="484" rx="146" stroke="#FFFFFF" stroke-opacity="0.78" stroke-width="28"/>
+  <circle cx="176" cy="156" r="150" fill="url(#mist)"/>
 
-  <g opacity="0.85">
-    <circle cx="116" cy="118" r="7" fill="#FFFFFF"/>
-    <circle cx="410" cy="118" r="10" fill="#FFFFFF" fill-opacity="0.8"/>
-    <circle cx="396" cy="404" r="8" fill="#FFFFFF" fill-opacity="0.76"/>
-    <circle cx="96" cy="392" r="5" fill="#FFFFFF" fill-opacity="0.68"/>
+  <g opacity="0.5">
+    <circle cx="118" cy="136" r="6" fill="#FFFFFF"/>
+    <circle cx="392" cy="132" r="8" fill="#FFFFFF"/>
+    <circle cx="112" cy="376" r="5" fill="#D8C2CE"/>
+    <circle cx="402" cy="388" r="5" fill="#D8C2CE"/>
   </g>
 
-  <g transform="translate(256 256)">
-    <g opacity="0.98">
-      <path d="M0 -116C32 -112 62 -85 65 -48C68 -11 41 15 0 20C-41 15 -68 -11 -65 -48C-62 -85 -32 -112 0 -116Z" fill="url(#petal)"/>
-      <path d="M0 116C-32 112 -62 85 -65 48C-68 11 -41 -15 0 -20C41 -15 68 11 65 48C62 85 32 112 0 116Z" fill="url(#petal)"/>
-      <path d="M116 0C112 32 85 62 48 65C11 68 -15 41 -20 0C-15 -41 11 -68 48 -65C85 -62 112 -32 116 0Z" fill="url(#petal)"/>
-      <path d="M-116 0C-112 -32 -85 -62 -48 -65C-11 -68 15 -41 20 0C15 41 -11 68 -48 65C-85 62 -112 32 -116 0Z" fill="url(#petal)"/>
-      <path d="M82 -82C108 -63 123 -31 113 2C103 35 70 53 34 41C8 15 0 -16 11 -44C22 -72 49 -89 82 -82Z" fill="url(#petal)"/>
-      <path d="M-82 82C-108 63 -123 31 -113 -2C-103 -35 -70 -53 -34 -41C-8 -15 0 16 -11 44C-22 72 -49 89 -82 82Z" fill="url(#petal)"/>
-      <path d="M82 82C63 108 31 123 -2 113C-35 103 -53 70 -41 34C-15 8 16 0 44 11C72 22 89 49 82 82Z" fill="url(#petal)"/>
-      <path d="M-82 -82C-63 -108 -31 -123 2 -113C35 -103 53 -70 41 -34C15 -8 -16 0 -44 -11C-72 -22 -89 -49 -82 -82Z" fill="url(#petal)"/>
-    </g>
-
-    <g opacity="0.6">
-      <circle cx="0" cy="-57" r="18" fill="url(#petalCore)"/>
-      <circle cx="57" cy="0" r="18" fill="url(#petalCore)"/>
-      <circle cx="0" cy="57" r="18" fill="url(#petalCore)"/>
-      <circle cx="-57" cy="0" r="18" fill="url(#petalCore)"/>
-    </g>
-
-    <circle r="26" fill="url(#center)"/>
-    <g fill="#F4A56C">
-      <circle cx="-18" cy="-6" r="3"/>
-      <circle cx="-6" cy="-14" r="3"/>
-      <circle cx="8" cy="-12" r="3"/>
-      <circle cx="17" cy="-1" r="3"/>
-      <circle cx="13" cy="12" r="3"/>
-      <circle cx="-2" cy="17" r="3"/>
-      <circle cx="-15" cy="10" r="3"/>
-    </g>
+  <g filter="url(#shadow)">
+    <circle cx="256" cy="196" r="58" fill="url(#figure)" opacity="0.82"/>
+    <path
+      d="M146 370C158 304 200 270 256 270C312 270 354 304 366 370C369 387 356 402 339 402H173C156 402 143 387 146 370Z"
+      fill="url(#figure)"
+      opacity="0.78"
+    />
   </g>
+
+  <g transform="translate(256 260)" opacity="0.92">
+    <path d="M0 -42C13 -40 25 -30 26 -16C28 -1 16 10 0 12C-16 10 -28 -1 -26 -16C-25 -30 -13 -40 0 -42Z" fill="url(#petal)"/>
+    <path d="M38 -12C34 1 22 10 8 7C-7 4 -14 -10 -8 -24C5 -31 20 -29 30 -21C34 -18 36 -15 38 -12Z" fill="url(#petal)"/>
+    <path d="M24 34C11 37 -3 31 -8 17C-13 4 -4 -9 12 -12C26 -5 35 8 33 21C32 27 29 31 24 34Z" fill="url(#petal)"/>
+    <path d="M-24 34C-34 25 -36 10 -26 -2C-17 -14 -2 -14 10 -3C10 13 1 27 -12 33C-16 35 -20 35 -24 34Z" fill="url(#petal)"/>
+    <path d="M-38 -12C-29 -22 -14 -26 -2 -18C10 -10 10 6 -2 16C-18 16 -31 8 -37 -4C-39 -7 -39 -10 -38 -12Z" fill="url(#petal)"/>
+    <circle cx="0" cy="0" r="8" fill="#C88BA5"/>
+    <circle cx="0" cy="0" r="3" fill="#FFF8FB"/>
+  </g>
+
+  <path d="M168 416C218 438 296 438 344 416" stroke="#FFFFFF" stroke-opacity="0.58" stroke-width="10" stroke-linecap="round"/>
 </svg>
