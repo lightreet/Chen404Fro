@@ -276,25 +276,45 @@ function normalizeMinHeight(value: string) {
 
 @media (max-width: 768px) {
   .page-hero {
-    min-height: min(52vh, var(--page-hero-min-height));
-    padding: calc(64px + 1rem) 1rem 3rem;
+    min-height: min(44vh, var(--page-hero-min-height));
+    padding: calc(64px + 0.75rem) 1rem 2rem;
   }
 
   .page-hero--compact {
-    min-height: min(48vh, var(--page-hero-min-height));
-    padding-bottom: 2.5rem;
+    min-height: min(40vh, var(--page-hero-min-height));
+    padding-bottom: 1.8rem;
   }
 
   .page-hero--left .page-hero__content {
     padding-inline: 0;
   }
 
+  .page-hero__eyebrow {
+    margin-bottom: 0.6rem;
+    font-size: 0.72rem;
+    letter-spacing: 0.18em;
+  }
+
+  .page-hero__title {
+    font-size: clamp(1.9rem, 8vw, 2.6rem);
+    margin-bottom: 0.5rem;
+  }
+
+  .page-hero__subtitle {
+    font-size: 0.92rem;
+    line-height: 1.55;
+  }
+
+  .page-hero__meta {
+    margin-top: 0.9rem;
+  }
+
   .page-hero__fade {
-    height: 152px;
+    height: 116px;
   }
 
   .page-hero__scroll-hint {
-    bottom: 0.85rem;
+    bottom: 0.45rem;
   }
 }
 </style>
