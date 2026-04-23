@@ -34,6 +34,26 @@ interface SakuraPetal {
   colorEnd: string;
 }
 
+interface AtmosphereMote {
+  depth: SakuraDepth;
+  x: number;
+  y: number;
+  radius: number;
+  blur: number;
+  speedY: number;
+  speedX: number;
+  sway: number;
+  swaySpeed: number;
+  swayOffset: number;
+  pulseOffset: number;
+  opacity: number;
+  stretchX: number;
+  stretchY: number;
+  tintInner: string;
+  tintMid: string;
+  tintOuter: string;
+}
+
 /** Draw order: back → front */
 const DEPTH_DRAW_ORDER: readonly SakuraDepth[] = ['background', 'midground', 'foreground'];
 
@@ -57,6 +77,18 @@ type DepthRanges = {
   flipSpeed: readonly [number, number];
   flipTilt: readonly [number, number];
   opacity: readonly [number, number];
+};
+
+type AtmosphereRanges = {
+  radius: readonly [number, number];
+  blur: readonly [number, number];
+  speedY: readonly [number, number];
+  speedX: readonly [number, number];
+  sway: readonly [number, number];
+  swaySpeed: readonly [number, number];
+  opacity: readonly [number, number];
+  stretchX: readonly [number, number];
+  stretchY: readonly [number, number];
 };
 
 const DEPTH_RANGES: Record<SakuraDepth, DepthRanges> = {
@@ -101,6 +133,42 @@ const DEPTH_RANGES: Record<SakuraDepth, DepthRanges> = {
     flipSpeed: [1.9, 3.15],
     flipTilt: [0.08, 0.2],
     opacity: [0.52, 0.86],
+  },
+};
+
+const ATMOSPHERE_RANGES: Record<SakuraDepth, AtmosphereRanges> = {
+  background: {
+    radius: [18, 42],
+    blur: [18, 34],
+    speedY: [7, 13],
+    speedX: [-8, -2],
+    sway: [2, 7],
+    swaySpeed: [0.35, 0.85],
+    opacity: [0.06, 0.16],
+    stretchX: [1.05, 1.42],
+    stretchY: [0.82, 1.12],
+  },
+  midground: {
+    radius: [11, 26],
+    blur: [10, 22],
+    speedY: [11, 20],
+    speedX: [-10, -3],
+    sway: [3, 8],
+    swaySpeed: [0.48, 1.08],
+    opacity: [0.08, 0.2],
+    stretchX: [0.96, 1.32],
+    stretchY: [0.84, 1.1],
+  },
+  foreground: {
+    radius: [6, 16],
+    blur: [4, 10],
+    speedY: [16, 28],
+    speedX: [-14, -4],
+    sway: [3, 9],
+    swaySpeed: [0.6, 1.25],
+    opacity: [0.1, 0.24],
+    stretchX: [0.92, 1.22],
+    stretchY: [0.82, 1.08],
   },
 };
 
@@ -224,6 +292,7 @@ const PETAL_COLORS = [
 
 let ctx: CanvasRenderingContext2D | null = null;
 let petals: SakuraPetal[] = [];
+let atmosphereMotes: AtmosphereMote[] = [];
 let animationFrameId = 0;
 let resizeTimer = 0;
 let lastFrameTime = 0;
@@ -266,6 +335,11 @@ const getPetalCount = () => {
   return Math.max(24, Math.min(56, Math.round(area / 28500)));
 };
 
+const getAtmosphereMoteCount = () => {
+  const area = viewportWidth * viewportHeight;
+  return Math.max(18, Math.min(34, Math.round(area / 64000)));
+};
+
 const createPetal = (startInViewport = false): SakuraPetal => {
   const depth = pickDepth();
   const r = DEPTH_RANGES[depth];
@@ -298,6 +372,51 @@ const createPetal = (startInViewport = false): SakuraPetal => {
   };
 };
 
+const createAtmosphereMote = (startInViewport = false): AtmosphereMote => {
+  const depth = pickDepth();
+  const r = ATMOSPHERE_RANGES[depth];
+  const palette =
+    depth === 'background'
+      ? [
+          'rgba(255, 244, 250, 0.94)',
+          'rgba(244, 228, 248, 0.5)',
+          'rgba(236, 220, 246, 0)',
+        ]
+      : depth === 'midground'
+        ? [
+            'rgba(255, 240, 248, 0.98)',
+            'rgba(255, 222, 238, 0.56)',
+            'rgba(240, 220, 246, 0)',
+          ]
+        : [
+            'rgba(255, 246, 251, 1)',
+            'rgba(255, 226, 239, 0.62)',
+            'rgba(247, 223, 240, 0)',
+          ];
+
+  const radius = random(r.radius[0], r.radius[1]);
+
+  return {
+    depth,
+    x: spawnX(),
+    y: startInViewport ? random(-viewportHeight * 0.08, viewportHeight * 1.06) : spawnYAboveViewport(radius),
+    radius,
+    blur: random(r.blur[0], r.blur[1]),
+    speedY: random(r.speedY[0], r.speedY[1]),
+    speedX: random(r.speedX[0], r.speedX[1]),
+    sway: random(r.sway[0], r.sway[1]),
+    swaySpeed: random(r.swaySpeed[0], r.swaySpeed[1]),
+    swayOffset: random(0, Math.PI * 2),
+    pulseOffset: random(0, Math.PI * 2),
+    opacity: random(r.opacity[0], r.opacity[1]),
+    stretchX: random(r.stretchX[0], r.stretchX[1]),
+    stretchY: random(r.stretchY[0], r.stretchY[1]),
+    tintInner: palette[0],
+    tintMid: palette[1],
+    tintOuter: palette[2],
+  };
+};
+
 const resetPetal = (petal: SakuraPetal) => {
   const nextPetal = createPetal(false);
   Object.assign(petal, nextPetal);
@@ -312,6 +431,13 @@ const resetPetal = (petal: SakuraPetal) => {
   const r = DEPTH_RANGES[petal.depth];
   petal.speedY = clamp(petal.speedY + random(-10, 10), r.speedY[0], r.speedY[1]);
   petal.speedX = clamp(petal.speedX + random(-10, 10), r.speedX[0], r.speedX[1]);
+};
+
+const resetAtmosphereMote = (mote: AtmosphereMote) => {
+  const nextMote = createAtmosphereMote(false);
+  Object.assign(mote, nextMote);
+  mote.x = spawnX();
+  mote.y = spawnYAboveViewport(mote.radius);
 };
 
 const syncCanvasSize = () => {
@@ -332,11 +458,16 @@ const syncCanvasSize = () => {
     stopAnimation();
     lastFrameTime = 0;
     petals = [];
+    atmosphereMotes = [];
     return;
   }
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
   petals = Array.from({ length: getPetalCount() }, () => createPetal(true));
+  atmosphereMotes = Array.from(
+    { length: getAtmosphereMoteCount() },
+    () => createAtmosphereMote(true)
+  );
 };
 
 const drawPetal = (petal: SakuraPetal) => {
@@ -514,6 +645,87 @@ const drawPetal = (petal: SakuraPetal) => {
   c.restore();
 };
 
+const drawAtmosphereVeil = (timestamp: number) => {
+  const c = ctx;
+  if (!c) return;
+
+  const driftA = Math.sin(timestamp / 6200) * viewportWidth * 0.025;
+  const driftB = Math.cos(timestamp / 7100) * viewportWidth * 0.03;
+
+  c.save();
+
+  const veilA = c.createRadialGradient(
+    viewportWidth * 0.24 + driftA,
+    viewportHeight * 0.22,
+    viewportWidth * 0.06,
+    viewportWidth * 0.24 + driftA,
+    viewportHeight * 0.22,
+    viewportWidth * 0.62
+  );
+  veilA.addColorStop(0, 'rgba(255, 224, 240, 0.1)');
+  veilA.addColorStop(0.44, 'rgba(246, 226, 248, 0.055)');
+  veilA.addColorStop(1, 'rgba(246, 226, 248, 0)');
+  c.fillStyle = veilA;
+  c.fillRect(0, 0, viewportWidth, viewportHeight);
+
+  const veilB = c.createRadialGradient(
+    viewportWidth * 0.72 + driftB,
+    viewportHeight * 0.58,
+    viewportWidth * 0.05,
+    viewportWidth * 0.72 + driftB,
+    viewportHeight * 0.58,
+    viewportWidth * 0.54
+  );
+  veilB.addColorStop(0, 'rgba(222, 232, 255, 0.095)');
+  veilB.addColorStop(0.48, 'rgba(236, 229, 255, 0.05)');
+  veilB.addColorStop(1, 'rgba(236, 229, 255, 0)');
+  c.fillStyle = veilB;
+  c.fillRect(0, 0, viewportWidth, viewportHeight);
+
+  const veilC = c.createLinearGradient(0, 0, viewportWidth, viewportHeight);
+  veilC.addColorStop(0, 'rgba(255, 232, 244, 0.022)');
+  veilC.addColorStop(0.5, 'rgba(244, 234, 255, 0.035)');
+  veilC.addColorStop(1, 'rgba(234, 238, 255, 0.025)');
+  c.fillStyle = veilC;
+  c.fillRect(0, 0, viewportWidth, viewportHeight);
+
+  c.restore();
+};
+
+const drawAtmosphereMote = (mote: AtmosphereMote, timestamp: number) => {
+  const c = ctx;
+  if (!c) return;
+
+  const pulse = 0.76 + (Math.sin(timestamp / 880 + mote.pulseOffset) + 1) * 0.12;
+
+  c.save();
+  c.translate(mote.x, mote.y);
+  c.scale(mote.stretchX, mote.stretchY);
+  c.globalAlpha = mote.opacity * pulse;
+  c.shadowBlur = mote.blur;
+  c.shadowColor = 'rgba(255, 232, 244, 0.2)';
+
+  const halo = c.createRadialGradient(0, 0, mote.radius * 0.08, 0, 0, mote.radius);
+  halo.addColorStop(0, mote.tintInner);
+  halo.addColorStop(0.46, mote.tintMid);
+  halo.addColorStop(1, mote.tintOuter);
+  c.fillStyle = halo;
+  c.beginPath();
+  c.arc(0, 0, mote.radius, 0, Math.PI * 2);
+  c.fill();
+
+  c.shadowBlur = 0;
+  c.shadowColor = 'transparent';
+  const core = c.createRadialGradient(-mote.radius * 0.18, -mote.radius * 0.18, 0, 0, 0, mote.radius * 0.56);
+  core.addColorStop(0, 'rgba(255, 252, 255, 0.34)');
+  core.addColorStop(1, 'rgba(255, 244, 250, 0)');
+  c.fillStyle = core;
+  c.beginPath();
+  c.arc(0, 0, mote.radius * 0.52, 0, Math.PI * 2);
+  c.fill();
+  c.restore();
+};
+
 const animate = (timestamp: number) => {
   if (!ctx) {
     stopAnimation();
@@ -532,6 +744,23 @@ const animate = (timestamp: number) => {
   const windRipple = Math.sin(timestamp / 880) * 1.4;
 
   ctx.clearRect(0, 0, viewportWidth, viewportHeight);
+  drawAtmosphereVeil(timestamp);
+
+  atmosphereMotes.forEach((mote) => {
+    mote.y += mote.speedY * delta;
+    mote.x += (
+      mote.speedX
+      + Math.sin(timestamp / 1000 * mote.swaySpeed + mote.swayOffset) * mote.sway
+    ) * delta;
+
+    if (
+      mote.y - mote.radius > viewportHeight + 36
+      || mote.x < -viewportWidth * 0.2
+      || mote.x > viewportWidth * 1.2
+    ) {
+      resetAtmosphereMote(mote);
+    }
+  });
 
   petals.forEach((petal) => {
     petal.y += petal.speedY * delta;
@@ -554,6 +783,11 @@ const animate = (timestamp: number) => {
   });
 
   for (const depth of DEPTH_DRAW_ORDER) {
+    for (const mote of atmosphereMotes) {
+      if (mote.depth === depth) {
+        drawAtmosphereMote(mote, timestamp);
+      }
+    }
     for (const petal of petals) {
       if (petal.depth === depth) {
         drawPetal(petal);

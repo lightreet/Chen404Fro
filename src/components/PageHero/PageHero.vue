@@ -77,6 +77,7 @@ const props = withDefaults(defineProps<Props>(), {
 
 const fallbackBg =
   'linear-gradient(135deg, #0f172a 0%, #1d3557 52%, #3a506b 100%)';
+const HERO_HEIGHT_SCALE = 0.8;
 
 const normalizedBgImage = computed(() => {
   const value = props.bgImage?.trim() ?? '';
@@ -91,7 +92,7 @@ const normalizedBgImage = computed(() => {
 const heroVars = computed(() => ({
   '--page-hero-bg-image': normalizedBgImage.value ? `url("${normalizedBgImage.value}")` : fallbackBg,
   '--page-hero-bg-position': props.bgPosition,
-  '--page-hero-min-height': props.minHeight,
+  '--page-hero-min-height': normalizeMinHeight(props.minHeight),
   '--page-hero-overlay-opacity': String(props.overlayOpacity),
 }));
 
@@ -104,6 +105,17 @@ const highlightParts = computed(() => {
     after: props.title.slice(index + props.highlightText.length),
   };
 });
+
+function normalizeMinHeight(value: string) {
+  const normalized = value.trim();
+  const vhMatch = normalized.match(/^(\d+(?:\.\d+)?)vh$/i);
+  if (!vhMatch) {
+    return normalized;
+  }
+
+  const scaled = Number(vhMatch[1]) * HERO_HEIGHT_SCALE;
+  return `${Math.round(scaled * 10) / 10}vh`;
+}
 </script>
 
 <style scoped lang="scss">
@@ -264,12 +276,25 @@ const highlightParts = computed(() => {
 
 @media (max-width: 768px) {
   .page-hero {
-    min-height: min(62vh, var(--page-hero-min-height));
-    padding: calc(64px + 1.5rem) 1rem 4rem;
+    min-height: min(52vh, var(--page-hero-min-height));
+    padding: calc(64px + 1rem) 1rem 3rem;
+  }
+
+  .page-hero--compact {
+    min-height: min(48vh, var(--page-hero-min-height));
+    padding-bottom: 2.5rem;
   }
 
   .page-hero--left .page-hero__content {
     padding-inline: 0;
+  }
+
+  .page-hero__fade {
+    height: 152px;
+  }
+
+  .page-hero__scroll-hint {
+    bottom: 0.85rem;
   }
 }
 </style>

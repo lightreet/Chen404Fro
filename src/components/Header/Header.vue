@@ -112,12 +112,34 @@
 
         <!-- 已登录显示用户菜单 -->
         <template v-if="isLoggedIn">
-          <div class="mobile-user-info">
+          <router-link
+            to="/profile"
+            class="mobile-user-info"
+            @click="closeMobileMenu"
+          >
             <el-avatar :src="user?.avatar" :size="48">
               {{ user?.nickname?.charAt(0) || user?.username?.charAt(0) || 'U' }}
             </el-avatar>
             <span class="mobile-nickname">{{ user?.nickname || user?.username }}</span>
-          </div>
+            <span class="mobile-user-role">{{ roleText }}</span>
+          </router-link>
+          <router-link
+            to="/profile"
+            class="mobile-nav-item"
+            @click="closeMobileMenu"
+          >
+            <el-icon><User /></el-icon>
+            <span>个人中心</span>
+          </router-link>
+          <router-link
+            v-if="isAdmin"
+            to="/admin?tab=categories"
+            class="mobile-nav-item"
+            @click="closeMobileMenu"
+          >
+            <el-icon><Setting /></el-icon>
+            <span>后台管理</span>
+          </router-link>
           <router-link
             v-if="canCreateArticle"
             to="/article/edit"
@@ -575,10 +597,27 @@ const handleLogout = async () => {
   align-items: center;
   gap: 8px;
   padding: 16px;
+  border-radius: 14px;
+  color: var(--text-primary);
+  text-decoration: none;
+  transition: all 0.3s;
+
+  &:hover {
+    background: var(--bg-hover);
+    color: var(--primary);
+  }
 
   .mobile-nickname {
     font-weight: 500;
-    color: var(--text-primary);
+  }
+
+  .mobile-user-role {
+    font-size: 12px;
+    color: var(--primary);
+    background: rgba(251, 114, 153, 0.12);
+    border: 1px solid rgba(251, 114, 153, 0.18);
+    padding: 2px 10px;
+    border-radius: 999px;
   }
 }
 

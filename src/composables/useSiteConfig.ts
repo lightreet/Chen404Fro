@@ -7,7 +7,8 @@ const DEFAULT_SITE_CONFIG: SiteConfig = {
   siteDescription: '一个热爱技术分享的博客',
   siteLogo: '/logo.svg',
   siteFavicon: '/favicon.ico',
-  icp: '',
+  icp: '湘ICP备2026010852号-1',
+  github: 'https://github.com/lightreet',
   heroImages: {},
 };
 const CACHE_TTL_MS = 30 * 1000;

@@ -14,6 +14,16 @@ import type {
   RecentComment,
 } from '@/types';
 
+export interface SiteMember {
+  id: number;
+  username: string;
+  nickname: string;
+  avatar: string;
+  bio?: string;
+  trustLevel?: number;
+  createTime?: string;
+}
+
 /**
  * 获取首页聚合数据
  * 包含：Banner、站点统计、热门文章、最新评论
@@ -32,6 +42,10 @@ export function getSiteConfig(): Promise<SiteConfig> {
 
 export function getSiteOwner(): Promise<SiteOwner | null> {
   return get('/site/owner');
+}
+
+export function getSiteMembers(): Promise<SiteMember[]> {
+  return get('/site/members');
 }
 
 export function updateSiteConfig(data: Partial<SiteConfig>): Promise<SiteConfig> {
