@@ -32,7 +32,11 @@ export interface User {
   bio?: string;
   role: UserRole;
   roleCode?: UserRoleCode;
+  roleName?: string;
   trustLevel?: UserTrustLevel;
+  trustLevelName?: string;
+  memberLabel?: string;
+  memberSecondaryLabel?: string;
   status: UserStatus;
   createTime: string;
   lastLoginTime?: string;
@@ -142,6 +146,8 @@ export interface SiteOwner {
   nickname: string;
   avatar: string;
   bio?: string;
+  memberLabel?: string;
+  memberSecondaryLabel?: string;
 }
 
 // 轮播图 Banner
@@ -346,7 +352,40 @@ export interface CreateCommentParams {
   authorWebsite?: string;
 }
 
+// ==================== 受信申请相关类型 ====================
 
+export enum TrustRequestStatus {
+  PENDING = 0,
+  APPROVED = 1,
+  REJECTED = 2,
+}
 
+export interface TrustRequestAttachment {
+  id: number;
+  fileName: string;
+  fileUrl: string;
+  fileSize?: number;
+  contentType?: string;
+  createTime?: string;
+}
+
+export interface TrustRequest {
+  id: number;
+  userId: number;
+  username?: string;
+  nickname?: string;
+  userEmail?: string;
+  userTrustLevel?: UserTrustLevel;
+  status: TrustRequestStatus;
+  reason: string;
+  attachments: TrustRequestAttachment[];
+  contactEmail?: string;
+  reviewNote?: string;
+  reviewedBy?: number;
+  reviewerName?: string;
+  reviewedAt?: string;
+  createTime: string;
+  updateTime: string;
+}
 
 

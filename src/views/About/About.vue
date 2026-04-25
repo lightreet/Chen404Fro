@@ -46,7 +46,7 @@
                 </span>
                 <span v-if="activeMember.trustLevel === 1 && owner?.id !== activeMember.id" class="member-preview__meta-item">
                   <el-icon><StarFilled /></el-icon>
-                  <span>受信伙伴</span>
+                  <span>{{ activeMember.memberLabel || '知友' }}</span>
                 </span>
               </div>
             </article>
@@ -57,7 +57,7 @@
               <p class="community-hint">鼠标悬浮头像即可切换预览，移动端也可以直接点击头像查看。</p>
               <div class="community-stats">
                 <span class="community-stat">已注册 {{ memberCount }} 位成员</span>
-                <span class="community-stat">受信伙伴 {{ trustedCount }} 位</span>
+                <span class="community-stat">知友 {{ trustedCount }} 位</span>
                 <span class="community-stat">悬浮头像可预览成员卡片</span>
               </div>
             </div>
@@ -115,7 +115,7 @@
               <strong>{{ memberCount }}</strong>
             </div>
             <div class="contact-item contact-item--muted">
-              <span class="contact-item__label">同频伙伴</span>
+              <span class="contact-item__label">知友</span>
               <strong>{{ trustedCount }}</strong>
             </div>
             <div v-if="!siteEmail && !githubLink" class="contact-empty">
@@ -261,10 +261,10 @@ function memberIdentityLabel(member: SiteMember) {
   if (owner.value?.id === member.id) {
     return '主理人';
   }
-  if (member.trustLevel === 1) {
-    return '同频伙伴';
+  if (member.memberLabel?.trim()) {
+    return member.memberLabel.trim();
   }
-  return '注册成员';
+  return member.trustLevel === 1 ? '知友' : '读者';
 }
 
 function memberIdentityClass(member: SiteMember) {

@@ -32,7 +32,8 @@ const routes: RouteRecordRaw[] = [
     component: () => import('@/views/Article/ArticleEdit.vue'),
     meta: {
       title: '编写文章',
-      requiresAuth: true, // 需要登录
+      requiresAuth: true,
+      requiresAdmin: true,
     },
   },
   {

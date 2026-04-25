@@ -18,3 +18,6 @@ export * from './comment';
 
 // 文件上传相关 API
 export * from './upload';
+
+// 受信申请相关 API
+export * from './trust-request';

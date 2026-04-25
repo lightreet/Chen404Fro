@@ -28,6 +28,10 @@
                 <el-icon><CollectionTag /></el-icon>
                 <span>表情包管理</span>
               </el-menu-item>
+              <el-menu-item index="trust-requests">
+                <el-icon><Postcard /></el-icon>
+                <span>受信申请</span>
+              </el-menu-item>
             </el-menu>
           </aside>
 
@@ -35,6 +39,7 @@
             <AdminCategories v-if="activeMenu === 'categories'" />
             <AdminSiteHeroSettings v-else-if="activeMenu === 'hero'" />
             <AdminEmojiManager v-else-if="activeMenu === 'emoji'" />
+            <AdminTrustRequests v-else-if="activeMenu === 'trust-requests'" />
           </section>
         </div>
       </div>
@@ -45,11 +50,12 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { CollectionTag, Picture } from '@element-plus/icons-vue'
+import { CollectionTag, Picture, Postcard } from '@element-plus/icons-vue'
 import DefaultLayout from '@/layouts/DefaultLayout.vue'
 import AdminCategories from './AdminCategories.vue'
 import AdminEmojiManager from './AdminEmojiManager.vue'
 import AdminSiteHeroSettings from './AdminSiteHeroSettings.vue'
+import AdminTrustRequests from './AdminTrustRequests.vue'
 
 const route = useRoute()
 const router = useRouter()

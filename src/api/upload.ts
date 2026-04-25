@@ -10,7 +10,7 @@ export interface UploadResult {
   size?: string;
 }
 
-type UploadEndpoint = 'image' | 'cover' | 'avatar';
+type UploadEndpoint = 'image' | 'cover' | 'avatar' | 'trust-attachment';
 
 /**
  * 统一上传：将文件以 multipart 形式 POST 到指定上传端点
@@ -39,6 +39,11 @@ export function uploadCover(file: File): Promise<UploadResult> {
 /** 上传头像 */
 export function uploadAvatar(file: File): Promise<UploadResult> {
   return uploadFile(file, 'avatar');
+}
+
+/** 上传受信申请附件 */
+export function uploadTrustAttachment(file: File): Promise<UploadResult> {
+  return uploadFile(file, 'trust-attachment');
 }
 
 /**

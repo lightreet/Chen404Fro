@@ -21,6 +21,7 @@ export interface SiteMember {
   avatar: string;
   bio?: string;
   trustLevel?: number;
+  memberLabel?: string;
   createTime?: string;
 }
 
