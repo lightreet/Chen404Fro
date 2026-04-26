@@ -11,8 +11,12 @@ const DEFAULT_SITE_CONFIG: SiteConfig = {
   siteLogo: '/logo.png',
   siteFavicon: '/favicon.png',
   icp: '湘ICP备2026010852号-1',
+  beian: '',
   github: 'https://github.com/lightreet',
   email: DEFAULT_SITE_EMAIL,
+  copyright: 'Copyright 2024 Chen404',
+  seoKeywords: '博客,技术,前端,后端,Java,Vue',
+  seoDescription: 'Chen404的个人技术博客，一个写下技术，也收藏温柔日常的小小角落',
   heroImages: {},
 };
 const CACHE_TTL_MS = 30 * 1000;

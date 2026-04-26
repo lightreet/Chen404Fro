@@ -20,9 +20,9 @@
                 <el-icon><CollectionTag /></el-icon>
                 <span>分类管理</span>
               </el-menu-item>
-              <el-menu-item index="hero">
-                <el-icon><Picture /></el-icon>
-                <span>页面封面</span>
+              <el-menu-item index="site-settings">
+                <el-icon><Setting /></el-icon>
+                <span>站点配置</span>
               </el-menu-item>
               <el-menu-item index="emoji">
                 <el-icon><CollectionTag /></el-icon>
@@ -37,7 +37,7 @@
 
           <section class="admin-content">
             <AdminCategories v-if="activeMenu === 'categories'" />
-            <AdminSiteHeroSettings v-else-if="activeMenu === 'hero'" />
+            <AdminSiteSettings v-else-if="activeMenu === 'site-settings'" />
             <AdminEmojiManager v-else-if="activeMenu === 'emoji'" />
             <AdminTrustRequests v-else-if="activeMenu === 'trust-requests'" />
           </section>
@@ -50,17 +50,18 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { CollectionTag, Picture, Postcard } from '@element-plus/icons-vue'
+import { CollectionTag, Postcard, Setting } from '@element-plus/icons-vue'
 import DefaultLayout from '@/layouts/DefaultLayout.vue'
 import AdminCategories from './AdminCategories.vue'
 import AdminEmojiManager from './AdminEmojiManager.vue'
-import AdminSiteHeroSettings from './AdminSiteHeroSettings.vue'
+import AdminSiteSettings from './AdminSiteSettings.vue'
 import AdminTrustRequests from './AdminTrustRequests.vue'
 
 const route = useRoute()
 const router = useRouter()
 
-const activeMenu = ref<string>((route.query.tab as string) || 'categories')
+const normalizeTab = (tab?: string) => (tab === 'hero' ? 'site-settings' : tab || 'categories')
+const activeMenu = ref<string>(normalizeTab(route.query.tab as string | undefined))
 
 const currentTabQuery = computed(() => ({ ...route.query, tab: activeMenu.value }))
 

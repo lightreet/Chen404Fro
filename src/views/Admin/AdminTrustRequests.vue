@@ -29,7 +29,13 @@
         <el-table-column label="申请人" min-width="180">
           <template #default="{ row }">
             <div class="user-cell">
-              <div class="user-name">{{ row.nickname || row.username || '--' }}</div>
+              <button
+                type="button"
+                class="user-name user-name--link"
+                @click="goToUserProfile(row)"
+              >
+                {{ row.nickname || row.username || '--' }}
+              </button>
               <div class="user-sub">{{ row.username || '--' }}</div>
             </div>
           </template>
@@ -85,7 +91,16 @@
         <div class="detail-grid">
           <div class="detail-item">
             <span class="detail-label">申请人</span>
-            <strong>{{ activeRequest.nickname || activeRequest.username || '--' }}</strong>
+            <div class="detail-user">
+              <strong>{{ activeRequest.nickname || activeRequest.username || '--' }}</strong>
+              <button
+                type="button"
+                class="detail-link-btn"
+                @click="goToUserProfile(activeRequest)"
+              >
+                查看主页
+              </button>
+            </div>
           </div>
           <div class="detail-item">
             <span class="detail-label">用户名</span>
@@ -159,10 +174,12 @@
 import { onMounted, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Postcard } from '@element-plus/icons-vue'
+import { useRouter } from 'vue-router'
 import { approveTrustRequest, getAdminTrustRequests, rejectTrustRequest } from '@/api/trust-request'
 import type { TrustRequest } from '@/types'
 import { TrustRequestStatus } from '@/types'
 
+const router = useRouter()
 const loading = ref(false)
 const reviewLoading = ref(false)
 const dialogVisible = ref(false)
@@ -217,6 +234,14 @@ const openDialog = (row: TrustRequest) => {
   activeRequest.value = { ...row }
   reviewNote.value = row.reviewNote || ''
   dialogVisible.value = true
+}
+
+const goToUserProfile = (row: TrustRequest) => {
+  if (!row.userId) {
+    ElMessage.warning('该申请缺少用户标识，暂时无法跳转主页')
+    return
+  }
+  router.push(`/user/${String(row.userId)}`)
 }
 
 const handleApprove = async () => {
@@ -303,6 +328,19 @@ onMounted(() => {
   color: var(--text-primary);
 }
 
+.user-name--link {
+  padding: 0;
+  border: none;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  transition: color 0.2s ease;
+
+  &:hover {
+    color: var(--primary);
+  }
+}
+
 .user-sub {
   color: var(--text-tertiary);
   font-size: 12px;
@@ -343,6 +381,31 @@ onMounted(() => {
   white-space: pre-wrap;
   line-height: 1.8;
   color: var(--text-primary);
+}
+
+.detail-user {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+
+  strong {
+    min-width: 0;
+  }
+}
+
+.detail-link-btn {
+  flex: 0 0 auto;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--primary);
+  font-size: 13px;
+  cursor: pointer;
+
+  &:hover {
+    text-decoration: underline;
+  }
 }
 
 .attachment-list {

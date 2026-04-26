@@ -134,8 +134,12 @@ export interface SiteConfig {
   siteLogo: string;
   siteFavicon: string;
   icp: string;
+  beian?: string;
   github?: string;
   email?: string;
+  copyright?: string;
+  seoKeywords?: string;
+  seoDescription?: string;
   heroImages?: Record<string, string>;
 }
 
@@ -370,8 +374,8 @@ export interface TrustRequestAttachment {
 }
 
 export interface TrustRequest {
-  id: number;
-  userId: number;
+  id: number | string;
+  userId: number | string;
   username?: string;
   nickname?: string;
   userEmail?: string;
@@ -381,7 +385,7 @@ export interface TrustRequest {
   attachments: TrustRequestAttachment[];
   contactEmail?: string;
   reviewNote?: string;
-  reviewedBy?: number;
+  reviewedBy?: number | string;
   reviewerName?: string;
   reviewedAt?: string;
   createTime: string;
