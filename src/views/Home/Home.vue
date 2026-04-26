@@ -2,8 +2,9 @@
   <DefaultLayout>
     <template #hero>
       <PageHero
-        title="Hi，Chen404 的小站"
+        title="Chen404"
         highlight-text="Chen404"
+        variant="sakura-diary"
         :subtitle="heroSubtitle"
         :bg-image="heroBgImage"
         min-height="80vh"

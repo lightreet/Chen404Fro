@@ -3,6 +3,7 @@
     class="page-hero"
     :class="[
       `page-hero--${align}`,
+      `page-hero--${variant}`,
       { 'page-hero--compact': compact, 'page-hero--with-wave': showWave },
     ]"
     :style="heroVars"
@@ -16,13 +17,26 @@
       <p v-if="eyebrow" class="page-hero__eyebrow">{{ eyebrow }}</p>
       <h1 class="page-hero__title">
         <template v-if="highlightParts">
-          {{ highlightParts.before }}<span class="page-hero__accent">{{ highlightText }}</span>{{ highlightParts.after }}
+          {{ highlightParts.before }}<span class="page-hero__accent">
+            <template v-if="variant === 'sakura-diary' && highlightText === 'Chen404'">
+              <span class="page-hero__accent-main">Chen</span><span class="page-hero__accent-tail">404</span>
+            </template>
+            <template v-else>
+              {{ highlightText }}
+            </template>
+          </span><span
+            v-if="variant === 'sakura-diary'"
+            class="page-hero__flower"
+            aria-hidden="true"
+          >❀</span>{{ highlightParts.after }}
         </template>
         <template v-else>
           {{ title }}
         </template>
       </h1>
-      <p v-if="subtitle" class="page-hero__subtitle">{{ subtitle }}</p>
+      <p v-if="subtitle" class="page-hero__subtitle">
+        <span class="page-hero__subtitle-text">{{ subtitle }}</span>
+      </p>
       <div v-if="$slots.meta" class="page-hero__meta">
         <slot name="meta" />
       </div>
@@ -41,6 +55,8 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import HeroWave from '@/components/HeroWave/HeroWave.vue';
+import '@fontsource/patrick-hand/400.css';
+import heroBrushUnderline from '@/assets/hero-brush-underline.svg';
 
 interface Props {
   title: string;
@@ -57,6 +73,7 @@ interface Props {
   waveHeight?: number;
   waveIntensity?: number;
   highlightText?: string;
+  variant?: 'default' | 'sakura-diary';
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -70,9 +87,10 @@ const props = withDefaults(defineProps<Props>(), {
   compact: false,
   showWave: true,
   scrollTarget: '',
-  waveHeight: 92,
+  waveHeight: 112,
   waveIntensity: 1.08,
   highlightText: '',
+  variant: 'default',
 });
 
 const fallbackBg =
@@ -91,9 +109,11 @@ const normalizedBgImage = computed(() => {
 
 const heroVars = computed(() => ({
   '--page-hero-bg-image': normalizedBgImage.value ? `url("${normalizedBgImage.value}")` : fallbackBg,
+  '--page-hero-brush-image': `url("${heroBrushUnderline}")`,
   '--page-hero-bg-position': props.bgPosition,
   '--page-hero-min-height': normalizeMinHeight(props.minHeight),
   '--page-hero-overlay-opacity': String(props.overlayOpacity),
+  '--page-hero-wave-height': `${props.waveHeight}px`,
 }));
 
 const highlightParts = computed(() => {
@@ -128,6 +148,26 @@ function normalizeMinHeight(value: string) {
   overflow: hidden;
   padding: calc(64px + 2rem) 1.5rem 5rem;
   color: #fff;
+}
+
+.page-hero--sakura-diary {
+  .page-hero__bg {
+    filter: saturate(0.82) brightness(1.08) blur(1.1px);
+    transform: scale(1.015);
+  }
+
+  .page-hero__overlay {
+    background: linear-gradient(
+      to bottom,
+      rgba(70, 58, 64, calc(var(--page-hero-overlay-opacity) * 0.06)) 0%,
+      rgba(70, 58, 64, calc(var(--page-hero-overlay-opacity) * 0.13)) 52%,
+      rgba(70, 58, 64, calc(var(--page-hero-overlay-opacity) * 0.2)) 100%
+    );
+  }
+
+  .page-hero__content {
+    max-width: 900px;
+  }
 }
 
 .page-hero--compact {
@@ -212,12 +252,14 @@ function normalizeMinHeight(value: string) {
 }
 
 .page-hero__title {
-  font-size: clamp(2rem, 5vw, 3.5rem);
-  line-height: 1.12;
-  font-weight: 700;
-  margin: 0 0 0.75rem;
-  letter-spacing: 0.02em;
-  text-shadow: 0 2px 20px rgba(0, 0, 0, 0.3);
+  font-size: clamp(2.2rem, 5.4vw, 4rem);
+  line-height: 1.08;
+  font-weight: 760;
+  margin: 0 0 1rem;
+  letter-spacing: 0.015em;
+  text-shadow:
+    0 14px 34px rgba(24, 14, 31, 0.3),
+    0 2px 10px rgba(0, 0, 0, 0.18);
 }
 
 .page-hero__accent {
@@ -226,9 +268,117 @@ function normalizeMinHeight(value: string) {
 
 .page-hero__subtitle {
   margin: 0;
-  font-size: clamp(0.95rem, 2.2vw, 1.12rem);
-  line-height: 1.7;
-  color: rgba(255, 255, 255, 0.92);
+  display: flex;
+  justify-content: center;
+}
+
+.page-hero__subtitle-text {
+  display: inline-block;
+  max-width: min(100%, 42rem);
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  backdrop-filter: none;
+  box-shadow: none;
+  font-family: inherit;
+  font-size: clamp(1rem, 2.15vw, 1.18rem);
+  line-height: 1.75;
+  letter-spacing: 0.07em;
+  color: rgba(255, 255, 255, 0.82);
+  text-shadow: 0 1px 12px rgba(32, 16, 28, 0.16);
+}
+
+.page-hero__flower {
+  display: none;
+}
+
+.page-hero--sakura-diary {
+  .page-hero__title {
+    font-size: clamp(2.9rem, 6.5vw, 5.15rem);
+    line-height: 1.02;
+    margin-bottom: 1.45rem;
+    letter-spacing: 0.01em;
+    font-weight: 400;
+    text-shadow:
+      0 12px 34px rgba(27, 35, 48, 0.28),
+      0 2px 10px rgba(27, 35, 48, 0.18);
+  }
+
+  .page-hero__accent {
+    position: relative;
+    display: inline-block;
+    padding-inline: 0.02em;
+    font-family:
+      'Patrick Hand',
+      'Segoe Print',
+      'Bradley Hand',
+      cursive;
+    font-size: 1em;
+    font-weight: 400;
+    font-style: normal;
+    letter-spacing: 0.02em;
+    color: #8f8792;
+    text-shadow:
+      0 1px 0 rgba(255, 255, 255, 0.26),
+      0 8px 24px rgba(91, 74, 92, 0.18),
+      0 2px 8px rgba(91, 74, 92, 0.12);
+    transform: rotate(-0.45deg);
+  }
+
+  .page-hero__accent::after {
+    content: none;
+  }
+
+  .page-hero__accent-main {
+    color: #8f8792;
+  }
+
+  .page-hero__accent-tail {
+    color: #f3bdd1;
+  }
+
+  .page-hero__flower {
+    display: inline-block;
+    margin-left: 0.16em;
+    font-size: 0.25em;
+    color: rgba(238, 164, 195, 0.82);
+    text-shadow:
+      0 0 10px rgba(238, 164, 195, 0.22),
+      0 3px 10px rgba(91, 74, 92, 0.14);
+    transform: translateY(-0.7em) rotate(6deg);
+  }
+
+  .page-hero__subtitle-text {
+    position: relative;
+    max-width: none;
+    padding: 0.12rem 0.35rem 0.16rem;
+    border: none;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    backdrop-filter: none;
+    font-family: inherit;
+    font-size: clamp(1.08rem, 2.02vw, 1.34rem);
+    line-height: 1.9;
+    letter-spacing: 0.11em;
+    color: rgba(109, 101, 112, 0.64);
+    text-shadow:
+      0 1px 0 rgba(255, 255, 255, 0.18),
+      0 8px 20px rgba(91, 74, 92, 0.08);
+  }
+
+  .page-hero__subtitle-text::before {
+    content: none;
+  }
+
+  .page-hero__subtitle-text::after {
+    content: none;
+  }
+
+  .page-hero__scroll-hint {
+    color: rgba(68, 48, 58, 0.72);
+  }
 }
 
 .page-hero__meta {
@@ -240,7 +390,7 @@ function normalizeMinHeight(value: string) {
   left: 0;
   right: 0;
   bottom: 0;
-  height: 92px;
+  height: var(--page-hero-wave-height);
   z-index: 1;
   line-height: 0;
 }
@@ -296,13 +446,17 @@ function normalizeMinHeight(value: string) {
   }
 
   .page-hero__title {
-    font-size: clamp(1.9rem, 8vw, 2.6rem);
-    margin-bottom: 0.5rem;
+    font-size: clamp(2rem, 8vw, 2.95rem);
+    margin-bottom: 0.72rem;
   }
 
-  .page-hero__subtitle {
-    font-size: 0.92rem;
-    line-height: 1.55;
+  .page-hero__subtitle-text {
+    max-width: min(100%, 27rem);
+    padding: 0;
+    border-radius: 0;
+    font-size: 0.96rem;
+    line-height: 1.65;
+    letter-spacing: 0.05em;
   }
 
   .page-hero__meta {
@@ -315,6 +469,35 @@ function normalizeMinHeight(value: string) {
 
   .page-hero__scroll-hint {
     bottom: 0.45rem;
+  }
+
+  .page-hero--sakura-diary {
+    .page-hero__title {
+      font-size: clamp(2.45rem, 12vw, 3.65rem);
+      margin-bottom: 1rem;
+    }
+
+    .page-hero__flower {
+      font-size: 0.22em;
+      margin-left: 0.12em;
+    }
+
+    .page-hero__subtitle-text {
+      max-width: min(100%, 24rem);
+      padding-inline: 0.2rem;
+      font-size: 0.95rem;
+      letter-spacing: 0.06em;
+      line-height: 1.72;
+      border-radius: 0;
+    }
+
+    .page-hero__subtitle-text::before {
+      inset-inline: -0.8rem;
+    }
+
+    .page-hero__subtitle-text::after {
+      inset-inline: -0.35rem;
+    }
   }
 }
 </style>
