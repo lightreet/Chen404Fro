@@ -7,12 +7,16 @@ const LEGACY_SITE_EMAIL = 'admin@chen404.com';
 
 const DEFAULT_SITE_CONFIG: SiteConfig = {
   siteName: 'Chen404 Blog',
-  siteDescription: '一个热爱技术分享的博客',
+  siteDescription: '一个写下技术，也收藏温柔日常的小小角落',
   siteLogo: '/logo.png',
   siteFavicon: '/favicon.png',
   icp: '湘ICP备2026010852号-1',
+  beian: '',
   github: 'https://github.com/lightreet',
   email: DEFAULT_SITE_EMAIL,
+  copyright: 'Copyright 2024 Chen404',
+  seoKeywords: '博客,技术,前端,后端,Java,Vue',
+  seoDescription: 'Chen404的个人技术博客，一个写下技术，也收藏温柔日常的小小角落',
   heroImages: {},
 };
 const CACHE_TTL_MS = 30 * 1000;

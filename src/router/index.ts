@@ -32,7 +32,8 @@ const routes: RouteRecordRaw[] = [
     component: () => import('@/views/Article/ArticleEdit.vue'),
     meta: {
       title: '编写文章',
-      requiresAuth: true, // 需要登录
+      requiresAuth: true,
+      requiresAdmin: true,
     },
   },
   {
@@ -81,6 +82,14 @@ const routes: RouteRecordRaw[] = [
     component: () => import('@/views/About/About.vue'),
     meta: {
       title: '关于',
+    },
+  },
+  {
+    path: '/user/:id',
+    name: 'UserProfile',
+    component: () => import('@/views/User/UserProfile.vue'),
+    meta: {
+      title: '成员主页',
     },
   },
   {

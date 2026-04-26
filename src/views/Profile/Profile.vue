@@ -15,7 +15,6 @@
                   <h1 class="sidebar-name">{{ bannerProfile.nickname || '未登录' }}</h1>
                   <div class="sidebar-identity-row">
                     <span class="sidebar-role">{{ roleText }}</span>
-                    <span class="sidebar-archetype">{{ sidebarArchetype }}</span>
                   </div>
                   <div class="sidebar-email">{{ user?.email || '暂未绑定邮箱' }}</div>
                 </div>
@@ -28,6 +27,7 @@
                 <el-menu-item index="articles"><el-icon><Document /></el-icon><span>我的文章</span></el-menu-item>
                 <el-menu-item index="likes"><el-icon><Medal /></el-icon><span>我的点赞</span></el-menu-item>
                 <el-menu-item index="favorites"><el-icon><Star /></el-icon><span>我的收藏</span></el-menu-item>
+                <el-menu-item index="trust"><el-icon><Postcard /></el-icon><span>受信申请</span></el-menu-item>
               </el-menu>
             </section>
           </aside>
@@ -228,6 +228,10 @@
                 </div>
                 <el-skeleton v-else :rows="6" animated />
               </div>
+
+              <div v-else-if="activeMenu === 'trust'" class="settings-panel">
+                <ProfileTrustRequestPanel :user="user" />
+              </div>
             </el-card>
           </section>
         </div>
@@ -276,34 +280,32 @@
 import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import type { FormInstance, FormRules } from 'element-plus'
-import { Document, Lock, Medal, Search, Star, Upload, User } from '@element-plus/icons-vue'
+import { Document, Lock, Medal, Postcard, Search, Star, Upload, User } from '@element-plus/icons-vue'
 import { useRoute, useRouter } from 'vue-router'
 import DefaultLayout from '@/layouts/DefaultLayout.vue'
 import { useUserStore } from '@/stores/user'
 import { changePassword, getUserInfo, updateProfile } from '@/api/auth'
 import { uploadAvatar } from '@/api/upload'
-import { getTrustLevelLabel, isAdminUser, isFriendUser } from '@/utils/permission'
+import { getTrustLevelLabel } from '@/utils/permission'
 import { AVATAR_MAX_MB, createConfirmPasswordRule, validateImageFile } from '@/utils/validation'
 import { deleteArticle, getMyArticles, getMyFavoriteArticles, getMyLikedArticles } from '@/api/article'
 import ArticleCard from '@/components/ArticleCard/ArticleCard.vue'
+import ProfileTrustRequestPanel from './ProfileTrustRequestPanel.vue'
 
 const userStore = useUserStore()
 const router = useRouter()
 const route = useRoute()
 
 const user = ref(userStore.user)
-const activeMenu = ref<'articles' | 'likes' | 'favorites' | 'settings'>('settings')
+const activeMenu = ref<'articles' | 'likes' | 'favorites' | 'settings' | 'trust'>('settings')
 const roleText = computed(() => getTrustLevelLabel(user.value))
-const trustLevelText = computed(() => {
-  if (!user.value) return '--'
-  if (isAdminUser(user.value)) return '管理员'
-  return isFriendUser(user.value) ? '好友 / 受信用户' : '普通用户'
-})
+const trustLevelText = computed(() => (user.value ? getTrustLevelLabel(user.value) : '--'))
 
 const panelTitle = computed(() => {
   if (activeMenu.value === 'articles') return '我的文章'
   if (activeMenu.value === 'likes') return '我的点赞'
   if (activeMenu.value === 'favorites') return '我的收藏'
+  if (activeMenu.value === 'trust') return '受信申请'
   return '个人中心'
 })
 
@@ -320,6 +322,7 @@ const panelBadge = computed(() => {
   if (activeMenu.value === 'articles') return `共 ${articleTotal.value} 篇`
   if (activeMenu.value === 'likes') return `共 ${likedTotal.value} 篇`
   if (activeMenu.value === 'favorites') return `共 ${favTotal.value} 篇`
+  if (activeMenu.value === 'trust') return '权限申请'
   return trustLevelText.value
 })
 
@@ -327,13 +330,8 @@ const panelIcon = computed(() => {
   if (activeMenu.value === 'articles') return Document
   if (activeMenu.value === 'likes') return Medal
   if (activeMenu.value === 'favorites') return Star
+  if (activeMenu.value === 'trust') return Postcard
   return User
-})
-
-const sidebarArchetype = computed(() => {
-  if (!user.value) return '访客'
-  if (isAdminUser(user.value)) return '博主'
-  return isFriendUser(user.value) ? '创作者' : '创作者'
 })
 
 const profileFormRef = ref<FormInstance>()
@@ -416,7 +414,7 @@ const handleMenuSelect = (index: string) => {
 
 const syncActiveMenuFromRoute = () => {
   const tab = route.query.tab
-  if (tab === 'articles' || tab === 'likes' || tab === 'favorites' || tab === 'settings') {
+  if (tab === 'articles' || tab === 'likes' || tab === 'favorites' || tab === 'settings' || tab === 'trust') {
     activeMenu.value = tab
   } else {
     activeMenu.value = 'settings'
@@ -568,7 +566,7 @@ const handleChangePassword = async () => {
 watch(
   () => route.query.tab,
   (tab) => {
-    if (tab === 'articles' || tab === 'likes' || tab === 'favorites' || tab === 'settings') {
+    if (tab === 'articles' || tab === 'likes' || tab === 'favorites' || tab === 'settings' || tab === 'trust') {
       activeMenu.value = tab
       if (tab === 'articles') loadMyArticles(1)
       if (tab === 'likes') loadMyLikedArticles(1)

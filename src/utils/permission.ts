@@ -12,8 +12,9 @@ export function isFriendUser(user: User | null | undefined): boolean {
 }
 
 export function getTrustLevelLabel(user: User | null | undefined): string {
-  if (!user) return '游客';
-  if (isAdminUser(user)) return '管理员';
-  if (isFriendUser(user)) return '好友 / 受信用户';
-  return '普通用户';
+  if (!user) return '来客';
+  if (user.memberLabel?.trim()) return user.memberLabel.trim();
+  if (user.roleName?.trim() && isAdminUser(user)) return user.roleName.trim();
+  if (user.trustLevelName?.trim() && isFriendUser(user)) return user.trustLevelName.trim();
+  return isAdminUser(user) ? '管理员' : isFriendUser(user) ? '知友' : '读者';
 }

@@ -32,7 +32,10 @@ export interface User {
   bio?: string;
   role: UserRole;
   roleCode?: UserRoleCode;
+  roleName?: string;
   trustLevel?: UserTrustLevel;
+  trustLevelName?: string;
+  memberLabel?: string;
   status: UserStatus;
   createTime: string;
   lastLoginTime?: string;
@@ -131,17 +134,23 @@ export interface SiteConfig {
   siteLogo: string;
   siteFavicon: string;
   icp: string;
+  beian?: string;
   github?: string;
   email?: string;
+  copyright?: string;
+  seoKeywords?: string;
+  seoDescription?: string;
   heroImages?: Record<string, string>;
 }
 
 export interface SiteOwner {
-  id: number;
+  id: number | string;
   username: string;
   nickname: string;
+  email?: string;
   avatar: string;
   bio?: string;
+  memberLabel?: string;
 }
 
 // 轮播图 Banner
@@ -191,7 +200,7 @@ export interface Article {
   /** 服务端渲染好的 HTML（若有则优先展示） */
   contentHtml?: string;
   coverImage?: string;
-  authorId: number;
+  authorId: number | string;
   categoryId: number;
   status: ArticleStatus;
   viewCount: number;
@@ -269,7 +278,7 @@ export interface Tag {
 }
 
 export interface Author {
-  id: number;
+  id: number | string;
   username: string;
   nickname: string;
   avatar: string;
@@ -281,6 +290,7 @@ export interface ArticleQueryParams extends PageParams {
   keyword?: string;
   categoryId?: number;
   tagId?: number;
+  authorId?: number | string;
   status?: ArticleStatus;
   orderBy?: 'newest' | 'hottest' | 'recommend';
 }
@@ -310,7 +320,7 @@ export interface Comment {
   authorEmail?: string;
   authorWebsite?: string;
   authorAvatar?: string;
-  authorId?: number;
+  authorId?: number | string;
   authorIp?: string;
   isAdmin: number;
   likeCount: number;
@@ -346,7 +356,38 @@ export interface CreateCommentParams {
   authorWebsite?: string;
 }
 
+// ==================== 受信申请相关类型 ====================
 
+export enum TrustRequestStatus {
+  PENDING = 0,
+  APPROVED = 1,
+  REJECTED = 2,
+}
 
+export interface TrustRequestAttachment {
+  id: number;
+  fileName: string;
+  fileUrl: string;
+  fileSize?: number;
+  contentType?: string;
+  createTime?: string;
+}
 
-
+export interface TrustRequest {
+  id: number | string;
+  userId: number | string;
+  username?: string;
+  nickname?: string;
+  userEmail?: string;
+  userTrustLevel?: UserTrustLevel;
+  status: TrustRequestStatus;
+  reason: string;
+  attachments: TrustRequestAttachment[];
+  contactEmail?: string;
+  reviewNote?: string;
+  reviewedBy?: number | string;
+  reviewerName?: string;
+  reviewedAt?: string;
+  createTime: string;
+  updateTime: string;
+}

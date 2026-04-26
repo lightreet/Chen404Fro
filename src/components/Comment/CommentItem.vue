@@ -10,8 +10,13 @@
     <div class="comment-body">
       <div class="comment-header">
         <span class="comment-author">
+          <RouterLink
+            v-if="comment.authorId"
+            class="comment-author-link"
+            :to="`/user/${comment.authorId}`"
+          >{{ comment.authorName }}</RouterLink>
           <a
-            v-if="comment.authorWebsite"
+            v-else-if="comment.authorWebsite"
             :href="comment.authorWebsite"
             target="_blank"
             rel="noopener noreferrer"
@@ -104,7 +109,7 @@ function getGuestDeleteKey(commentId: number | string): string | undefined {
 
 const props = defineProps<{
   comment: Comment
-  currentUserId?: number | null
+  currentUserId?: number | string | null
   isAdmin?: boolean
   canComment?: boolean
   showReplyForm?: boolean
@@ -145,7 +150,7 @@ const canDelete = computed(() => {
   // 登录用户：管理员或本人可删
   if (props.currentUserId) {
     if (isCurrentUserAdmin.value) return true
-    return props.currentUserId === props.comment.authorId
+    return String(props.currentUserId) === String(props.comment.authorId)
   }
   // 游客：如果本地有存储的删除 key，且该评论无 authorId（游客评论），则可删
   if (guestDeleteKey.value && !props.comment.authorId) {
@@ -247,6 +252,16 @@ function formatTime(time: string): string {
     &:hover {
       text-decoration: underline;
     }
+  }
+}
+
+.comment-author-link {
+  color: var(--primary);
+  font: inherit;
+  text-decoration: none;
+
+  &:hover {
+    text-decoration: underline;
   }
 }
 

@@ -55,6 +55,8 @@ declare module 'vue' {
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
     SakuraOverlay: typeof import('./components/SakuraOverlay/SakuraOverlay.vue')['default']
+    UserProfileCard: typeof import('./components/UserProfile/UserProfileCard.vue')['default']
+    UserProfilePopover: typeof import('./components/UserProfile/UserProfilePopover.vue')['default']
   }
   export interface GlobalDirectives {
     vLoading: typeof import('element-plus/es')['ElLoadingDirective']

@@ -230,32 +230,32 @@ const layerSpecs: Record<
 > = {
   back: {
     lines: 9,
-    strokeWidth: 0.95,
+    strokeWidth: 1.35,
     opacity: 0.18,
     yStart: 44,
     yStep: 2.7,
     amplitude: 6.5,
-    wavelength: 320,
+    wavelength: 410,
     phaseOffset: 0,
   },
   mid: {
     lines: 11,
-    strokeWidth: 1.25,
+    strokeWidth: 1.8,
     opacity: 0.26,
     yStart: 50,
     yStep: 2.45,
     amplitude: 10,
-    wavelength: 250,
+    wavelength: 340,
     phaseOffset: 38,
   },
   front: {
     lines: 13,
-    strokeWidth: 1.7,
+    strokeWidth: 2.35,
     opacity: 0.34,
     yStart: 57,
     yStep: 2.25,
     amplitude: 14,
-    wavelength: 208,
+    wavelength: 290,
     phaseOffset: 76,
   },
 };
@@ -273,7 +273,7 @@ const buildWavePoints = (depth: WaveDepth, index: number): WavePoint[] => {
   const step = wavelength / 4;
 
   const points: WavePoint[] = [];
-  for (let x = -step * 2; x <= 1200 + step * 2; x += step) {
+  for (let x = -step * 3; x <= 1200 + step * 3; x += step) {
     const angle = ((x + phase) / wavelength) * Math.PI * 2;
     const secondaryAngle = angle * 0.5 + index * 0.65;
     const y =
@@ -426,4 +426,3 @@ onMounted(() => {
   }
 }
 </style>
-

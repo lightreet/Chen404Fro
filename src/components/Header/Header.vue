@@ -25,7 +25,7 @@
 
         <!-- 右侧操作区 -->
         <div class="header-actions">
-          <!-- 编写文章按钮（仅管理员和受信任用户显示） -->
+          <!-- 编写文章按钮（仅管理员显示） -->
           <router-link
             v-if="isLoggedIn && canCreateArticle && !isMobile"
             to="/article/edit"
@@ -204,7 +204,7 @@ import {
 import { useUserStore } from '@/stores/user';
 import { storeToRefs } from 'pinia';
 import { logout as logoutApi } from '@/api/auth';
-import { getTrustLevelLabel, isAdminUser, isFriendUser } from '@/utils/permission';
+import { getTrustLevelLabel, isAdminUser } from '@/utils/permission';
 import { useLayoutMobile } from '@/composables/useLayoutMobile';
 
 const router = useRouter();
@@ -217,10 +217,10 @@ const roleText = computed(() => getTrustLevelLabel(user.value));
 // 是否为管理员
 const isAdmin = computed(() => isAdminUser(user.value));
 
-// 是否可以创建文章（管理员或受信任用户）
+// 是否可以创建文章（仅管理员）
 const canCreateArticle = computed(() => {
   if (!user.value) return false;
-  return isAdminUser(user.value) || isFriendUser(user.value);
+  return isAdminUser(user.value);
 });
 
 // 导航项

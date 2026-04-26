@@ -202,14 +202,14 @@ const contentCharCount = computed(() => (form.content ?? '').length);
 const visibilityOptions = [
   { label: '公开', value: ArticleVisibility.PUBLIC },
   { label: '登录可见', value: ArticleVisibility.LOGIN },
-  { label: '好友可见', value: ArticleVisibility.FRIEND },
+  { label: '知友可见', value: ArticleVisibility.FRIEND },
   { label: '私密', value: ArticleVisibility.PRIVATE },
 ];
 
 const commentPolicyOptions = [
   { label: '关闭评论', value: ArticleCommentPolicy.CLOSED },
   { label: '登录可评论', value: ArticleCommentPolicy.REGISTERED },
-  { label: '好友可评论', value: ArticleCommentPolicy.FRIEND },
+  { label: '知友可评论', value: ArticleCommentPolicy.FRIEND },
   { label: '游客可评论', value: ArticleCommentPolicy.PUBLIC },
 ];
 
