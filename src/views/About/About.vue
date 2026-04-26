@@ -21,40 +21,17 @@
               <span class="eyebrow">Member Constellation</span>
               <h2 class="panel-title">从一个人，到一片星群</h2>
             </div>
-            <article v-if="activeMember" class="member-preview" :class="memberIdentityClass(activeMember)">
-              <div class="member-preview__halo"></div>
-              <div class="member-preview__header">
-                <div class="member-preview__avatar">
-                  <img :src="getMemberAvatar(activeMember)" :alt="getMemberDisplayName(activeMember)" />
-                </div>
-                <div class="member-preview__title">
-                  <div class="member-preview__badges">
-                    <span class="member-chip member-chip--strong">{{ memberIdentityLabel(activeMember) }}</span>
-                    <span class="member-chip">加入于 {{ formatJoinTime(activeMember.createTime) }}</span>
-                  </div>
-                  <h3>{{ getMemberDisplayName(activeMember) }}</h3>
-                  <p>@{{ activeMember.username }}</p>
-                </div>
-              </div>
-              <p class="member-preview__bio">
-                {{ activeMember.bio?.trim() || '正在这里安静留下自己的头像与名字，也让这片小站变得更完整一点。' }}
-              </p>
-              <div class="member-preview__meta">
-                <span class="member-preview__meta-item">
-                  <el-icon><UserFilled /></el-icon>
-                  <span>{{ owner?.id === activeMember.id ? '站点创建者' : '站点注册成员' }}</span>
-                </span>
-                <span v-if="activeMember.trustLevel === 1 && owner?.id !== activeMember.id" class="member-preview__meta-item">
-                  <el-icon><StarFilled /></el-icon>
-                  <span>{{ activeMember.memberLabel || '知友' }}</span>
-                </span>
-              </div>
-            </article>
+            <UserProfileCard
+              v-if="activeMember"
+              :user="activeMember"
+              :owner-id="owner?.id"
+              class="member-preview-card"
+            />
           </div>
 
           <div class="community-side">
             <div class="community-aside">
-              <p class="community-hint">鼠标悬浮头像即可切换预览，移动端也可以直接点击头像查看。</p>
+              <p class="community-hint">鼠标悬浮头像即可切换预览，点击头像可以打开完整成员卡片。</p>
               <div class="community-stats">
                 <span class="community-stat">已注册 {{ memberCount }} 位成员</span>
                 <span class="community-stat">知友 {{ trustedCount }} 位</span>
@@ -73,7 +50,7 @@
                 :aria-label="`查看 ${getMemberDisplayName(member)} 的信息卡片`"
                 @mouseenter="setActiveMember(member.id)"
                 @focus="setActiveMember(member.id)"
-                @click="setActiveMember(member.id)"
+                @click="openMemberCard(member)"
               >
                 <span class="member-orb__glow"></span>
                 <span class="member-orb__ring"></span>
@@ -84,6 +61,12 @@
           </div>
         </div>
       </section>
+
+      <UserProfilePopover
+        v-model="profilePopoverVisible"
+        :user="selectedMember"
+        :owner-id="owner?.id"
+      />
 
       <div class="about-grid">
         <section class="glass-panel story-panel">
@@ -131,10 +114,12 @@
 <script setup lang="ts">
 import dayjs from 'dayjs';
 import { computed, onMounted, ref, watch } from 'vue';
-import { Link, Message, StarFilled, UserFilled } from '@element-plus/icons-vue';
+import { Link, Message } from '@element-plus/icons-vue';
 import type { SiteOwner } from '@/types';
 import { getSiteMembers, getSiteOwner, type SiteMember } from '@/api/home';
 import PageHero from '@/components/PageHero/PageHero.vue';
+import UserProfileCard from '@/components/UserProfile/UserProfileCard.vue';
+import UserProfilePopover from '@/components/UserProfile/UserProfilePopover.vue';
 import { useSiteConfig } from '@/composables/useSiteConfig';
 import DefaultLayout from '@/layouts/DefaultLayout.vue';
 
@@ -150,7 +135,9 @@ const LEGACY_DEFAULT_AVATAR = '/default-avatar.jpg';
 const heroBgImage = ref(DEFAULT_ABOUT_HERO);
 const owner = ref<SiteOwner | null>(null);
 const members = ref<SiteMember[]>([]);
-const activeMemberId = ref<number | null>(null);
+const activeMemberId = ref<string | null>(null);
+const selectedMember = ref<SiteMember | null>(null);
+const profilePopoverVisible = ref(false);
 const siteEmail = ref('');
 const githubLink = ref('');
 const { loadSiteConfig } = useSiteConfig();
@@ -171,23 +158,23 @@ const ownerMember = computed<SiteMember | null>(() => {
 });
 const displayMembers = computed<SiteMember[]>(() => {
   const ownerId = owner.value?.id ?? null;
-  const memberMap = new Map<number, SiteMember>();
+  const memberMap = new Map<string, SiteMember>();
 
   if (ownerMember.value?.id != null) {
-    memberMap.set(ownerMember.value.id, ownerMember.value);
+    memberMap.set(String(ownerMember.value.id), ownerMember.value);
   }
 
   members.value.forEach((member) => {
     if (member?.id != null) {
-      memberMap.set(member.id, member);
+      memberMap.set(String(member.id), member);
     }
   });
 
   return Array.from(memberMap.values()).sort((left, right) => {
-    if (ownerId != null && left.id === ownerId && right.id !== ownerId) {
+    if (ownerId != null && String(left.id) === String(ownerId) && String(right.id) !== String(ownerId)) {
       return -1;
     }
-    if (ownerId != null && right.id === ownerId && left.id !== ownerId) {
+    if (ownerId != null && String(right.id) === String(ownerId) && String(left.id) !== String(ownerId)) {
       return 1;
     }
 
@@ -205,13 +192,15 @@ const activeMember = computed(() => {
   }
 
   return (
-    displayMembers.value.find((member) => member.id === activeMemberId.value) ??
+    displayMembers.value.find((member) => String(member.id) === activeMemberId.value) ??
     displayMembers.value[0]
   );
 });
 const memberCount = computed(() => displayMembers.value.length);
 const trustedCount = computed(() =>
-  displayMembers.value.filter((member) => member.trustLevel === 1 && member.id !== owner.value?.id).length
+  displayMembers.value.filter(
+    (member) => member.trustLevel === 1 && String(member.id) !== String(owner.value?.id)
+  ).length
 );
 
 watch(
@@ -222,15 +211,21 @@ watch(
       return;
     }
 
-    if (!list.some((member) => member.id === activeMemberId.value)) {
-      activeMemberId.value = owner.value?.id ?? list[0].id;
+    if (!list.some((member) => String(member.id) === activeMemberId.value)) {
+      activeMemberId.value = String(owner.value?.id ?? list[0].id);
     }
   },
   { immediate: true }
 );
 
-function setActiveMember(id: number) {
-  activeMemberId.value = id;
+function setActiveMember(id: number | string) {
+  activeMemberId.value = String(id);
+}
+
+function openMemberCard(member: SiteMember) {
+  setActiveMember(member.id);
+  selectedMember.value = member;
+  profilePopoverVisible.value = true;
 }
 
 function getMemberDisplayName(member: SiteMember) {
@@ -257,16 +252,6 @@ function normalizeGithubLink(link?: string) {
   return normalized;
 }
 
-function memberIdentityLabel(member: SiteMember) {
-  if (owner.value?.id === member.id) {
-    return '主理人';
-  }
-  if (member.memberLabel?.trim()) {
-    return member.memberLabel.trim();
-  }
-  return member.trustLevel === 1 ? '知友' : '读者';
-}
-
 function memberIdentityClass(member: SiteMember) {
   if (owner.value?.id === member.id) {
     return 'is-owner';
@@ -275,14 +260,6 @@ function memberIdentityClass(member: SiteMember) {
     return 'is-trusted';
   }
   return 'is-member';
-}
-
-function formatJoinTime(value?: string) {
-  if (!value) {
-    return '最近加入';
-  }
-  const parsed = dayjs(value);
-  return parsed.isValid() ? parsed.format('YYYY.MM.DD') : '最近加入';
 }
 
 function getMemberOrbStyle(index: number) {
@@ -434,129 +411,6 @@ onMounted(() => {
   color: #9a6079;
   font-size: 13px;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.82);
-}
-
-.member-preview {
-  position: relative;
-  min-height: 320px;
-  padding: 28px;
-  border-radius: 28px;
-  border: 1px solid rgba(255, 255, 255, 0.82);
-  background:
-    radial-gradient(circle at top, rgba(255, 255, 255, 0.8), transparent 44%),
-    linear-gradient(160deg, rgba(255, 250, 252, 0.88), rgba(240, 244, 255, 0.84));
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.86);
-}
-
-.member-preview__halo {
-  position: absolute;
-  top: -18%;
-  right: -10%;
-  width: 220px;
-  height: 220px;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(255, 211, 227, 0.42), transparent 70%);
-  pointer-events: none;
-}
-
-.member-preview__header {
-  position: relative;
-  z-index: 1;
-  display: flex;
-  align-items: center;
-  gap: 18px;
-}
-
-.member-preview__avatar {
-  width: 92px;
-  height: 92px;
-  border-radius: 28px;
-  overflow: hidden;
-  border: 4px solid rgba(255, 255, 255, 0.84);
-  box-shadow: 0 18px 32px rgba(180, 128, 152, 0.18);
-
-  img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-  }
-}
-
-.member-preview__title {
-  min-width: 0;
-
-  h3 {
-    margin: 12px 0 6px;
-    font-size: 28px;
-    color: #5b3344;
-    word-break: break-word;
-  }
-
-  p {
-    margin: 0;
-    color: rgba(113, 80, 94, 0.76);
-    font-size: 14px;
-  }
-}
-
-.member-preview__badges {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.member-chip {
-  display: inline-flex;
-  align-items: center;
-  flex: 0 0 auto;
-  min-width: 72px;
-  justify-content: center;
-  padding: 8px 12px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.72);
-  color: #9d6580;
-  font-size: 12px;
-  line-height: 1;
-  white-space: nowrap;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.84);
-}
-
-.member-chip--strong {
-  background: linear-gradient(135deg, rgba(255, 222, 236, 0.94), rgba(255, 255, 255, 0.84));
-  color: #a34d73;
-}
-
-.member-preview__bio {
-  position: relative;
-  z-index: 1;
-  margin: 20px 0 0;
-  overflow: hidden;
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 3;
-  font-size: 15px;
-  line-height: 1.9;
-  color: rgba(89, 59, 72, 0.84);
-}
-
-.member-preview__meta {
-  position: relative;
-  z-index: 1;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  margin-top: 20px;
-}
-
-.member-preview__meta-item {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 14px;
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.64);
-  color: #8b5a72;
-  font-size: 13px;
 }
 
 .member-cloud {
@@ -816,11 +670,6 @@ onMounted(() => {
 
   .community-copy .panel-title {
     font-size: clamp(30px, 9vw, 38px);
-  }
-
-  .member-preview__header {
-    align-items: flex-start;
-    flex-direction: column;
   }
 
   .member-cloud {

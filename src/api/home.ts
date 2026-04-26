@@ -15,9 +15,10 @@ import type {
 } from '@/types';
 
 export interface SiteMember {
-  id: number;
+  id: number | string;
   username: string;
   nickname: string;
+  email?: string;
   avatar: string;
   bio?: string;
   trustLevel?: number;
@@ -47,6 +48,10 @@ export function getSiteOwner(): Promise<SiteOwner | null> {
 
 export function getSiteMembers(): Promise<SiteMember[]> {
   return get('/site/members');
+}
+
+export function getSiteUser(id: number | string): Promise<SiteMember> {
+  return get(`/site/users/${String(id)}`);
 }
 
 export function updateSiteConfig(data: Partial<SiteConfig>): Promise<SiteConfig> {

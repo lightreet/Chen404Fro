@@ -140,9 +140,10 @@ export interface SiteConfig {
 }
 
 export interface SiteOwner {
-  id: number;
+  id: number | string;
   username: string;
   nickname: string;
+  email?: string;
   avatar: string;
   bio?: string;
   memberLabel?: string;
@@ -195,7 +196,7 @@ export interface Article {
   /** 服务端渲染好的 HTML（若有则优先展示） */
   contentHtml?: string;
   coverImage?: string;
-  authorId: number;
+  authorId: number | string;
   categoryId: number;
   status: ArticleStatus;
   viewCount: number;
@@ -273,7 +274,7 @@ export interface Tag {
 }
 
 export interface Author {
-  id: number;
+  id: number | string;
   username: string;
   nickname: string;
   avatar: string;
@@ -285,6 +286,7 @@ export interface ArticleQueryParams extends PageParams {
   keyword?: string;
   categoryId?: number;
   tagId?: number;
+  authorId?: number | string;
   status?: ArticleStatus;
   orderBy?: 'newest' | 'hottest' | 'recommend';
 }
@@ -314,7 +316,7 @@ export interface Comment {
   authorEmail?: string;
   authorWebsite?: string;
   authorAvatar?: string;
-  authorId?: number;
+  authorId?: number | string;
   authorIp?: string;
   isAdmin: number;
   likeCount: number;
@@ -385,4 +387,3 @@ export interface TrustRequest {
   createTime: string;
   updateTime: string;
 }
-

@@ -30,7 +30,13 @@
             <template v-if="authorName">
               <span class="meta-sep">·</span>
               <el-icon class="author-icon"><User /></el-icon>
-              <span class="author-name">{{ authorName }}</span>
+              <router-link
+                v-if="authorProfileUrl"
+                :to="authorProfileUrl"
+                class="author-name author-name--link"
+                @click.stop
+              >{{ authorName }}</router-link>
+              <span v-else class="author-name">{{ authorName }}</span>
             </template>
           </div>
 
@@ -134,7 +140,13 @@
           <template v-if="authorName">
             <span class="meta-sep">·</span>
             <el-icon class="author-icon"><User /></el-icon>
-            <span class="author-name">{{ authorName }}</span>
+            <router-link
+              v-if="authorProfileUrl"
+              :to="authorProfileUrl"
+              class="author-name author-name--link"
+              @click.stop
+            >{{ authorName }}</router-link>
+            <span v-else class="author-name">{{ authorName }}</span>
           </template>
         </div>
 
@@ -349,6 +361,11 @@ const authorName = computed(() => {
   const a = props.article.author;
   if (!a) return '';
   return (a.nickname && a.nickname.trim()) ? a.nickname.trim() : (a.username || '');
+});
+
+const authorProfileUrl = computed(() => {
+  const id = props.article.author?.id ?? props.article.authorId;
+  return id != null ? `/user/${id}` : '';
 });
 </script>
 
@@ -1012,6 +1029,16 @@ const authorName = computed(() => {
   .author-name {
     color: var(--text-secondary);
     font-weight: 500;
+  }
+
+  .author-name--link {
+    text-decoration: none;
+
+    &:hover {
+      color: var(--primary);
+      text-decoration: underline;
+      text-underline-offset: 2px;
+    }
   }
 }
 

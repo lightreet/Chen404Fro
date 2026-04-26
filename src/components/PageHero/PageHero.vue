@@ -56,7 +56,6 @@
 import { computed } from 'vue';
 import HeroWave from '@/components/HeroWave/HeroWave.vue';
 import '@fontsource/patrick-hand/400.css';
-import heroBrushUnderline from '@/assets/hero-brush-underline.svg';
 
 interface Props {
   title: string;
@@ -109,7 +108,6 @@ const normalizedBgImage = computed(() => {
 
 const heroVars = computed(() => ({
   '--page-hero-bg-image': normalizedBgImage.value ? `url("${normalizedBgImage.value}")` : fallbackBg,
-  '--page-hero-brush-image': `url("${heroBrushUnderline}")`,
   '--page-hero-bg-position': props.bgPosition,
   '--page-hero-min-height': normalizeMinHeight(props.minHeight),
   '--page-hero-overlay-opacity': String(props.overlayOpacity),
