@@ -18,9 +18,3 @@ export function getTrustLevelLabel(user: User | null | undefined): string {
   if (user.trustLevelName?.trim() && isFriendUser(user)) return user.trustLevelName.trim();
   return isAdminUser(user) ? '管理员' : isFriendUser(user) ? '知友' : '读者';
 }
-
-export function getUserSecondaryLabel(user: User | null | undefined): string | null {
-  if (!user) return null;
-  const label = user.memberSecondaryLabel?.trim();
-  return label || null;
-}

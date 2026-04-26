@@ -15,7 +15,6 @@
                   <h1 class="sidebar-name">{{ bannerProfile.nickname || '未登录' }}</h1>
                   <div class="sidebar-identity-row">
                     <span class="sidebar-role">{{ roleText }}</span>
-                    <span v-if="sidebarArchetype" class="sidebar-archetype">{{ sidebarArchetype }}</span>
                   </div>
                   <div class="sidebar-email">{{ user?.email || '暂未绑定邮箱' }}</div>
                 </div>
@@ -287,7 +286,7 @@ import DefaultLayout from '@/layouts/DefaultLayout.vue'
 import { useUserStore } from '@/stores/user'
 import { changePassword, getUserInfo, updateProfile } from '@/api/auth'
 import { uploadAvatar } from '@/api/upload'
-import { getTrustLevelLabel, getUserSecondaryLabel } from '@/utils/permission'
+import { getTrustLevelLabel } from '@/utils/permission'
 import { AVATAR_MAX_MB, createConfirmPasswordRule, validateImageFile } from '@/utils/validation'
 import { deleteArticle, getMyArticles, getMyFavoriteArticles, getMyLikedArticles } from '@/api/article'
 import ArticleCard from '@/components/ArticleCard/ArticleCard.vue'
@@ -334,8 +333,6 @@ const panelIcon = computed(() => {
   if (activeMenu.value === 'trust') return Postcard
   return User
 })
-
-const sidebarArchetype = computed(() => getUserSecondaryLabel(user.value))
 
 const profileFormRef = ref<FormInstance>()
 const profileSaving = ref(false)

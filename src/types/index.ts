@@ -36,7 +36,6 @@ export interface User {
   trustLevel?: UserTrustLevel;
   trustLevelName?: string;
   memberLabel?: string;
-  memberSecondaryLabel?: string;
   status: UserStatus;
   createTime: string;
   lastLoginTime?: string;
@@ -147,7 +146,6 @@ export interface SiteOwner {
   avatar: string;
   bio?: string;
   memberLabel?: string;
-  memberSecondaryLabel?: string;
 }
 
 // 轮播图 Banner
@@ -387,5 +385,4 @@ export interface TrustRequest {
   createTime: string;
   updateTime: string;
 }
-
 
