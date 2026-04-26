@@ -4,7 +4,7 @@
       <PageHero
         title="Hi，Chen404 的小站"
         highlight-text="Chen404"
-        subtitle="「 记录技术、生活与想法，欢迎来玩 ~ 」"
+        :subtitle="heroSubtitle"
         :bg-image="heroBgImage"
         min-height="80vh"
         scroll-target="#discovery"
@@ -85,7 +85,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, watch, nextTick } from 'vue';
+import { computed, ref, onMounted, onUnmounted, watch, nextTick } from 'vue';
 import { ElMessage } from 'element-plus';
 import { Compass } from '@element-plus/icons-vue';
 import DefaultLayout from '@/layouts/DefaultLayout.vue';
@@ -99,6 +99,7 @@ import { getArticles } from '@/api/article';
 const pageSize = 6;
 const DEFAULT_HOME_HERO =
   'https://images.unsplash.com/photo-1522383225653-ed111181a951?w=1920&q=80';
+const DEFAULT_HOME_SUBTITLE = '一个写下技术，也收藏温柔日常的小小角落';
 
 // 文章列表
 const articleList = ref<Article[]>([]);
@@ -112,7 +113,8 @@ const activeKeyword = ref('');
 const searchDraft = ref('');
 const searchExpanded = ref(false);
 const heroBgImage = ref(DEFAULT_HOME_HERO);
-const { loadSiteConfig } = useSiteConfig();
+const { siteConfig, loadSiteConfig } = useSiteConfig();
+const heroSubtitle = computed(() => siteConfig.value?.siteDescription?.trim() || DEFAULT_HOME_SUBTITLE);
 
 /**
  * 首页「摩天轮」滚动：strength 距中心衰减；phase = (cardMidY - midY) / R，上负下正。
