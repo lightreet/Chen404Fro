@@ -291,7 +291,7 @@ onMounted(() => {
 
 .attachment-list {
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
   gap: 10px;
   margin-top: 14px;
 }
@@ -300,12 +300,21 @@ onMounted(() => {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  padding: 10px 14px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.88);
-  border: 1px solid rgba(245, 155, 188, 0.12);
+  justify-content: space-between;
+  width: min(100%, 420px);
+  padding: 12px 16px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(245, 155, 188, 0.14);
+  box-shadow: 0 10px 24px rgba(215, 156, 186, 0.08);
   color: var(--text-primary);
   text-decoration: none;
+}
+
+.attachment-chip a {
+  color: inherit;
+  text-decoration: none;
+  word-break: break-all;
 }
 
 .attachment-chip--editable a {
@@ -331,6 +340,10 @@ onMounted(() => {
   .trust-state__head {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .attachment-chip {
+    width: 100%;
   }
 }
 </style>
