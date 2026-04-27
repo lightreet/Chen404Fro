@@ -258,7 +258,7 @@ import type { UploadRequestOptions } from 'element-plus';
 import { ElMessage } from 'element-plus';
 import { Delete, Refresh, Setting, UploadFilled } from '@element-plus/icons-vue';
 import { getSiteConfig, updateSiteConfig } from '@/api/home';
-import { uploadCover } from '@/api/upload';
+import { uploadSiteAsset } from '@/api/upload';
 import { useSiteConfig } from '@/composables/useSiteConfig';
 import type { SiteConfig } from '@/types';
 import { DEFAULT_IMAGE_MAX_MB, validateImageFile } from '@/utils/validation';
@@ -409,7 +409,7 @@ function beforeImageUpload(file: File) {
 async function handleAssetUpload(key: AssetKey, options: UploadRequestOptions) {
   uploadingKey.value = key;
   try {
-    const res = await uploadCover(options.file);
+    const res = await uploadSiteAsset(options.file);
     form[key] = res.url;
     options.onSuccess?.(res as any);
     ElMessage.success('品牌图片上传成功');
@@ -424,7 +424,7 @@ async function handleAssetUpload(key: AssetKey, options: UploadRequestOptions) {
 async function handleHeroUpload(key: HeroKey, options: UploadRequestOptions) {
   uploadingKey.value = key;
   try {
-    const res = await uploadCover(options.file);
+    const res = await uploadSiteAsset(options.file);
     heroImages[key] = res.url;
     options.onSuccess?.(res as any);
     ElMessage.success(`${heroPages.find((item) => item.key === key)?.label ?? '页面'}封面上传成功`);

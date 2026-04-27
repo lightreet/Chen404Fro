@@ -112,17 +112,10 @@
 
         <!-- 已登录显示用户菜单 -->
         <template v-if="isLoggedIn">
-          <router-link
-            to="/profile"
-            class="mobile-user-info"
-            @click="closeMobileMenu"
-          >
-            <el-avatar :src="user?.avatar" :size="48">
-              {{ user?.nickname?.charAt(0) || user?.username?.charAt(0) || 'U' }}
-            </el-avatar>
-            <span class="mobile-nickname">{{ user?.nickname || user?.username }}</span>
-            <span class="mobile-user-role">{{ roleText }}</span>
-          </router-link>
+          <div class="mobile-account-summary">
+            <span class="mobile-account-summary__name">{{ user?.nickname || user?.username }}</span>
+            <span class="mobile-account-summary__role">{{ roleText }}</span>
+          </div>
           <router-link
             to="/profile"
             class="mobile-nav-item"
@@ -183,7 +176,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, computed } from 'vue';
+import { ref, onMounted, onUnmounted, computed, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import {
@@ -240,7 +233,7 @@ let lastScrollY = 0;
 const handleScroll = () => {
   const currentScrollY = window.scrollY;
   isScrolled.value = currentScrollY > 10;
-  isHidden.value = currentScrollY > lastScrollY && currentScrollY > 100;
+  isHidden.value = !isMobileMenuOpen.value && currentScrollY > lastScrollY && currentScrollY > 100;
   lastScrollY = currentScrollY;
 };
 
@@ -253,6 +246,7 @@ onMounted(() => {
 
 onUnmounted(() => {
   window.removeEventListener('scroll', handleScroll);
+  document.body.style.overflow = '';
 });
 
 // 主题切换
@@ -283,6 +277,13 @@ const toggleMobileMenu = () => {
 const closeMobileMenu = () => {
   isMobileMenuOpen.value = false;
 };
+
+watch(isMobileMenuOpen, (open) => {
+  document.body.style.overflow = open ? 'hidden' : '';
+  if (open) {
+    isHidden.value = false;
+  }
+});
 
 // 用户菜单命令
 const handleUserCommand = (command: string) => {
@@ -558,18 +559,24 @@ const handleLogout = async () => {
   position: absolute;
   top: 0;
   right: 0;
-  width: 260px;
+  width: min(84vw, 320px);
   height: 100%;
-  background: var(--bg-secondary);
-  padding: 80px 20px 20px;
+  background: rgba(255, 255, 255, 0.98);
+  backdrop-filter: blur(18px);
+  border-left: 1px solid rgba(244, 194, 213, 0.45);
+  box-shadow: -18px 0 40px rgba(112, 86, 102, 0.12);
+  padding: 84px 18px 24px;
   display: flex;
   flex-direction: column;
   gap: 8px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
 }
 
 .mobile-menu-divider {
   height: 1px;
-  background: var(--border-color);
+  background: rgba(227, 229, 231, 0.8);
   margin: 8px 0;
 }
 
@@ -578,7 +585,7 @@ const handleLogout = async () => {
   align-items: center;
   gap: 12px;
   padding: 12px 16px;
-  border-radius: 8px;
+  border-radius: 14px;
   color: var(--text-primary);
   text-decoration: none;
   font-size: 16px;
@@ -591,34 +598,33 @@ const handleLogout = async () => {
   }
 }
 
-.mobile-user-info {
+.mobile-account-summary {
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: 8px;
-  padding: 16px;
-  border-radius: 14px;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 16px 6px;
   color: var(--text-primary);
-  text-decoration: none;
-  transition: all 0.3s;
+}
 
-  &:hover {
-    background: var(--bg-hover);
-    color: var(--primary);
-  }
+.mobile-account-summary__name {
+  min-width: 0;
+  font-size: 15px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 
-  .mobile-nickname {
-    font-weight: 500;
-  }
-
-  .mobile-user-role {
-    font-size: 12px;
-    color: var(--primary);
-    background: rgba(251, 114, 153, 0.12);
-    border: 1px solid rgba(251, 114, 153, 0.18);
-    padding: 2px 10px;
-    border-radius: 999px;
-  }
+.mobile-account-summary__role {
+  flex-shrink: 0;
+  font-size: 12px;
+  color: var(--primary);
+  background: rgba(251, 114, 153, 0.12);
+  border: 1px solid rgba(251, 114, 153, 0.18);
+  padding: 4px 10px;
+  border-radius: 999px;
+  white-space: nowrap;
 }
 
 // 搜索对话框
@@ -631,5 +637,15 @@ const handleLogout = async () => {
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+[data-theme="dark"] .mobile-menu-content {
+  background: rgba(35, 36, 39, 0.98);
+  border-left-color: rgba(78, 82, 90, 0.7);
+  box-shadow: -18px 0 40px rgba(0, 0, 0, 0.28);
+}
+
+[data-theme="dark"] .mobile-menu-divider {
+  background: rgba(78, 82, 90, 0.78);
 }
 </style>
