@@ -56,6 +56,7 @@
 import { computed } from 'vue';
 import HeroWave from '@/components/HeroWave/HeroWave.vue';
 import '@fontsource/patrick-hand/400.css';
+import '@fontsource/zcool-kuaile/400.css';
 
 interface Props {
   title: string;
@@ -149,6 +150,12 @@ function normalizeMinHeight(value: string) {
 }
 
 .page-hero--sakura-diary {
+  --sakura-hero-text-main: #ffffff;
+  --sakura-hero-text-muted: rgba(255, 255, 255, 0.86);
+  --sakura-hero-accent: #ff7faa;
+  --sakura-hero-accent-soft: #f7b6ca;
+  --sakura-hero-shadow: rgba(0, 0, 0, 0.5);
+
   .page-hero__bg {
     filter: saturate(0.82) brightness(1.08) blur(1.1px);
     transform: scale(1.015);
@@ -287,6 +294,70 @@ function normalizeMinHeight(value: string) {
   text-shadow: 0 1px 12px rgba(32, 16, 28, 0.16);
 }
 
+.page-hero--default {
+  .page-hero__content {
+    max-width: 860px;
+  }
+
+  .page-hero__title {
+    font-family:
+      'Patrick Hand',
+      'ZCOOL KuaiLe',
+      'Segoe Print',
+      'Bradley Hand',
+      cursive;
+    font-size: clamp(2.75rem, 6vw, 4.5rem);
+    font-weight: 400;
+    letter-spacing: 0.04em;
+    text-shadow:
+      0 4px 20px rgba(0, 0, 0, 0.5),
+      0 0 8px rgba(255, 182, 193, 0.58),
+      0 0 20px rgba(255, 127, 170, 0.2);
+  }
+
+  .page-hero__subtitle-text {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: clamp(0.75rem, 2vw, 1.15rem);
+    font-family:
+      'Microsoft YaHei UI',
+      'PingFang SC',
+      'Hiragino Sans GB',
+      'Noto Sans CJK SC',
+      sans-serif;
+    font-size: clamp(1rem, 1.45vw, 1.08rem);
+    font-weight: 500;
+    line-height: 1.76;
+    letter-spacing: 0.12em;
+    color: rgba(255, 255, 255, 0.88);
+    text-shadow:
+      0 2px 10px rgba(0, 0, 0, 0.42),
+      0 0 8px rgba(255, 214, 226, 0.14);
+  }
+
+  .page-hero__subtitle-text::before,
+  .page-hero__subtitle-text::after {
+    content: '';
+    width: clamp(0.72rem, 1.6vw, 0.92rem);
+    height: clamp(0.92rem, 2vw, 1.08rem);
+    opacity: 0.72;
+    box-shadow: 0 0 8px rgba(255, 196, 214, 0.14);
+  }
+
+  .page-hero__subtitle-text::before {
+    border-top: 1px solid rgba(255, 223, 233, 0.72);
+    border-bottom: 1px solid rgba(255, 223, 233, 0.72);
+    border-left: 1px solid rgba(255, 223, 233, 0.72);
+  }
+
+  .page-hero__subtitle-text::after {
+    border-top: 1px solid rgba(255, 223, 233, 0.72);
+    border-bottom: 1px solid rgba(255, 223, 233, 0.72);
+    border-right: 1px solid rgba(255, 223, 233, 0.72);
+  }
+}
+
 .page-hero__flower {
   display: none;
 }
@@ -299,8 +370,9 @@ function normalizeMinHeight(value: string) {
     letter-spacing: 0.01em;
     font-weight: 400;
     text-shadow:
-      0 12px 34px rgba(27, 35, 48, 0.28),
-      0 2px 10px rgba(27, 35, 48, 0.18);
+      0 4px 22px var(--sakura-hero-shadow),
+      0 0 9px rgba(255, 182, 193, 0.68),
+      0 0 24px rgba(255, 127, 170, 0.22);
   }
 
   .page-hero__accent {
@@ -312,16 +384,18 @@ function normalizeMinHeight(value: string) {
       'Segoe Print',
       'Bradley Hand',
       cursive;
-    font-size: 1em;
+    font-size: 1.04em;
     font-weight: 400;
     font-style: normal;
-    letter-spacing: 0.02em;
-    color: #8f8792;
+    letter-spacing: 0.045em;
+    color: var(--sakura-hero-text-main);
+    -webkit-text-stroke: 0.35px rgba(255, 214, 226, 0.58);
     text-shadow:
-      0 1px 0 rgba(255, 255, 255, 0.26),
-      0 8px 24px rgba(91, 74, 92, 0.18),
-      0 2px 8px rgba(91, 74, 92, 0.12);
-    transform: rotate(-0.45deg);
+      0 4px 20px rgba(0, 0, 0, 0.54),
+      0 0 8px rgba(255, 214, 226, 0.78),
+      0 0 22px rgba(255, 127, 170, 0.46);
+    filter: drop-shadow(0 0 8px rgba(255, 156, 190, 0.36));
+    transform: rotate(-0.35deg);
   }
 
   .page-hero__accent::after {
@@ -329,53 +403,75 @@ function normalizeMinHeight(value: string) {
   }
 
   .page-hero__accent-main {
-    color: #8f8792;
+    color: var(--sakura-hero-text-main);
   }
 
   .page-hero__accent-tail {
-    color: #f3bdd1;
+    color: var(--sakura-hero-text-main);
+    text-shadow:
+      0 4px 20px rgba(0, 0, 0, 0.54),
+      0 0 10px rgba(255, 214, 226, 0.78),
+      0 0 26px rgba(255, 127, 170, 0.5);
   }
 
   .page-hero__flower {
     display: inline-block;
     margin-left: 0.16em;
     font-size: 0.25em;
-    color: rgba(238, 164, 195, 0.82);
+    color: color-mix(in srgb, var(--sakura-hero-accent-soft) 82%, var(--sakura-hero-text-muted));
     text-shadow:
-      0 0 10px rgba(238, 164, 195, 0.22),
-      0 3px 10px rgba(91, 74, 92, 0.14);
+      0 0 10px rgba(247, 182, 202, 0.28),
+      0 3px 10px rgba(111, 101, 115, 0.14);
     transform: translateY(-0.7em) rotate(6deg);
   }
 
   .page-hero__subtitle-text {
     position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: clamp(0.75rem, 2vw, 1.15rem);
     max-width: none;
-    padding: 0.12rem 0.35rem 0.16rem;
-    border: none;
-    border-radius: 0;
-    background: transparent;
-    box-shadow: none;
-    backdrop-filter: none;
-    font-family: inherit;
-    font-size: clamp(1.08rem, 2.02vw, 1.34rem);
-    line-height: 1.9;
-    letter-spacing: 0.11em;
-    color: rgba(109, 101, 112, 0.64);
+    padding: 0.08rem 0.18rem 0.12rem;
+    font-family:
+      'Microsoft YaHei UI',
+      'PingFang SC',
+      'Hiragino Sans GB',
+      'Noto Sans CJK SC',
+      sans-serif;
+    font-size: clamp(1rem, 1.5vw, 1.1rem);
+    font-weight: 500;
+    line-height: 1.76;
+    letter-spacing: 0.12em;
+    color: var(--sakura-hero-text-muted);
     text-shadow:
-      0 1px 0 rgba(255, 255, 255, 0.18),
-      0 8px 20px rgba(91, 74, 92, 0.08);
+      0 2px 10px rgba(0, 0, 0, 0.46),
+      0 0 8px rgba(255, 214, 226, 0.22);
   }
 
   .page-hero__subtitle-text::before {
-    content: none;
+    content: '';
+    width: clamp(0.72rem, 1.6vw, 0.92rem);
+    height: clamp(0.92rem, 2vw, 1.08rem);
+    opacity: 0.76;
+    border-top: 1px solid rgba(255, 223, 233, 0.78);
+    border-bottom: 1px solid rgba(255, 223, 233, 0.78);
+    border-left: 1px solid rgba(255, 223, 233, 0.78);
+    box-shadow: 0 0 8px rgba(255, 196, 214, 0.18);
   }
 
   .page-hero__subtitle-text::after {
-    content: none;
+    content: '';
+    width: clamp(0.72rem, 1.6vw, 0.92rem);
+    height: clamp(0.92rem, 2vw, 1.08rem);
+    opacity: 0.76;
+    border-top: 1px solid rgba(255, 223, 233, 0.78);
+    border-bottom: 1px solid rgba(255, 223, 233, 0.78);
+    border-right: 1px solid rgba(255, 223, 233, 0.78);
+    box-shadow: 0 0 8px rgba(255, 196, 214, 0.18);
   }
 
   .page-hero__scroll-hint {
-    color: rgba(68, 48, 58, 0.72);
+    color: rgba(111, 101, 115, 0.78);
   }
 }
 
@@ -482,19 +578,41 @@ function normalizeMinHeight(value: string) {
 
     .page-hero__subtitle-text {
       max-width: min(100%, 24rem);
-      padding-inline: 0.2rem;
       font-size: 0.95rem;
-      letter-spacing: 0.06em;
+      gap: 0.62rem;
+      letter-spacing: 0.08em;
       line-height: 1.72;
-      border-radius: 0;
     }
 
     .page-hero__subtitle-text::before {
-      inset-inline: -0.8rem;
+      width: 0.62rem;
+      height: 0.82rem;
     }
 
     .page-hero__subtitle-text::after {
-      inset-inline: -0.35rem;
+      width: 0.62rem;
+      height: 0.82rem;
+    }
+  }
+
+  .page-hero--default {
+    .page-hero__title {
+      font-size: clamp(2.2rem, 10vw, 3.4rem);
+      letter-spacing: 0.03em;
+    }
+
+    .page-hero__subtitle-text {
+      max-width: min(100%, 24rem);
+      gap: 0.62rem;
+      font-size: 0.95rem;
+      line-height: 1.72;
+      letter-spacing: 0.08em;
+    }
+
+    .page-hero__subtitle-text::before,
+    .page-hero__subtitle-text::after {
+      width: 0.62rem;
+      height: 0.82rem;
     }
   }
 }

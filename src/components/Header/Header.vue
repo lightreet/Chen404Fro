@@ -385,7 +385,7 @@ const handleLogout = async () => {
   gap: 6px;
   padding: 8px 16px;
   border-radius: 20px;
-  color: var(--text-secondary);
+  color: #5f6066;
   text-decoration: none;
   font-size: 14px;
   transition: all 0.3s;
@@ -395,13 +395,13 @@ const handleLogout = async () => {
   }
 
   &:hover {
-    color: var(--primary);
-    background: var(--bg-hover);
+    color: #ff7faa;
+    background: rgba(255, 255, 255, 0.34);
   }
 
   &.is-active {
-    color: var(--primary);
-    background: rgba(251, 114, 153, 0.1);
+    color: #ff7faa;
+    background: rgba(255, 127, 170, 0.14);
   }
 }
 
