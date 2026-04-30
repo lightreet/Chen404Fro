@@ -20,7 +20,12 @@
     </template>
 
     <div class="tag-page">
-      <div class="tags-cloud">
+      <div v-if="loading" class="loading-state">
+        <el-icon class="loading-icon"><Loading /></el-icon>
+        <p>加载中…</p>
+      </div>
+
+      <div v-else class="tags-cloud">
         <router-link
           v-for="tag in tags"
           :key="tag.id"
@@ -29,8 +34,12 @@
           :style="{ backgroundColor: tag.color + '20', color: tag.color }"
         >
           {{ tag.name }}
-          <span class="tag-count">{{ Math.floor(Math.random() * 15) + 1 }}</span>
+          <span class="tag-count">{{ tag.articleCount ?? 0 }}</span>
         </router-link>
+      </div>
+
+      <div v-if="!loading && tags.length === 0" class="empty-state">
+        <p>暂无标签</p>
       </div>
     </div>
   </DefaultLayout>
@@ -38,23 +47,39 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
+import { ElMessage } from 'element-plus';
+import { Loading } from '@element-plus/icons-vue';
 import DefaultLayout from '@/layouts/DefaultLayout.vue';
 import PageHero from '@/components/PageHero/PageHero.vue';
 import { useSiteConfig } from '@/composables/useSiteConfig';
 import type { Tag } from '@/types';
-import { mockTags } from '@/utils/mock';
+import { getTags } from '@/api/article';
 
 const DEFAULT_TAG_HERO =
   'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=1920&q=80';
 const tags = ref<Tag[]>([]);
+const loading = ref(true);
 const heroBgImage = ref(DEFAULT_TAG_HERO);
 const { loadSiteConfig } = useSiteConfig();
+
+const fetchTags = async () => {
+  loading.value = true;
+  try {
+    tags.value = (await getTags(true)) ?? [];
+  } catch (err) {
+    console.error('加载标签失败', err);
+    ElMessage.error('加载标签失败，请稍后重试');
+    tags.value = [];
+  } finally {
+    loading.value = false;
+  }
+};
 
 onMounted(() => {
   void loadSiteConfig(true).then((config) => {
     heroBgImage.value = config.heroImages?.tag || DEFAULT_TAG_HERO;
   });
-  tags.value = mockTags;
+  void fetchTags();
 });
 </script>
 
@@ -64,6 +89,28 @@ onMounted(() => {
   max-width: 960px;
   margin: 0 auto;
   padding-top: 20px;
+}
+
+.loading-state {
+  text-align: center;
+  padding: 48px 24px;
+  color: var(--text-secondary);
+
+  .loading-icon {
+    font-size: 32px;
+    margin-bottom: 12px;
+    animation: spin 1s linear infinite;
+  }
+
+  p {
+    margin: 0;
+    font-size: 14px;
+  }
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 
 .hero-meta {
@@ -92,6 +139,13 @@ onMounted(() => {
   flex-wrap: wrap;
   gap: 12px;
   justify-content: center;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 48px 24px;
+  color: var(--text-tertiary);
+  font-size: 15px;
 }
 
 .tag-item {

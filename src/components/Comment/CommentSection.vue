@@ -220,6 +220,17 @@ const canSubmit = computed(() => {
   return true
 })
 
+function normalizeExternalUrl(raw?: string): string | undefined {
+  if (!raw?.trim()) return undefined
+  try {
+    const url = new URL(raw.trim(), window.location.origin)
+    if (!['http:', 'https:'].includes(url.protocol)) return undefined
+    return url.toString()
+  } catch {
+    return undefined
+  }
+}
+
 async function fetchComments() {
   loading.value = true
   try {
@@ -248,13 +259,19 @@ async function submitComment() {
   submitting.value = true
 
   try {
+    const normalizedWebsite = normalizeExternalUrl(form.value.authorWebsite)
+    if (form.value.authorWebsite.trim() && !normalizedWebsite) {
+      ElMessage.warning('个人网站仅支持 http/https 链接')
+      return
+    }
+
     const params: CreateCommentParams = {
       content: form.value.content.trim(),
       authorName: userStore.isLoggedIn
         ? (userStore.user!.nickname || userStore.user!.username)
         : form.value.authorName.trim(),
       authorEmail: form.value.authorEmail.trim() || undefined,
-      authorWebsite: form.value.authorWebsite.trim() || undefined,
+      authorWebsite: normalizedWebsite,
     }
 
     if (!isGuestbook.value) {
@@ -273,9 +290,10 @@ async function submitComment() {
     }
 
     form.value.content = ''
+    form.value.authorWebsite = ''
     replyTarget.value = null
 
-    ElMessage.success('评论发表成功')
+    ElMessage.success(result.status === 0 ? '评论已提交，审核后展示' : '评论发表成功')
     await fetchComments()
   } catch {
     ElMessage.error('评论发表失败')

@@ -16,8 +16,8 @@
             :to="`/user/${comment.authorId}`"
           >{{ comment.authorName }}</RouterLink>
           <a
-            v-else-if="comment.authorWebsite"
-            :href="comment.authorWebsite"
+            v-else-if="safeAuthorWebsite"
+            :href="safeAuthorWebsite"
             target="_blank"
             rel="noopener noreferrer"
           >{{ comment.authorName }}</a>
@@ -142,6 +142,7 @@ watch(
 )
 
 const isCurrentUserAdmin = computed(() => props.isAdmin ?? false)
+const safeAuthorWebsite = computed(() => normalizeExternalUrl(props.comment.authorWebsite))
 
 // 获取当前评论的删除 key（如果是游客评论）
 const guestDeleteKey = computed(() => getGuestDeleteKey(props.comment.id));
@@ -181,6 +182,16 @@ function handleDelete() {
     emit('guestDelete', props.comment, guestDeleteKey.value)
   } else {
     emit('delete', props.comment)
+  }
+}
+
+function normalizeExternalUrl(raw?: string): string | null {
+  if (!raw) return null
+  try {
+    const url = new URL(raw, window.location.origin)
+    return ['http:', 'https:'].includes(url.protocol) ? url.toString() : null
+  } catch {
+    return null
   }
 }
 

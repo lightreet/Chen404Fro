@@ -139,7 +139,7 @@ export function getArticlesByCategory(
   categoryId: number | string,
   params?: PageParams
 ): Promise<PageResult<Article>> {
-  return get(`/categories/${categoryId}/articles`, params);
+  return get('/articles', { categoryId, ...params });
 }
 
 /**
@@ -190,32 +190,7 @@ export function getArticlesByTag(
   tagId: number | string,
   params?: PageParams
 ): Promise<PageResult<Article>> {
-  return get(`/tags/${tagId}/articles`, params);
-}
-
-/**
- * 创建标签（管理员）
- * @param data 标签数据
- */
-export function createTag(data: Partial<Tag>): Promise<Tag> {
-  return post('/admin/tags', data);
-}
-
-/**
- * 更新标签（管理员）
- * @param id 标签ID
- * @param data 标签数据
- */
-export function updateTag(id: number, data: Partial<Tag>): Promise<Tag> {
-  return put(`/admin/tags/${id}`, data);
-}
-
-/**
- * 删除标签（管理员）
- * @param id 标签ID
- */
-export function deleteTag(id: number): Promise<void> {
-  return del(`/admin/tags/${id}`);
+  return get('/articles', { tagId, ...params });
 }
 
 // ==================== 归档相关 ====================
@@ -226,19 +201,4 @@ export function deleteTag(id: number): Promise<void> {
  */
 export function getArchives(): Promise<ArchiveYear[]> {
   return get('/archives');
-}
-
-/**
- * 根据日期获取文章
- * @param year 年份
- * @param month 月份（可选）
- * @param params 分页参数
- */
-export function getArticlesByDate(
-  year: number,
-  month?: number,
-  params?: PageParams
-): Promise<PageResult<Article>> {
-  const path = month ? `/archives/${year}/${month}` : `/archives/${year}`;
-  return get(path, params);
 }

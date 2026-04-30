@@ -63,7 +63,7 @@ export function updateSiteConfig(data: Partial<SiteConfig>): Promise<SiteConfig>
  * 包含：文章数、分类数、标签数、评论数、访问数
  */
 export function getSiteStats(): Promise<SiteStats> {
-  return get('/site/stats');
+  return get('/home/stats');
 }
 
 /**

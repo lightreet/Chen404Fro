@@ -32,14 +32,6 @@ export function getGuestbookComments(params?: PageParams): Promise<PageResult<Co
 }
 
 /**
- * 获取文章的评论数
- * @param articleId 文章ID
- */
-export function getCommentCount(articleId: number | string): Promise<{ count: number }> {
-  return get(`/articles/${articleId}/comment-count`);
-}
-
-/**
  * 发表评论
  * @param data 评论数据
  */

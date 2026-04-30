@@ -28,7 +28,11 @@ export function uploadImage(file: File): Promise<UploadResult> {
 
 /** 批量上传图片（并行） */
 export async function uploadImages(files: File[]): Promise<UploadResult[]> {
-  return Promise.all(files.map((file) => uploadFile(file, 'image')));
+  const formData = new FormData();
+  files.forEach((file) => {
+    formData.append('files', file);
+  });
+  return request.post('/upload/images', formData, { timeout: 60000 });
 }
 
 /** 上传封面图 */

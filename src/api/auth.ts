@@ -10,7 +10,6 @@ import type {
   RegisterParams,
   User,
   SendCodeParams,
-  ForgotPasswordParams,
   ChangePasswordParams,
   UpdateProfileParams,
 } from '@/types';
@@ -35,7 +34,8 @@ export function register(params: RegisterParams): Promise<User> {
  * 退出登录
  */
 export function logout(): Promise<void> {
-  return post('/auth/logout');
+  const refreshToken = localStorage.getItem('refreshToken') || undefined;
+  return post('/auth/logout', refreshToken ? { refreshToken } : undefined);
 }
 
 /**
@@ -65,28 +65,6 @@ export function sendVerifyCode(params: SendCodeParams): Promise<{
   expireSeconds: number;
 }> {
   return post('/auth/send-code', params);
-}
-
-/**
- * 验证验证码
- * @param account 邮箱或手机号
- * @param code 验证码
- * @param type 验证类型
- */
-export function verifyCode(
-  account: string,
-  code: string,
-  type: 'email' | 'phone'
-): Promise<boolean> {
-  return post('/auth/verify-code', { account, code, type });
-}
-
-/**
- * 忘记密码 - 重置密码
- * @param params 重置密码参数 { account, code, newPassword }
- */
-export function resetPassword(params: ForgotPasswordParams): Promise<void> {
-  return post('/auth/reset-password', params);
 }
 
 /**
