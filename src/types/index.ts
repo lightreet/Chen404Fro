@@ -191,14 +191,34 @@ export interface HomeData {
 
 // ==================== 文章相关类型 ====================
 
-export interface Article {
+export interface ArticleAuthorSummary {
+  id: number | string;
+  username: string;
+  nickname: string;
+  avatar: string;
+  bio?: string;
+}
+
+export interface ArticleCategorySummary {
+  id: number;
+  name: string;
+  slug: string;
+  description?: string;
+  icon?: string;
+}
+
+export interface ArticleTagSummary {
+  id: number;
+  name: string;
+  slug: string;
+  color: string;
+}
+
+export interface ArticleListItem {
   /** 文章 ID（后端 Long 序列化为 string，避免大数精度丢失） */
   id: number | string;
   title: string;
   summary: string;
-  content?: string;
-  /** 服务端渲染好的 HTML（若有则优先展示） */
-  contentHtml?: string;
   coverImage?: string;
   authorId: number | string;
   categoryId: number;
@@ -217,25 +237,28 @@ export interface Article {
   publishTime: string;
   createTime: string;
   updateTime: string;
-  // 关联数据
-  category?: Category;
-  tags?: Tag[];
-  author?: Author;
-  /** 创建/更新时提交的标签 ID 列表 */
-  tagIds?: number[];
-  /** 创建/更新时提交的新标签名称（后端 findOrCreate） */
-  tagNames?: string[];
-  /** 当前登录用户是否可编辑 */
+  category?: ArticleCategorySummary;
+  tags?: ArticleTagSummary[];
+  author?: ArticleAuthorSummary;
   canEdit?: boolean;
-  /** 当前登录用户是否可删除 */
   canDelete?: boolean;
-  /** 当前登录用户是否可评论 */
-  canComment?: boolean;
-  /** 当前登录用户是否已点赞该文章 */
   liked?: boolean;
-  /** 当前登录用户是否已收藏 */
   favorited?: boolean;
 }
+
+export interface ArticleDetail extends ArticleListItem {
+  content?: string;
+  /** 服务端渲染好的 HTML（若有则优先展示） */
+  contentHtml?: string;
+  isOriginal?: number;
+  originalUrl?: string;
+  canComment?: boolean;
+}
+
+/**
+ * 兼容现有视图逐步迁移；新接口类型优先使用 ArticleListItem / ArticleDetail。
+ */
+export type Article = ArticleDetail;
 
 export enum ArticleStatus {
   DRAFT = 0,
@@ -268,6 +291,37 @@ export interface Category {
   /** 管理端：0 禁用 1 启用 */
   status?: number;
 }
+
+export interface CreateArticleCommand {
+  title: string;
+  summary?: string;
+  content: string;
+  coverImage?: string;
+  categoryId: number;
+  status: ArticleStatus;
+  isTop?: number;
+  isRecommend?: number;
+  isOriginal?: number;
+  originalUrl?: string;
+  password?: string;
+  visibility?: ArticleVisibility;
+  commentPolicy?: ArticleCommentPolicy;
+  tagIds?: number[];
+  tagNames?: string[];
+}
+
+export interface UpdateArticleCommand extends CreateArticleCommand {}
+
+export interface CreateCategoryCommand {
+  name: string;
+  slug?: string;
+  description?: string;
+  icon?: string;
+  sortOrder?: number;
+  status?: number;
+}
+
+export interface UpdateCategoryCommand extends CreateCategoryCommand {}
 
 export interface Tag {
   id: number;

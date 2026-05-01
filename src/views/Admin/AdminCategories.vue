@@ -77,7 +77,7 @@
 import { computed, onMounted, reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { CollectionTag, Plus } from '@element-plus/icons-vue'
-import type { Category } from '@/types'
+import type { Category, CreateCategoryCommand } from '@/types'
 import { createCategory, deleteCategory, getAdminCategories, updateCategory } from '@/api/article'
 
 const categoriesList = ref<Category[]>([])
@@ -92,7 +92,7 @@ const editingCategoryId = ref<number | null>(null)
 
 const categoryDialogTitle = computed(() => (editingCategoryId.value ? '编辑分类' : '新建分类'))
 
-const categoryForm = reactive<Partial<Category>>({
+const categoryForm = reactive<CreateCategoryCommand>({
   name: '',
   slug: '',
   description: '',

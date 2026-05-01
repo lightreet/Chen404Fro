@@ -2,7 +2,7 @@ import { ref, reactive, computed, onMounted, onUnmounted, onUpdated, watch, next
 import { useRoute, useRouter, onBeforeRouteLeave } from 'vue-router';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import type { ExposeParam, ToolbarNames } from 'md-editor-v3';
-import type { Article, Category, Tag } from '@/types';
+import type { Category, CreateArticleCommand, Tag, UpdateArticleCommand } from '@/types';
 import { ArticleStatus, ArticleVisibility, ArticleCommentPolicy } from '@/types';
 import {
   getArticleById,
@@ -185,7 +185,19 @@ const upsertImageWidthBySrc = (src: string, width: string) => {
 };
 
 // 表单数据；置顶 isTop 仅管理员可在界面修改（受信用户新建时后端也会强制为 0）。推荐 isRecommend 不在此编辑
-const form = reactive<Partial<Article>>({
+type ArticleEditorForm = {
+  title: string;
+  content: string;
+  summary: string;
+  coverImage: string;
+  categoryId?: number;
+  status: ArticleStatus;
+  isTop: number;
+  visibility: ArticleVisibility;
+  commentPolicy: ArticleCommentPolicy;
+};
+
+const form = reactive<ArticleEditorForm>({
   title: '',
   content: '',
   summary: '',
@@ -407,7 +419,7 @@ const validateForm = (): boolean => {
 };
 
 // 构建提交数据（标签：数字为 id，字符串为新标签名，后端会 findOrCreate）
-const buildSubmitData = (): Partial<Article> => {
+const buildSubmitData = (): CreateArticleCommand => {
   let summary = form.summary?.trim();
   if (!summary && form.content) {
     summary = form.content
@@ -420,14 +432,21 @@ const buildSubmitData = (): Partial<Article> => {
   const tagNames = customTagNames.value.map((s) => s.trim()).filter(Boolean);
 
   return {
-    ...form,
+    title: form.title,
+    content: form.content,
+    coverImage: form.coverImage || undefined,
+    categoryId: Number(form.categoryId),
+    status: form.status,
+    isTop: form.isTop,
+    visibility: form.visibility,
+    commentPolicy: form.commentPolicy,
     summary,
     tagIds,
     ...(tagNames.length > 0 ? { tagNames } : {}),
   };
 };
 
-const buildDraftSubmitData = (): Partial<Article> => {
+const buildDraftSubmitData = (): UpdateArticleCommand => {
   return {
     ...buildSubmitData(),
     status: ArticleStatus.DRAFT,

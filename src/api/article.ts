@@ -5,20 +5,25 @@
 
 import { get, post, put, del, type RequestConfig } from './request';
 import type {
-  Article,
+  ArticleDetail,
+  ArticleListItem,
   Category,
+  CreateArticleCommand,
+  CreateCategoryCommand,
   Tag,
   PageResult,
   PageParams,
   ArticleQueryParams,
   ArchiveYear,
+  UpdateArticleCommand,
+  UpdateCategoryCommand,
 } from '@/types';
 
 /**
  * 获取文章列表
  * @param params 查询参数 { page, size, categoryId, tagId, keyword, orderBy }
  */
-export function getArticles(params?: ArticleQueryParams): Promise<PageResult<Article>> {
+export function getArticles(params?: ArticleQueryParams): Promise<PageResult<ArticleListItem>> {
   return get('/articles', params);
 }
 
@@ -30,7 +35,7 @@ export function getArticles(params?: ArticleQueryParams): Promise<PageResult<Art
 export function getArticleById(
   id: number | string,
   incrementView: boolean = true
-): Promise<Article> {
+): Promise<ArticleDetail> {
   return get(`/articles/${String(id)}`, { incrementView });
 }
 
@@ -48,14 +53,18 @@ export function getArticleNeighbors(id: number | string): Promise<{
 /**
  * 创建文章（需登录）
  */
-export function createArticle(data: Partial<Article>, config?: RequestConfig): Promise<Article> {
+export function createArticle(data: CreateArticleCommand, config?: RequestConfig): Promise<ArticleDetail> {
   return post('/articles', data, config);
 }
 
 /**
  * 更新文章（需登录）
  */
-export function updateArticle(id: number | string, data: Partial<Article>, config?: RequestConfig): Promise<Article> {
+export function updateArticle(
+  id: number | string,
+  data: UpdateArticleCommand,
+  config?: RequestConfig
+): Promise<ArticleDetail> {
   return put(`/articles/${String(id)}`, data, config);
 }
 
@@ -74,7 +83,7 @@ export function getMyArticles(params?: {
   size?: number;
   status?: number;
   keyword?: string;
-}): Promise<PageResult<Article>> {
+}): Promise<PageResult<ArticleListItem>> {
   return get('/articles/mine', params);
 }
 
@@ -99,12 +108,12 @@ export function toggleArticleFavorite(id: number | string): Promise<{ favorited:
 }
 
 /** 个人中心：我点赞的文章 */
-export function getMyLikedArticles(params?: PageParams): Promise<PageResult<Article>> {
+export function getMyLikedArticles(params?: PageParams): Promise<PageResult<ArticleListItem>> {
   return get('/articles/mine/liked', params);
 }
 
 /** 个人中心：我的收藏 */
-export function getMyFavoriteArticles(params?: PageParams): Promise<PageResult<Article>> {
+export function getMyFavoriteArticles(params?: PageParams): Promise<PageResult<ArticleListItem>> {
   return get('/articles/mine/favorites', params);
 }
 
@@ -138,21 +147,21 @@ export function getCategoryById(id: number | string): Promise<Category> {
 export function getArticlesByCategory(
   categoryId: number | string,
   params?: PageParams
-): Promise<PageResult<Article>> {
+): Promise<PageResult<ArticleListItem>> {
   return get('/articles', { categoryId, ...params });
 }
 
 /**
  * 创建分类（需管理员，后端 @RequireAdmin 校验）
  */
-export function createCategory(data: Partial<Category>): Promise<Category> {
+export function createCategory(data: CreateCategoryCommand): Promise<Category> {
   return post('/categories', data);
 }
 
 /**
  * 更新分类（需管理员）
  */
-export function updateCategory(id: number, data: Partial<Category>): Promise<Category> {
+export function updateCategory(id: number, data: UpdateCategoryCommand): Promise<Category> {
   return put(`/categories/${id}`, data);
 }
 
@@ -189,7 +198,7 @@ export function getTagById(id: number | string): Promise<Tag> {
 export function getArticlesByTag(
   tagId: number | string,
   params?: PageParams
-): Promise<PageResult<Article>> {
+): Promise<PageResult<ArticleListItem>> {
   return get('/articles', { tagId, ...params });
 }
 
