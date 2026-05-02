@@ -419,9 +419,9 @@
       left: env(safe-area-inset-left, 0);
       /*
        * 返回栏使用 fixed + 阴影，目录若紧贴其底边，首条在部分缩放/字体渲染下会被“吃掉”几像素。
-       * 额外留出 16px 安全间距，避免顶部目录标题被挡住。
+       * 这里再多留一些安全间距，避免目录首项被顶部横栏压住。
        */
-      top: calc(var(--article-edit-top-h) + 16px);
+      top: calc(var(--article-edit-top-h) + 28px);
       bottom: var(--article-edit-footer-h);
       width: var(--article-edit-catalog-w);
       /* 高于 sticky 工具栏(295)，低于返回顶栏(300)，避免大纲被正文区盖住又压在返回栏下 */
@@ -435,7 +435,7 @@
       box-sizing: border-box;
       display: flex;
       flex-direction: column;
-      padding-top: 12px;
+      padding-top: 18px;
       overflow: hidden;
     }
 
@@ -450,20 +450,20 @@
        * md-editor-v3 会在目录激活同步时微调内部滚动位置，默认顶部留白太小，
        * 首条顶层目录容易被滚动容器上沿裁掉一截。
        */
-      padding-top: 18px !important;
+      padding-top: 28px !important;
       padding-bottom: 12px !important;
-      scroll-padding-top: 18px;
+      scroll-padding-top: 28px;
     }
 
     :deep(.md-editor-catalog) {
-      padding-top: 8px;
+      padding-top: 12px;
       box-sizing: border-box;
     }
 
     /* 首条目录不要再贴着容器上沿 */
     :deep(.md-editor-catalog-container > .md-editor-catalog-link:first-child),
     :deep(.md-editor-catalog-wrapper > .md-editor-catalog-link:first-child) {
-      padding-top: 16px !important;
+      padding-top: 20px !important;
     }
   }
 }

@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div ref="articleEditRootRef" class="article-edit-page">
     <!-- 顶部 fixed 栏（返回与草稿状态）；Markdown 工具栏在正文内 sticky，避免迁出 DOM 导致下拉失效 -->
     <header ref="editTopDockRef" class="edit-top-dock">
@@ -44,6 +44,7 @@
             v-model="form.content"
             :theme="editorTheme"
             :toolbars="toolbars"
+            :defToolbars="defToolbars"
             :preview="true"
             :previewComponent="MdResizablePreview"
             catalog-layout="flat"
@@ -266,12 +267,14 @@
 </template>
 
 <script setup lang="ts">
+import { h } from 'vue';
 import { Icon } from '@iconify/vue';
 import { resolveCategoryIcon } from '@/utils/categoryIcon';
 import { ArrowLeft, ArrowDown, Plus } from '@element-plus/icons-vue';
 import { MdEditor } from 'md-editor-v3';
 import 'md-editor-v3/lib/style.css';
 import { ArticleStatus } from '@/types';
+import MdEditorUnorderedListToolbar from '@/components/Editor/MdEditorUnorderedListToolbar.vue';
 import MdResizablePreview from '@/components/MdResizablePreview/MdResizablePreview.vue';
 import { useArticleEdit } from '@/composables/article-edit/useArticleEdit';
 
@@ -318,6 +321,8 @@ const {
   onTagsWrapMouseLeave,
 } = useArticleEdit();
 
+const defToolbars = h('div', [h(MdEditorUnorderedListToolbar)]);
+
 /** 仅模板使用；满足 noUnusedLocals（布局测量在 composable 内消费这些 ref） */
 void [
   articleEditRootRef,
@@ -334,3 +339,4 @@ defineExpose({ editorRef });
 <style scoped lang="scss">
 @use './article-edit/ArticleEdit.styles.scss' as *;
 </style>
+

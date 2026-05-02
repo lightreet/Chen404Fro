@@ -1,9 +1,9 @@
 /**
  * 认证相关 API
- * 包含登录、注册、密码重置等功能
+ * 优先通过 generated SDK 对齐后端契约；refresh/logout 这类特殊流程仍保留手写 request。
  */
 
-import { get, post, put, type RequestConfig } from './request';
+import { post, type RequestConfig } from './request';
 import type {
   LoginParams,
   LoginResult,
@@ -13,21 +13,36 @@ import type {
   ChangePasswordParams,
   UpdateProfileParams,
 } from '@/types';
+import { Service } from '@/sdk/generated';
+import { unwrapResult } from '@/sdk/runtime';
 
 /**
  * 用户登录
- * @param params 登录参数 { username, password, captcha }
  */
-export function login(params: LoginParams): Promise<LoginResult> {
-  return post('/auth/login', params);
+export async function login(params: LoginParams): Promise<LoginResult> {
+  return unwrapResult(await Service.login({
+    requestBody: {
+      username: params.username,
+      password: params.password,
+      captcha: params.captcha,
+    },
+  })) as LoginResult;
 }
 
 /**
  * 用户注册
- * @param params 注册参数 { username, password, nickname, email/phone, code, registerType }
  */
-export function register(params: RegisterParams): Promise<User> {
-  return post('/auth/register', params);
+export async function register(params: RegisterParams): Promise<User> {
+  return unwrapResult(await Service.register({
+    requestBody: {
+      username: params.username,
+      password: params.password,
+      nickname: params.nickname,
+      email: params.email,
+      phone: params.phone,
+      code: params.code || '',
+    },
+  })) as User;
 }
 
 /**
@@ -41,13 +56,12 @@ export function logout(): Promise<void> {
 /**
  * 获取当前登录用户信息
  */
-export function getUserInfo(config?: RequestConfig): Promise<User> {
-  return get('/auth/info', undefined, config);
+export async function getUserInfo(_config?: RequestConfig): Promise<User> {
+  return unwrapResult(await Service.getUserInfo()) as User;
 }
 
 /**
  * 刷新 Token
- * @param refreshToken 刷新令牌
  */
 export function refreshToken(refreshToken: string): Promise<{
   token: string;
@@ -59,59 +73,79 @@ export function refreshToken(refreshToken: string): Promise<{
 
 /**
  * 发送验证码（邮箱或短信）
- * @param params 发送验证码参数 { phone/email, type }
  */
-export function sendVerifyCode(params: SendCodeParams): Promise<{
+export async function sendVerifyCode(params: SendCodeParams): Promise<{
   expireSeconds: number;
 }> {
-  return post('/auth/send-code', params);
+  return unwrapResult(await Service.sendCode({
+    requestBody: {
+      phone: params.phone,
+      email: params.email,
+      type: params.type,
+    },
+  })) as { expireSeconds: number };
 }
 
 /**
  * 修改密码（需要登录）
- * @param params 修改密码参数 { oldPassword, newPassword }
  */
-export function changePassword(params: ChangePasswordParams): Promise<void> {
-  return post('/auth/change-password', params);
+export async function changePassword(params: ChangePasswordParams): Promise<void> {
+  await unwrapResult(await Service.changePassword({
+    requestBody: {
+      oldPassword: params.oldPassword,
+      newPassword: params.newPassword,
+    },
+  }));
 }
 
 /**
  * 更新个人资料（需要登录）
- * @param params 更新参数 { nickname, avatar }
  */
-export function updateProfile(params: UpdateProfileParams): Promise<User> {
-  return put('/auth/profile', params);
+export async function updateProfile(params: UpdateProfileParams): Promise<User> {
+  return unwrapResult(await Service.updateProfile({
+    requestBody: {
+      nickname: params.nickname,
+      avatar: params.avatar,
+      bio: params.bio,
+    },
+  })) as User;
 }
 
 /**
  * 检查用户名是否可用
- * @param username 用户名
  */
-export function checkUsername(username: string): Promise<{
+export async function checkUsername(username: string): Promise<{
   available: boolean;
   message?: string;
 }> {
-  return get('/auth/check-username', { username });
+  const exists = unwrapResult(await Service.checkUsername({ username })) as boolean;
+  return {
+    available: !exists,
+  };
 }
 
 /**
  * 检查邮箱是否已注册
- * @param email 邮箱
  */
-export function checkEmail(email: string): Promise<{
+export async function checkEmail(email: string): Promise<{
   exists: boolean;
   message?: string;
 }> {
-  return get('/auth/check-email', { email });
+  const exists = unwrapResult(await Service.checkEmail({ email })) as boolean;
+  return {
+    exists,
+  };
 }
 
 /**
  * 检查手机号是否已注册
- * @param phone 手机号
  */
-export function checkPhone(phone: string): Promise<{
+export async function checkPhone(phone: string): Promise<{
   exists: boolean;
   message?: string;
 }> {
-  return get('/auth/check-phone', { phone });
+  const exists = unwrapResult(await Service.checkPhone({ phone })) as boolean;
+  return {
+    exists,
+  };
 }

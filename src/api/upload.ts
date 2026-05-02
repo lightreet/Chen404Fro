@@ -1,64 +1,64 @@
 /**
- * 文件上传相关 API（统一走 multipart/form-data，减少重复）
+ * 文件上传相关 API。
+ * 保留薄适配层，统一前端调用签名，同时底层走 generated SDK 对齐后端契约。
  */
 
-import request from './request';
+import { Service } from '@/sdk/generated'
+import { unwrapResult, type ResultEnvelope } from '@/sdk/runtime'
 
 export interface UploadResult {
-  url: string;
-  name: string;
-  size?: string;
+  url: string
+  name: string
+  size?: string
 }
 
-type UploadEndpoint = 'image' | 'cover' | 'avatar' | 'trust-attachment' | 'site-asset';
+async function uploadSingleFile(
+  file: File,
+  handler: (params: { formData: { file: Blob } }) => Promise<unknown>,
+): Promise<UploadResult> {
+  const payload = unwrapResult(await handler({
+    formData: { file },
+  }) as ResultEnvelope<{ url?: string; name?: string; size?: string }>)
 
-/**
- * 统一上传：将文件以 multipart 形式 POST 到指定上传端点
- */
-function uploadFile(file: File, endpoint: UploadEndpoint): Promise<UploadResult> {
-  const formData = new FormData();
-  formData.append('file', file);
-  return request.post(`/upload/${endpoint}`, formData, { timeout: 60000 });
+  return {
+    url: payload.url || '',
+    name: payload.name || '',
+    size: payload.size,
+  }
 }
 
-/** 上传单张图片（编辑器内） */
 export function uploadImage(file: File): Promise<UploadResult> {
-  return uploadFile(file, 'image');
+  return uploadSingleFile(file, Service.uploadImage)
 }
 
-/** 批量上传图片（并行） */
 export async function uploadImages(files: File[]): Promise<UploadResult[]> {
-  const formData = new FormData();
-  files.forEach((file) => {
-    formData.append('files', file);
-  });
-  return request.post('/upload/images', formData, { timeout: 60000 });
+  const payload = unwrapResult(await Service.uploadImages({
+    formData: { files },
+  }) as ResultEnvelope<Array<{ url?: string; name?: string; size?: string }>>)
+
+  return payload.map((item) => ({
+    url: item.url || '',
+    name: item.name || '',
+    size: item.size,
+  }))
 }
 
-/** 上传封面图 */
 export function uploadCover(file: File): Promise<UploadResult> {
-  return uploadFile(file, 'cover');
+  return uploadSingleFile(file, Service.uploadCover)
 }
 
-/** 上传站点配置图片，保持原图 */
 export function uploadSiteAsset(file: File): Promise<UploadResult> {
-  return uploadFile(file, 'site-asset');
+  return uploadSingleFile(file, Service.uploadSiteAsset)
 }
 
-/** 上传头像 */
 export function uploadAvatar(file: File): Promise<UploadResult> {
-  return uploadFile(file, 'avatar');
+  return uploadSingleFile(file, Service.uploadAvatar)
 }
 
-/** 上传受信申请附件 */
 export function uploadTrustAttachment(file: File): Promise<UploadResult> {
-  return uploadFile(file, 'trust-attachment');
+  return uploadSingleFile(file, Service.uploadTrustAttachment)
 }
 
-/**
- * 删除文件
- * @param url 文件URL
- */
-export function deleteFile(url: string): Promise<void> {
-  return request.delete('/upload/file', { params: { url } });
+export async function deleteFile(url: string): Promise<void> {
+  await unwrapResult(await Service.deleteFile({ url }))
 }

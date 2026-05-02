@@ -1,5 +1,6 @@
 import type { PageResult, TrustRequest } from '@/types'
-import { get, post, put } from './request'
+import { Service } from '@/sdk/generated'
+import { unwrapResult } from '@/sdk/runtime'
 
 export interface CreateTrustRequestParams {
   reason: string
@@ -17,22 +18,40 @@ export interface TrustRequestQueryParams {
   keyword?: string
 }
 
-export function createTrustRequest(data: CreateTrustRequestParams): Promise<TrustRequest> {
-  return post('/trust-requests', data)
+export async function createTrustRequest(data: CreateTrustRequestParams): Promise<TrustRequest> {
+  return unwrapResult(await Service.createRequest({
+    requestBody: {
+      reason: data.reason,
+      attachmentUrls: data.attachmentUrls,
+    },
+  })) as TrustRequest
 }
 
-export function getMyLatestTrustRequest(): Promise<TrustRequest | null> {
-  return get('/trust-requests/me/latest')
+export async function getMyLatestTrustRequest(): Promise<TrustRequest | null> {
+  return unwrapResult(await Service.getMyLatestRequest()) as TrustRequest | null
 }
 
-export function getAdminTrustRequests(params: TrustRequestQueryParams): Promise<PageResult<TrustRequest>> {
-  return get('/admin/trust-requests', params)
+export async function getAdminTrustRequests(params: TrustRequestQueryParams): Promise<PageResult<TrustRequest>> {
+  return unwrapResult(await Service.getAdminRequests({
+    page: params.page,
+    size: params.size,
+    status: params.status,
+    keyword: params.keyword,
+  })) as PageResult<TrustRequest>
 }
 
-export function approveTrustRequest(id: number | string, data?: ReviewTrustRequestParams): Promise<TrustRequest> {
-  return put(`/admin/trust-requests/${String(id)}/approve`, data || {})
+export async function approveTrustRequest(id: number | string, data?: ReviewTrustRequestParams): Promise<TrustRequest> {
+  return unwrapResult(await Service.approveRequest({
+    id: Number(id),
+    requestBody: data ? { reviewNote: data.reviewNote } : undefined,
+  })) as TrustRequest
 }
 
-export function rejectTrustRequest(id: number | string, data: ReviewTrustRequestParams): Promise<TrustRequest> {
-  return put(`/admin/trust-requests/${String(id)}/reject`, data)
+export async function rejectTrustRequest(id: number | string, data: ReviewTrustRequestParams): Promise<TrustRequest> {
+  return unwrapResult(await Service.rejectRequest({
+    id: Number(id),
+    requestBody: {
+      reviewNote: data.reviewNote,
+    },
+  })) as TrustRequest
 }

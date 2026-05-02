@@ -1,68 +1,61 @@
 /**
  * 评论相关 API
- * 包含评论列表、发表评论、点赞评论等功能
+ * 现在统一优先走 generated SDK，减少评论链路的手写路径漂移。
  */
 
-import { get, post, put, del } from './request';
 import type {
   Comment,
   CreateCommentParams,
   PageResult,
   PageParams,
 } from '@/types';
+import { Service } from '@/sdk/generated';
+import { unwrapResult } from '@/sdk/runtime';
 
-/**
- * 获取评论列表
- * @param articleId 文章ID（可选，不传则获取留言板评论）
- * @param params 分页参数
- */
-export function getComments(
+export async function getComments(
   articleId?: number | string,
-  params?: PageParams
+  params?: PageParams,
 ): Promise<PageResult<Comment>> {
-  return get('/comments', { articleId, ...params });
+  return unwrapResult(await Service.getComments({
+    articleId: articleId ? Number(articleId) : undefined,
+    page: params?.page,
+    size: params?.size,
+  })) as PageResult<Comment>;
 }
 
-/**
- * 获取留言板评论列表
- * @param params 分页参数
- */
-export function getGuestbookComments(params?: PageParams): Promise<PageResult<Comment>> {
-  return get('/comments/guestbook', params);
+export async function getGuestbookComments(params?: PageParams): Promise<PageResult<Comment>> {
+  return unwrapResult(await Service.getGuestbookComments({
+    page: params?.page,
+    size: params?.size,
+  })) as PageResult<Comment>;
 }
 
-/**
- * 发表评论
- * @param data 评论数据
- */
-export function createComment(data: CreateCommentParams): Promise<Comment> {
-  return post('/comments', data);
+export async function createComment(data: CreateCommentParams): Promise<Comment> {
+  return unwrapResult(await Service.createComment({
+    requestBody: {
+      articleId: data.articleId ? Number(data.articleId) : undefined,
+      parentId: data.parentId,
+      content: data.content,
+      authorName: data.authorName,
+      authorEmail: data.authorEmail,
+      authorWebsite: data.authorWebsite,
+    },
+  })) as Comment;
 }
 
-/**
- * 删除评论（管理员或评论本人）
- * @param id 评论ID
- */
-export function deleteComment(id: number): Promise<void> {
-  return del(`/comments/${id}`);
+export async function deleteComment(id: number): Promise<void> {
+  await unwrapResult(await Service.deleteComment({ id }));
 }
 
-/**
- * 游客删除自己的评论（使用创建时返回的 guestDeleteKey）
- * @param id 评论ID
- * @param guestDeleteKey 游客删除密钥
- */
-export function deleteCommentAsGuest(id: number, guestDeleteKey: string): Promise<void> {
-  return del(`/comments/${id}`, { params: { guestDeleteKey } });
+export async function deleteCommentAsGuest(id: number, guestDeleteKey: string): Promise<void> {
+  await unwrapResult(await Service.deleteComment({ id, guestDeleteKey }));
 }
 
-/**
- * 审核评论（管理员）
- * @param id 评论ID
- * @param status 审核状态 1-通过 2-拒绝
- */
-export function reviewComment(id: number, status: 1 | 2): Promise<Comment> {
-  return put(`/admin/comments/${id}/review`, { status });
+export async function reviewComment(id: number, status: 1 | 2): Promise<Comment> {
+  return unwrapResult(await Service.reviewComment({
+    id,
+    requestBody: { status },
+  })) as Comment;
 }
 
 export interface CommentLikeResponse {
@@ -70,9 +63,6 @@ export interface CommentLikeResponse {
   liked: boolean;
 }
 
-/**
- * 点赞评论（登录去重；匿名可重复计数，服务端限流）
- */
-export function likeComment(id: number): Promise<CommentLikeResponse> {
-  return post(`/comments/${id}/like`);
+export async function likeComment(id: number): Promise<CommentLikeResponse> {
+  return unwrapResult(await Service.likeComment({ id })) as CommentLikeResponse;
 }

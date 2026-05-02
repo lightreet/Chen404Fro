@@ -94,6 +94,7 @@ Chen404Fro/
 │  ├─ assets/
 │  ├─ components/
 │  ├─ composables/
+│  ├─ modules/
 │  ├─ layouts/
 │  ├─ router/
 │  ├─ stores/
@@ -124,6 +125,13 @@ Chen404Fro/
 - 留言板与评论区共用评论体系，但展示场景不同
 - 部分后台管理能力仍属于“基础管理”范围，不代表独立后台资源体系已经完整落地
 
+## OpenAPI SDK
+
+- 后端当前已经提供可用的 SpringDoc OpenAPI 文档：`http://localhost:10404/api/v3/api-docs`
+- 前端已补上 SDK 生成脚本：`npm run gen:sdk`
+- 生成结果默认输出到 `src/sdk/generated`
+- 如需对接其他环境，可通过 `OPENAPI_INPUT` 指定文档地址
+
 ## 主要特性
 
 - 动漫风首页 Hero、樱花动效与 Live2D 看板娘
@@ -132,6 +140,7 @@ Chen404Fro/
 - 个人中心与文章管理
 - 管理员后台入口
 - 文章编辑器与封面上传
+- `modules/article-edit` 模块层已用于承接文章编辑页的接口与提交模型
 
 ## 文档
 

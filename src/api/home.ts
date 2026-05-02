@@ -1,9 +1,9 @@
-﻿/**
+/**
  * 首页相关 API
- * 包含站点统计、Banner、热门文章等首页展示数据
+ * 读取类接口优先走 generated SDK，减少与后端 Controller 的长期漂移。
  */
 
-import { get, put } from './request';
+import { put } from './request';
 import type {
   HomeData,
   SiteStats,
@@ -13,6 +13,8 @@ import type {
   HotArticle,
   RecentComment,
 } from '@/types';
+import { Service } from '@/sdk/generated';
+import { unwrapResult } from '@/sdk/runtime';
 
 export interface SiteMember {
   id: number | string;
@@ -26,78 +28,58 @@ export interface SiteMember {
   createTime?: string;
 }
 
-/**
- * 获取首页聚合数据
- * 包含：Banner、站点统计、热门文章、最新评论
- */
-export function getHomeData(): Promise<HomeData> {
-  return get('/home');
+export async function getHomeData(): Promise<HomeData> {
+  return unwrapResult(await Service.getHomeData()) as HomeData;
 }
 
-/**
- * 获取站点配置信息
- * 包含：站点名称、描述、Logo、备案号等
- */
-export function getSiteConfig(): Promise<SiteConfig> {
-  return get('/site/config');
+export async function getSiteConfig(): Promise<SiteConfig> {
+  return unwrapResult(await Service.getSiteConfig()) as SiteConfig;
 }
 
-export function getSiteOwner(): Promise<SiteOwner | null> {
-  return get('/site/owner');
+export async function getSiteOwner(): Promise<SiteOwner | null> {
+  return unwrapResult(await Service.getSiteOwner()) as SiteOwner | null;
 }
 
-export function getSiteMembers(): Promise<SiteMember[]> {
-  return get('/site/members');
+export async function getSiteMembers(): Promise<SiteMember[]> {
+  return unwrapResult(await Service.getSiteMembers()) as SiteMember[];
 }
 
-export function getSiteUser(id: number | string): Promise<SiteMember> {
-  return get(`/site/users/${String(id)}`);
+export async function getSiteUser(id: number | string): Promise<SiteMember> {
+  return unwrapResult(await Service.getSiteUser({
+    id: Number(id),
+  })) as SiteMember;
 }
 
 export function updateSiteConfig(data: Partial<SiteConfig>): Promise<SiteConfig> {
   return put('/site/config', data);
 }
 
-/**
- * 获取站点统计数据
- * 包含：文章数、分类数、标签数、评论数、访问数
- */
-export function getSiteStats(): Promise<SiteStats> {
-  return get('/home/stats');
+export async function getSiteStats(): Promise<SiteStats> {
+  return unwrapResult(await Service.getSiteStats()) as SiteStats;
 }
 
-/**
- * 获取首页轮播图 Banner 列表
- */
-export function getBanners(): Promise<Banner[]> {
-  return get('/site/banners');
+export async function getBanners(position: number = 1): Promise<Banner[]> {
+  return unwrapResult(await Service.getBanners({ position })) as Banner[];
 }
 
-/**
- * 获取热门文章列表
- * @param limit 数量限制，默认 10 条
- */
-export function getHotArticles(limit: number = 10): Promise<HotArticle[]> {
-  return get('/articles/hot', { limit });
+export async function getHotArticles(limit: number = 10): Promise<HotArticle[]> {
+  return unwrapResult(await Service.getHotArticles({ limit })) as HotArticle[];
 }
 
-/**
- * 获取最新评论列表
- * @param limit 数量限制，默认 5 条
- */
-export function getRecentComments(limit: number = 5): Promise<RecentComment[]> {
-  return get('/comments/recent', { limit });
+export async function getRecentComments(limit: number = 5): Promise<RecentComment[]> {
+  return unwrapResult(await Service.getRecentComments({ limit })) as RecentComment[];
 }
 
-/**
- * 获取推荐文章列表
- * @param limit 数量限制，默认 6 条
- */
-export function getRecommendArticles(limit: number = 6): Promise<{
+export async function getRecommendArticles(limit: number = 6): Promise<{
   id: number;
   title: string;
   coverImage?: string;
   summary?: string;
-}> {
-  return get('/articles/recommend', { limit });
+}[]> {
+  return unwrapResult(await Service.getRecommendArticles({ limit })) as {
+    id: number;
+    title: string;
+    coverImage?: string;
+    summary?: string;
+  }[];
 }

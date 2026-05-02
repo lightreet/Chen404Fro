@@ -50,6 +50,7 @@ declare module 'vue' {
     HomeDiscoverySearch: typeof import('./components/HomeDiscoverySearch/HomeDiscoverySearch.vue')['default']
     Live2D: typeof import('./components/Live2D/Live2D.vue')['default']
     MdEditorEmojiToolbar: typeof import('./components/Editor/MdEditorEmojiToolbar.vue')['default']
+    MdEditorUnorderedListToolbar: typeof import('./components/Editor/MdEditorUnorderedListToolbar.vue')['default']
     MdResizablePreview: typeof import('./components/MdResizablePreview/MdResizablePreview.vue')['default']
     PageHero: typeof import('./components/PageHero/PageHero.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']

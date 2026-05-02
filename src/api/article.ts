@@ -1,6 +1,6 @@
 /**
  * 文章相关 API
- * 包含文章列表、详情、分类、标签、归档等功能
+ * 先把读取类接口收敛到 generated SDK，写接口暂时保留手写 request 以复用现有鉴权/续期策略。
  */
 
 import { get, post, put, del, type RequestConfig } from './request';
@@ -18,36 +18,50 @@ import type {
   UpdateArticleCommand,
   UpdateCategoryCommand,
 } from '@/types';
+import { Service } from '@/sdk/generated';
+import { unwrapResult } from '@/sdk/runtime';
 
 /**
  * 获取文章列表
- * @param params 查询参数 { page, size, categoryId, tagId, keyword, orderBy }
  */
-export function getArticles(params?: ArticleQueryParams): Promise<PageResult<ArticleListItem>> {
-  return get('/articles', params);
+export async function getArticles(params?: ArticleQueryParams): Promise<PageResult<ArticleListItem>> {
+  return unwrapResult(await Service.getArticles({
+    page: params?.page,
+    size: params?.size,
+    status: params?.status,
+    categoryId: params?.categoryId,
+    tagId: params?.tagId,
+    authorId: params?.authorId ? Number(params.authorId) : undefined,
+    keyword: params?.keyword,
+  })) as PageResult<ArticleListItem>;
 }
 
 /**
  * 获取文章详情
- * @param id 文章ID（请传 string，避免 Long 在 JS 中精度丢失）
- * @param incrementView 是否增加阅读量，默认为true
  */
-export function getArticleById(
+export async function getArticleById(
   id: number | string,
-  incrementView: boolean = true
+  incrementView: boolean = true,
 ): Promise<ArticleDetail> {
-  return get(`/articles/${String(id)}`, { incrementView });
+  return unwrapResult(await Service.getArticleById({
+    id: Number(id),
+    incrementView,
+  })) as ArticleDetail;
 }
 
 /**
  * 获取上一篇和下一篇文章
- * @param id 当前文章ID（请传 string，避免 Long 在 JS 中精度丢失）
  */
-export function getArticleNeighbors(id: number | string): Promise<{
+export async function getArticleNeighbors(id: number | string): Promise<{
   prev?: { id: number | string; title: string };
   next?: { id: number | string; title: string };
 }> {
-  return get(`/articles/${String(id)}/neighbors`);
+  return unwrapResult(await Service.getArticleNeighbors({
+    id: Number(id),
+  })) as {
+    prev?: { id: number | string; title: string };
+    next?: { id: number | string; title: string };
+  };
 }
 
 /**
@@ -63,7 +77,7 @@ export function createArticle(data: CreateArticleCommand, config?: RequestConfig
 export function updateArticle(
   id: number | string,
   data: UpdateArticleCommand,
-  config?: RequestConfig
+  config?: RequestConfig,
 ): Promise<ArticleDetail> {
   return put(`/articles/${String(id)}`, data, config);
 }
@@ -87,7 +101,6 @@ export function getMyArticles(params?: {
   return get('/articles/mine', params);
 }
 
-/** 文章点赞接口返回（匿名无 liked 字段） */
 export interface ArticleLikeResponse {
   likes: number;
   liked?: boolean;
@@ -107,24 +120,21 @@ export function toggleArticleFavorite(id: number | string): Promise<{ favorited:
   return post(`/articles/${String(id)}/favorite`);
 }
 
-/** 个人中心：我点赞的文章 */
 export function getMyLikedArticles(params?: PageParams): Promise<PageResult<ArticleListItem>> {
   return get('/articles/mine/liked', params);
 }
 
-/** 个人中心：我的收藏 */
 export function getMyFavoriteArticles(params?: PageParams): Promise<PageResult<ArticleListItem>> {
   return get('/articles/mine/favorites', params);
 }
 
-// ==================== 分类相关 ====================
-
 /**
  * 获取分类列表
- * @param withArticleCount 是否包含文章数量
  */
-export function getCategories(withArticleCount: boolean = true): Promise<Category[]> {
-  return get('/categories', { withArticleCount });
+export async function getCategories(withArticleCount: boolean = true): Promise<Category[]> {
+  return unwrapResult(await Service.getCategories({
+    withArticleCount,
+  })) as Category[];
 }
 
 export function getAdminCategories(params?: PageParams): Promise<PageResult<Category>> {
@@ -133,81 +143,66 @@ export function getAdminCategories(params?: PageParams): Promise<PageResult<Cate
 
 /**
  * 获取分类详情
- * @param id 分类ID或slug
  */
-export function getCategoryById(id: number | string): Promise<Category> {
-  return get(`/categories/${id}`);
+export async function getCategoryById(id: number | string): Promise<Category> {
+  return unwrapResult(await Service.getCategoryById({
+    id: Number(id),
+  })) as Category;
 }
 
 /**
  * 获取分类下的文章
- * @param categoryId 分类ID
- * @param params 分页参数
  */
 export function getArticlesByCategory(
   categoryId: number | string,
-  params?: PageParams
+  params?: PageParams,
 ): Promise<PageResult<ArticleListItem>> {
   return get('/articles', { categoryId, ...params });
 }
 
-/**
- * 创建分类（需管理员，后端 @RequireAdmin 校验）
- */
 export function createCategory(data: CreateCategoryCommand): Promise<Category> {
   return post('/categories', data);
 }
 
-/**
- * 更新分类（需管理员）
- */
 export function updateCategory(id: number, data: UpdateCategoryCommand): Promise<Category> {
   return put(`/categories/${id}`, data);
 }
 
-/**
- * 删除分类（需管理员）
- */
 export function deleteCategory(id: number): Promise<void> {
   return del(`/categories/${id}`);
 }
 
-// ==================== 标签相关 ====================
-
 /**
  * 获取标签列表
- * @param withArticleCount 是否包含文章数量
  */
-export function getTags(withArticleCount: boolean = true): Promise<Tag[]> {
-  return get('/tags', { withArticleCount });
+export async function getTags(withArticleCount: boolean = true): Promise<Tag[]> {
+  return unwrapResult(await Service.getTags({
+    withArticleCount,
+  })) as Tag[];
 }
 
 /**
  * 获取标签详情
- * @param id 标签ID或slug
  */
-export function getTagById(id: number | string): Promise<Tag> {
-  return get(`/tags/${id}`);
+export async function getTagById(id: number | string): Promise<Tag> {
+  return unwrapResult(await Service.getTagById({
+    idOrSlug: String(id),
+  })) as Tag;
 }
 
 /**
  * 获取标签下的文章
- * @param tagId 标签ID
- * @param params 分页参数
  */
 export function getArticlesByTag(
   tagId: number | string,
-  params?: PageParams
+  params?: PageParams,
 ): Promise<PageResult<ArticleListItem>> {
   return get('/articles', { tagId, ...params });
 }
 
-// ==================== 归档相关 ====================
-
 /**
  * 获取归档数据
- * 按年月分组的文章列表
  */
-export function getArchives(): Promise<ArchiveYear[]> {
-  return get('/archives');
+export async function getArchives(): Promise<ArchiveYear[]> {
+  return unwrapResult(await Service.listArchives()) as ArchiveYear[];
 }
