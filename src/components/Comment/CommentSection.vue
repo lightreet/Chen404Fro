@@ -41,6 +41,7 @@
       </div>
       <div class="form-textarea-row">
         <textarea
+          ref="textareaRef"
           v-model="form.content"
           class="textarea-field"
           :placeholder="replyTarget ? `回复 @${replyTarget.authorName}` : '说点什么吧...'"
@@ -53,22 +54,7 @@
           </button>
         </div>
         <div v-if="showEmojiPanel" class="emoji-panel">
-          <button
-            v-for="emoji in sceneEmojis"
-            :key="emoji.id"
-            class="emoji-item-btn"
-            type="button"
-            :title="emoji.label"
-            @click="insertEmoji(emoji.shortcode)"
-          >
-            <img
-              v-if="emoji.type === 'image' && emoji.asset"
-              :src="emoji.asset"
-              :alt="emoji.label"
-              class="emoji-preview-image"
-            />
-            <span v-else>{{ emoji.unicode || '\u{1F642}' }}</span>
-          </button>
+          <EmojiPickerPanel scene="comment" @select="handleEmojiSelect" />
         </div>
       </div>
       <div class="form-footer">
@@ -142,15 +128,17 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, watch, nextTick } from 'vue'
 import type { Comment, CreateCommentParams } from '@/types'
 import { getComments, getGuestbookComments, createComment, deleteComment, deleteCommentAsGuest } from '@/api/comment'
 import { useUserStore } from '@/stores/user'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import CommentItem from './CommentItem.vue'
-import { queryByScene, getEmojiByShortcode } from '@/emoji/registry'
+import EmojiPickerPanel from '@/components/Emoji/EmojiPickerPanel.vue'
+import type { EmojiItem } from '@/emoji/types'
 import { countEmojiTokens, renderShortcodesToText } from '@/emoji/parser'
 import { scenePolicies } from '@/emoji/scenePolicy'
+import { emojiInsertPayload } from '@/emoji/insertPayload'
 
 // 本地存储游客评论删除 key 的 key
 const GUEST_DELETE_KEYS_KEY = 'comment_guest_delete_keys';
@@ -201,7 +189,7 @@ const loading = ref(false)
 const submitting = ref(false)
 const replyTarget = ref<Comment | null>(null)
 const showEmojiPanel = ref(false)
-const sceneEmojis = computed(() => queryByScene('comment'))
+const textareaRef = ref<HTMLTextAreaElement | null>(null)
 
 const totalPages = computed(() => Math.ceil(total.value / pageSize))
 const currentUserId = computed(() => userStore.user?.id ?? null)
@@ -304,23 +292,37 @@ async function submitComment() {
 
 function handleReply(comment: Comment) {
   replyTarget.value = comment
-  const textarea = document.querySelector('.comment-section .textarea-field') as HTMLTextAreaElement | null
-  textarea?.focus()
-  textarea?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  textareaRef.value?.focus()
+  textareaRef.value?.scrollIntoView({ behavior: 'smooth', block: 'center' })
 }
 
 function cancelReply() {
   replyTarget.value = null
 }
 
-function insertEmoji(shortcode: string) {
-  const emoji = getEmojiByShortcode(shortcode)
-  // 目前一期/种子主要是 unicode：点击面板直接插入表情本体，避免用户看到 :shortcode:
-  if (emoji?.type === 'unicode' && emoji.unicode) {
-    form.value.content += emoji.unicode
+function insertTextAtCursor(text: string) {
+  const textarea = textareaRef.value
+  if (!textarea) {
+    form.value.content += text
     return
   }
-  form.value.content += `:${shortcode}:`
+
+  const start = textarea.selectionStart ?? form.value.content.length
+  const end = textarea.selectionEnd ?? form.value.content.length
+  const before = form.value.content.slice(0, start)
+  const after = form.value.content.slice(end)
+  form.value.content = `${before}${text}${after}`
+
+  const nextPos = start + text.length
+  void nextTick(() => {
+    textarea.focus()
+    textarea.setSelectionRange(nextPos, nextPos)
+  })
+}
+
+function handleEmojiSelect(emoji: EmojiItem) {
+  insertTextAtCursor(emojiInsertPayload(emoji))
+  showEmojiPanel.value = false
 }
 
 // 用户手动输入 :shortcode: 时自动替换成表情（仅替换已存在的 unicode 表情）
@@ -514,45 +516,6 @@ onMounted(fetchComments)
 
 .emoji-panel {
   margin-top: var(--spacing-sm);
-  border: 1px solid var(--border-light);
-  border-radius: var(--radius-md);
-  background: var(--bg-secondary);
-  padding: 8px;
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(38px, 38px));
-  gap: 8px;
-  max-height: 180px;
-  overflow-y: auto;
-  align-content: start;
-}
-
-.emoji-item-btn {
-  width: 38px;
-  height: 38px;
-  border: 1px solid var(--border-light);
-  border-radius: var(--radius-sm);
-  background: var(--bg-primary);
-  cursor: pointer;
-  font-size: 22px;
-  line-height: 1;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0;
-  overflow: hidden;
-  font-family:
-    'Apple Color Emoji',
-    'Segoe UI Emoji',
-    'Noto Color Emoji',
-    sans-serif;
-  text-rendering: optimizeLegibility;
-  flex-shrink: 0;
-}
-
-.emoji-preview-image {
-  width: 26px;
-  height: 26px;
-  object-fit: contain;
 }
 
 .form-footer {

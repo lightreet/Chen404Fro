@@ -110,6 +110,7 @@ export function useArticleEdit() {
     'sup',
     'quote',
     0,
+    1,
     'orderedList',
     'task',
     '-',

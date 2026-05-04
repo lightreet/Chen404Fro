@@ -274,6 +274,7 @@ import { ArrowLeft, ArrowDown, Plus } from '@element-plus/icons-vue';
 import { MdEditor } from 'md-editor-v3';
 import 'md-editor-v3/lib/style.css';
 import { ArticleStatus } from '@/types';
+import MdEditorEmojiToolbar from '@/components/Editor/MdEditorEmojiToolbar.vue';
 import MdEditorUnorderedListToolbar from '@/components/Editor/MdEditorUnorderedListToolbar.vue';
 import MdResizablePreview from '@/components/MdResizablePreview/MdResizablePreview.vue';
 import { useArticleEdit } from '@/composables/article-edit/useArticleEdit';
@@ -321,7 +322,7 @@ const {
   onTagsWrapMouseLeave,
 } = useArticleEdit();
 
-const defToolbars = h('div', [h(MdEditorUnorderedListToolbar)]);
+const defToolbars = h('div', [h(MdEditorEmojiToolbar), h(MdEditorUnorderedListToolbar)]);
 
 /** 仅模板使用；满足 noUnusedLocals（布局测量在 composable 内消费这些 ref） */
 void [

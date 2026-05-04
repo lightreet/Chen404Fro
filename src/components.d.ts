@@ -44,6 +44,7 @@ declare module 'vue' {
     ElTabs: typeof import('element-plus/es')['ElTabs']
     ElTag: typeof import('element-plus/es')['ElTag']
     ElUpload: typeof import('element-plus/es')['ElUpload']
+    EmojiPickerPanel: typeof import('./components/Emoji/EmojiPickerPanel.vue')['default']
     Footer: typeof import('./components/Footer/Footer.vue')['default']
     Header: typeof import('./components/Header/Header.vue')['default']
     HeroWave: typeof import('./components/HeroWave/HeroWave.vue')['default']
