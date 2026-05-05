@@ -347,6 +347,7 @@ onMounted(() => {
 }
 
 .community-panel {
+  --community-card-height: 484px;
   padding: 30px;
 }
 
@@ -359,26 +360,31 @@ onMounted(() => {
 
 .community-main,
 .community-side {
-  display: grid;
-  align-content: start;
+  display: flex;
+  flex-direction: column;
   gap: 22px;
   min-width: 0;
 }
 
 .community-copy {
-  max-width: 560px;
+  max-width: 100%;
 }
 
 .community-copy .panel-title {
-  max-width: 460px;
-  font-size: clamp(30px, 3.2vw, 42px);
-  line-height: 1.22;
-  letter-spacing: -0.03em;
+  max-width: none;
+  font-size: clamp(25px, 2.5vw, 36px);
+  line-height: 1.14;
+  letter-spacing: -0.02em;
+  white-space: nowrap;
   color: #5f3a4d;
   background: linear-gradient(135deg, #5f3a4d 0%, #9d6680 54%, #d99ab2 100%);
   background-clip: text;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
+}
+
+.member-preview-card {
+  min-height: var(--community-card-height);
 }
 
 .community-hint {
@@ -420,7 +426,7 @@ onMounted(() => {
   align-content: flex-start;
   justify-content: center;
   gap: 24px 22px;
-  min-height: 320px;
+  min-height: var(--community-card-height);
   padding: 22px 18px 18px;
   border-radius: 30px;
   background:
@@ -639,6 +645,15 @@ onMounted(() => {
     grid-template-columns: 1fr;
   }
 
+  .community-copy .panel-title {
+    white-space: normal;
+  }
+
+  .member-preview-card,
+  .member-cloud {
+    min-height: 0;
+  }
+
   .community-aside,
   .community-hint {
     max-width: none;
@@ -670,6 +685,7 @@ onMounted(() => {
 
   .community-copy .panel-title {
     font-size: clamp(30px, 9vw, 38px);
+    white-space: normal;
   }
 
   .member-cloud {
