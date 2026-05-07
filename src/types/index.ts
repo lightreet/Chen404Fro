@@ -314,6 +314,16 @@ export interface CreateArticleCommand {
 
 export interface UpdateArticleCommand extends CreateArticleCommand {}
 
+export interface AiArticleAssistRequest {
+  title?: string;
+  content: string;
+}
+
+export interface AiArticleAssistResponse {
+  summary: string;
+  tags: string[];
+}
+
 export interface CreateCategoryCommand {
   name: string;
   slug?: string;

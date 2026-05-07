@@ -6,6 +6,7 @@ import type { Category, Tag } from '@/types';
 import { ArticleStatus, ArticleVisibility, ArticleCommentPolicy } from '@/types';
 import {
   createArticle,
+  generateArticleAiAssist,
   updateArticle,
   uploadImage,
   uploadCover,
@@ -208,6 +209,8 @@ export function useArticleEdit() {
   const advancedOpen = ref(false);
   const isDraftSaving = ref(false);
   const publishing = ref(false);
+  const generatingSummary = ref(false);
+  const generatingTags = ref(false);
   const loading = ref(false);
   const autoSaveState = ref<AutoSaveState>('idle');
   const lastSavedAt = ref<Date | null>(null);
@@ -648,6 +651,75 @@ export function useArticleEdit() {
     }
   };
 
+  const ensureAiInputReady = () => {
+    if (!form.content?.trim()) {
+      ElMessage.warning('请先输入文章正文');
+      return false;
+    }
+    return true;
+  };
+
+  const applyAiTags = (tagNames: string[]) => {
+    const nextSelectedIds = new Set(formTagIds.value);
+    const nextCustomNames = new Set(customTagNames.value);
+
+    tagNames.forEach((name) => {
+      const cleanName = name.trim();
+      if (!cleanName) return;
+
+      const existingTag = tags.value.find((tag) => tag.name.toLowerCase() === cleanName.toLowerCase());
+      if (existingTag) {
+        nextSelectedIds.add(Number(existingTag.id));
+        nextCustomNames.delete(existingTag.name);
+        nextCustomNames.delete(cleanName);
+        return;
+      }
+
+      nextCustomNames.add(cleanName);
+    });
+
+    setSelectedTagIds([...nextSelectedIds]);
+    setCustomTagNames([...nextCustomNames]);
+  };
+
+  const handleGenerateSummary = async () => {
+    if (!ensureAiInputReady() || generatingSummary.value) return;
+
+    generatingSummary.value = true;
+    try {
+      const result = await generateArticleAiAssist({
+        title: form.title?.trim() || undefined,
+        content: form.content,
+      });
+      form.summary = result.summary || '';
+      ElMessage.success('AI 摘要已生成');
+    } catch (error) {
+      console.error('AI 摘要生成失败', error);
+      ElMessage.error('AI 摘要生成失败');
+    } finally {
+      generatingSummary.value = false;
+    }
+  };
+
+  const handleGenerateTags = async () => {
+    if (!ensureAiInputReady() || generatingTags.value) return;
+
+    generatingTags.value = true;
+    try {
+      const result = await generateArticleAiAssist({
+        title: form.title?.trim() || undefined,
+        content: form.content,
+      });
+      applyAiTags(result.tags || []);
+      ElMessage.success('AI 标签建议已应用');
+    } catch (error) {
+      console.error('AI 标签生成失败', error);
+      ElMessage.error('AI 标签生成失败');
+    } finally {
+      generatingTags.value = false;
+    }
+  };
+
   const runDraftSnapshotReconcile = () => {
     if (!editorReady.value) return;
 
@@ -848,12 +920,16 @@ export function useArticleEdit() {
     tags,
     isDraftSaving,
     publishing,
+    generatingSummary,
+    generatingTags,
     autoSaveState,
     handleCoverUpload,
     beforeCoverUpload,
     onUploadImg,
     handleSaveDraft,
     handlePublish,
+    handleGenerateSummary,
+    handleGenerateTags,
     autoSaveStatusText,
     addCustomTag,
     removeCustomTag,
@@ -861,6 +937,8 @@ export function useArticleEdit() {
     suggestedTags,
     removeTagById,
     addTagById,
+    setSelectedTagIds,
+    setCustomTagNames,
     onTagsInputBlur,
     onTagsWrapMouseEnter,
     onTagsWrapMouseLeave,

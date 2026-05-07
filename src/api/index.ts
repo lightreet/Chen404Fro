@@ -13,6 +13,9 @@ export * from './home';
 // 文章相关 API（文章列表、详情、分类、标签、归档）
 export * from './article';
 
+// AI 相关 API
+export * from './ai';
+
 // 评论相关 API（评论列表、发表评论）
 export * from './comment';
 
