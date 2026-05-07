@@ -121,7 +121,18 @@
 
             <!-- 标签 -->
             <section class="sidebar-section meta-section tags-section">
-              <label class="meta-section-label">标签</label>
+              <div class="section-header">
+                <label class="meta-section-label">标签</label>
+                <el-button
+                  size="small"
+                  text
+                  type="primary"
+                  :loading="generatingTags"
+                  @click="handleGenerateTags"
+                >
+                  AI 推荐
+                </el-button>
+              </div>
               <div
                 class="tags-input-wrap"
                 @mouseenter="onTagsWrapMouseEnter"
@@ -180,7 +191,18 @@
 
             <!-- 摘要 -->
             <section class="sidebar-section summary-section">
-              <label class="section-label">内容摘要</label>
+              <div class="section-header">
+                <label class="section-label">内容摘要</label>
+                <el-button
+                  size="small"
+                  text
+                  type="primary"
+                  :loading="generatingSummary"
+                  @click="handleGenerateSummary"
+                >
+                  AI 生成
+                </el-button>
+              </div>
               <el-input
                 v-model="form.summary"
                 type="textarea"
@@ -304,12 +326,16 @@ const {
   categories,
   isDraftSaving,
   publishing,
+  generatingSummary,
+  generatingTags,
   autoSaveState,
   handleCoverUpload,
   beforeCoverUpload,
   onUploadImg,
   handleSaveDraft,
   handlePublish,
+  handleGenerateSummary,
+  handleGenerateTags,
   autoSaveStatusText,
   addCustomTag,
   removeCustomTag,

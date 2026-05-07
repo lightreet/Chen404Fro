@@ -539,6 +539,19 @@
   }
 }
 
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+
+  .meta-section-label,
+  .section-label {
+    margin-bottom: 0;
+  }
+}
+
 .cover-section {
   .cover-uploader :deep(.el-upload) {
     width: 100%;
