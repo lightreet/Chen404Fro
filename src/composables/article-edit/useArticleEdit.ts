@@ -480,6 +480,9 @@ export function useArticleEdit() {
     return false;
   };
 
+  const hasGeneratedSummary = computed(() => Boolean(form.summary?.trim()));
+  const hasGeneratedTags = computed(() => selectedTagNames.value.length > 0 || customTagNames.value.length > 0);
+
   const clearAutoSaveDebounce = () => {
     if (autoSaveDebounceTimer) {
       clearTimeout(autoSaveDebounceTimer);
@@ -660,8 +663,10 @@ export function useArticleEdit() {
   };
 
   const applyAiTags = (tagNames: string[]) => {
-    const nextSelectedIds = new Set(formTagIds.value);
-    const nextCustomNames = new Set(customTagNames.value);
+    const aiSelectedIds: number[] = [];
+    const aiCustomNames: string[] = [];
+    const seenSelectedIds = new Set<number>();
+    const seenCustomNames = new Set<string>();
 
     tagNames.forEach((name) => {
       const cleanName = name.trim();
@@ -669,17 +674,25 @@ export function useArticleEdit() {
 
       const existingTag = tags.value.find((tag) => tag.name.toLowerCase() === cleanName.toLowerCase());
       if (existingTag) {
-        nextSelectedIds.add(Number(existingTag.id));
-        nextCustomNames.delete(existingTag.name);
-        nextCustomNames.delete(cleanName);
+        const tagId = Number(existingTag.id);
+        if (!seenSelectedIds.has(tagId)) {
+          aiSelectedIds.push(tagId);
+          seenSelectedIds.add(tagId);
+        }
         return;
       }
 
-      nextCustomNames.add(cleanName);
+      const normalizedKey = cleanName.toLowerCase();
+      if (seenCustomNames.has(normalizedKey)) return;
+      aiCustomNames.push(cleanName);
+      seenCustomNames.add(normalizedKey);
     });
 
-    setSelectedTagIds([...nextSelectedIds]);
-    setCustomTagNames([...nextCustomNames]);
+    const remainingSelectedIds = formTagIds.value.filter((id) => !seenSelectedIds.has(id));
+    const remainingCustomNames = customTagNames.value.filter((name) => !seenCustomNames.has(name.trim().toLowerCase()));
+
+    setSelectedTagIds([...aiSelectedIds, ...remainingSelectedIds]);
+    setCustomTagNames([...aiCustomNames, ...remainingCustomNames]);
   };
 
   const handleGenerateSummary = async () => {
@@ -687,9 +700,12 @@ export function useArticleEdit() {
 
     generatingSummary.value = true;
     try {
+      const currentSummary = form.summary?.trim();
       const result = await generateArticleAiAssist({
         title: form.title?.trim() || undefined,
         content: form.content,
+        regenerate: Boolean(currentSummary),
+        currentSummary: currentSummary || undefined,
       });
       form.summary = result.summary || '';
       ElMessage.success('AI 摘要已生成');
@@ -706,9 +722,12 @@ export function useArticleEdit() {
 
     generatingTags.value = true;
     try {
+      const currentTags = [...selectedTagNames.value.map((item) => item.name), ...customTagNames.value];
       const result = await generateArticleAiAssist({
         title: form.title?.trim() || undefined,
         content: form.content,
+        regenerate: currentTags.length > 0,
+        currentTags: currentTags.length > 0 ? currentTags : undefined,
       });
       applyAiTags(result.tags || []);
       ElMessage.success('AI 标签建议已应用');
@@ -922,6 +941,8 @@ export function useArticleEdit() {
     publishing,
     generatingSummary,
     generatingTags,
+    hasGeneratedSummary,
+    hasGeneratedTags,
     autoSaveState,
     handleCoverUpload,
     beforeCoverUpload,

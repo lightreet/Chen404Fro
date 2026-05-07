@@ -317,6 +317,9 @@ export interface UpdateArticleCommand extends CreateArticleCommand {}
 export interface AiArticleAssistRequest {
   title?: string;
   content: string;
+  regenerate?: boolean;
+  currentSummary?: string;
+  currentTags?: string[];
 }
 
 export interface AiArticleAssistResponse {

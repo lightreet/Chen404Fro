@@ -130,7 +130,7 @@
                   :loading="generatingTags"
                   @click="handleGenerateTags"
                 >
-                  AI 推荐
+                  {{ hasGeneratedTags ? '重新推荐' : 'AI 推荐' }}
                 </el-button>
               </div>
               <div
@@ -200,7 +200,7 @@
                   :loading="generatingSummary"
                   @click="handleGenerateSummary"
                 >
-                  AI 生成
+                  {{ hasGeneratedSummary ? '重新生成' : 'AI 生成' }}
                 </el-button>
               </div>
               <el-input
@@ -328,6 +328,8 @@ const {
   publishing,
   generatingSummary,
   generatingTags,
+  hasGeneratedSummary,
+  hasGeneratedTags,
   autoSaveState,
   handleCoverUpload,
   beforeCoverUpload,
