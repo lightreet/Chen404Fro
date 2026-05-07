@@ -2,7 +2,7 @@
   <div class="not-found-page">
     <div class="not-found-content">
       <div class="error-logo">
-        <img src="/logo.png" alt="404" />
+        <img :src="siteLogo" :alt="siteName" />
       </div>
       <h1 class="error-title">页面不存在</h1>
       <p class="error-desc">抱歉，您访问的页面找不到了</p>
@@ -14,7 +14,17 @@
 </template>
 
 <script setup lang="ts">
-// 404 页面
+import { computed, onMounted } from 'vue';
+import { useSiteConfig } from '@/composables/useSiteConfig';
+import { resolveSiteLogo, resolveSiteName } from '@/utils/siteConfig';
+
+const { siteConfig, loadSiteConfig } = useSiteConfig();
+const siteName = computed(() => resolveSiteName(siteConfig.value));
+const siteLogo = computed(() => resolveSiteLogo(siteConfig.value));
+
+onMounted(() => {
+  void loadSiteConfig();
+});
 </script>
 
 <style scoped lang="scss">

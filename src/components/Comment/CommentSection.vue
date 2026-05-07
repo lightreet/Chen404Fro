@@ -7,7 +7,7 @@
     </h3>
 
     <!-- 评论表单 -->
-    <div v-if="canComment" class="comment-form-card">
+    <div v-if="effectiveCanComment" class="comment-form-card">
       <div class="form-row">
         <div v-if="userStore.isLoggedIn" class="form-user-info">
           <img
@@ -96,7 +96,7 @@
         :comment="comment"
         :current-user-id="currentUserId"
         :is-admin="isCurrentUserAdmin"
-        :can-comment="canComment"
+        :can-comment="effectiveCanComment"
         :show-reply-form="replyTarget?.id === comment.id"
         :replying-to="replyTarget?.id ?? null"
         @reply="handleReply"
@@ -131,6 +131,7 @@
 import { ref, computed, onMounted, watch, nextTick } from 'vue'
 import type { Comment, CreateCommentParams } from '@/types'
 import { getComments, getGuestbookComments, createComment, deleteComment, deleteCommentAsGuest } from '@/api/comment'
+import { useSiteConfig } from '@/composables/useSiteConfig'
 import { useUserStore } from '@/stores/user'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import CommentItem from './CommentItem.vue'
@@ -177,9 +178,12 @@ const props = withDefaults(defineProps<{
 })
 
 const userStore = useUserStore()
+const { siteConfig, loadSiteConfig } = useSiteConfig()
 const defaultAvatar = 'https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png'
 
 const isGuestbook = computed(() => !props.articleId)
+const commentGuestEnabled = computed(() => siteConfig.value?.commentGuest ?? true)
+const effectiveCanComment = computed(() => Boolean(props.canComment) && (userStore.isLoggedIn || commentGuestEnabled.value))
 
 const comments = ref<Comment[]>([])
 const total = ref(0)
@@ -385,7 +389,10 @@ watch(() => props.articleId, () => {
   fetchComments()
 })
 
-onMounted(fetchComments)
+onMounted(() => {
+  void loadSiteConfig()
+  void fetchComments()
+})
 </script>
 
 <style scoped lang="scss">

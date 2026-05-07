@@ -35,7 +35,7 @@
         </template>
       </h1>
       <p v-if="subtitle" class="page-hero__subtitle">
-        <span class="page-hero__subtitle-text">{{ subtitle }}</span>
+        <HeroSubtitlePulse :text="subtitle" />
       </p>
       <div v-if="$slots.meta" class="page-hero__meta">
         <slot name="meta" />
@@ -55,6 +55,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import HeroWave from '@/components/HeroWave/HeroWave.vue';
+import HeroSubtitlePulse from '@/components/PageHero/HeroSubtitlePulse.vue';
 import '@fontsource/patrick-hand/400.css';
 import '@fontsource/zcool-kuaile/400.css';
 
@@ -583,16 +584,6 @@ function normalizeMinHeight(value: string) {
       letter-spacing: 0.08em;
       line-height: 1.72;
     }
-
-    .page-hero__subtitle-text::before {
-      width: 0.62rem;
-      height: 0.82rem;
-    }
-
-    .page-hero__subtitle-text::after {
-      width: 0.62rem;
-      height: 0.82rem;
-    }
   }
 
   .page-hero--default {
@@ -607,12 +598,6 @@ function normalizeMinHeight(value: string) {
       font-size: 0.95rem;
       line-height: 1.72;
       letter-spacing: 0.08em;
-    }
-
-    .page-hero__subtitle-text::before,
-    .page-hero__subtitle-text::after {
-      width: 0.62rem;
-      height: 0.82rem;
     }
   }
 }

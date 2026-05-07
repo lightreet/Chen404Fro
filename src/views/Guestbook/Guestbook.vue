@@ -4,7 +4,7 @@
       <PageHero
         title="留言板"
         eyebrow="Guestbook"
-        subtitle="路过这里时，留下一个想法、一句问候，或者一段你正在思考的东西。"
+        subtitle="留下一句话，也留下此刻的你"
         :bg-image="heroBgImage"
         bg-position="center 40%"
         min-height="70vh"

@@ -4,10 +4,10 @@
       <div class="footer-shell">
         <div class="footer-main">
           <div class="footer-brand" aria-label="站点信息">
-            <img src="/logo.png" alt="Chen404" class="footer-logo" />
+            <img :src="siteLogo" :alt="siteName" class="footer-logo" />
             <div>
               <p class="footer-title">{{ siteName }}</p>
-              <p class="footer-subtitle">Chen404.cn</p>
+              <p class="footer-subtitle">{{ siteDescription }}</p>
             </div>
           </div>
 
@@ -19,11 +19,12 @@
         </div>
 
         <div class="footer-info">
-          <a class="footer-chip" href="https://beian.miit.gov.cn/" target="_blank" rel="noreferrer">
+          <a v-if="icpNumber" class="footer-chip" href="https://beian.miit.gov.cn/" target="_blank" rel="noreferrer">
             {{ icpNumber }}
           </a>
-          <span class="footer-chip">{{ siteDomain }} · {{ domainExpiresAt }}</span>
-          <span class="footer-copyright">© {{ currentYear }} {{ siteName }}</span>
+          <span v-if="beianNumber" class="footer-chip">{{ beianNumber }}</span>
+          <span class="footer-chip">{{ siteDomain }}</span>
+          <span class="footer-copyright">{{ copyrightText }}</span>
         </div>
       </div>
     </div>
@@ -33,21 +34,26 @@
 <script setup lang="ts">
 import { computed, onMounted } from 'vue';
 import { useSiteConfig } from '@/composables/useSiteConfig';
+import {
+  resolveBeian,
+  resolveCopyright,
+  resolveIcp,
+  resolveSiteDescription,
+  resolveSiteGithub,
+  resolveSiteLogo,
+  resolveSiteName,
+} from '@/utils/siteConfig';
 
-const DEFAULT_SITE_NAME = 'Chen404 Blog';
-const DEFAULT_GITHUB_LINK = 'https://github.com/lightreet';
-const DEFAULT_ICP_NUMBER = '湘ICP备2026010852号-1';
-const SITE_DOMAIN = 'chen404.cn';
-const DOMAIN_EXPIRES_AT = '2027.03.28';
-
-const currentYear = new Date().getFullYear();
 const { siteConfig, loadSiteConfig } = useSiteConfig();
 
-const siteName = computed(() => siteConfig.value?.siteName?.trim() || DEFAULT_SITE_NAME);
-const githubLink = computed(() => siteConfig.value?.github?.trim() || DEFAULT_GITHUB_LINK);
-const icpNumber = computed(() => siteConfig.value?.icp?.trim() || DEFAULT_ICP_NUMBER);
-const siteDomain = SITE_DOMAIN;
-const domainExpiresAt = DOMAIN_EXPIRES_AT;
+const siteName = computed(() => resolveSiteName(siteConfig.value));
+const siteLogo = computed(() => resolveSiteLogo(siteConfig.value));
+const siteDescription = computed(() => resolveSiteDescription(siteConfig.value));
+const githubLink = computed(() => resolveSiteGithub(siteConfig.value));
+const icpNumber = computed(() => resolveIcp(siteConfig.value));
+const beianNumber = computed(() => resolveBeian(siteConfig.value));
+const siteDomain = typeof window !== 'undefined' ? window.location.hostname || 'chen404.cn' : 'chen404.cn';
+const copyrightText = computed(() => resolveCopyright(siteConfig.value));
 
 onMounted(() => {
   void loadSiteConfig();

@@ -56,8 +56,10 @@ import { ElMessage } from 'element-plus';
 import { Loading } from '@element-plus/icons-vue';
 import DefaultLayout from '@/layouts/DefaultLayout.vue';
 import ArticleCard from '@/components/ArticleCard/ArticleCard.vue';
+import { useSiteConfig } from '@/composables/useSiteConfig';
 import type { Article, Tag } from '@/types';
 import { getArticlesByTag, getTagById } from '@/api/article';
+import { resolveArticlePageSize } from '@/utils/siteConfig';
 
 const route = useRoute();
 const tagId = computed(() => route.params.id as string);
@@ -67,7 +69,8 @@ const articleList = ref<Article[]>([]);
 const currentPage = ref(1);
 const total = ref(0);
 const loading = ref(false);
-const pageSize = 6;
+const { siteConfig, loadSiteConfig } = useSiteConfig();
+const pageSize = computed(() => resolveArticlePageSize(siteConfig.value, 6));
 
 const hasMore = computed(() => articleList.value.length < total.value);
 const tagChipStyle = computed(() => ({
@@ -92,7 +95,7 @@ const loadArticles = async (page: number = 1) => {
   try {
     const res = await getArticlesByTag(tagId.value, {
       page,
-      size: pageSize,
+      size: pageSize.value,
     });
     const list = res?.list ?? [];
     const totalCount = res?.total ?? 0;
@@ -121,8 +124,10 @@ const loadMore = () => {
 };
 
 onMounted(() => {
-  void loadTag();
-  void loadArticles();
+  void loadSiteConfig().finally(() => {
+    void loadTag();
+    void loadArticles();
+  });
 });
 
 watch(tagId, () => {

@@ -4,7 +4,7 @@
       <PageHero
         title="关于 Chen404"
         eyebrow="About"
-        subtitle="这里不只是文章集合，也慢慢长成了一片有人停留、有人共鸣、有人一起留下痕迹的小小星群。"
+        subtitle="这里记录技术，也收藏生活与心绪"
         :bg-image="heroBgImage"
         bg-position="center 42%"
         min-height="70vh"

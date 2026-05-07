@@ -3,7 +3,7 @@
     <div class="auth-container">
       <div class="auth-banner">
         <div class="banner-content">
-          <img src="/logo.png" alt="Chen404" class="banner-logo" />
+          <img :src="siteLogo" :alt="siteName" class="banner-logo" />
           <h2 class="banner-title">加入我们</h2>
           <p class="banner-desc">创建账号，开启你的 Chen404 小宇宙</p>
         </div>
@@ -179,16 +179,19 @@
 </template>
 
 <script setup lang="ts">
-import { reactive, ref } from 'vue';
+import { computed, onMounted, reactive, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { ElMessage } from 'element-plus';
 import { ArrowLeft, Key, Lock, Message, User } from '@element-plus/icons-vue';
 import { login, register, sendVerifyCode as sendVerifyCodeApi } from '@/api/auth';
+import { useSiteConfig } from '@/composables/useSiteConfig';
 import { useUserStore } from '@/stores/user';
+import { resolveSiteLogo, resolveSiteName } from '@/utils/siteConfig';
 import { createConfirmPasswordRule, createUsernameRules } from '@/utils/validation';
 
 const router = useRouter();
 const userStore = useUserStore();
+const { siteConfig, loadSiteConfig } = useSiteConfig();
 const formRef = ref();
 const loading = ref(false);
 const agreement = ref(false);
@@ -204,6 +207,8 @@ const form = reactive({
   password: '',
   confirmPassword: '',
 });
+const siteName = computed(() => resolveSiteName(siteConfig.value));
+const siteLogo = computed(() => resolveSiteLogo(siteConfig.value));
 
 const agreementSections = [
   {
@@ -377,6 +382,10 @@ const handleRegister = async () => {
     loading.value = false;
   }
 };
+
+onMounted(() => {
+  void loadSiteConfig();
+});
 </script>
 
 <style scoped lang="scss">

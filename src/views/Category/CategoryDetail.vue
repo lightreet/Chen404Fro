@@ -52,8 +52,10 @@ import { ElMessage } from 'element-plus';
 import { Loading } from '@element-plus/icons-vue';
 import DefaultLayout from '@/layouts/DefaultLayout.vue';
 import ArticleCard from '@/components/ArticleCard/ArticleCard.vue';
+import { useSiteConfig } from '@/composables/useSiteConfig';
 import type { Article, Category } from '@/types';
 import { getArticles, getCategoryById } from '@/api/article';
+import { resolveArticlePageSize } from '@/utils/siteConfig';
 
 const route = useRoute();
 const categoryId = computed(() => route.params.id as string);
@@ -63,7 +65,8 @@ const articleList = ref<Article[]>([]);
 const currentPage = ref(1);
 const total = ref(0);
 const loading = ref(false);
-const pageSize = 6;
+const { siteConfig, loadSiteConfig } = useSiteConfig();
+const pageSize = computed(() => resolveArticlePageSize(siteConfig.value, 6));
 
 const hasMore = computed(
   () => articleList.value.length < total.value
@@ -84,7 +87,7 @@ const loadArticles = async (page: number = 1) => {
   try {
     const res = await getArticles({
       page,
-      size: pageSize,
+      size: pageSize.value,
       status: 1,
       categoryId: Number(categoryId.value),
     });
@@ -112,8 +115,10 @@ const loadMore = () => {
 };
 
 onMounted(() => {
-  loadCategory();
-  loadArticles();
+  void loadSiteConfig().finally(() => {
+    void loadCategory();
+    void loadArticles();
+  });
 });
 
 watch(categoryId, () => {

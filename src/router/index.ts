@@ -1,7 +1,9 @@
 import { createRouter, createWebHistory } from 'vue-router';
 import type { RouteRecordRaw } from 'vue-router';
 import { ElMessage } from 'element-plus';
+import { useSiteConfig } from '@/composables/useSiteConfig';
 import { isAdminUser } from '@/utils/permission';
+import { applySiteMeta } from '@/utils/siteConfig';
 import { useUserStore } from '@/stores/user';
 
 const routes: RouteRecordRaw[] = [
@@ -179,11 +181,10 @@ router.onError((err) => {
 // 路由守卫
 router.beforeEach(async (to, _from, next) => {
   const userStore = useUserStore();
-  // 设置页面标题
+  const { loadSiteConfig } = useSiteConfig();
   const title = to.meta.title as string;
-  if (title) {
-    document.title = title === '首页' ? 'Chen404 Blog' : `${title} - Chen404 Blog`;
-  }
+  const siteConfig = await loadSiteConfig().catch(() => null);
+  applySiteMeta(siteConfig, title);
 
   // 检查是否需要登录
   if (to.meta.requiresAuth) {

@@ -164,7 +164,7 @@
                 <span class="section-kicker">SEO</span>
                 <h3>搜索展示信息</h3>
               </div>
-              <el-tag type="info" effect="plain">配置已保存，前台待完整接入</el-tag>
+              <el-tag type="success" effect="plain">已接入</el-tag>
             </div>
 
             <el-form label-position="top" class="settings-form">
@@ -185,6 +185,69 @@
                 />
               </el-form-item>
             </el-form>
+          </section>
+        </el-tab-pane>
+
+        <el-tab-pane label="运行配置" name="runtime">
+          <section class="settings-section">
+            <div class="section-head section-head--runtime">
+              <div>
+                <span class="section-kicker">Runtime</span>
+                <h3>评论互动策略</h3>
+                <p class="runtime-summary">把真正需要日常调整的评论开关留在这里，其余分页和上传限制固定为后端默认值。</p>
+              </div>
+              <el-tag type="success" effect="plain">仅保留必要开关</el-tag>
+            </div>
+
+            <div class="runtime-grid">
+              <section class="runtime-panel">
+                <div class="runtime-panel__icon">审核</div>
+                <div class="runtime-panel__body">
+                  <div class="runtime-panel__head">
+                    <div>
+                      <h4>评论审核</h4>
+                      <p>控制新评论是否先进入待审核状态。</p>
+                    </div>
+                    <el-switch
+                      v-model="form.commentAudit"
+                      inline-prompt
+                      active-text="开启"
+                      inactive-text="关闭"
+                    />
+                  </div>
+                  <div class="runtime-panel__meta">
+                    <span class="runtime-chip runtime-chip--soft">推荐开启</span>
+                    <span class="runtime-note">开启后，除管理员外的新评论默认待审核。</span>
+                  </div>
+                </div>
+              </section>
+
+              <section class="runtime-panel">
+                <div class="runtime-panel__icon">访客</div>
+                <div class="runtime-panel__body">
+                  <div class="runtime-panel__head">
+                    <div>
+                      <h4>游客评论</h4>
+                      <p>决定未登录用户能否在文章和留言板发言。</p>
+                    </div>
+                    <el-switch
+                      v-model="form.commentGuest"
+                      inline-prompt
+                      active-text="允许"
+                      inactive-text="关闭"
+                    />
+                  </div>
+                  <div class="runtime-panel__meta">
+                    <span class="runtime-chip">影响留言板和文章评论</span>
+                    <span class="runtime-note">关闭后，所有评论都需要先登录。</span>
+                  </div>
+                </div>
+              </section>
+            </div>
+
+            <div class="runtime-footer-note">
+              <p>文章列表分页大小、图片上传大小限制与允许后缀已固定为后端默认配置，不再通过数据库管理。</p>
+            </div>
           </section>
         </el-tab-pane>
 
@@ -295,6 +358,8 @@ const form = reactive<Required<Omit<SiteConfig, 'heroImages'>>>({
   copyright: '',
   seoKeywords: '',
   seoDescription: '',
+  commentAudit: true,
+  commentGuest: true,
 });
 
 const heroImages = reactive<Record<HeroKey, string>>({
@@ -326,6 +391,8 @@ function applyConfig(config: SiteConfig) {
   form.copyright = config.copyright ?? '';
   form.seoKeywords = config.seoKeywords ?? '';
   form.seoDescription = config.seoDescription ?? '';
+  form.commentAudit = config.commentAudit ?? true;
+  form.commentGuest = config.commentGuest ?? true;
 
   heroImages.home = config.heroImages?.home ?? '';
   heroImages.archive = config.heroImages?.archive ?? '';
@@ -348,6 +415,8 @@ function toPayload(): SiteConfig {
     copyright: form.copyright.trim(),
     seoKeywords: form.seoKeywords.trim(),
     seoDescription: form.seoDescription.trim(),
+    commentAudit: form.commentAudit,
+    commentGuest: form.commentGuest,
     heroImages: {
       home: heroImages.home.trim(),
       archive: heroImages.archive.trim(),
@@ -632,9 +701,132 @@ onMounted(() => {
   }
 }
 
+.section-head--runtime {
+  align-items: flex-start;
+
+  p {
+    margin: 8px 0 0;
+    color: var(--text-tertiary);
+    font-size: 13px;
+    line-height: 1.7;
+  }
+}
+
 .settings-form {
   :deep(.el-form-item) {
     margin-bottom: 0;
+  }
+}
+
+.field-hint {
+  margin: 8px 0 0;
+  color: var(--text-tertiary);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.runtime-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.runtime-panel {
+  display: grid;
+  grid-template-columns: 68px minmax(0, 1fr);
+  gap: 16px;
+  padding: 20px;
+  border: 1px solid rgba(235, 219, 228, 0.8);
+  border-radius: 16px;
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.82), rgba(255, 248, 251, 0.72)),
+    radial-gradient(circle at right top, rgba(255, 223, 236, 0.18), transparent 42%);
+  box-shadow: 0 14px 28px rgba(212, 180, 194, 0.08);
+}
+
+.runtime-panel__icon {
+  width: 68px;
+  height: 68px;
+  display: grid;
+  place-items: center;
+  border-radius: 22px;
+  background: linear-gradient(135deg, rgba(255, 229, 239, 0.88), rgba(239, 244, 255, 0.8));
+  color: #b97792;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+}
+
+.runtime-panel__body {
+  min-width: 0;
+}
+
+.runtime-panel__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+
+  h4 {
+    margin: 0;
+    color: #573848;
+    font-size: 17px;
+  }
+
+  p {
+    margin: 8px 0 0;
+    color: rgba(95, 73, 86, 0.72);
+    font-size: 13px;
+    line-height: 1.7;
+  }
+}
+
+.runtime-panel__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.runtime-chip,
+.runtime-note {
+  display: inline-flex;
+  align-items: center;
+  min-height: 30px;
+  padding: 0 12px;
+  border-radius: 999px;
+  font-size: 12px;
+}
+
+.runtime-chip {
+  background: rgba(255, 239, 245, 0.92);
+  border: 1px solid rgba(237, 203, 219, 0.92);
+  color: #9f6a82;
+}
+
+.runtime-chip--soft {
+  background: rgba(243, 249, 255, 0.9);
+  border-color: rgba(208, 223, 243, 0.92);
+  color: #6e7f9d;
+}
+
+.runtime-note {
+  background: rgba(255, 255, 255, 0.72);
+  color: rgba(95, 73, 86, 0.7);
+}
+
+.runtime-footer-note {
+  margin-top: 18px;
+  padding: 14px 16px;
+  border-radius: 14px;
+  background: rgba(255, 250, 252, 0.74);
+  border: 1px dashed rgba(227, 208, 218, 0.92);
+
+  p {
+    margin: 0;
+    color: rgba(111, 88, 100, 0.76);
+    font-size: 13px;
+    line-height: 1.7;
   }
 }
 
@@ -768,6 +960,7 @@ onMounted(() => {
 @media (max-width: 1080px) {
   .brand-grid,
   .hero-grid,
+  .runtime-grid,
   .form-grid {
     grid-template-columns: 1fr;
   }

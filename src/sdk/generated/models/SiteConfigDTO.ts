@@ -14,6 +14,8 @@ export type SiteConfigDTO = {
     copyright?: string;
     seoKeywords?: string;
     seoDescription?: string;
+    commentAudit?: boolean;
+    commentGuest?: boolean;
     heroImages?: Record<string, string>;
 };
 

@@ -131,16 +131,19 @@ import { MdPreview } from 'md-editor-v3';
 import 'md-editor-v3/lib/preview.css';
 import DefaultLayout from '@/layouts/DefaultLayout.vue';
 import CommentSection from '@/components/Comment/CommentSection.vue';
+import { useSiteConfig } from '@/composables/useSiteConfig';
 import type { Article } from '@/types';
 import { formatDate } from '@/utils/format';
 import { getArticleById, getArticleNeighbors, likeArticle, toggleArticleFavorite } from '@/api/article';
 import { renderArticleText } from '@/emoji/renderers/articleRenderer';
 import { useUserStore } from '@/stores/user';
 import { ElMessage } from 'element-plus';
+import { applySiteMeta, resolveSeoDescription } from '@/utils/siteConfig';
 
 const route = useRoute();
 const router = useRouter();
 const userStore = useUserStore();
+const { loadSiteConfig } = useSiteConfig();
 const loading = ref(true);
 const likeLoading = ref(false);
 const favLoading = ref(false);
@@ -182,11 +185,19 @@ const loadArticle = async () => {
   }
   loading.value = true;
   try {
-    const [articleRes, neighborsRes] = await Promise.all([
+    const [siteConfig, articleRes, neighborsRes] = await Promise.all([
+      loadSiteConfig().catch(() => null),
       getArticleById(id, true),
       getArticleNeighbors(id),
     ]);
     article.value = articleRes ?? null;
+    if (article.value) {
+      applySiteMeta(
+        siteConfig,
+        article.value.title,
+        article.value.summary?.trim() || resolveSeoDescription(siteConfig),
+      );
+    }
     if (neighborsRes?.prev) {
       prevArticle.value = { id: neighborsRes.prev.id, title: neighborsRes.prev.title };
     } else {

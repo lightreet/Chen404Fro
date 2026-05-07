@@ -4,7 +4,7 @@
       <div class="header-content">
         <!-- Logo -->
         <router-link to="/" class="logo">
-          <img src="/logo.png" alt="Chen404" class="logo-img" />
+          <img :src="siteLogo" :alt="siteName" class="logo-img" />
         </router-link>
 
         <!-- 导航菜单 -->
@@ -197,12 +197,17 @@ import {
 import { useUserStore } from '@/stores/user';
 import { storeToRefs } from 'pinia';
 import { logout as logoutApi } from '@/api/auth';
+import { useSiteConfig } from '@/composables/useSiteConfig';
 import { getTrustLevelLabel, isAdminUser } from '@/utils/permission';
+import { resolveSiteLogo, resolveSiteName } from '@/utils/siteConfig';
 import { useLayoutMobile } from '@/composables/useLayoutMobile';
 
 const router = useRouter();
 const userStore = useUserStore();
 const { isLoggedIn, user } = storeToRefs(userStore);
+const { siteConfig, loadSiteConfig } = useSiteConfig();
+const siteName = computed(() => resolveSiteName(siteConfig.value));
+const siteLogo = computed(() => resolveSiteLogo(siteConfig.value));
 
 // 角色文本
 const roleText = computed(() => getTrustLevelLabel(user.value));
@@ -242,6 +247,7 @@ const { isMobile } = useLayoutMobile();
 onMounted(() => {
   window.addEventListener('scroll', handleScroll);
   userStore.initUser();
+  void loadSiteConfig();
 });
 
 onUnmounted(() => {

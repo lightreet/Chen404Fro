@@ -3,7 +3,7 @@
     <div class="auth-container">
       <div class="auth-banner">
         <div class="banner-content">
-          <img src="/logo.png" alt="Chen404" class="banner-logo" />
+          <img :src="siteLogo" :alt="siteName" class="banner-logo" />
           <h2 class="banner-title">欢迎回来</h2>
           <p class="banner-desc">登录以继续探索精彩内容</p>
         </div>
@@ -80,17 +80,20 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive } from 'vue';
+import { computed, onMounted, reactive, ref } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { ElMessage } from 'element-plus';
 import { User, Lock, ArrowLeft } from '@element-plus/icons-vue';
 import { login } from '@/api/auth';
+import { useSiteConfig } from '@/composables/useSiteConfig';
 import { useUserStore } from '@/stores/user';
+import { resolveSiteLogo, resolveSiteName } from '@/utils/siteConfig';
 import { isValidUsername } from '@/utils/validation';
 
 const router = useRouter();
 const route = useRoute();
 const userStore = useUserStore();
+const { siteConfig, loadSiteConfig } = useSiteConfig();
 const formRef = ref();
 const loading = ref(false);
 const rememberMe = ref(false);
@@ -98,6 +101,8 @@ const form = reactive({
   account: '',
   password: '',
 });
+const siteName = computed(() => resolveSiteName(siteConfig.value));
+const siteLogo = computed(() => resolveSiteLogo(siteConfig.value));
 
 const rules = {
   account: [
@@ -145,6 +150,10 @@ const handleLogin = async () => {
     loading.value = false;
   }
 };
+
+onMounted(() => {
+  void loadSiteConfig();
+});
 </script>
 
 <style scoped lang="scss">

@@ -140,6 +140,8 @@ export interface SiteConfig {
   copyright?: string;
   seoKeywords?: string;
   seoDescription?: string;
+  commentAudit?: boolean;
+  commentGuest?: boolean;
   heroImages?: Record<string, string>;
 }
 

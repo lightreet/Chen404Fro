@@ -2,8 +2,8 @@
   <DefaultLayout>
     <template #hero>
       <PageHero
-        title="Chen404"
-        highlight-text="Chen404"
+        :title="siteName"
+        :highlight-text="siteName"
         variant="sakura-diary"
         :subtitle="heroSubtitle"
         :bg-image="heroBgImage"
@@ -96,8 +96,8 @@ import PageHero from '@/components/PageHero/PageHero.vue';
 import { useSiteConfig } from '@/composables/useSiteConfig';
 import type { Article } from '@/types';
 import { getArticles } from '@/api/article';
+import { resolveArticlePageSize, resolveHeroImage, resolveSiteName } from '@/utils/siteConfig';
 
-const pageSize = 6;
 const DEFAULT_HOME_HERO =
   'https://images.unsplash.com/photo-1522383225653-ed111181a951?w=1920&q=80';
 const DEFAULT_HOME_SUBTITLE = '一个写下技术，也收藏温柔日常的小小角落';
@@ -108,6 +108,7 @@ const currentPage = ref(1);
 const total = ref(0);
 const loading = ref(false);
 const hasMore = ref(true);
+const loadedPageSet = ref<Set<number>>(new Set());
 
 /** 标题搜索：已生效的关键词（回车后提交） */
 const activeKeyword = ref('');
@@ -115,6 +116,8 @@ const searchDraft = ref('');
 const searchExpanded = ref(false);
 const heroBgImage = ref(DEFAULT_HOME_HERO);
 const { siteConfig, loadSiteConfig } = useSiteConfig();
+const siteName = computed(() => resolveSiteName(siteConfig.value));
+const pageSize = computed(() => resolveArticlePageSize(siteConfig.value, 6));
 const heroSubtitle = computed(() => siteConfig.value?.siteDescription?.trim() || DEFAULT_HOME_SUBTITLE);
 
 /**
@@ -197,13 +200,16 @@ function scheduleCenterUpdate() {
 
 // 加载文章列表（仅已发布文章，对接后端 GET /api/articles；keyword 仅匹配标题）
 const loadArticles = async (page: number = 1) => {
+  if (loading.value) return;
+  if (page !== 1 && loadedPageSet.value.has(page)) return;
+
   currentPage.value = page;
   loading.value = true;
   try {
     const kw = activeKeyword.value.trim();
     const res = await getArticles({
       page,
-      size: pageSize,
+      size: pageSize.value,
       status: 1, // 仅已发布
       ...(kw ? { keyword: kw } : {}),
     });
@@ -212,11 +218,16 @@ const loadArticles = async (page: number = 1) => {
 
     if (page === 1) {
       articleList.value = list;
+      loadedPageSet.value = new Set(list.length > 0 ? [1] : []);
     } else {
       articleList.value.push(...list);
+      loadedPageSet.value = new Set([...loadedPageSet.value, page]);
     }
     total.value = totalCount;
-    hasMore.value = articleList.value.length < totalCount;
+
+    const pageFilled = list.length >= pageSize.value;
+    const countSuggestsMore = articleList.value.length < totalCount;
+    hasMore.value = list.length > 0 && pageFilled && countSuggestsMore;
   } catch (err) {
     console.error('加载文章列表失败', err);
     ElMessage.error('加载文章列表失败，请稍后重试');
@@ -234,6 +245,7 @@ function handleSearchSubmit(raw: string) {
   activeKeyword.value = q;
   searchExpanded.value = false;
   currentPage.value = 1;
+  loadedPageSet.value = new Set();
   void loadArticles(1);
 }
 
@@ -242,6 +254,7 @@ function clearTitleSearch() {
   searchDraft.value = '';
   searchExpanded.value = false;
   currentPage.value = 1;
+  loadedPageSet.value = new Set();
   void loadArticles(1);
 }
 
@@ -278,9 +291,9 @@ function setupLoadObserver() {
 
 onMounted(() => {
   void loadSiteConfig(true).then((config) => {
-    heroBgImage.value = config.heroImages?.home || DEFAULT_HOME_HERO;
+    heroBgImage.value = resolveHeroImage(config, 'home', DEFAULT_HOME_HERO);
+    return loadArticles(1);
   });
-  void loadArticles(1);
   window.addEventListener('scroll', scheduleCenterUpdate, { passive: true });
   window.addEventListener('resize', scheduleCenterUpdate, { passive: true });
 });
