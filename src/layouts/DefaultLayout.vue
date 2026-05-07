@@ -13,10 +13,6 @@
           class="content-wrapper"
           :class="{ 'no-right-sidebar': isMobile || !showRightSidebar }"
         >
-          <!-- 左侧 Live2D：当前先隐藏，保留结构便于后续恢复 -->
-          <aside class="sidebar-left" v-if="showLive2D && !isMobile">
-            <Live2D />
-          </aside>
 
           <!-- 中间内容 -->
           <div class="main-area">
@@ -33,6 +29,8 @@
 
     <!-- 底部 -->
     <Footer />
+
+    <Live2D v-if="showLive2D && !isMobile" />
   </div>
 </template>
 
@@ -52,7 +50,7 @@ withDefaults(defineProps<Props>(), {
 });
 
 const { isMobile } = useLayoutMobile();
-const showLive2D = false;
+const showLive2D = true;
 </script>
 
 <style scoped lang="scss">
@@ -77,15 +75,6 @@ const showLive2D = false;
   display: flex;
   gap: 24px;
   align-items: flex-start;
-}
-
-.sidebar-left {
-  position: fixed;
-  left: 24px;
-  bottom: 24px;
-  top: auto;
-  z-index: 20;
-  pointer-events: auto;
 }
 
 .main-area {
@@ -114,10 +103,6 @@ const showLive2D = false;
 @media (max-width: 1024px) {
   .content-wrapper {
     flex-direction: column;
-  }
-
-  .sidebar-left {
-    display: none;
   }
 }
 </style>

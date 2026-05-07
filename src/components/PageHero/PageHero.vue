@@ -287,12 +287,21 @@ function normalizeMinHeight(value: string) {
   background: transparent;
   backdrop-filter: none;
   box-shadow: none;
-  font-family: inherit;
-  font-size: clamp(1rem, 2.15vw, 1.18rem);
+  font-family:
+    'Microsoft YaHei UI',
+    'PingFang SC',
+    'Hiragino Sans GB',
+    'Noto Sans CJK SC',
+    sans-serif;
+  font-size: clamp(1rem, 1.45vw, 1.08rem);
+  font-weight: 500;
   line-height: 1.75;
-  letter-spacing: 0.07em;
-  color: rgba(255, 255, 255, 0.82);
-  text-shadow: 0 1px 12px rgba(32, 16, 28, 0.16);
+  letter-spacing: 0.12em;
+  color: rgba(255, 255, 255, 0.88);
+  text-align: center;
+  text-shadow:
+    0 2px 10px rgba(0, 0, 0, 0.42),
+    0 0 8px rgba(255, 214, 226, 0.14);
 }
 
 .page-hero--default {
@@ -316,47 +325,6 @@ function normalizeMinHeight(value: string) {
       0 0 20px rgba(255, 127, 170, 0.2);
   }
 
-  .page-hero__subtitle-text {
-    position: relative;
-    display: inline-flex;
-    align-items: center;
-    gap: clamp(0.75rem, 2vw, 1.15rem);
-    font-family:
-      'Microsoft YaHei UI',
-      'PingFang SC',
-      'Hiragino Sans GB',
-      'Noto Sans CJK SC',
-      sans-serif;
-    font-size: clamp(1rem, 1.45vw, 1.08rem);
-    font-weight: 500;
-    line-height: 1.76;
-    letter-spacing: 0.12em;
-    color: rgba(255, 255, 255, 0.88);
-    text-shadow:
-      0 2px 10px rgba(0, 0, 0, 0.42),
-      0 0 8px rgba(255, 214, 226, 0.14);
-  }
-
-  .page-hero__subtitle-text::before,
-  .page-hero__subtitle-text::after {
-    content: '';
-    width: clamp(0.72rem, 1.6vw, 0.92rem);
-    height: clamp(0.92rem, 2vw, 1.08rem);
-    opacity: 0.72;
-    box-shadow: 0 0 8px rgba(255, 196, 214, 0.14);
-  }
-
-  .page-hero__subtitle-text::before {
-    border-top: 1px solid rgba(255, 223, 233, 0.72);
-    border-bottom: 1px solid rgba(255, 223, 233, 0.72);
-    border-left: 1px solid rgba(255, 223, 233, 0.72);
-  }
-
-  .page-hero__subtitle-text::after {
-    border-top: 1px solid rgba(255, 223, 233, 0.72);
-    border-bottom: 1px solid rgba(255, 223, 233, 0.72);
-    border-right: 1px solid rgba(255, 223, 233, 0.72);
-  }
 }
 
 .page-hero__flower {
@@ -424,51 +392,6 @@ function normalizeMinHeight(value: string) {
       0 0 10px rgba(247, 182, 202, 0.28),
       0 3px 10px rgba(111, 101, 115, 0.14);
     transform: translateY(-0.7em) rotate(6deg);
-  }
-
-  .page-hero__subtitle-text {
-    position: relative;
-    display: inline-flex;
-    align-items: center;
-    gap: clamp(0.75rem, 2vw, 1.15rem);
-    max-width: none;
-    padding: 0.08rem 0.18rem 0.12rem;
-    font-family:
-      'Microsoft YaHei UI',
-      'PingFang SC',
-      'Hiragino Sans GB',
-      'Noto Sans CJK SC',
-      sans-serif;
-    font-size: clamp(1rem, 1.5vw, 1.1rem);
-    font-weight: 500;
-    line-height: 1.76;
-    letter-spacing: 0.12em;
-    color: var(--sakura-hero-text-muted);
-    text-shadow:
-      0 2px 10px rgba(0, 0, 0, 0.46),
-      0 0 8px rgba(255, 214, 226, 0.22);
-  }
-
-  .page-hero__subtitle-text::before {
-    content: '';
-    width: clamp(0.72rem, 1.6vw, 0.92rem);
-    height: clamp(0.92rem, 2vw, 1.08rem);
-    opacity: 0.76;
-    border-top: 1px solid rgba(255, 223, 233, 0.78);
-    border-bottom: 1px solid rgba(255, 223, 233, 0.78);
-    border-left: 1px solid rgba(255, 223, 233, 0.78);
-    box-shadow: 0 0 8px rgba(255, 196, 214, 0.18);
-  }
-
-  .page-hero__subtitle-text::after {
-    content: '';
-    width: clamp(0.72rem, 1.6vw, 0.92rem);
-    height: clamp(0.92rem, 2vw, 1.08rem);
-    opacity: 0.76;
-    border-top: 1px solid rgba(255, 223, 233, 0.78);
-    border-bottom: 1px solid rgba(255, 223, 233, 0.78);
-    border-right: 1px solid rgba(255, 223, 233, 0.78);
-    box-shadow: 0 0 8px rgba(255, 196, 214, 0.18);
   }
 
   .page-hero__scroll-hint {
@@ -576,28 +499,12 @@ function normalizeMinHeight(value: string) {
       font-size: 0.22em;
       margin-left: 0.12em;
     }
-
-    .page-hero__subtitle-text {
-      max-width: min(100%, 24rem);
-      font-size: 0.95rem;
-      gap: 0.62rem;
-      letter-spacing: 0.08em;
-      line-height: 1.72;
-    }
   }
 
   .page-hero--default {
     .page-hero__title {
       font-size: clamp(2.2rem, 10vw, 3.4rem);
       letter-spacing: 0.03em;
-    }
-
-    .page-hero__subtitle-text {
-      max-width: min(100%, 24rem);
-      gap: 0.62rem;
-      font-size: 0.95rem;
-      line-height: 1.72;
-      letter-spacing: 0.08em;
     }
   }
 }

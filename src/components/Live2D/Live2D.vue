@@ -1,111 +1,56 @@
 <template>
-  <div class="live2d-container" v-if="isVisible">
+  <div
+    v-if="isVisible"
+    class="live2d-container"
+    :class="{ dragging: isDragging }"
+    :style="containerStyle"
+  >
     <div class="live2d-wrapper">
-      <!-- 对话气泡 -->
-      <div class="speech-bubble" v-if="speechText" @click="clearSpeech">
+      <div v-if="speechText" class="speech-bubble" @click="clearSpeech">
         {{ speechText }}
       </div>
 
-      <!-- Live2D 画布区域 -->
-      <div class="live2d-canvas">
-        <div class="anime-figure" @click="showRandomSpeech">
-          <div class="anime-shadow" aria-hidden="true"></div>
-          <svg class="anime-girl" viewBox="0 0 260 320" role="img" aria-label="动漫少女助手">
-            <defs>
-              <linearGradient id="hairGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stop-color="#5b4bd1" />
-                <stop offset="100%" stop-color="#2a235f" />
-              </linearGradient>
-              <linearGradient id="dressGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-                <stop offset="0%" stop-color="#ffd8ea" />
-                <stop offset="100%" stop-color="#ff95bf" />
-              </linearGradient>
-              <linearGradient id="ribbonGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stop-color="#ffb4d2" />
-                <stop offset="100%" stop-color="#fb7299" />
-              </linearGradient>
-            </defs>
+      <div
+        class="live2d-canvas"
+        @pointerdown="startDrag"
+        @mousemove="handlePointerMove"
+        @mouseleave="resetPointerTilt"
+      >
+        <span class="magic-orb magic-orb--cyan" aria-hidden="true"></span>
+        <span class="magic-orb magic-orb--gold" aria-hidden="true"></span>
+        <span class="magic-orb magic-orb--violet" aria-hidden="true"></span>
 
-            <ellipse cx="130" cy="294" rx="58" ry="14" fill="rgba(15,23,42,0.12)" />
+        <div class="maid-stage">
+          <div class="figure-shadow" aria-hidden="true"></div>
+          <div class="figure-aura" aria-hidden="true"></div>
 
-            <g class="girl-bob">
-              <path
-                d="M86 114c-18-12-28-34-24-60 6-37 34-62 69-62 39 0 69 30 71 70 1 23-7 39-23 52l-10-18c7-7 11-16 10-30-1-28-21-46-48-46-25 0-45 18-49 43-3 17 2 32 13 44z"
-                fill="url(#hairGradient)"
-              />
-              <path
-                d="M72 118c-20 18-33 48-27 86 5 29 24 44 48 44l4-28c-14-1-22-8-25-23-4-21 0-38 12-57z"
-                fill="url(#hairGradient)"
-              />
-              <path
-                d="M190 118c20 18 33 48 27 86-5 29-24 44-48 44l-4-28c14-1 22-8 25-23 4-21 0-38-12-57z"
-                fill="url(#hairGradient)"
-              />
-
-              <ellipse cx="130" cy="106" rx="52" ry="58" fill="#ffe8ee" />
-
-              <path
-                d="M82 93c9-30 33-49 65-49 24 0 43 10 57 31-14 1-24 3-36 12-7-7-17-11-31-11-17 0-31 6-43 17z"
-                fill="url(#hairGradient)"
-              />
-              <path
-                d="M84 92c9 18 30 24 49 23 20-1 40-8 56-24l4 14c-10 13-31 24-60 25-30 1-46-10-56-23z"
-                fill="url(#hairGradient)"
-              />
-
-              <g class="girl-eyes">
-                <ellipse cx="110" cy="110" rx="10" ry="13" fill="#ffffff" />
-                <ellipse cx="151" cy="110" rx="10" ry="13" fill="#ffffff" />
-                <ellipse cx="110" cy="112" rx="6" ry="9" fill="#6b7cff" />
-                <ellipse cx="151" cy="112" rx="6" ry="9" fill="#6b7cff" />
-                <circle cx="112" cy="109" r="2.6" fill="#ffffff" />
-                <circle cx="153" cy="109" r="2.6" fill="#ffffff" />
-              </g>
-
-              <path d="M101 93c5-4 12-6 19-5" stroke="#43336f" stroke-width="3.5" stroke-linecap="round" fill="none" />
-              <path d="M141 88c7-1 14 1 18 6" stroke="#43336f" stroke-width="3.5" stroke-linecap="round" fill="none" />
-              <path d="M128 114c-3 4-3 8 0 12" stroke="#e8a2aa" stroke-width="2.4" stroke-linecap="round" fill="none" />
-              <path d="M118 131c7 4 15 4 23 0" stroke="#c86b7d" stroke-width="3" stroke-linecap="round" fill="none" />
-              <ellipse cx="95" cy="126" rx="9" ry="5" fill="#ffc6d5" opacity="0.75" />
-              <ellipse cx="165" cy="126" rx="9" ry="5" fill="#ffc6d5" opacity="0.75" />
-
-              <path
-                d="M101 160c-8 14-14 29-16 44-4 25 5 44 45 46 38 2 53-11 49-42-2-16-8-32-17-48z"
-                fill="url(#dressGradient)"
-              />
-              <path d="M106 162c11 7 31 7 48 0l-4-13h-41z" fill="#fff5fb" />
-              <path d="M131 150l-14 10 14 12 14-12z" fill="url(#ribbonGradient)" />
-              <circle cx="131" cy="162" r="5" fill="#fff5fb" />
-
-              <path d="M102 167c-17 12-27 28-31 48" stroke="#ffe8ee" stroke-width="13" stroke-linecap="round" fill="none" />
-              <path d="M158 167c17 12 27 28 31 48" stroke="#ffe8ee" stroke-width="13" stroke-linecap="round" fill="none" />
-              <path d="M96 251c8 10 19 16 35 18 20 3 38-2 48-18" stroke="#fff5fb" stroke-width="14" stroke-linecap="round" fill="none" />
-
-              <g class="girl-ribbon">
-                <path d="M77 66l19-11 3 19-16 11z" fill="url(#ribbonGradient)" />
-                <path d="M96 55l20 8-17 12-18-9z" fill="#ffd2e3" />
-              </g>
-            </g>
-          </svg>
+          <div class="maid-motion" :style="stageStyle">
+            <img
+              class="maid-figure"
+              :src="maidImage"
+              alt="蓝发魔女女仆看板娘"
+              @click="showRandomSpeech"
+            />
+          </div>
 
           <span class="sparkle sparkle--1" aria-hidden="true"></span>
           <span class="sparkle sparkle--2" aria-hidden="true"></span>
           <span class="sparkle sparkle--3" aria-hidden="true"></span>
+          <span class="sparkle sparkle--4" aria-hidden="true"></span>
         </div>
       </div>
 
-      <!-- 工具按钮 -->
       <div class="live2d-tools">
-        <button class="tool-btn" @click="handleChat" title="聊天">
+        <button class="tool-btn" type="button" aria-label="对话" @click="handleChat">
           <el-icon><ChatDotRound /></el-icon>
         </button>
-        <button class="tool-btn" @click="handleChange" title="切换">
+        <button class="tool-btn" type="button" aria-label="换装" @click="handleChange">
           <el-icon><Refresh /></el-icon>
         </button>
-        <button class="tool-btn" @click="handleScreenshot" title="截图">
+        <button class="tool-btn" type="button" aria-label="截图" @click="handleScreenshot">
           <el-icon><Camera /></el-icon>
         </button>
-        <button class="tool-btn close-btn" @click="handleClose" title="关闭">
+        <button class="tool-btn close-btn" type="button" aria-label="关闭" @click="handleClose">
           <el-icon><Close /></el-icon>
         </button>
       </div>
@@ -114,64 +59,197 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue';
-import { ChatDotRound, Refresh, Camera, Close } from '@element-plus/icons-vue';
+import { computed, onMounted, onUnmounted, ref } from 'vue';
+import { Camera, ChatDotRound, Close, Refresh } from '@element-plus/icons-vue';
+import maidImage from '@/assets/live2d/maid-witch.webp';
+
+const STORAGE_KEY = 'chen404.live2d.position';
+const VIEWPORT_PADDING = 52;
+const WIDGET_WIDTH = 252;
+const WIDGET_HEIGHT = 456;
 
 const isVisible = ref(true);
+const isDragging = ref(false);
 const speechText = ref('');
+const tiltX = ref(0);
+const tiltY = ref(0);
+const positionX = ref(92);
+const positionY = ref(120);
+const suppressClick = ref(false);
 
-// 预设对话
 const speeches = [
-  '欢迎来到 Chen404 的博客! 🌸',
-  '今天也要加油哦! 💪',
-  '有什么可以帮你的吗? 🤔',
-  '图片刷新失败，试试 Ctrl+F5 刷新哦！',
-  '喜欢这篇文章的话记得点赞哦! 👍',
-  '好好学习，天天向上! 📚',
-  '代码写累了就休息一下吧 ☕',
+  '欢迎来到 Chen404 的博客魔法屋。',
+  '想找文章重点的话，可以直接来问我。',
+  '这顶帽子里藏着一点灵感，也藏着一点点小魔法。',
+  '如果页面没刷新出来，可以试试 Ctrl+F5 哦。',
+  '今天也一起把灵感整理成作品吧。',
+  '写累了就先休息一下，恢复魔力也很重要。',
+  '等智能对话接好之后，我就能更认真地陪你看文章啦。',
 ];
 
-// 随机显示对话
+const containerStyle = computed(() => ({
+  left: `${positionX.value}px`,
+  top: `${positionY.value}px`,
+}));
+
+const stageStyle = computed(() => ({
+  '--tilt-x': `${tiltX.value}deg`,
+  '--tilt-y': `${tiltY.value}deg`,
+}));
+
 const showRandomSpeech = () => {
-  const random = speeches[Math.floor(Math.random() * speeches.length)];
-  speechText.value = random;
+  if (suppressClick.value) {
+    suppressClick.value = false;
+    return;
+  }
+  speechText.value = speeches[Math.floor(Math.random() * speeches.length)];
 };
 
 const clearSpeech = () => {
   speechText.value = '';
 };
 
-// 工具按钮处理
+const handlePointerMove = (event: MouseEvent) => {
+  const target = event.currentTarget as HTMLDivElement | null;
+  if (!target) {
+    return;
+  }
+  const rect = target.getBoundingClientRect();
+  const relativeX = (event.clientX - rect.left) / rect.width - 0.5;
+  const relativeY = (event.clientY - rect.top) / rect.height - 0.5;
+  tiltX.value = Number((relativeX * 2.8).toFixed(2));
+  tiltY.value = Number((relativeY * -2.4).toFixed(2));
+};
+
+const resetPointerTilt = () => {
+  tiltX.value = 0;
+  tiltY.value = 0;
+};
+
+const clampPosition = (x: number, y: number) => {
+  const maxX = Math.max(VIEWPORT_PADDING, window.innerWidth - WIDGET_WIDTH - VIEWPORT_PADDING);
+  const maxY = Math.max(VIEWPORT_PADDING, window.innerHeight - WIDGET_HEIGHT - VIEWPORT_PADDING);
+  return {
+    x: Math.min(Math.max(VIEWPORT_PADDING, x), maxX),
+    y: Math.min(Math.max(VIEWPORT_PADDING, y), maxY),
+  };
+};
+
+const persistPosition = () => {
+  window.localStorage.setItem(
+    STORAGE_KEY,
+    JSON.stringify({ x: positionX.value, y: positionY.value })
+  );
+};
+
+const applyDefaultPosition = () => {
+  const defaultX = 92;
+  const defaultY = Math.max(96, window.innerHeight - WIDGET_HEIGHT - 36);
+  const next = clampPosition(defaultX, defaultY);
+  positionX.value = next.x;
+  positionY.value = next.y;
+};
+
+const restorePosition = () => {
+  const saved = window.localStorage.getItem(STORAGE_KEY);
+  if (!saved) {
+    applyDefaultPosition();
+    return;
+  }
+  try {
+    const parsed = JSON.parse(saved) as { x?: number; y?: number };
+    const next = clampPosition(parsed.x ?? 92, parsed.y ?? 120);
+    positionX.value = next.x;
+    positionY.value = next.y;
+  } catch {
+    applyDefaultPosition();
+  }
+};
+
+const handleResize = () => {
+  const next = clampPosition(positionX.value, positionY.value);
+  positionX.value = next.x;
+  positionY.value = next.y;
+  persistPosition();
+};
+
+let dragStartX = 0;
+let dragStartY = 0;
+let originX = 0;
+let originY = 0;
+let movedDuringDrag = false;
+
+const handleDragMove = (event: PointerEvent) => {
+  const deltaX = event.clientX - dragStartX;
+  const deltaY = event.clientY - dragStartY;
+  movedDuringDrag = movedDuringDrag || Math.abs(deltaX) > 4 || Math.abs(deltaY) > 4;
+  const next = clampPosition(originX + deltaX, originY + deltaY);
+  positionX.value = next.x;
+  positionY.value = next.y;
+};
+
+const stopDrag = () => {
+  if (!isDragging.value) {
+    return;
+  }
+  isDragging.value = false;
+  window.removeEventListener('pointermove', handleDragMove);
+  window.removeEventListener('pointerup', stopDrag);
+  window.removeEventListener('pointercancel', stopDrag);
+  if (movedDuringDrag) {
+    suppressClick.value = true;
+    persistPosition();
+  }
+};
+
+const startDrag = (event: PointerEvent) => {
+  if (event.button !== 0) {
+    return;
+  }
+  isDragging.value = true;
+  movedDuringDrag = false;
+  dragStartX = event.clientX;
+  dragStartY = event.clientY;
+  originX = positionX.value;
+  originY = positionY.value;
+  window.addEventListener('pointermove', handleDragMove);
+  window.addEventListener('pointerup', stopDrag);
+  window.addEventListener('pointercancel', stopDrag);
+};
+
 const handleChat = () => {
   showRandomSpeech();
 };
 
 const handleChange = () => {
-  speechText.value = '切换角色功能开发中...';
-  setTimeout(clearSpeech, 2000);
+  speechText.value = '换装魔法还在准备中，先让我披着这件斗篷陪你。';
+  setTimeout(clearSpeech, 2200);
 };
 
 const handleScreenshot = () => {
-  speechText.value = '截图功能开发中...';
-  setTimeout(clearSpeech, 2000);
+  speechText.value = '截图功能还在制作中，我先帮你把灵感记下来。';
+  setTimeout(clearSpeech, 2200);
 };
 
 const handleClose = () => {
   isVisible.value = false;
 };
 
-// 定时显示对话
 let speechTimer: number | null = null;
 
 onMounted(() => {
+  restorePosition();
+  window.addEventListener('resize', handleResize);
   speechTimer = window.setInterval(() => {
-    if (Math.random() > 0.7) {
+    if (Math.random() > 0.72) {
       showRandomSpeech();
     }
   }, 30000);
 });
 
 onUnmounted(() => {
+  stopDrag();
+  window.removeEventListener('resize', handleResize);
   if (speechTimer) {
     clearInterval(speechTimer);
   }
@@ -180,7 +258,16 @@ onUnmounted(() => {
 
 <style scoped lang="scss">
 .live2d-container {
-  position: relative;
+  position: fixed;
+  z-index: 40;
+  width: 252px;
+  height: 456px;
+  pointer-events: auto;
+  touch-action: none;
+}
+
+.live2d-container.dragging {
+  user-select: none;
 }
 
 .live2d-wrapper {
@@ -188,39 +275,227 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   align-items: center;
+  width: 252px;
 }
 
-// 对话气泡
 .speech-bubble {
   position: absolute;
-  top: -60px;
+  top: -54px;
   left: 50%;
+  z-index: 8;
   transform: translateX(-50%);
-  background: white;
-  padding: 12px 16px;
+  max-width: 212px;
+  padding: 10px 14px;
   border-radius: 12px;
-  box-shadow: var(--shadow-md);
-  font-size: 14px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(247, 250, 255, 0.98));
+  box-shadow: 0 16px 34px rgba(33, 41, 74, 0.18);
   color: var(--text-primary);
-  max-width: 240px;
+  font-size: 13px;
+  line-height: 1.5;
   text-align: center;
   cursor: pointer;
-  animation: float 3s ease-in-out infinite;
+  animation: bubble-float 3.6s ease-in-out infinite;
 
   &::after {
     content: '';
     position: absolute;
     bottom: -8px;
     left: 50%;
-    transform: translateX(-50%);
-    border-left: 8px solid transparent;
-    border-right: 8px solid transparent;
-    border-top: 8px solid white;
+    width: 16px;
+    height: 16px;
+    background: inherit;
+    transform: translateX(-50%) rotate(45deg);
+    border-radius: 2px;
   }
 }
 
-@keyframes float {
-  0%, 100% {
+.live2d-canvas {
+  position: relative;
+  width: 252px;
+  height: 420px;
+  overflow: visible;
+  cursor: grab;
+}
+
+.live2d-container.dragging .live2d-canvas {
+  cursor: grabbing;
+}
+
+.maid-stage {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.figure-shadow {
+  position: absolute;
+  bottom: 14px;
+  left: 50%;
+  z-index: 0;
+  width: 132px;
+  height: 22px;
+  border-radius: 999px;
+  transform: translateX(-50%);
+  background: radial-gradient(circle, rgba(21, 26, 43, 0.26) 0%, rgba(21, 26, 43, 0.08) 62%, transparent 100%);
+  filter: blur(8px);
+  will-change: transform, opacity;
+  animation: shadow-breathe 3.8s ease-in-out infinite;
+}
+
+.figure-aura {
+  position: absolute;
+  inset: 34px 26px 38px;
+  z-index: 0;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 28% 38%, rgba(92, 193, 255, 0.18), transparent 34%),
+    radial-gradient(circle at 72% 32%, rgba(255, 225, 188, 0.16), transparent 32%),
+    radial-gradient(circle at 48% 78%, rgba(204, 184, 255, 0.14), transparent 36%);
+  filter: blur(12px);
+  will-change: transform, opacity;
+  animation: aura-breathe 5.2s ease-in-out infinite;
+}
+
+.maid-motion {
+  position: absolute;
+  left: 50%;
+  bottom: 18px;
+  z-index: 2;
+  width: 238px;
+  transform: translateX(-50%);
+  transform-style: preserve-3d;
+  will-change: transform;
+  animation: body-float 4.2s ease-in-out infinite;
+}
+
+.maid-figure {
+  display: block;
+  width: 100%;
+  user-select: none;
+  -webkit-user-drag: none;
+  will-change: transform;
+  transform:
+    perspective(900px)
+    rotateY(var(--tilt-x))
+    rotateX(var(--tilt-y));
+  transform-origin: 50% 72%;
+  transition: transform 180ms ease-out;
+  filter: drop-shadow(0 18px 28px rgba(27, 33, 63, 0.18));
+}
+
+.magic-orb {
+  position: absolute;
+  border-radius: 999px;
+  filter: blur(12px);
+  opacity: 0.72;
+  will-change: transform, opacity;
+  animation: orb-float 5.2s ease-in-out infinite;
+}
+
+.magic-orb--cyan {
+  top: 182px;
+  left: 18px;
+  width: 42px;
+  height: 42px;
+  background: radial-gradient(circle, rgba(119, 225, 255, 0.58) 0%, rgba(119, 225, 255, 0.08) 68%, transparent 100%);
+}
+
+.magic-orb--gold {
+  top: 76px;
+  right: 24px;
+  width: 36px;
+  height: 36px;
+  background: radial-gradient(circle, rgba(255, 224, 183, 0.58) 0%, rgba(255, 224, 183, 0.08) 70%, transparent 100%);
+  animation-delay: 1.1s;
+}
+
+.magic-orb--violet {
+  bottom: 96px;
+  right: 28px;
+  width: 32px;
+  height: 32px;
+  background: radial-gradient(circle, rgba(200, 183, 255, 0.58) 0%, rgba(200, 183, 255, 0.08) 70%, transparent 100%);
+  animation-delay: 1.8s;
+}
+
+.sparkle {
+  position: absolute;
+  z-index: 3;
+  border-radius: 999px;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.96) 0%, rgba(166, 221, 255, 0.92) 58%, transparent 76%);
+  opacity: 0.82;
+  will-change: transform, opacity;
+  animation: sparkle-float 4s ease-in-out infinite;
+}
+
+.sparkle--1 {
+  top: 50px;
+  left: 38px;
+  width: 8px;
+  height: 8px;
+}
+
+.sparkle--2 {
+  top: 114px;
+  right: 30px;
+  width: 6px;
+  height: 6px;
+  animation-delay: 0.8s;
+}
+
+.sparkle--3 {
+  top: 208px;
+  left: 8px;
+  width: 5px;
+  height: 5px;
+  animation-delay: 1.4s;
+}
+
+.sparkle--4 {
+  top: 182px;
+  right: 44px;
+  width: 5px;
+  height: 5px;
+  animation-delay: 2s;
+}
+
+.live2d-tools {
+  width: max-content;
+  margin-top: 8px;
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+}
+
+.tool-btn {
+  width: 34px;
+  height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.95);
+  color: var(--text-secondary);
+  box-shadow: 0 10px 22px rgba(37, 44, 78, 0.12);
+  cursor: pointer;
+  transition: transform 0.24s ease, background 0.24s ease, color 0.24s ease;
+
+  &:hover {
+    transform: translateY(-2px);
+    background: #6b89d6;
+    color: #fff;
+  }
+}
+
+.close-btn:hover {
+  background: #ef6c88;
+}
+
+@keyframes body-float {
+  0%,
+  100% {
     transform: translateX(-50%) translateY(0);
   }
   50% {
@@ -228,119 +503,39 @@ onUnmounted(() => {
   }
 }
 
-// 画布区域
-.live2d-canvas {
-  width: 260px;
-  height: 320px;
-  position: relative;
-  overflow: hidden;
-}
-
-// 占位角色样式
-.anime-figure {
-  width: 100%;
-  height: 100%;
-  position: relative;
-  display: grid;
-  place-items: end center;
-  padding-bottom: 18px;
-}
-
-.anime-shadow {
-  position: absolute;
-  bottom: 12px;
-  left: 50%;
-  width: 132px;
-  height: 28px;
-  border-radius: 999px;
-  transform: translateX(-50%);
-  background: radial-gradient(circle, rgba(15, 23, 42, 0.22) 0%, rgba(15, 23, 42, 0.06) 62%, transparent 100%);
-  filter: blur(8px);
-}
-
-.anime-girl {
-  width: 232px;
-  height: 292px;
-  overflow: visible;
-  filter: drop-shadow(0 18px 24px rgba(71, 48, 126, 0.18));
-}
-
-.girl-bob {
-  transform-origin: 50% 80%;
-  animation: idol-breathe 3.2s ease-in-out infinite;
-}
-
-.girl-eyes {
-  transform-origin: center;
-  animation: idol-blink 5.6s infinite;
-}
-
-.girl-ribbon {
-  transform-origin: 96px 64px;
-  animation: idol-sway 2.8s ease-in-out infinite;
-}
-
-.sparkle {
-  position: absolute;
-  width: 12px;
-  height: 12px;
-  border-radius: 999px;
-  background: radial-gradient(circle, rgba(255, 255, 255, 0.95) 0%, rgba(255, 182, 193, 0.88) 55%, transparent 70%);
-  opacity: 0.86;
-  animation: sparkle-float 3.2s ease-in-out infinite;
-}
-
-.sparkle--1 {
-  top: 44px;
-  left: 34px;
-  animation-delay: 0s;
-}
-
-.sparkle--2 {
-  top: 102px;
-  right: 28px;
-  width: 10px;
-  height: 10px;
-  animation-delay: 0.8s;
-}
-
-.sparkle--3 {
-  top: 164px;
-  left: 20px;
-  width: 8px;
-  height: 8px;
-  animation-delay: 1.4s;
-}
-
-@keyframes idol-breathe {
+@keyframes shadow-breathe {
   0%,
   100% {
-    transform: translateY(0) scale(1);
+    transform: translateX(-50%) scaleX(1);
+    opacity: 0.76;
   }
   50% {
-    transform: translateY(-4px) scale(1.015);
+    transform: translateX(-50%) scaleX(0.94);
+    opacity: 0.6;
   }
 }
 
-@keyframes idol-blink {
-  0%,
-  44%,
-  48%,
-  100% {
-    transform: scaleY(1);
-  }
-  46% {
-    transform: scaleY(0.12);
-  }
-}
-
-@keyframes idol-sway {
+@keyframes aura-breathe {
   0%,
   100% {
-    transform: rotate(-2deg);
+    transform: scale(0.98);
+    opacity: 0.7;
   }
   50% {
-    transform: rotate(3deg);
+    transform: scale(1.02);
+    opacity: 0.92;
+  }
+}
+
+@keyframes orb-float {
+  0%,
+  100% {
+    transform: translateY(0);
+    opacity: 0.5;
+  }
+  50% {
+    transform: translateY(-10px);
+    opacity: 0.78;
   }
 }
 
@@ -348,49 +543,21 @@ onUnmounted(() => {
   0%,
   100% {
     transform: translateY(0) scale(1);
-    opacity: 0.72;
+    opacity: 0.7;
   }
   50% {
-    transform: translateY(-9px) scale(1.18);
+    transform: translateY(-8px) scale(1.1);
     opacity: 1;
   }
 }
 
-// 工具按钮
-.live2d-tools {
-  display: flex;
-  gap: 8px;
-  margin-top: 8px;
-}
-
-.tool-btn {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  border: none;
-  background: white;
-  color: var(--text-secondary);
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.3s;
-  box-shadow: var(--shadow-sm);
-
-  &:hover {
-    background: var(--primary);
-    color: white;
-    transform: translateY(-2px);
+@keyframes bubble-float {
+  0%,
+  100% {
+    transform: translateX(-50%) translateY(0);
   }
-
-  &.close-btn:hover {
-    background: var(--danger);
-  }
-}
-
-@media (max-width: 1024px) {
-  .live2d-container {
-    display: none;
+  50% {
+    transform: translateX(-50%) translateY(-3px);
   }
 }
 </style>
