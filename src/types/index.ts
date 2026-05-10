@@ -327,6 +327,65 @@ export interface AiArticleAssistResponse {
   tags: string[];
 }
 
+export interface AiChatMessage {
+  role: 'user' | 'assistant';
+  content: string;
+}
+
+export interface AiChatCitation {
+  articleId: number | string;
+  articleTitle: string;
+  url: string;
+  snippet?: string;
+}
+
+export interface AiChatRelatedArticle {
+  articleId: number | string;
+  articleTitle: string;
+  url: string;
+}
+
+export interface AiChatRequest {
+  sessionId?: string;
+  visitorId?: string;
+  messages: AiChatMessage[];
+  pageContext?: string;
+  currentArticleId?: number | string;
+  currentArticleTitle?: string;
+  stream?: boolean;
+}
+
+export interface AiChatResponse {
+  sessionId: string;
+  messageId: string;
+  scene: 'helper' | 'companion';
+  replyText: string;
+  mood: string;
+  citations: AiChatCitation[];
+  relatedArticles: AiChatRelatedArticle[];
+  suggestions: string[];
+  traceId: string;
+  finishReason: string;
+}
+
+export interface AiChatHistoryMessage {
+  messageId: string;
+  role: 'user' | 'assistant';
+  content: string;
+  scene?: 'helper' | 'companion';
+  mood?: string;
+  citations: AiChatCitation[];
+  suggestions: string[];
+}
+
+export interface AiChatSessionDetailResponse {
+  sessionId: string;
+  title: string;
+  sourcePage: string;
+  sourceArticleId?: number | string;
+  messages: AiChatHistoryMessage[];
+}
+
 export interface CreateCategoryCommand {
   name: string;
   slug?: string;

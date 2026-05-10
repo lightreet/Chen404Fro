@@ -51,6 +51,7 @@ declare module 'vue' {
     HeroWave: typeof import('./components/HeroWave/HeroWave.vue')['default']
     HomeDiscoverySearch: typeof import('./components/HomeDiscoverySearch/HomeDiscoverySearch.vue')['default']
     Live2D: typeof import('./components/Live2D/Live2D.vue')['default']
+    Live2DChatPanel: typeof import('./components/Live2D/Live2DChatPanel.vue')['default']
     MdEditorEmojiToolbar: typeof import('./components/Editor/MdEditorEmojiToolbar.vue')['default']
     MdEditorUnorderedListToolbar: typeof import('./components/Editor/MdEditorUnorderedListToolbar.vue')['default']
     MdResizablePreview: typeof import('./components/MdResizablePreview/MdResizablePreview.vue')['default']

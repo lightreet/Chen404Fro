@@ -5,6 +5,19 @@
     :class="{ dragging: isDragging }"
     :style="containerStyle"
   >
+    <Live2DChatPanel
+      v-if="panelVisible"
+      class="chat-panel-shell"
+      :class="chatPanelPlacementClass"
+      :messages="chatMessages"
+      :suggestions="panelSuggestions"
+      :is-loading="isChatLoading"
+      @close="panelVisible = false"
+      @send="handleSendMessage"
+      @quick-action="handleSendMessage"
+      @stop="handleStopStreaming"
+    />
+
     <div class="live2d-wrapper">
       <div v-if="speechText" class="speech-bubble" @click="clearSpeech">
         {{ speechText }}
@@ -60,22 +73,50 @@
 
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue';
+import { useRoute } from 'vue-router';
 import { Camera, ChatDotRound, Close, Refresh } from '@element-plus/icons-vue';
+import { ElMessage } from 'element-plus';
+import Live2DChatPanel from './Live2DChatPanel.vue';
 import maidImage from '@/assets/live2d/maid-witch.webp';
+import { getMaidChatSessionDetail, sendMaidChat, streamMaidChat, type AiChatStreamEvent } from '@/api/ai';
+import type { AiChatCitation, AiChatMessage, AiChatResponse, AiChatSessionDetailResponse } from '@/types';
 
 const STORAGE_KEY = 'chen404.live2d.position';
+const CHAT_SESSION_STORAGE_KEY = 'chen404.live2d.chat.session';
+const CHAT_VISITOR_STORAGE_KEY = 'chen404.live2d.chat.visitor';
+const LIVE2D_SCALE = 2 / 3;
 const VIEWPORT_PADDING = 52;
-const WIDGET_WIDTH = 252;
-const WIDGET_HEIGHT = 456;
+const BASE_WIDGET_WIDTH = 252;
+const BASE_WIDGET_HEIGHT = 456;
+const WIDGET_WIDTH = Math.round(BASE_WIDGET_WIDTH * LIVE2D_SCALE);
+const WIDGET_HEIGHT = Math.round(BASE_WIDGET_HEIGHT * LIVE2D_SCALE);
+const WELCOME_MESSAGE = '你好呀，我是 Lyra。想聊聊，还是让我帮你看看这页内容呀？';
+
+interface ChatPanelMessage {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  citations?: AiChatCitation[];
+  suggestions?: string[];
+}
 
 const isVisible = ref(true);
 const isDragging = ref(false);
 const speechText = ref('');
+const panelVisible = ref(false);
+const isChatLoading = ref(false);
 const tiltX = ref(0);
 const tiltY = ref(0);
 const positionX = ref(92);
 const positionY = ref(120);
 const suppressClick = ref(false);
+const activeSessionId = ref('');
+const visitorId = ref('');
+const chatMessages = ref<ChatPanelMessage[]>([]);
+const activeStreamMessageId = ref('');
+const activeAbortController = ref<AbortController | null>(null);
+const sessionRestoreLoaded = ref(false);
+const route = useRoute();
 
 const speeches = [
   '欢迎来到 Chen404 的博客魔法屋。',
@@ -90,7 +131,58 @@ const speeches = [
 const containerStyle = computed(() => ({
   left: `${positionX.value}px`,
   top: `${positionY.value}px`,
+  '--live2d-scale': String(LIVE2D_SCALE),
+  '--live2d-width': `${WIDGET_WIDTH}px`,
+  '--live2d-height': `${WIDGET_HEIGHT}px`,
 }));
+
+const currentPageContext = computed(() => {
+  const name = String(route.name ?? '').toLowerCase();
+  if (name.includes('article')) {
+    return 'article';
+  }
+  if (name.includes('archive')) {
+    return 'archive';
+  }
+  if (name.includes('about')) {
+    return 'about';
+  }
+  if (name.includes('category')) {
+    return 'category';
+  }
+  if (name.includes('tag')) {
+    return 'tag';
+  }
+  if (name.includes('guestbook')) {
+    return 'guestbook';
+  }
+  return name || 'home';
+});
+
+const currentArticleId = computed(() => {
+  if (currentPageContext.value !== 'article') {
+    return undefined;
+  }
+  const raw = route.params.id;
+  return Array.isArray(raw) ? raw[0] : raw;
+});
+
+const panelSuggestions = computed(() => {
+  for (let i = chatMessages.value.length - 1; i >= 0; i--) {
+    const message = chatMessages.value[i];
+    if (message.role === 'assistant' && message.suggestions?.length) {
+      return message.suggestions;
+    }
+  }
+  if (currentPageContext.value === 'article') {
+    return ['帮我总结这篇', '这篇的重点是什么', '推荐两篇相关的'];
+  }
+  return ['随便陪我聊聊', '今天适合看什么', '给我一句打气的话'];
+});
+
+const chatPanelPlacementClass = computed(() => {
+  return positionX.value > 360 ? 'panel-left' : 'panel-right';
+});
 
 const stageStyle = computed(() => ({
   '--tilt-x': `${tiltX.value}deg`,
@@ -107,6 +199,230 @@ const showRandomSpeech = () => {
 
 const clearSpeech = () => {
   speechText.value = '';
+};
+
+const pushAssistantMessage = (payload: Pick<ChatPanelMessage, 'content'> & Partial<ChatPanelMessage>) => {
+  chatMessages.value.push({
+    id: payload.id ?? `assistant-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
+    role: 'assistant',
+    content: payload.content,
+    citations: payload.citations ?? [],
+    suggestions: payload.suggestions ?? [],
+  });
+};
+
+const getOrCreateVisitorId = () => {
+  const saved = window.localStorage.getItem(CHAT_VISITOR_STORAGE_KEY);
+  if (saved) {
+    return saved;
+  }
+  const next = `visitor-${crypto.randomUUID?.() ?? Math.random().toString(16).slice(2, 10)}`;
+  window.localStorage.setItem(CHAT_VISITOR_STORAGE_KEY, next);
+  return next;
+};
+
+const ensureGreetingMessage = () => {
+  if (chatMessages.value.length > 0) {
+    return;
+  }
+  pushAssistantMessage({
+    content: WELCOME_MESSAGE,
+    suggestions: panelSuggestions.value,
+  });
+  speechText.value = WELCOME_MESSAGE;
+};
+
+const openChatPanel = () => {
+  panelVisible.value = true;
+  void restoreChatSessionIfNeeded();
+};
+
+const buildChatRequestMessages = (): AiChatMessage[] => {
+  return chatMessages.value.map((message) => ({
+    role: message.role,
+    content: message.content,
+  }));
+};
+
+const buildChatRequest = (): AiChatMessage[] => {
+  return buildChatRequestMessages();
+};
+
+const getLastAssistantMessage = () => {
+  for (let i = chatMessages.value.length - 1; i >= 0; i--) {
+    if (chatMessages.value[i].role === 'assistant') {
+      return chatMessages.value[i];
+    }
+  }
+  return undefined;
+};
+
+const applySessionDetail = (detail: AiChatSessionDetailResponse) => {
+  activeSessionId.value = detail.sessionId;
+  chatMessages.value = detail.messages.map((message) => ({
+    id: message.messageId,
+    role: message.role,
+    content: message.content,
+    citations: message.citations ?? [],
+    suggestions: message.suggestions ?? [],
+  }));
+  if (chatMessages.value.length === 0) {
+    ensureGreetingMessage();
+  }
+};
+
+const restoreChatSessionIfNeeded = async () => {
+  if (sessionRestoreLoaded.value) {
+    ensureGreetingMessage();
+    return;
+  }
+  sessionRestoreLoaded.value = true;
+  if (!activeSessionId.value) {
+    ensureGreetingMessage();
+    return;
+  }
+  try {
+    const detail = await getMaidChatSessionDetail(activeSessionId.value, visitorId.value);
+    applySessionDetail(detail);
+  } catch {
+    activeSessionId.value = '';
+    window.localStorage.removeItem(CHAT_SESSION_STORAGE_KEY);
+    ensureGreetingMessage();
+  }
+};
+
+const updateAssistantMessage = (messageId: string, updater: (message: ChatPanelMessage) => void) => {
+  const target = chatMessages.value.find((message) => message.id === messageId);
+  if (!target) {
+    return;
+  }
+  updater(target);
+};
+
+const applyStreamEvent = (event: AiChatStreamEvent) => {
+  switch (event.event) {
+    case 'session':
+      activeSessionId.value = event.data.sessionId;
+      window.localStorage.setItem(CHAT_SESSION_STORAGE_KEY, event.data.sessionId);
+      break;
+    case 'message_start':
+      activeStreamMessageId.value = event.data.messageId;
+      chatMessages.value.push({
+        id: event.data.messageId,
+        role: 'assistant',
+        content: '',
+        citations: [],
+        suggestions: [],
+      });
+      break;
+    case 'delta':
+      updateAssistantMessage(event.data.messageId, (message) => {
+        message.content += event.data.text;
+        speechText.value = message.content || speechText.value;
+      });
+      break;
+    case 'citation':
+      updateAssistantMessage(activeStreamMessageId.value, (message) => {
+        message.citations = [...(message.citations ?? []), event.data];
+      });
+      break;
+    case 'suggestions':
+      updateAssistantMessage(event.data.messageId, (message) => {
+        message.suggestions = event.data.items;
+      });
+      break;
+    case 'done': {
+      const lastAssistant = getLastAssistantMessage();
+      if (lastAssistant?.content) {
+        speechText.value = lastAssistant.content;
+      }
+      activeStreamMessageId.value = '';
+      break;
+    }
+    case 'error':
+      ElMessage.warning(event.data.message || '这次我没接稳，再试一次呀。');
+      break;
+  }
+};
+
+const handleSendMessage = async (content: string) => {
+  const trimmed = content.trim();
+  if (!trimmed || isChatLoading.value) {
+    return;
+  }
+
+  panelVisible.value = true;
+  chatMessages.value.push({
+    id: `user-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
+    role: 'user',
+    content: trimmed,
+  });
+
+  isChatLoading.value = true;
+  try {
+    activeAbortController.value = new AbortController();
+    await streamMaidChat(
+      {
+        sessionId: activeSessionId.value || undefined,
+        visitorId: visitorId.value,
+        messages: buildChatRequest(),
+        pageContext: currentPageContext.value,
+        currentArticleId: currentArticleId.value,
+        stream: true,
+      },
+      {
+        signal: activeAbortController.value.signal,
+        onEvent: applyStreamEvent,
+      },
+    );
+  } catch {
+    if (activeAbortController.value?.signal.aborted) {
+      return;
+    }
+    try {
+      const response = await sendMaidChat({
+        sessionId: activeSessionId.value || undefined,
+        visitorId: visitorId.value,
+        messages: buildChatRequest(),
+        pageContext: currentPageContext.value,
+        currentArticleId: currentArticleId.value,
+        stream: false,
+      });
+      applyChatResponse(response);
+    } catch {
+      pushAssistantMessage({
+        content: '这次我没接稳，再试一次呀。',
+        suggestions: panelSuggestions.value,
+      });
+      speechText.value = '这次我没接稳，再试一次呀。';
+    }
+  } finally {
+    activeAbortController.value = null;
+    isChatLoading.value = false;
+  }
+};
+
+const applyChatResponse = (response: AiChatResponse) => {
+  activeSessionId.value = response.sessionId;
+  window.localStorage.setItem(CHAT_SESSION_STORAGE_KEY, response.sessionId);
+  pushAssistantMessage({
+    id: response.messageId,
+    content: response.replyText,
+    citations: response.citations,
+    suggestions: response.suggestions,
+  });
+  speechText.value = response.replyText;
+};
+
+const handleStopStreaming = () => {
+  activeAbortController.value?.abort();
+  activeAbortController.value = null;
+  activeStreamMessageId.value = '';
+  isChatLoading.value = false;
+  const lastAssistant = getLastAssistantMessage();
+  if (lastAssistant?.content) {
+    speechText.value = lastAssistant.content;
+  }
 };
 
 const handlePointerMove = (event: MouseEvent) => {
@@ -218,7 +534,11 @@ const startDrag = (event: PointerEvent) => {
 };
 
 const handleChat = () => {
-  showRandomSpeech();
+  if (panelVisible.value) {
+    panelVisible.value = false;
+    return;
+  }
+  openChatPanel();
 };
 
 const handleChange = () => {
@@ -233,21 +553,25 @@ const handleScreenshot = () => {
 
 const handleClose = () => {
   isVisible.value = false;
+  panelVisible.value = false;
 };
 
 let speechTimer: number | null = null;
 
 onMounted(() => {
   restorePosition();
+  activeSessionId.value = window.localStorage.getItem(CHAT_SESSION_STORAGE_KEY) ?? '';
+  visitorId.value = getOrCreateVisitorId();
   window.addEventListener('resize', handleResize);
   speechTimer = window.setInterval(() => {
-    if (Math.random() > 0.72) {
+    if (!panelVisible.value && Math.random() > 0.72) {
       showRandomSpeech();
     }
   }, 30000);
 });
 
 onUnmounted(() => {
+  handleStopStreaming();
   stopDrag();
   window.removeEventListener('resize', handleResize);
   if (speechTimer) {
@@ -260,8 +584,8 @@ onUnmounted(() => {
 .live2d-container {
   position: fixed;
   z-index: 40;
-  width: 252px;
-  height: 456px;
+  width: var(--live2d-width);
+  height: var(--live2d-height);
   pointer-events: auto;
   touch-action: none;
 }
@@ -270,12 +594,29 @@ onUnmounted(() => {
   user-select: none;
 }
 
+.chat-panel-shell {
+  position: absolute;
+  top: -6px;
+  z-index: 18;
+  animation: panel-fade-in 260ms ease;
+}
+
+.chat-panel-shell.panel-left {
+  left: -372px;
+}
+
+.chat-panel-shell.panel-right {
+  left: calc(var(--live2d-width) + 20px);
+}
+
 .live2d-wrapper {
   position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
   width: 252px;
+  transform: scale(var(--live2d-scale));
+  transform-origin: top left;
 }
 
 .speech-bubble {
@@ -288,8 +629,10 @@ onUnmounted(() => {
   padding: 10px 14px;
   border-radius: 12px;
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(247, 250, 255, 0.98));
-  box-shadow: 0 16px 34px rgba(33, 41, 74, 0.18);
+    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(255, 247, 251, 0.98));
+  box-shadow:
+    0 16px 34px rgba(84, 60, 73, 0.16),
+    0 6px 18px rgba(247, 126, 162, 0.12);
   color: var(--text-primary);
   font-size: 13px;
   line-height: 1.5;
@@ -476,21 +819,34 @@ onUnmounted(() => {
   justify-content: center;
   border: none;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.95);
-  color: var(--text-secondary);
-  box-shadow: 0 10px 22px rgba(37, 44, 78, 0.12);
+  background: rgba(255, 251, 253, 0.96);
+  color: #8e7280;
+  box-shadow:
+    0 10px 22px rgba(84, 60, 73, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.82);
   cursor: pointer;
   transition: transform 0.24s ease, background 0.24s ease, color 0.24s ease;
 
   &:hover {
     transform: translateY(-2px);
-    background: #6b89d6;
+    background: linear-gradient(135deg, #f48aac, #fb7299);
     color: #fff;
   }
 }
 
 .close-btn:hover {
-  background: #ef6c88;
+  background: linear-gradient(135deg, #ee7c9f, #e85d83);
+}
+
+@keyframes panel-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @keyframes body-float {
@@ -558,6 +914,16 @@ onUnmounted(() => {
   }
   50% {
     transform: translateX(-50%) translateY(-3px);
+  }
+}
+
+@media (max-width: 768px) {
+  .chat-panel-shell {
+    position: fixed;
+    left: 50% !important;
+    top: auto;
+    bottom: 116px;
+    transform: translateX(-50%);
   }
 }
 </style>
