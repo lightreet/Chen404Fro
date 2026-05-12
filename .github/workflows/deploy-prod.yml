@@ -51,13 +51,25 @@ jobs:
       - name: Upload dist.zip
         shell: bash
         run: |
-          scp -i ~/.ssh/id_ed25519 -P "${{ secrets.SERVER_PORT }}" \
+          scp -v \
+            -i ~/.ssh/id_ed25519 \
+            -o BatchMode=yes \
+            -o ConnectTimeout=15 \
+            -o ServerAliveInterval=15 \
+            -o ServerAliveCountMax=3 \
+            -P "${{ secrets.SERVER_PORT }}" \
             dist.zip \
-            "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/tmp/dist.zip"
+            "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/home/deploy/dist.zip"
 
       - name: Deploy frontend
         shell: bash
         run: |
-          ssh -i ~/.ssh/id_ed25519 -p "${{ secrets.SERVER_PORT }}" \
+          ssh \
+            -i ~/.ssh/id_ed25519 \
+            -o BatchMode=yes \
+            -o ConnectTimeout=15 \
+            -o ServerAliveInterval=15 \
+            -o ServerAliveCountMax=3 \
+            -p "${{ secrets.SERVER_PORT }}" \
             "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}" \
-            "/srv/chen404/scripts/deploy-frontend.sh /tmp/dist.zip"
+            "/srv/chen404/scripts/deploy-frontend.sh /home/deploy/dist.zip"
