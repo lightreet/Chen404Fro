@@ -1,0 +1,63 @@
+name: Deploy Frontend
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-frontend-prod
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: production
+
+    env:
+      VITE_API_BASE_URL: https://www.chen404.cn/api
+      VITE_IMAGE_BASE_URL: https://www.chen404.cn
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Package dist.zip
+        shell: bash
+        run: |
+          cd dist
+          zip -r ../dist.zip .
+
+      - name: Prepare SSH
+        shell: bash
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "${{ secrets.SERVER_SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -p "${{ secrets.SERVER_PORT }}" "${{ secrets.SERVER_HOST }}" >> ~/.ssh/known_hosts
+
+      - name: Upload dist.zip
+        shell: bash
+        run: |
+          scp -i ~/.ssh/id_ed25519 -P "${{ secrets.SERVER_PORT }}" \
+            dist.zip \
+            "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/tmp/dist.zip"
+
+      - name: Deploy frontend
+        shell: bash
+        run: |
+          ssh -i ~/.ssh/id_ed25519 -p "${{ secrets.SERVER_PORT }}" \
+            "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}" \
+            "/srv/chen404/scripts/deploy-frontend.sh /tmp/dist.zip"
