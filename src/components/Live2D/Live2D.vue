@@ -79,7 +79,13 @@ import { ElMessage } from 'element-plus';
 import Live2DChatPanel from './Live2DChatPanel.vue';
 import maidImage from '@/assets/live2d/maid-witch.webp';
 import { getMaidChatSessionDetail, sendMaidChat, streamMaidChat, type AiChatStreamEvent } from '@/api/ai';
-import type { AiChatCitation, AiChatMessage, AiChatResponse, AiChatSessionDetailResponse } from '@/types';
+import type {
+  AiChatCitation,
+  AiChatMessage,
+  AiChatRelatedArticle,
+  AiChatResponse,
+  AiChatSessionDetailResponse,
+} from '@/types';
 
 const STORAGE_KEY = 'chen404.live2d.position';
 const CHAT_SESSION_STORAGE_KEY = 'chen404.live2d.chat.session';
@@ -97,6 +103,7 @@ interface ChatPanelMessage {
   role: 'user' | 'assistant';
   content: string;
   citations?: AiChatCitation[];
+  relatedArticles?: AiChatRelatedArticle[];
   suggestions?: string[];
 }
 
@@ -207,6 +214,7 @@ const pushAssistantMessage = (payload: Pick<ChatPanelMessage, 'content'> & Parti
     role: 'assistant',
     content: payload.content,
     citations: payload.citations ?? [],
+    relatedArticles: payload.relatedArticles ?? [],
     suggestions: payload.suggestions ?? [],
   });
 };
@@ -264,6 +272,7 @@ const applySessionDetail = (detail: AiChatSessionDetailResponse) => {
     role: message.role,
     content: message.content,
     citations: message.citations ?? [],
+    relatedArticles: message.relatedArticles ?? [],
     suggestions: message.suggestions ?? [],
   }));
   if (chatMessages.value.length === 0) {
@@ -312,6 +321,7 @@ const applyStreamEvent = (event: AiChatStreamEvent) => {
         role: 'assistant',
         content: '',
         citations: [],
+        relatedArticles: [],
         suggestions: [],
       });
       break;
@@ -324,6 +334,11 @@ const applyStreamEvent = (event: AiChatStreamEvent) => {
     case 'citation':
       updateAssistantMessage(activeStreamMessageId.value, (message) => {
         message.citations = [...(message.citations ?? []), event.data];
+      });
+      break;
+    case 'related_articles':
+      updateAssistantMessage(event.data.messageId, (message) => {
+        message.relatedArticles = event.data.items;
       });
       break;
     case 'suggestions':
@@ -409,6 +424,7 @@ const applyChatResponse = (response: AiChatResponse) => {
     id: response.messageId,
     content: response.replyText,
     citations: response.citations,
+    relatedArticles: response.relatedArticles,
     suggestions: response.suggestions,
   });
   speechText.value = response.replyText;

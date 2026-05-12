@@ -14,6 +14,7 @@ export type AiChatStreamEvent =
   | { event: 'message_start'; data: { messageId: string; scene: 'helper' | 'companion'; mood: string } }
   | { event: 'delta'; data: { messageId: string; text: string } }
   | { event: 'citation'; data: { articleId: number | string; articleTitle: string; url: string; snippet?: string } }
+  | { event: 'related_articles'; data: { messageId: string; items: Array<{ articleId: number | string; articleTitle: string; url: string }> } }
   | { event: 'suggestions'; data: { messageId: string; items: string[] } }
   | { event: 'done'; data: { messageId: string; finishReason: string; traceId: string } }
   | { event: 'error'; data: { message: string } };

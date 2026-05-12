@@ -375,6 +375,7 @@ export interface AiChatHistoryMessage {
   scene?: 'helper' | 'companion';
   mood?: string;
   citations: AiChatCitation[];
+  relatedArticles: AiChatRelatedArticle[];
   suggestions: string[];
 }
 

@@ -7,7 +7,6 @@
           <h3 class="chat-panel__title">Lyra</h3>
           <span class="chat-panel__status">online</span>
         </div>
-        <p class="chat-panel__subtitle">陪你闲聊，也陪你翻翻站内的小书柜。</p>
       </div>
 
       <button
@@ -40,6 +39,19 @@
             <span v-if="citation.snippet">{{ citation.snippet }}</span>
           </a>
         </div>
+
+        <div v-if="message.relatedArticles?.length" class="chat-message__related">
+          <p class="chat-message__related-label">顺手给你挑了几篇：</p>
+          <a
+            v-for="article in message.relatedArticles"
+            :key="`${message.id}-${article.articleId}`"
+            class="related-article-card"
+            :href="article.url"
+          >
+            <strong>{{ article.articleTitle }}</strong>
+            <span>打开文章看看</span>
+          </a>
+        </div>
       </article>
 
       <div v-if="isLoading" class="chat-panel__thinking">
@@ -50,7 +62,7 @@
 
     <div v-if="suggestions.length" class="chat-panel__suggestions">
       <button
-        v-for="item in suggestions"
+        v-for="item in visibleSuggestions"
         :key="item"
         type="button"
         class="suggestion-pill"
@@ -65,7 +77,7 @@
       <textarea
         v-model="draft"
         class="chat-panel__input"
-        rows="3"
+        rows="2"
         maxlength="300"
         placeholder="想聊聊，还是让我帮你看看这页内容呀？"
         @keydown.enter.exact.prevent="handleSubmit"
@@ -99,14 +111,15 @@
 </template>
 
 <script setup lang="ts">
-import { nextTick, ref, watch } from 'vue';
-import type { AiChatCitation } from '@/types';
+import { computed, nextTick, ref, watch } from 'vue';
+import type { AiChatCitation, AiChatRelatedArticle } from '@/types';
 
 export interface Live2DChatPanelMessage {
   id: string;
   role: 'user' | 'assistant';
   content: string;
   citations?: AiChatCitation[];
+  relatedArticles?: AiChatRelatedArticle[];
 }
 
 const props = defineProps<{
@@ -124,6 +137,7 @@ const emit = defineEmits<{
 
 const draft = ref('');
 const messageListRef = ref<HTMLDivElement | null>(null);
+const visibleSuggestions = computed(() => props.suggestions.slice(0, 2));
 
 const scrollToBottom = async () => {
   await nextTick();
@@ -168,12 +182,13 @@ watch(
   --maid-user-bg-end: #ea89a7;
 
   position: relative;
-  width: 348px;
+  width: 336px;
+  max-height: min(76vh, 680px);
   display: flex;
   flex-direction: column;
-  gap: 14px;
-  padding: 18px;
-  border-radius: 28px;
+  gap: 8px;
+  padding: 15px;
+  border-radius: 26px;
   overflow: hidden;
   background:
     radial-gradient(circle at top left, var(--maid-panel-glow-pink), transparent 34%),
@@ -202,8 +217,8 @@ watch(
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 16px;
-  padding-bottom: 12px;
+  gap: 12px;
+  padding-bottom: 8px;
 }
 
 .chat-panel__header::after {
@@ -219,15 +234,16 @@ watch(
 .chat-panel__heading {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 2px;
+  min-width: 0;
 }
 
 .chat-panel__eyebrow {
   margin: 0;
   color: rgba(154, 131, 142, 0.88);
-  font-size: 10px;
+  font-size: 9px;
   font-weight: 700;
-  letter-spacing: 0.26em;
+  letter-spacing: 0.22em;
   text-transform: uppercase;
 }
 
@@ -245,7 +261,7 @@ watch(
     'ZCOOL KuaiLe',
     'Segoe Print',
     cursive;
-  font-size: 1.65rem;
+  font-size: 1.45rem;
   line-height: 1;
   font-weight: 400;
   letter-spacing: 0.03em;
@@ -255,11 +271,11 @@ watch(
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 4px 10px;
+  padding: 3px 8px;
   border-radius: 999px;
   background: rgba(248, 242, 246, 0.92);
   color: #bf7a93;
-  font-size: 11px;
+  font-size: 10px;
   line-height: 1;
   text-transform: lowercase;
 }
@@ -273,21 +289,14 @@ watch(
   box-shadow: 0 0 0 4px rgba(238, 143, 170, 0.1);
 }
 
-.chat-panel__subtitle {
-  margin: 0;
-  color: var(--maid-ink-soft);
-  font-size: 12px;
-  line-height: 1.55;
-}
-
 .chat-panel__close {
-  width: 32px;
-  height: 32px;
+  width: 30px;
+  height: 30px;
   border: 1px solid rgba(214, 191, 203, 0.24);
   border-radius: 999px;
   background: rgba(255, 250, 252, 0.88);
   color: #9b7f8d;
-  font-size: 18px;
+  font-size: 16px;
   line-height: 1;
   cursor: pointer;
   transition:
@@ -305,13 +314,13 @@ watch(
 }
 
 .chat-panel__messages {
-  min-height: 232px;
-  max-height: 348px;
+  min-height: 0;
+  flex: 1 1 auto;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 9px;
   overflow-y: auto;
-  padding-right: 6px;
+  padding-right: 4px;
 }
 
 .chat-panel__messages::-webkit-scrollbar {
@@ -345,10 +354,10 @@ watch(
   position: relative;
   margin: 0;
   max-width: 88%;
-  padding: 12px 14px;
-  border-radius: 18px;
-  font-size: 13px;
-  line-height: 1.7;
+  padding: 10px 12px;
+  border-radius: 16px;
+  font-size: 12.5px;
+  line-height: 1.62;
   white-space: pre-wrap;
   word-break: break-word;
 }
@@ -386,15 +395,30 @@ watch(
   width: 100%;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
+}
+
+.chat-message__related {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.chat-message__related-label {
+  margin: 0;
+  padding-left: 2px;
+  color: #8b7984;
+  font-size: 10px;
+  letter-spacing: 0.04em;
 }
 
 .citation-card {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  padding: 10px 12px;
-  border-radius: 16px;
+  padding: 9px 11px;
+  border-radius: 14px;
   background: rgba(253, 251, 252, 0.92);
   border: 1px solid rgba(219, 203, 211, 0.42);
   color: #82737d;
@@ -413,12 +437,48 @@ watch(
 
 .citation-card strong {
   color: #66535d;
-  font-size: 12px;
+  font-size: 11px;
 }
 
 .citation-card span {
-  font-size: 12px;
-  line-height: 1.55;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.related-article-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 9px 11px;
+  border-radius: 14px;
+  background:
+    linear-gradient(135deg, rgba(255, 248, 251, 0.96), rgba(247, 249, 255, 0.92));
+  border: 1px solid rgba(221, 203, 214, 0.52);
+  color: #75646f;
+  text-decoration: none;
+  transition:
+    transform 0.2s ease,
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.related-article-card:hover {
+  transform: translateY(-1px);
+  border-color: rgba(205, 176, 191, 0.7);
+  box-shadow: 0 10px 18px rgba(165, 123, 141, 0.1);
+}
+
+.related-article-card strong {
+  color: #5d4a56;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.related-article-card span {
+  flex-shrink: 0;
+  color: #a1778a;
+  font-size: 10px;
 }
 
 .chat-panel__thinking {
@@ -427,7 +487,7 @@ watch(
   gap: 8px;
   padding: 0 2px;
   color: #8d7d87;
-  font-size: 12px;
+  font-size: 11px;
 }
 
 .chat-panel__thinking-dot {
@@ -442,16 +502,17 @@ watch(
 .chat-panel__suggestions {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 6px;
+  margin-top: 2px;
 }
 
 .suggestion-pill {
-  padding: 8px 12px;
+  padding: 6px 10px;
   border: 1px solid rgba(214, 191, 203, 0.34);
   border-radius: 999px;
   background: rgba(255, 252, 253, 0.9);
   color: #857680;
-  font-size: 12px;
+  font-size: 11px;
   cursor: pointer;
   transition:
     transform 0.2s ease,
@@ -475,8 +536,8 @@ watch(
 .chat-panel__composer {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  padding-top: 12px;
+  gap: 7px;
+  padding-top: 8px;
   border-top: 1px solid rgba(214, 191, 203, 0.24);
 }
 
@@ -484,12 +545,14 @@ watch(
   width: 100%;
   resize: none;
   border: 1px solid rgba(214, 191, 203, 0.34);
-  border-radius: 18px;
-  padding: 13px 14px;
+  min-height: 76px;
+  border-radius: 16px;
+  padding: 10px 12px;
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(252, 250, 251, 0.94));
   color: var(--maid-ink-main);
   font: inherit;
+  font-size: 12px;
   line-height: 1.6;
   outline: none;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.72);
@@ -501,6 +564,7 @@ watch(
 
 .chat-panel__input::placeholder {
   color: #a08f99;
+  font-size: 11.5px;
 }
 
 .chat-panel__input:focus {
@@ -515,7 +579,7 @@ watch(
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: 10px;
 }
 
 .chat-panel__action-buttons {
@@ -526,15 +590,16 @@ watch(
 
 .chat-panel__hint {
   color: #9e8e98;
-  font-size: 11px;
+  font-size: 10px;
 }
 
 .chat-panel__send,
 .chat-panel__stop {
-  padding: 9px 16px;
+  padding: 7px 14px;
   border: none;
   border-radius: 999px;
   font: inherit;
+  font-size: 12px;
   cursor: pointer;
   transition:
     transform 0.2s ease,
@@ -583,14 +648,10 @@ watch(
 
 @media (max-width: 768px) {
   .chat-panel {
-    width: min(92vw, 360px);
-    padding: 16px;
-    border-radius: 24px;
-  }
-
-  .chat-panel__messages {
-    min-height: 200px;
-    max-height: 300px;
+    width: min(90vw, 340px);
+    max-height: min(72vh, 620px);
+    padding: 14px;
+    border-radius: 22px;
   }
 
   .chat-panel__actions {
