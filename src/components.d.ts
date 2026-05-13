@@ -47,6 +47,7 @@ declare module 'vue' {
     EmojiPickerPanel: typeof import('./components/Emoji/EmojiPickerPanel.vue')['default']
     Footer: typeof import('./components/Footer/Footer.vue')['default']
     Header: typeof import('./components/Header/Header.vue')['default']
+    HeroImageFocusEditor: typeof import('./components/HeroImageFocusEditor/HeroImageFocusEditor.vue')['default']
     HeroSubtitlePulse: typeof import('./components/PageHero/HeroSubtitlePulse.vue')['default']
     HeroWave: typeof import('./components/HeroWave/HeroWave.vue')['default']
     HomeDiscoverySearch: typeof import('./components/HomeDiscoverySearch/HomeDiscoverySearch.vue')['default']

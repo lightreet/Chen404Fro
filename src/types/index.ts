@@ -143,6 +143,7 @@ export interface SiteConfig {
   commentAudit?: boolean;
   commentGuest?: boolean;
   heroImages?: Record<string, string>;
+  heroImagePositions?: Record<string, string>;
 }
 
 export interface SiteOwner {

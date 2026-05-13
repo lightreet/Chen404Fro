@@ -6,7 +6,7 @@
         eyebrow="Tags"
         subtitle="通过更细粒度的标签快速定位感兴趣的话题和关键词。"
         :bg-image="heroBgImage"
-        bg-position="center 38%"
+        :bg-position="heroBgPosition"
         min-height="70vh"
         :overlay-opacity="0.5"
         compact
@@ -53,13 +53,16 @@ import DefaultLayout from '@/layouts/DefaultLayout.vue';
 import PageHero from '@/components/PageHero/PageHero.vue';
 import { useSiteConfig } from '@/composables/useSiteConfig';
 import type { Tag } from '@/types';
+import { resolveHeroImagePosition } from '@/utils/siteConfig';
 import { getTags } from '@/api/article';
 
 const DEFAULT_TAG_HERO =
   'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=1920&q=80';
+const DEFAULT_TAG_HERO_POSITION = '50% 38%';
 const tags = ref<Tag[]>([]);
 const loading = ref(true);
 const heroBgImage = ref(DEFAULT_TAG_HERO);
+const heroBgPosition = ref(DEFAULT_TAG_HERO_POSITION);
 const { loadSiteConfig } = useSiteConfig();
 
 const fetchTags = async () => {
@@ -78,6 +81,7 @@ const fetchTags = async () => {
 onMounted(() => {
   void loadSiteConfig(true).then((config) => {
     heroBgImage.value = config.heroImages?.tag || DEFAULT_TAG_HERO;
+    heroBgPosition.value = resolveHeroImagePosition(config, 'tag', DEFAULT_TAG_HERO_POSITION);
   });
   void fetchTags();
 });

@@ -6,7 +6,7 @@
         eyebrow="Timeline"
         subtitle="把写过的内容，交给时间排序。"
         :bg-image="heroBgImage"
-        bg-position="center 44%"
+        :bg-position="heroBgPosition"
         min-height="70vh"
         :overlay-opacity="0.48"
         compact
@@ -80,14 +80,17 @@ import PageHero from '@/components/PageHero/PageHero.vue';
 import { useSiteConfig } from '@/composables/useSiteConfig';
 import type { ArchiveYear } from '@/types';
 import { formatDate } from '@/utils/format';
+import { resolveHeroImagePosition } from '@/utils/siteConfig';
 import { getArchives } from '@/api/article';
 
 const DEFAULT_ARCHIVE_HERO =
   'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?w=1920&q=80';
+const DEFAULT_ARCHIVE_HERO_POSITION = '50% 44%';
 const archiveData = ref<ArchiveYear[]>([]);
 const total = ref(0);
 const loading = ref(true);
 const heroBgImage = ref(DEFAULT_ARCHIVE_HERO);
+const heroBgPosition = ref(DEFAULT_ARCHIVE_HERO_POSITION);
 const { loadSiteConfig } = useSiteConfig();
 
 const loadArchives = async () => {
@@ -107,6 +110,7 @@ const loadArchives = async () => {
 onMounted(() => {
   void loadSiteConfig(true).then((config) => {
     heroBgImage.value = config.heroImages?.archive || DEFAULT_ARCHIVE_HERO;
+    heroBgPosition.value = resolveHeroImagePosition(config, 'archive', DEFAULT_ARCHIVE_HERO_POSITION);
   });
   loadArchives();
 });

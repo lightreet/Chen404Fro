@@ -7,7 +7,10 @@
         variant="sakura-diary"
         :subtitle="heroSubtitle"
         :bg-image="heroBgImage"
-        min-height="80vh"
+        :bg-position="heroBgPosition"
+        min-height="88vh"
+        :overlay-opacity="0.34"
+        :show-wave="false"
         scroll-target="#discovery"
       />
     </template>
@@ -96,11 +99,12 @@ import PageHero from '@/components/PageHero/PageHero.vue';
 import { useSiteConfig } from '@/composables/useSiteConfig';
 import type { Article } from '@/types';
 import { getArticles } from '@/api/article';
-import { resolveArticlePageSize, resolveHeroImage, resolveSiteName } from '@/utils/siteConfig';
+import { resolveArticlePageSize, resolveHeroImage, resolveHeroImagePosition, resolveSiteName } from '@/utils/siteConfig';
 
 const DEFAULT_HOME_HERO =
   'https://images.unsplash.com/photo-1522383225653-ed111181a951?w=1920&q=80';
-const DEFAULT_HOME_SUBTITLE = '一个写下技术，也收藏温柔日常的小小角落';
+const DEFAULT_HOME_HERO_POSITION = '50% 58%';
+const DEFAULT_HOME_LEAD = '每一行代码，都是热爱的注脚。';
 
 // 文章列表
 const articleList = ref<Article[]>([]);
@@ -115,10 +119,11 @@ const activeKeyword = ref('');
 const searchDraft = ref('');
 const searchExpanded = ref(false);
 const heroBgImage = ref(DEFAULT_HOME_HERO);
+const heroBgPosition = ref(DEFAULT_HOME_HERO_POSITION);
 const { siteConfig, loadSiteConfig } = useSiteConfig();
 const siteName = computed(() => resolveSiteName(siteConfig.value));
 const pageSize = computed(() => resolveArticlePageSize(siteConfig.value, 6));
-const heroSubtitle = computed(() => siteConfig.value?.siteDescription?.trim() || DEFAULT_HOME_SUBTITLE);
+const heroSubtitle = computed(() => siteConfig.value?.siteDescription?.trim() || DEFAULT_HOME_LEAD);
 
 /**
  * 首页「摩天轮」滚动：strength 距中心衰减；phase = (cardMidY - midY) / R，上负下正。
@@ -292,6 +297,7 @@ function setupLoadObserver() {
 onMounted(() => {
   void loadSiteConfig(true).then((config) => {
     heroBgImage.value = resolveHeroImage(config, 'home', DEFAULT_HOME_HERO);
+    heroBgPosition.value = resolveHeroImagePosition(config, 'home', DEFAULT_HOME_HERO_POSITION);
     return loadArticles(1);
   });
   window.addEventListener('scroll', scheduleCenterUpdate, { passive: true });
@@ -334,7 +340,14 @@ watch(
 <style scoped lang="scss">
 /* ========== 首页正文 ========== */
 .home-page {
+  position: relative;
   padding-top: 24px;
+  padding-bottom: 28px;
+}
+
+.home-page > * {
+  position: relative;
+  z-index: 1;
 }
 
 .discovery-head {
@@ -475,5 +488,65 @@ watch(
 .infinite-trigger {
   width: 100%;
   height: 1px;
+}
+
+[data-theme='dark'] .home-page::before {
+  content: '';
+  position: absolute;
+  top: -56px;
+  left: 50%;
+  width: 100vw;
+  height: 620px;
+  pointer-events: none;
+  z-index: 0;
+  transform: translateX(-50%);
+  background:
+    radial-gradient(circle at 18% 0%, rgba(119, 88, 123, 0.18), transparent 28%),
+    radial-gradient(circle at 84% 14%, rgba(141, 102, 129, 0.12), transparent 24%),
+    radial-gradient(circle at 50% 22%, rgba(62, 50, 73, 0.14), transparent 36%),
+    linear-gradient(
+      180deg,
+      rgba(47, 38, 57, 0.18) 0%,
+      rgba(38, 31, 46, 0.08) 42%,
+      rgba(33, 29, 38, 0) 100%
+    );
+  filter: blur(16px);
+}
+
+[data-theme='dark'] .discovery-head {
+  padding: 14px 18px;
+  border-radius: 24px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.03)),
+    linear-gradient(135deg, rgba(64, 52, 74, 0.72), rgba(41, 34, 48, 0.72));
+  border: 1px solid var(--border-color);
+  box-shadow:
+    0 14px 28px rgba(18, 14, 24, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+[data-theme='dark'] .home-page {
+  padding-top: 40px;
+}
+
+[data-theme='dark'] .article-list {
+  margin-top: 10px;
+}
+
+[data-theme='dark'] .search-active-hint {
+  padding: 10px 14px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 230, 239, 0.08);
+}
+
+@media (max-width: 768px) {
+  [data-theme='dark'] .home-page {
+    padding-top: 28px;
+  }
+
+  [data-theme='dark'] .article-list {
+    margin-top: 8px;
+  }
 }
 </style>

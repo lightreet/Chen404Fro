@@ -6,7 +6,7 @@
         eyebrow="About"
         subtitle="这里记录技术，也收藏生活与心绪"
         :bg-image="heroBgImage"
-        bg-position="center 42%"
+        :bg-position="heroBgPosition"
         min-height="70vh"
         :overlay-opacity="0.48"
         compact
@@ -122,10 +122,12 @@ import UserProfileCard from '@/components/UserProfile/UserProfileCard.vue';
 import UserProfilePopover from '@/components/UserProfile/UserProfilePopover.vue';
 import { useSiteConfig } from '@/composables/useSiteConfig';
 import DefaultLayout from '@/layouts/DefaultLayout.vue';
+import { resolveHeroImagePosition } from '@/utils/siteConfig';
 
 const techs = ref(['Vue 3', 'TypeScript', 'Spring Boot', 'Java', 'MySQL', 'Redis']);
 const DEFAULT_ABOUT_HERO =
   'https://images.unsplash.com/photo-1498050108023-c5249f4df085?w=1920&q=80';
+const DEFAULT_ABOUT_HERO_POSITION = '50% 42%';
 const DEFAULT_OWNER_NAME = 'Chen404';
 const DEFAULT_MEMBER_AVATAR = '/default-member-avatar.svg';
 const DEFAULT_GITHUB_LINK = 'https://github.com/lightreet';
@@ -133,6 +135,7 @@ const LEGACY_GITHUB_LINK = 'https://github.com/chen404';
 const LEGACY_DEFAULT_AVATAR = '/default-avatar.jpg';
 
 const heroBgImage = ref(DEFAULT_ABOUT_HERO);
+const heroBgPosition = ref(DEFAULT_ABOUT_HERO_POSITION);
 const owner = ref<SiteOwner | null>(null);
 const members = ref<SiteMember[]>([]);
 const activeMemberId = ref<string | null>(null);
@@ -281,6 +284,7 @@ onMounted(() => {
     ([configResult, ownerResult, memberResult]) => {
       if (configResult.status === 'fulfilled') {
         heroBgImage.value = configResult.value.heroImages?.about || DEFAULT_ABOUT_HERO;
+        heroBgPosition.value = resolveHeroImagePosition(configResult.value, 'about', DEFAULT_ABOUT_HERO_POSITION);
         siteEmail.value = configResult.value.email || '';
         githubLink.value = normalizeGithubLink(configResult.value.github);
       }

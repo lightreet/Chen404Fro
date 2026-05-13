@@ -334,30 +334,25 @@ const handleLogout = async () => {
   left: 0;
   right: 0;
   z-index: 1000;
-  height: 64px;
+  padding-top: 12px;
   transition: all 0.3s ease;
   background: transparent;
 
   &.is-scrolled {
-    background: rgba(255, 255, 255, 0.9);
-    backdrop-filter: blur(10px);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    background: transparent;
   }
 
   &.is-hidden {
-    transform: translateY(-100%);
+    transform: translateY(calc(-100% - 18px));
   }
-}
-
-[data-theme="dark"] .header.is-scrolled {
-  background: rgba(35, 36, 39, 0.9);
 }
 
 .header-content {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  height: 64px;
+  gap: 16px;
+  min-height: 64px;
 }
 
 // Logo
@@ -383,18 +378,29 @@ const handleLogout = async () => {
   display: flex;
   align-items: center;
   gap: 8px;
+  min-height: 54px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: rgba(255, 251, 253, 0.22);
+  border: 1px solid rgba(255, 235, 242, 0.42);
+  box-shadow:
+    0 14px 30px rgba(120, 88, 104, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.54);
+  backdrop-filter: blur(20px) saturate(1.12);
 }
 
 .nav-item {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 8px 16px;
-  border-radius: 20px;
-  color: #5f6066;
+  padding: 9px 16px;
+  border-radius: 999px;
+  color: #564f57;
   text-decoration: none;
   font-size: 14px;
-  transition: all 0.3s;
+  font-weight: 500;
+  line-height: 1;
+  transition: all 0.28s ease;
 
   .nav-icon {
     font-size: 16px;
@@ -402,12 +408,16 @@ const handleLogout = async () => {
 
   &:hover {
     color: #ff7faa;
-    background: rgba(255, 255, 255, 0.34);
+    background: rgba(255, 255, 255, 0.38);
+    box-shadow: inset 0 0 0 1px rgba(255, 224, 235, 0.34);
   }
 
   &.is-active {
     color: #ff7faa;
-    background: rgba(255, 127, 170, 0.14);
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.68), rgba(255, 243, 248, 0.48));
+    box-shadow:
+      0 8px 16px rgba(255, 142, 181, 0.12),
+      inset 0 0 0 1px rgba(255, 196, 216, 0.4);
   }
 }
 
@@ -416,6 +426,15 @@ const handleLogout = async () => {
   display: flex;
   align-items: center;
   gap: 8px;
+  min-height: 54px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: rgba(255, 251, 253, 0.22);
+  border: 1px solid rgba(255, 235, 242, 0.42);
+  box-shadow:
+    0 14px 30px rgba(120, 88, 104, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.54);
+  backdrop-filter: blur(20px) saturate(1.1);
 }
 
 .action-btn {
@@ -423,18 +442,20 @@ const handleLogout = async () => {
   height: 36px;
   border-radius: 50%;
   border: none;
-  background: transparent;
-  color: var(--text-secondary);
+  background: rgba(255, 255, 255, 0.28);
+  color: #746777;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.3s;
+  transition: all 0.28s ease;
   font-size: 18px;
+  box-shadow: inset 0 0 0 1px rgba(255, 232, 240, 0.34);
 
   &:hover {
-    background: var(--bg-hover);
+    background: rgba(255, 255, 255, 0.48);
     color: var(--primary);
+    transform: translateY(-1px);
   }
 }
 
@@ -446,19 +467,22 @@ const handleLogout = async () => {
 .write-link {
   display: flex;
   align-items: center;
-  gap: 4px;
-  border-radius: 16px;
-  background: linear-gradient(135deg, var(--primary), var(--primary-light));
+  gap: 5px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #ff7faa, #ff98b7);
   border: none;
-  padding: 0 14px;
-  height: 32px;
+  padding: 0 16px;
+  height: 36px;
+  box-shadow: 0 12px 20px rgba(255, 136, 177, 0.22);
 
   .el-icon {
     font-size: 14px;
   }
 
   span {
-    font-size: 13px;
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 1;
   }
 
   &:hover {
@@ -475,19 +499,22 @@ const handleLogout = async () => {
 .login-btn {
   display: flex;
   align-items: center;
-  gap: 4px;
-  border-radius: 16px;
-  background: linear-gradient(135deg, var(--primary), var(--primary-light));
+  gap: 5px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #ff7faa, #ff98b7);
   border: none;
   padding: 0 16px;
-  height: 32px;
+  height: 36px;
+  box-shadow: 0 12px 20px rgba(255, 136, 177, 0.22);
 
   .el-icon {
     font-size: 14px;
   }
 
   span {
-    font-size: 13px;
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 1;
   }
 
   &:hover {
@@ -502,17 +529,20 @@ const handleLogout = async () => {
 }
 
 .user-avatar-wrapper {
-  padding: 4px;
+  padding: 2px;
   border-radius: 50%;
-  transition: background 0.3s;
+  transition: all 0.28s ease;
+  background: rgba(255, 255, 255, 0.28);
+  box-shadow: inset 0 0 0 1px rgba(255, 232, 240, 0.34);
 
   &:hover {
-    background: var(--bg-hover);
+    background: rgba(255, 255, 255, 0.48);
+    transform: translateY(-1px);
   }
 }
 
 .user-avatar {
-  border: 2px solid var(--border-color);
+  border: 2px solid rgba(255, 255, 255, 0.7);
 }
 
 .dropdown-user-info {
@@ -653,5 +683,55 @@ const handleLogout = async () => {
 
 [data-theme="dark"] .mobile-menu-divider {
   background: rgba(78, 82, 90, 0.78);
+}
+
+[data-theme="dark"] .nav-menu,
+[data-theme="dark"] .header-actions {
+  background: rgba(32, 28, 34, 0.34);
+  border-color: rgba(100, 89, 100, 0.38);
+  box-shadow:
+    0 18px 34px rgba(0, 0, 0, 0.24),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+[data-theme="dark"] .nav-item {
+  color: rgba(248, 239, 244, 0.82);
+}
+
+[data-theme="dark"] .nav-item:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+[data-theme="dark"] .nav-item.is-active {
+  background: rgba(255, 127, 170, 0.18);
+  box-shadow:
+    0 10px 18px rgba(0, 0, 0, 0.2),
+    inset 0 0 0 1px rgba(255, 162, 194, 0.28);
+}
+
+[data-theme="dark"] .action-btn,
+[data-theme="dark"] .user-avatar-wrapper {
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(248, 239, 244, 0.84);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+}
+
+@media (max-width: 768px) {
+  .header {
+    padding-top: 8px;
+  }
+
+  .header-content {
+    min-height: 56px;
+  }
+
+  .header-actions {
+    padding: 6px 8px;
+  }
+
+  .action-btn {
+    width: 34px;
+    height: 34px;
+  }
 }
 </style>

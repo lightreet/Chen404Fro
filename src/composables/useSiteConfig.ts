@@ -31,6 +31,7 @@ const DEFAULT_SITE_CONFIG: SiteConfig = {
   commentAudit: true,
   commentGuest: true,
   heroImages: {},
+  heroImagePositions: {},
 };
 const CACHE_TTL_MS = 30 * 1000;
 
@@ -54,6 +55,7 @@ export function useSiteConfig() {
           ...config,
           email: normalizeSiteEmail(config.email),
           heroImages: config.heroImages ?? {},
+          heroImagePositions: config.heroImagePositions ?? {},
         };
         siteConfig.value = next;
         loadedAt = Date.now();

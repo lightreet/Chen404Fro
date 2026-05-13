@@ -264,12 +264,11 @@
             <div class="hero-grid">
               <section v-for="item in heroPages" :key="item.key" class="hero-panel">
                 <div class="hero-preview">
-                  <img
-                    v-if="heroImages[item.key]"
-                    :src="heroImages[item.key]"
-                    :alt="`${item.label}封面`"
+                  <HeroImageFocusEditor
+                    :image-url="heroImages[item.key]"
+                    :position="heroImagePositions[item.key]"
+                    @update:position="heroImagePositions[item.key] = $event"
                   />
-                  <div v-else class="hero-preview__empty">未设置</div>
                 </div>
                 <div class="hero-panel__body">
                   <div>
@@ -290,7 +289,7 @@
                       text
                       type="danger"
                       :icon="Delete"
-                      @click="heroImages[item.key] = ''"
+                      @click="clearHeroImage(item.key)"
                     >
                       清除
                     </el-button>
@@ -322,6 +321,7 @@ import { ElMessage } from 'element-plus';
 import { Delete, Refresh, Setting, UploadFilled } from '@element-plus/icons-vue';
 import { getSiteConfig, updateSiteConfig } from '@/api/home';
 import { uploadSiteAsset } from '@/api/upload';
+import HeroImageFocusEditor from '@/components/HeroImageFocusEditor/HeroImageFocusEditor.vue';
 import { useSiteConfig } from '@/composables/useSiteConfig';
 import type { SiteConfig } from '@/types';
 import { DEFAULT_IMAGE_MAX_MB, validateImageFile } from '@/utils/validation';
@@ -334,10 +334,18 @@ const heroPages: Array<{ key: HeroKey; label: string; desc: string }> = [
   { key: 'home', label: '首页', desc: '首页主视觉封面' },
   { key: 'archive', label: '时光轴', desc: '时光轴页面顶部封面' },
   { key: 'category', label: '分类页', desc: '分类列表顶部封面' },
-  { key: 'tag', label: '标签页', desc: '标签云顶部封面' },
+  { key: 'tag', label: '标签页', desc: '标签云顶部封面（当前无主导航入口）' },
   { key: 'about', label: '关于页', desc: '关于页面顶部封面' },
   { key: 'guestbook', label: '留言板', desc: '留言板顶部封面' },
 ];
+const HERO_DEFAULT_POSITIONS: Record<HeroKey, string> = {
+  home: '50% 58%',
+  archive: '50% 44%',
+  category: '50% 40%',
+  tag: '50% 38%',
+  about: '50% 42%',
+  guestbook: '50% 40%',
+};
 
 const { setSiteConfig } = useSiteConfig();
 
@@ -346,7 +354,7 @@ const loading = ref(false);
 const saving = ref(false);
 const uploadingKey = ref<UploadingKey>('');
 
-const form = reactive<Required<Omit<SiteConfig, 'heroImages'>>>({
+const form = reactive<Required<Omit<SiteConfig, 'heroImages' | 'heroImagePositions'>>>({
   siteName: '',
   siteDescription: '',
   siteLogo: '',
@@ -369,6 +377,14 @@ const heroImages = reactive<Record<HeroKey, string>>({
   tag: '',
   about: '',
   guestbook: '',
+});
+const heroImagePositions = reactive<Record<HeroKey, string>>({
+  home: HERO_DEFAULT_POSITIONS.home,
+  archive: HERO_DEFAULT_POSITIONS.archive,
+  category: HERO_DEFAULT_POSITIONS.category,
+  tag: HERO_DEFAULT_POSITIONS.tag,
+  about: HERO_DEFAULT_POSITIONS.about,
+  guestbook: HERO_DEFAULT_POSITIONS.guestbook,
 });
 
 const filledBasicCount = computed(() =>
@@ -400,6 +416,13 @@ function applyConfig(config: SiteConfig) {
   heroImages.tag = config.heroImages?.tag ?? '';
   heroImages.about = config.heroImages?.about ?? '';
   heroImages.guestbook = config.heroImages?.guestbook ?? '';
+
+  heroImagePositions.home = config.heroImagePositions?.home ?? HERO_DEFAULT_POSITIONS.home;
+  heroImagePositions.archive = config.heroImagePositions?.archive ?? HERO_DEFAULT_POSITIONS.archive;
+  heroImagePositions.category = config.heroImagePositions?.category ?? HERO_DEFAULT_POSITIONS.category;
+  heroImagePositions.tag = config.heroImagePositions?.tag ?? HERO_DEFAULT_POSITIONS.tag;
+  heroImagePositions.about = config.heroImagePositions?.about ?? HERO_DEFAULT_POSITIONS.about;
+  heroImagePositions.guestbook = config.heroImagePositions?.guestbook ?? HERO_DEFAULT_POSITIONS.guestbook;
 }
 
 function toPayload(): SiteConfig {
@@ -424,6 +447,14 @@ function toPayload(): SiteConfig {
       tag: heroImages.tag.trim(),
       about: heroImages.about.trim(),
       guestbook: heroImages.guestbook.trim(),
+    },
+    heroImagePositions: {
+      home: heroImagePositions.home.trim(),
+      archive: heroImagePositions.archive.trim(),
+      category: heroImagePositions.category.trim(),
+      tag: heroImagePositions.tag.trim(),
+      about: heroImagePositions.about.trim(),
+      guestbook: heroImagePositions.guestbook.trim(),
     },
   };
 }
@@ -495,6 +526,7 @@ async function handleHeroUpload(key: HeroKey, options: UploadRequestOptions) {
   try {
     const res = await uploadSiteAsset(options.file);
     heroImages[key] = res.url;
+    heroImagePositions[key] = HERO_DEFAULT_POSITIONS[key];
     options.onSuccess?.(res as any);
     ElMessage.success(`${heroPages.find((item) => item.key === key)?.label ?? '页面'}封面上传成功`);
   } catch (error) {
@@ -503,6 +535,11 @@ async function handleHeroUpload(key: HeroKey, options: UploadRequestOptions) {
   } finally {
     uploadingKey.value = '';
   }
+}
+
+function clearHeroImage(key: HeroKey) {
+  heroImages[key] = '';
+  heroImagePositions[key] = HERO_DEFAULT_POSITIONS[key];
 }
 
 async function saveConfig() {
@@ -917,22 +954,9 @@ onMounted(() => {
 }
 
 .hero-preview {
-  height: 150px;
-  display: grid;
-  place-items: center;
+  padding: 14px;
   background:
     linear-gradient(135deg, rgba(93, 66, 82, 0.78), rgba(145, 111, 132, 0.66));
-
-  img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-  }
-}
-
-.hero-preview__empty {
-  color: rgba(255, 255, 255, 0.82);
-  font-size: 13px;
 }
 
 .hero-panel__body {

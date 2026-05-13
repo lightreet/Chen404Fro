@@ -6,7 +6,7 @@
         eyebrow="Category"
         subtitle="按主题浏览内容，把零散文章组织成更清晰的知识地图。"
         :bg-image="heroBgImage"
-        bg-position="center 40%"
+        :bg-position="heroBgPosition"
         min-height="70vh"
         :overlay-opacity="0.5"
         compact
@@ -82,16 +82,19 @@ import DefaultLayout from '@/layouts/DefaultLayout.vue';
 import PageHero from '@/components/PageHero/PageHero.vue';
 import { useSiteConfig } from '@/composables/useSiteConfig';
 import type { Category } from '@/types';
+import { resolveHeroImagePosition } from '@/utils/siteConfig';
 import { getCategories } from '@/api/article';
 
 const pageSize = 9;
 const DEFAULT_CATEGORY_HERO =
   'https://images.unsplash.com/photo-1497366754035-f200968a6e72?w=1920&q=80';
+const DEFAULT_CATEGORY_HERO_POSITION = '50% 40%';
 
 const categories = ref<Category[]>([]);
 const displayCount = ref(pageSize);
 const loading = ref(true);
 const heroBgImage = ref(DEFAULT_CATEGORY_HERO);
+const heroBgPosition = ref(DEFAULT_CATEGORY_HERO_POSITION);
 const { loadSiteConfig } = useSiteConfig();
 
 const displayedCategories = computed(() =>
@@ -123,6 +126,7 @@ const fetchCategories = async () => {
 onMounted(() => {
   void loadSiteConfig(true).then((config) => {
     heroBgImage.value = config.heroImages?.category || DEFAULT_CATEGORY_HERO;
+    heroBgPosition.value = resolveHeroImagePosition(config, 'category', DEFAULT_CATEGORY_HERO_POSITION);
   });
   fetchCategories();
 });

@@ -93,6 +93,22 @@ export function resolveHeroImage(
   return fallback;
 }
 
+export function resolveHeroImagePosition(
+  config: Partial<SiteConfig> | null | undefined,
+  key: string,
+  fallback: string,
+) {
+  const heroImagePositions = config?.heroImagePositions ?? {};
+  const direct = trimText(heroImagePositions[key]);
+  if (direct) {
+    return direct;
+  }
+  if (key === 'tag') {
+    return trimText(heroImagePositions.category) || trimText(heroImagePositions.home) || fallback;
+  }
+  return fallback;
+}
+
 function upsertMetaByName(name: string, content: string) {
   let element = document.head.querySelector<HTMLMetaElement>(`meta[name="${name}"]`);
   if (!element) {

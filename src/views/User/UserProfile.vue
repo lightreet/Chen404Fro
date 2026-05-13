@@ -6,7 +6,7 @@
         eyebrow="Member Profile"
         subtitle="在柔和的樱色光影里，翻开一位成员留下的小小名片。"
         :bg-image="heroBgImage"
-        bg-position="center 42%"
+        :bg-position="heroBgPosition"
         min-height="56vh"
         :overlay-opacity="0.42"
         compact
@@ -119,9 +119,11 @@ import { getArticles } from '@/api/article';
 import { getSiteOwner, getSiteUser, type SiteMember } from '@/api/home';
 import type { Article, SiteOwner } from '@/types';
 import { useSiteConfig } from '@/composables/useSiteConfig';
+import { resolveHeroImage, resolveHeroImagePosition } from '@/utils/siteConfig';
 
 const DEFAULT_PROFILE_HERO =
   'https://images.unsplash.com/photo-1518895949257-7621c3c786d7?w=1920&q=80';
+const DEFAULT_PROFILE_HERO_POSITION = '50% 42%';
 const DEFAULT_MEMBER_AVATAR = '/default-member-avatar.svg';
 const LEGACY_DEFAULT_AVATAR = '/default-avatar.jpg';
 
@@ -135,6 +137,7 @@ const owner = ref<SiteOwner | null>(null);
 const articles = ref<Article[]>([]);
 const totalArticles = ref(0);
 const heroBgImage = ref(DEFAULT_PROFILE_HERO);
+const heroBgPosition = ref(DEFAULT_PROFILE_HERO_POSITION);
 
 const userId = computed(() => String(route.params.id || ''));
 const displayName = computed(() => profile.value?.nickname?.trim() || profile.value?.username || 'Chen404 成员');
@@ -156,6 +159,7 @@ const avatarUrl = computed(() => {
 });
 const bannerVars = computed(() => ({
   '--profile-banner-image': `url("${heroBgImage.value}")`,
+  '--profile-banner-position': heroBgPosition.value,
 }));
 
 onMounted(() => {
@@ -170,7 +174,8 @@ async function loadSharedData() {
   const [configResult, ownerResult] = await Promise.allSettled([loadSiteConfig(true), getSiteOwner()]);
 
   if (configResult.status === 'fulfilled') {
-    heroBgImage.value = configResult.value.heroImages?.about || DEFAULT_PROFILE_HERO;
+    heroBgImage.value = resolveHeroImage(configResult.value, 'about', DEFAULT_PROFILE_HERO);
+    heroBgPosition.value = resolveHeroImagePosition(configResult.value, 'about', DEFAULT_PROFILE_HERO_POSITION);
   }
   if (ownerResult.status === 'fulfilled') {
     owner.value = ownerResult.value;
@@ -266,7 +271,7 @@ function formatDate(value?: string) {
   inset: 0;
   background:
     linear-gradient(110deg, rgba(255, 250, 252, 0.9), rgba(252, 247, 251, 0.62)),
-    var(--profile-banner-image) center 42% / cover no-repeat;
+    var(--profile-banner-image) var(--profile-banner-position) / cover no-repeat;
   filter: saturate(0.84) blur(1.2px) brightness(1.05);
   transform: scale(1.04);
   opacity: 0.35;

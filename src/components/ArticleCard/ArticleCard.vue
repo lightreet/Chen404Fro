@@ -319,10 +319,12 @@ const scrollFloatStyles = computed((): Record<string, string | number> => {
   if (s <= 0.002) return {};
   const ph = Math.min(1, Math.max(-1, props.scrollWheelPhase));
   const rotateXDeg = -ph * (10 - 6 * s);
+  const scaleValue = 0.9 + 0.12 * s;
   return {
     '--scroll-float': String(s),
     '--scroll-wheel-phase': String(ph),
     '--scroll-rotate-x': `${rotateXDeg}deg`,
+    '--scroll-scale': String(scaleValue),
     zIndex: Math.round(2 + 10 * s),
   };
 });
@@ -397,7 +399,7 @@ const authorProfileUrl = computed(() => {
     transform:
       translateZ(calc(60px * var(--scroll-float, 0)))
       translateY(calc(-4px - 22px * var(--scroll-float, 0)))
-      scale(calc(0.9 + 0.12 * var(--scroll-float, 0)))
+      scale(var(--scroll-scale, 0.9))
       rotateX(var(--scroll-rotate-x, 0deg));
     box-shadow:
       0 calc(10px + 28px * var(--scroll-float, 0)) calc(28px + 52px * var(--scroll-float, 0))
@@ -411,7 +413,7 @@ const authorProfileUrl = computed(() => {
       transform:
         translateZ(calc(60px * var(--scroll-float, 0)))
         translateY(calc(-8px - 22px * var(--scroll-float, 0)))
-        scale(calc(0.9 + 0.12 * var(--scroll-float, 0)))
+        scale(var(--scroll-scale, 0.9))
         rotateX(var(--scroll-rotate-x, 0deg));
     }
   }
@@ -1209,6 +1211,51 @@ const authorProfileUrl = computed(() => {
       }
     }
   }
+}
+
+[data-theme='dark'] .article-card.article-card--home-balanced {
+  border: 1px solid var(--border-color);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.03)),
+    linear-gradient(145deg, rgba(60, 49, 69, 0.9), rgba(36, 30, 43, 0.88));
+  box-shadow:
+    0 22px 48px rgba(16, 12, 22, 0.34),
+    0 10px 24px rgba(92, 69, 103, 0.22);
+
+  &:hover {
+    box-shadow:
+      0 28px 58px rgba(16, 12, 22, 0.42),
+      0 12px 30px rgba(104, 78, 116, 0.28);
+  }
+
+  .card-content {
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.015));
+  }
+}
+
+[data-theme='dark'] .article-card.article-card--home-balanced.no-cover .card-content,
+[data-theme='dark'] .article-card.manage-mode.no-cover .card-content,
+[data-theme='dark'] .article-card.profile-feed.no-cover .card-content {
+  background: linear-gradient(180deg, rgba(66, 53, 76, 0.84), rgba(43, 36, 50, 0.82));
+}
+
+[data-theme='dark'] .article-card.article-card--has-scroll-float {
+  box-shadow:
+    0 calc(10px + 28px * var(--scroll-float, 0)) calc(28px + 52px * var(--scroll-float, 0))
+      rgba(12, 8, 18, 0.28),
+    0 calc(4px + 12px * var(--scroll-float, 0)) calc(16px + 28px * var(--scroll-float, 0))
+      rgba(120, 90, 128, 0.24),
+    0 0 0 calc(1px * var(--scroll-float, 0)) rgba(242, 154, 182, 0.16);
+}
+
+[data-theme='dark'] .card-image .image-link .image-overlay {
+  background: linear-gradient(
+    to right,
+    rgba(23, 17, 29, 0.18),
+    rgba(54, 40, 63, 0.02) 22%,
+    rgba(54, 40, 63, 0.02) 78%,
+    rgba(23, 17, 29, 0.2)
+  );
 }
 
 // 响应式

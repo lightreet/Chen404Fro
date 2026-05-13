@@ -11,6 +11,15 @@
   --bg-primary: #f4f5f7;
   --bg-secondary: #ffffff;
   --bg-hover: #f5f5f5;
+  --bg-elevated: #ffffff;
+  --bg-glass: rgba(255, 255, 255, 0.72);
+  --bg-glass-strong: rgba(255, 255, 255, 0.84);
+  --border-strong: rgba(227, 229, 231, 0.9);
+  --hero-fade-base: #f4f5f7;
+  --page-background-image:
+    radial-gradient(circle at 18% 12%, rgba(255, 223, 234, 0.34), transparent 24%),
+    radial-gradient(circle at 86% 18%, rgba(255, 244, 248, 0.9), transparent 26%),
+    linear-gradient(180deg, #fff9fb 0%, #f7f5f8 32%, #f4f5f7 100%);
 
   // 文字色
   --text-primary: #212121;
@@ -55,16 +64,31 @@
 
 // 暗色主题
 [data-theme="dark"] {
-  --bg-primary: #18191c;
-  --bg-secondary: #232427;
-  --text-primary: #e3e5e7;
-  --text-secondary: #a1a3a6;
-  --text-tertiary: #6c6e72;
-  --border-color: #3a3c40;
-  --border-light: #2a2c30;
-  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.2);
-  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.3);
-  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.4);
+  --primary: #f29ab6;
+  --primary-light: #f6b7cb;
+  --primary-dark: #d77497;
+  --primary-hover: #f3aec4;
+  --bg-primary: #211d26;
+  --bg-secondary: #2b2431;
+  --bg-hover: #342c3a;
+  --bg-elevated: #352d3d;
+  --bg-glass: rgba(255, 255, 255, 0.06);
+  --bg-glass-strong: rgba(58, 48, 67, 0.76);
+  --text-primary: #f2ebf0;
+  --text-secondary: #c9bcc6;
+  --text-tertiary: #9b8d99;
+  --border-color: rgba(255, 230, 239, 0.12);
+  --border-light: rgba(255, 230, 239, 0.08);
+  --border-strong: rgba(255, 230, 239, 0.18);
+  --hero-fade-base: #241f2b;
+  --page-background-image:
+    radial-gradient(circle at 18% 0%, rgba(106, 77, 109, 0.34), transparent 26%),
+    radial-gradient(circle at 82% 18%, rgba(119, 87, 113, 0.18), transparent 24%),
+    radial-gradient(circle at 50% 100%, rgba(60, 46, 70, 0.2), transparent 34%),
+    linear-gradient(180deg, #261f2e 0%, #211d26 30%, #1f1b24 100%);
+  --shadow-sm: 0 6px 16px rgba(16, 12, 22, 0.2);
+  --shadow-md: 0 16px 34px rgba(16, 12, 22, 0.28);
+  --shadow-lg: 0 24px 56px rgba(16, 12, 22, 0.34);
 }
 
 // SCSS 变量 (用于计算)

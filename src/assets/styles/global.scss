@@ -16,10 +16,15 @@ html {
 body {
   font-family: var(--font-sans);
   background-color: var(--bg-primary);
+  background-image: var(--page-background-image);
+  background-attachment: fixed;
   color: var(--text-primary);
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  transition:
+    background-color 0.35s ease,
+    color 0.35s ease;
 }
 
 // 链接样式
@@ -133,11 +138,13 @@ a {
 
 // 毛玻璃效果
 .glass {
-  background: rgba(255, 255, 255, 0.8);
+  background: var(--bg-glass);
+  border: 1px solid var(--border-color);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
+  box-shadow: var(--shadow-sm);
 }
 
 [data-theme="dark"] .glass {
-  background: rgba(35, 36, 39, 0.8);
+  background: var(--bg-glass-strong);
 }

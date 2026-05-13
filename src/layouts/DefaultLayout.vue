@@ -65,6 +65,7 @@ const showLive2D = true;
   flex: 1;
   padding-top: calc(64px + 24px);
   padding-bottom: 24px;
+  overflow: clip;
 }
 
 .main-content:has([data-hero]) {
@@ -91,6 +92,17 @@ const showLive2D = true;
 .sidebar-right {
   width: 300px;
   flex-shrink: 0;
+}
+
+[data-theme='dark'] .main-content {
+  background:
+    linear-gradient(
+      180deg,
+      rgba(33, 29, 38, 0) 0%,
+      rgba(33, 29, 38, 0.1) 12%,
+      rgba(33, 29, 38, 0.76) 42%,
+      rgba(31, 27, 36, 0.98) 100%
+    );
 }
 
 // 响应式
