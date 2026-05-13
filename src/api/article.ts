@@ -20,6 +20,7 @@ import type {
 } from '@/types';
 import { Service } from '@/sdk/generated';
 import { unwrapResult } from '@/sdk/runtime';
+import { toPreciseId } from '@/utils/preciseId';
 
 /**
  * 获取文章列表
@@ -43,10 +44,7 @@ export async function getArticleById(
   id: number | string,
   incrementView: boolean = true,
 ): Promise<ArticleDetail> {
-  return unwrapResult(await Service.getArticleById({
-    id: Number(id),
-    incrementView,
-  })) as ArticleDetail;
+  return get<ArticleDetail>(`/articles/${toPreciseId(id)}`, { incrementView });
 }
 
 /**
@@ -56,12 +54,10 @@ export async function getArticleNeighbors(id: number | string): Promise<{
   prev?: { id: number | string; title: string };
   next?: { id: number | string; title: string };
 }> {
-  return unwrapResult(await Service.getArticleNeighbors({
-    id: Number(id),
-  })) as {
+  return get(`/articles/${toPreciseId(id)}/neighbors`) as Promise<{
     prev?: { id: number | string; title: string };
     next?: { id: number | string; title: string };
-  };
+  }>;
 }
 
 /**

@@ -3,6 +3,7 @@
  * 现在统一优先走 generated SDK，减少评论链路的手写路径漂移。
  */
 
+import { get, post } from './request';
 import type {
   Comment,
   CreateCommentParams,
@@ -11,16 +12,17 @@ import type {
 } from '@/types';
 import { Service } from '@/sdk/generated';
 import { unwrapResult } from '@/sdk/runtime';
+import { toPreciseId } from '@/utils/preciseId';
 
 export async function getComments(
   articleId?: number | string,
   params?: PageParams,
 ): Promise<PageResult<Comment>> {
-  return unwrapResult(await Service.getComments({
-    articleId: articleId ? Number(articleId) : undefined,
+  return get<PageResult<Comment>>('/comments', {
+    articleId: articleId ? toPreciseId(articleId) : undefined,
     page: params?.page,
     size: params?.size,
-  })) as PageResult<Comment>;
+  });
 }
 
 export async function getGuestbookComments(params?: PageParams): Promise<PageResult<Comment>> {
@@ -31,16 +33,14 @@ export async function getGuestbookComments(params?: PageParams): Promise<PageRes
 }
 
 export async function createComment(data: CreateCommentParams): Promise<Comment> {
-  return unwrapResult(await Service.createComment({
-    requestBody: {
-      articleId: data.articleId ? Number(data.articleId) : undefined,
-      parentId: data.parentId,
-      content: data.content,
-      authorName: data.authorName,
-      authorEmail: data.authorEmail,
-      authorWebsite: data.authorWebsite,
-    },
-  })) as Comment;
+  return post<Comment>('/comments', {
+    articleId: data.articleId ? toPreciseId(data.articleId) : undefined,
+    parentId: data.parentId,
+    content: data.content,
+    authorName: data.authorName,
+    authorEmail: data.authorEmail,
+    authorWebsite: data.authorWebsite,
+  });
 }
 
 export async function deleteComment(id: number): Promise<void> {
