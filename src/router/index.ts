@@ -2,7 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router';
 import type { RouteRecordRaw } from 'vue-router';
 import { ElMessage } from 'element-plus';
 import { useSiteConfig } from '@/composables/useSiteConfig';
-import { isAdminUser } from '@/utils/permission';
+import { isAdminUser, isFriendUser } from '@/utils/permission';
 import { applySiteMeta } from '@/utils/siteConfig';
 import { useUserStore } from '@/stores/user';
 
@@ -44,6 +44,16 @@ const routes: RouteRecordRaw[] = [
     component: () => import('@/views/Archive/Archive.vue'),
     meta: {
       title: '时光轴',
+    },
+  },
+  {
+    path: '/memory-map',
+    name: 'MemoryMap',
+    component: () => import('@/views/MemoryMap/MemoryMap.vue'),
+    meta: {
+      title: '旅行地图',
+      requiresAuth: true,
+      requiresFriend: true,
     },
   },
   {
@@ -212,6 +222,15 @@ router.beforeEach(async (to, _from, next) => {
     const ok = await userStore.syncAuthState();
     if (!ok || !isAdminUser(userStore.user)) {
       ElMessage.error('仅管理员可访问');
+      next({ path: '/' });
+      return;
+    }
+  }
+
+  if (to.meta.requiresFriend) {
+    const ok = await userStore.syncAuthState();
+    if (!ok || !isFriendUser(userStore.user)) {
+      ElMessage.error('仅管理员与知友可访问');
       next({ path: '/' });
       return;
     }

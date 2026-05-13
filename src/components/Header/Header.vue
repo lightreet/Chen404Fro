@@ -193,12 +193,13 @@ import {
   EditPen,
   SwitchButton,
   Setting,
+  Place,
 } from '@element-plus/icons-vue';
 import { useUserStore } from '@/stores/user';
 import { storeToRefs } from 'pinia';
 import { logout as logoutApi } from '@/api/auth';
 import { useSiteConfig } from '@/composables/useSiteConfig';
-import { getTrustLevelLabel, isAdminUser } from '@/utils/permission';
+import { getTrustLevelLabel, isAdminUser, isFriendUser } from '@/utils/permission';
 import { resolveSiteLogo, resolveSiteName } from '@/utils/siteConfig';
 import { useLayoutMobile } from '@/composables/useLayoutMobile';
 
@@ -215,6 +216,8 @@ const roleText = computed(() => getTrustLevelLabel(user.value));
 // 是否为管理员
 const isAdmin = computed(() => isAdminUser(user.value));
 
+const canViewMemoryMap = computed(() => isFriendUser(user.value));
+
 // 是否可以创建文章（仅管理员）
 const canCreateArticle = computed(() => {
   if (!user.value) return false;
@@ -222,13 +225,23 @@ const canCreateArticle = computed(() => {
 });
 
 // 导航项
-const navItems = [
-  { name: '首页', path: '/', icon: HomeFilled },
-  { name: '分类', path: '/category', icon: List },
-  { name: '时光轴', path: '/archive', icon: Folder },
-  { name: '留言板', path: '/guestbook', icon: ChatDotRound },
-  { name: '关于', path: '/about', icon: InfoFilled },
-];
+const navItems = computed(() => {
+  const items = [
+    { name: '首页', path: '/', icon: HomeFilled },
+    { name: '分类', path: '/category', icon: List },
+    { name: '时光轴', path: '/archive', icon: Folder },
+  ];
+
+  if (canViewMemoryMap.value) {
+    items.push({ name: '旅行地图', path: '/memory-map', icon: Place });
+  }
+
+  items.push(
+    { name: '留言板', path: '/guestbook', icon: ChatDotRound },
+    { name: '关于', path: '/about', icon: InfoFilled },
+  );
+  return items;
+});
 
 // 滚动相关
 const isScrolled = ref(false);
