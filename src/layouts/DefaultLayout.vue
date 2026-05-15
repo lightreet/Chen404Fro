@@ -11,7 +11,10 @@
       <div class="container">
         <div
           class="content-wrapper"
-          :class="{ 'no-right-sidebar': isMobile || !showRightSidebar }"
+          :class="{
+            'no-right-sidebar': isMobile || !showRightSidebar,
+            'is-wide-content': wideContent,
+          }"
         >
 
           <!-- 中间内容 -->
@@ -43,14 +46,17 @@ import { useLayoutMobile } from '@/composables/useLayoutMobile';
 
 interface Props {
   showRightSidebar?: boolean;
+  wideContent?: boolean;
+  showLive2D?: boolean;
 }
 
 withDefaults(defineProps<Props>(), {
   showRightSidebar: false,
+  wideContent: false,
+  showLive2D: true,
 });
 
 const { isMobile } = useLayoutMobile();
-const showLive2D = true;
 </script>
 
 <style scoped lang="scss">
@@ -87,6 +93,10 @@ const showLive2D = true;
 .content-wrapper.no-right-sidebar .main-area {
   max-width: 980px;
   margin: 0 auto;
+}
+
+.content-wrapper.no-right-sidebar.is-wide-content .main-area {
+  max-width: 100%;
 }
 
 .sidebar-right {

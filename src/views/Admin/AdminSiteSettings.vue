@@ -355,6 +355,7 @@ const activeTab = ref('basic');
 const loading = ref(false);
 const saving = ref(false);
 const uploadingKey = ref<UploadingKey>('');
+const SUCCESS_MESSAGE_DURATION = 1800;
 
 const form = reactive<Required<Omit<SiteConfig, 'heroImages' | 'heroImagePositions'>>>({
   siteName: '',
@@ -521,7 +522,10 @@ async function handleAssetUpload(key: AssetKey, options: UploadRequestOptions) {
     const res = await uploadSiteAsset(options.file);
     form[key] = res.url;
     options.onSuccess?.(res as any);
-    ElMessage.success('品牌图片上传成功');
+    ElMessage.success({
+      message: '品牌图片上传成功',
+      duration: SUCCESS_MESSAGE_DURATION,
+    });
   } catch (error) {
     options.onError?.(error as any);
     ElMessage.error('上传失败');
@@ -537,7 +541,10 @@ async function handleHeroUpload(key: HeroKey, options: UploadRequestOptions) {
     heroImages[key] = res.url;
     heroImagePositions[key] = HERO_DEFAULT_POSITIONS[key];
     options.onSuccess?.(res as any);
-    ElMessage.success(`${heroPages.find((item) => item.key === key)?.label ?? '页面'}封面上传成功`);
+    ElMessage.success({
+      message: `${heroPages.find((item) => item.key === key)?.label ?? '页面'}封面上传成功`,
+      duration: SUCCESS_MESSAGE_DURATION,
+    });
   } catch (error) {
     options.onError?.(error as any);
     ElMessage.error('上传失败');
@@ -560,7 +567,10 @@ async function saveConfig() {
     const nextConfig = await updateSiteConfig(payload);
     applyConfig(nextConfig);
     setSiteConfig(nextConfig);
-    ElMessage.success('站点配置保存成功');
+    ElMessage.success({
+      message: '站点配置保存成功',
+      duration: SUCCESS_MESSAGE_DURATION,
+    });
   } catch {
     ElMessage.error('保存失败');
   } finally {
@@ -953,6 +963,7 @@ onMounted(() => {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 16px;
+  align-items: start;
 }
 
 .hero-panel {
@@ -960,6 +971,7 @@ onMounted(() => {
   border-radius: 8px;
   overflow: hidden;
   background: rgba(255, 255, 255, 0.74);
+  align-self: start;
 }
 
 .hero-preview {
