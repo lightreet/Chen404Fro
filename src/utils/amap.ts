@@ -1,6 +1,15 @@
 let loadingPromise: Promise<any> | null = null
+let geocoderPromise: Promise<any> | null = null
+let geocoderInstance: any = null
 
 const AMAP_SCRIPT_ID = 'chen404-amap-script'
+
+export interface AmapReverseGeocodeResult {
+  province: string
+  city: string
+  district: string
+  formattedAddress: string
+}
 
 function getAmapKey() {
   return (import.meta.env.VITE_AMAP_KEY || '').trim()
@@ -60,4 +69,63 @@ export function loadAmap(): Promise<any> {
   })
 
   return loadingPromise
+}
+
+async function loadAmapGeocoder() {
+  const AMap = await loadAmap()
+  if (geocoderInstance) {
+    return geocoderInstance
+  }
+  if (geocoderPromise) {
+    return geocoderPromise
+  }
+
+  geocoderPromise = new Promise((resolve, reject) => {
+    AMap.plugin(['AMap.Geocoder'], () => {
+      try {
+        geocoderInstance = new AMap.Geocoder({
+          extensions: 'base',
+        })
+        resolve(geocoderInstance)
+      } catch (error) {
+        reject(error)
+      }
+    })
+  }).finally(() => {
+    geocoderPromise = null
+  })
+
+  return geocoderPromise
+}
+
+export async function reverseGeocodeLocation(
+  latitude: number,
+  longitude: number,
+): Promise<AmapReverseGeocodeResult> {
+  const geocoder = await loadAmapGeocoder()
+
+  return new Promise((resolve, reject) => {
+    geocoder.getAddress([longitude, latitude], (status: string, result: any) => {
+      const addressComponent = result?.regeocode?.addressComponent
+      if (status !== 'complete' || !addressComponent) {
+        reject(new Error('AMap reverse geocode failed'))
+        return
+      }
+
+      const province = String(addressComponent.province || '').trim()
+      const rawCity = addressComponent.city
+      const city = Array.isArray(rawCity)
+        ? String(rawCity[0] || '').trim()
+        : String(rawCity || '').trim()
+      const district = String(addressComponent.district || '').trim()
+      const formattedAddress = String(result?.regeocode?.formattedAddress || '').trim()
+
+      resolve({
+        province,
+        city: city || district,
+        district,
+        formattedAddress,
+      })
+    })
+  })
 }

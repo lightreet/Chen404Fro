@@ -57,6 +57,38 @@ const routes: RouteRecordRaw[] = [
     },
   },
   {
+    path: '/memory-map/detail/:id',
+    name: 'TravelMemoryDetail',
+    component: () => import('@/views/MemoryMap/TravelMemoryDetail.vue'),
+    meta: {
+      title: '旅行游记',
+      requiresAuth: true,
+      requiresFriend: true,
+    },
+  },
+  {
+    path: '/memory-map/create',
+    name: 'TravelMemoryCreate',
+    component: () => import('@/views/MemoryMap/TravelMemoryCreate.vue'),
+    meta: {
+      title: '新增旅游地点',
+      requiresAuth: true,
+      requiresFriend: true,
+      requiresAdmin: true,
+    },
+  },
+  {
+    path: '/memory-map/edit/:id',
+    name: 'TravelMemoryEdit',
+    component: () => import('@/views/MemoryMap/TravelMemoryCreate.vue'),
+    meta: {
+      title: '编辑旅游地点',
+      requiresAuth: true,
+      requiresFriend: true,
+      requiresAdmin: true,
+    },
+  },
+  {
     path: '/category',
     name: 'Category',
     component: () => import('@/views/Category/Category.vue'),

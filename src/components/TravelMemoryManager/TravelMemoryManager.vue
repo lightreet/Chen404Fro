@@ -4,11 +4,11 @@
       <div class="manager-toolbar__controls">
         <div class="manager-actions">
           <el-button @click="loadList" :loading="loading">刷新地点</el-button>
-          <el-button type="primary" @click="openCreateDialog">
+          <el-button type="primary" @click="goCreatePage">
             <el-icon><Plus /></el-icon>
             新增旅游地点
           </el-button>
-          <el-button :disabled="!activeLocation" @click="openCurrentEditDialog">
+          <el-button :disabled="!activeLocation" @click="goCurrentEditPage">
             编辑当前地点
           </el-button>
           <el-button :disabled="!activeLocation" type="danger" plain @click="confirmDeleteCurrent">
@@ -22,16 +22,14 @@
       v-model="drawerVisible"
       class="travel-memory-drawer"
       direction="rtl"
-      :size="'min(680px, 94vw)'"
+      :size="'min(760px, 96vw)'"
       :append-to-body="true"
       :destroy-on-close="false"
     >
       <template #header>
         <div class="drawer-header">
           <div>
-            <span class="eyebrow">Memory Editor</span>
             <h3>{{ dialogTitle }}</h3>
-            <p>{{ editingId ? '把这一站的地点信息、坐标和照片收进同一页手账里。' : '从这里新建一枚新的樱花印章。' }}</p>
           </div>
           <div class="drawer-header__meta">
             <span>{{ list.length }} 个地点</span>
@@ -56,49 +54,63 @@
         </section>
 
         <div class="editor-sheet">
-          <el-form label-position="top" class="editor-form">
-            <div class="form-grid">
-              <el-form-item label="地点标题" class="form-item--wide">
-                <el-input v-model="form.title" placeholder="例如：厦门" />
-              </el-form-item>
-              <el-form-item label="省份">
-                <el-input v-model="form.province" placeholder="例如：福建省" />
-              </el-form-item>
-              <el-form-item label="城市">
-                <el-input v-model="form.city" placeholder="例如：厦门市" />
-              </el-form-item>
-              <el-form-item label="到访时间" class="form-item--wide">
-                <el-date-picker
-                  v-model="form.visitedAt"
-                  type="datetime"
-                  value-format="YYYY-MM-DDTHH:mm:ss"
-                  placeholder="可选"
-                  class="w-full"
-                />
-              </el-form-item>
-              <el-form-item label="地点简介" class="form-item--wide">
-                <el-input
-                  v-model="form.summaryNote"
-                  type="textarea"
-                  :rows="3"
-                  maxlength="1000"
-                  show-word-limit
-                  placeholder="一段旅途走它的海出场，慢节奏，藏着风和久违温柔。"
-                />
-              </el-form-item>
-              <el-form-item label="是否展示">
-                <el-switch v-model="form.status" :active-value="1" :inactive-value="0" />
-              </el-form-item>
-              <el-form-item label="排序值">
-                <el-input-number v-model="form.sortOrder" :min="0" :max="9999" class="w-full" />
-              </el-form-item>
+          <section class="editor-card editor-card--intro">
+            <div class="section-head">
+              <span class="section-mark">1</span>
+              <div class="section-copy">
+                <h4>地点信息</h4>
+              </div>
             </div>
-          </el-form>
 
-          <section class="editor-card">
-            <div class="editor-card__head">
-              <h4>位置坐标</h4>
-              <p>点击小地图直接调整坐标，照片 EXIF 也会自动回填。</p>
+            <el-form label-position="top" class="editor-form">
+              <div class="form-grid form-grid--intro">
+                <el-form-item label="地点标题" class="form-item--wide">
+                  <el-input v-model="form.title" placeholder="例如：厦门" />
+                </el-form-item>
+                <el-form-item label="省份">
+                  <el-input v-model="form.province" placeholder="例如：福建省" />
+                </el-form-item>
+                <el-form-item label="城市">
+                  <el-input v-model="form.city" placeholder="例如：厦门市" />
+                </el-form-item>
+                <el-form-item label="到访时间" class="form-item--wide">
+                  <el-date-picker
+                    v-model="form.visitedAt"
+                    type="datetime"
+                    value-format="YYYY-MM-DDTHH:mm:ss"
+                    placeholder="可选"
+                    class="w-full"
+                  />
+                </el-form-item>
+                <el-form-item label="地点简介" class="form-item--wide">
+                  <el-input
+                    v-model="form.summaryNote"
+                    type="textarea"
+                    :rows="3"
+                    maxlength="1000"
+                    show-word-limit
+                    placeholder="一段旅途走它的海出场，慢节奏，藏着风和久违温柔。"
+                  />
+                </el-form-item>
+              </div>
+
+              <div class="form-grid form-grid--meta">
+                <el-form-item label="是否展示" class="form-item--toggle">
+                  <div class="display-toggle">
+                    <el-switch v-model="form.status" :active-value="1" :inactive-value="0" />
+                    <span>{{ form.status === 1 ? '会在地图中展示' : '暂不展示' }}</span>
+                  </div>
+                </el-form-item>
+              </div>
+            </el-form>
+          </section>
+
+          <section class="editor-card editor-card--coordinate">
+            <div class="section-head">
+              <span class="section-mark">2</span>
+              <div class="section-copy">
+                <h4>位置坐标</h4>
+              </div>
             </div>
 
             <div class="coordinate-layout">
@@ -124,11 +136,13 @@
             </div>
           </section>
 
-          <section class="editor-card">
-            <div class="editor-card__head editor-card__head--split">
-              <div>
-                <h4>封面图片</h4>
-                <p>当前地点最先展示的一张照片。</p>
+          <section class="editor-card editor-card--cover">
+            <div class="section-head section-head--split">
+              <div class="section-head__main">
+                <span class="section-mark">3</span>
+                <div class="section-copy">
+                  <h4>封面图片</h4>
+                </div>
               </div>
               <el-button
                 v-if="selectedEntry"
@@ -163,11 +177,27 @@
           </section>
 
           <section class="entry-section editor-card">
-            <div class="entry-section__head">
-              <div>
-                <h4>照片记忆</h4>
-                <p>编辑当前选中照片的标题、感想和时间。</p>
+            <div class="section-head section-head--split">
+              <div class="section-head__main">
+                <span class="section-mark">4</span>
+                <div class="section-copy">
+                  <h4>照片记忆</h4>
+                </div>
               </div>
+              <el-upload
+                class="entry-upload-trigger"
+                :show-file-list="false"
+                :before-upload="beforeImageUpload"
+                :http-request="handleUploadEntryImage"
+                accept="image/*"
+                multiple
+              >
+                <el-button class="section-upload-btn" type="primary" plain :loading="uploading">上传照片</el-button>
+              </el-upload>
+            </div>
+
+            <div v-if="!form.entries.length" class="entry-empty entry-empty--upload">
+              <span>至少需要上传一张照片。</span>
               <el-upload
                 :show-file-list="false"
                 :before-upload="beforeImageUpload"
@@ -175,55 +205,88 @@
                 accept="image/*"
                 multiple
               >
-                <el-button type="primary" :loading="uploading">上传照片</el-button>
+                <el-button class="entry-empty__button" type="primary" plain :loading="uploading">上传第一张照片</el-button>
               </el-upload>
             </div>
 
-            <div v-if="!form.entries.length" class="entry-empty">至少需要上传一张照片。</div>
-            <div v-else-if="selectedEntry" class="entry-editor-panel">
-              <div class="entry-editor-panel__preview">
-                <img :src="selectedEntry.imageUrl" :alt="selectedEntry.remark || form.title || '旅行照片'" />
-              </div>
+            <div v-else class="entry-board">
+              <article
+                v-for="(entry, index) in form.entries"
+                :key="entry.id || entry.imageUrl || index"
+                class="memory-entry-card"
+                :class="{ 'is-cover': entry.cover, 'is-active': selectedEntryIndex === index }"
+              >
+                <button type="button" class="memory-entry-card__preview" @click="selectedEntryIndex = index">
+                  <img :src="entry.imageUrl" :alt="entry.remark || form.title || `旅行照片 ${index + 1}`" />
+                  <span v-if="entry.cover" class="memory-entry-card__cover-badge">好封面</span>
+                </button>
 
-              <div class="entry-editor-panel__body">
-                <div class="entry-editor-panel__actions">
-                  <el-tag :type="selectedEntry.cover ? 'danger' : 'info'" effect="plain">
-                    {{ selectedEntry.cover ? '当前封面' : '普通照片' }}
-                  </el-tag>
-                  <div class="entry-actions">
-                    <el-button text type="primary" @click="setCover(selectedEntryIndex)">设为封面</el-button>
-                    <el-button text type="danger" @click="removeEntry(selectedEntryIndex)">删除</el-button>
+                <div class="memory-entry-card__fields">
+                  <div class="memory-entry-card__meta">
+                    <span>备注标题</span>
+                    <button type="button" class="entry-inline-action" @click="selectedEntryIndex = index">聚焦编辑</button>
+                  </div>
+                  <el-input v-model="entry.remark" placeholder="照片标题" />
+
+                  <div class="memory-entry-card__meta">
+                    <span>感想</span>
+                    <span>{{ entry.thanksNote?.length || 0 }}/2000</span>
+                  </div>
+                  <el-input
+                    v-model="entry.thanksNote"
+                    type="textarea"
+                    :rows="3"
+                    maxlength="2000"
+                    show-word-limit
+                    placeholder="为这张照片写一点感想"
+                  />
+
+                  <div class="memory-entry-card__inline">
+                    <div class="memory-entry-card__field">
+                      <span>拍摄时间</span>
+                      <el-date-picker
+                        v-model="entry.shotAt"
+                        type="datetime"
+                        value-format="YYYY-MM-DDTHH:mm:ss"
+                        placeholder="拍摄时间"
+                        class="w-full"
+                      />
+                    </div>
+                    <div class="memory-entry-card__field">
+                      <span>排序</span>
+                      <el-input-number v-model="entry.displayOrder" :min="0" :max="9999" class="w-full" />
+                    </div>
+                  </div>
+
+                  <div class="memory-entry-card__actions">
+                    <el-button text type="primary" @click="setCover(index)">设为封面</el-button>
+                    <el-button text type="danger" @click="removeEntry(index)">删除</el-button>
                   </div>
                 </div>
+              </article>
 
-                <el-input v-model="selectedEntry.remark" placeholder="备注标题" />
-                <el-input
-                  v-model="selectedEntry.thanksNote"
-                  type="textarea"
-                  :rows="3"
-                  maxlength="2000"
-                  show-word-limit
-                  placeholder="为这张照片写一点感想"
-                />
-                <div class="entry-inline">
-                  <el-date-picker
-                    v-model="selectedEntry.shotAt"
-                    type="datetime"
-                    value-format="YYYY-MM-DDTHH:mm:ss"
-                    placeholder="拍摄时间"
-                    class="w-full"
-                  />
-                  <el-input-number v-model="selectedEntry.displayOrder" :min="0" :max="9999" class="w-full" />
+              <el-upload
+                class="entry-upload-tile"
+                :show-file-list="false"
+                :before-upload="beforeImageUpload"
+                :http-request="handleUploadEntryImage"
+                accept="image/*"
+                multiple
+              >
+                <div class="entry-upload-tile__inner">
+                  <span class="entry-upload-tile__plus">+</span>
+                  <strong>上传照片</strong>
+                  <span>支持 JPG / PNG / GIF</span>
                 </div>
-              </div>
+              </el-upload>
             </div>
           </section>
         </div>
 
         <div class="drawer-footer">
-          <el-button @click="drawerVisible = false">取消</el-button>
-          <el-button v-if="editingId" type="danger" plain @click="confirmDeleteCurrent">删除地点</el-button>
-          <el-button type="primary" :loading="saving" @click="handleSave">保存地点</el-button>
+          <el-button class="footer-button footer-button--neutral" @click="drawerVisible = false">取消</el-button>
+          <el-button v-if="editingId" class="footer-button footer-button--danger" type="danger" plain @click="confirmDeleteCurrent">删除地点</el-button>
+          <el-button class="footer-button footer-button--save" type="primary" :loading="saving" @click="handleSave">保存地点</el-button>
         </div>
       </div>
     </el-drawer>
@@ -235,6 +298,7 @@ import { computed, onMounted, reactive, ref } from 'vue'
 import type { UploadRequestOptions } from 'element-plus'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
+import { useRouter } from 'vue-router'
 import TravelMemoryMap from '@/components/TravelMemoryMap/TravelMemoryMap.vue'
 import {
   createTravelMemory,
@@ -266,6 +330,8 @@ const emit = defineEmits<{
   (e: 'changed', payload: { selectedId?: number | null }): void
   (e: 'focus', id: number): void
 }>()
+
+const router = useRouter()
 
 const list = ref<TravelMemoryLocationDetail[]>([])
 const loading = ref(false)
@@ -319,6 +385,10 @@ function openCreateDialog() {
   drawerVisible.value = true
 }
 
+function goCreatePage() {
+  router.push({ name: 'TravelMemoryCreate' })
+}
+
 function openEditDialog(row: TravelMemoryLocationDetail) {
   editingId.value = row.id
   Object.assign(form, {
@@ -348,7 +418,7 @@ function openEditDialog(row: TravelMemoryLocationDetail) {
   drawerVisible.value = true
 }
 
-function openCurrentEditDialog() {
+function goCurrentEditPage() {
   if (!props.activeLocation) {
     ElMessage.info('先选择一个地点，再进行编辑。')
     return
@@ -427,6 +497,11 @@ async function handleSave() {
     return
   }
 
+  if (form.latitude == null || form.longitude == null) {
+    ElMessage.warning('请先在地图上选择地点坐标')
+    return
+  }
+
   saving.value = true
   try {
     const payload: CreateTravelMemoryCommand = {
@@ -437,11 +512,14 @@ async function handleSave() {
       summaryNote: form.summaryNote?.trim() || '',
       visitedAt: form.visitedAt || undefined,
       entries: form.entries.map((entry, index) => ({
-        ...entry,
+        imageUrl: entry.imageUrl,
         remark: entry.remark?.trim() || '',
         thanksNote: entry.thanksNote?.trim() || '',
+        shotAt: entry.shotAt,
         displayOrder: entry.displayOrder ?? index,
         cover: !!entry.cover,
+        sourceLatitude: entry.sourceLatitude,
+        sourceLongitude: entry.sourceLongitude,
         geoSource: entry.geoSource || 'NONE',
       })),
     }
@@ -525,14 +603,6 @@ onMounted(() => {
   backdrop-filter: blur(12px);
 }
 
-.eyebrow {
-  display: inline-block;
-  color: #c57f9a;
-  font-size: 12px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
 .manager-toolbar__controls,
 .manager-actions,
 .coordinate-actions,
@@ -556,22 +626,16 @@ onMounted(() => {
 
 .drawer-header {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
-  gap: 18px;
+  gap: 20px;
   padding-right: 8px;
 
   h3 {
-    margin: 4px 0 6px;
-    color: #51353f;
+    margin: 0;
+    color: #5d4037;
     font-size: 22px;
-    font-weight: 600;
-  }
-
-  p {
-    color: var(--text-secondary);
-    line-height: 1.65;
-    font-size: 13px;
+    font-weight: 700;
   }
 }
 
@@ -586,18 +650,18 @@ onMounted(() => {
     display: inline-flex;
     align-items: center;
     border-radius: 999px;
-    background: rgba(255, 245, 248, 0.82);
-    border: 1px solid rgba(241, 220, 229, 0.9);
-    color: #7b5c68;
+    background: rgba(247, 238, 229, 0.92);
+    border: 1px solid rgba(228, 212, 198, 0.96);
+    color: #8a6759;
     font-size: 12px;
   }
 }
 
 .drawer-body {
   display: grid;
-  gap: 14px;
+  gap: 12px;
   height: 100%;
-  padding: 6px 2px 12px;
+  padding: 4px 2px 18px;
 }
 
 .drawer-switcher {
@@ -614,27 +678,27 @@ onMounted(() => {
   gap: 4px;
   padding: 10px 12px;
   border-radius: 14px;
-  border: 1px solid rgba(237, 220, 228, 0.92);
-  background: rgba(255, 252, 253, 0.78);
+  border: 1px solid rgba(231, 217, 206, 0.96);
+  background: rgba(252, 247, 241, 0.88);
   text-align: left;
   cursor: pointer;
   transition: transform 0.24s ease, border-color 0.24s ease, box-shadow 0.24s ease;
 
   strong {
-    color: #51353f;
+    color: #66483d;
     font-size: 14px;
   }
 
   span {
-    color: var(--text-tertiary);
+    color: #a28779;
     font-size: 12px;
   }
 
   &:hover,
   &.is-active {
     transform: translateY(-2px);
-    border-color: rgba(245, 163, 189, 0.9);
-    box-shadow: 0 16px 24px rgba(224, 184, 197, 0.18);
+    border-color: rgba(223, 173, 156, 0.94);
+    box-shadow: 0 16px 24px rgba(219, 194, 178, 0.18);
   }
 }
 
@@ -645,78 +709,123 @@ onMounted(() => {
   gap: 14px;
 }
 
+.editor-sheet {
+  padding-bottom: 14px;
+}
+
+.section-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.section-head--split {
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.section-head__main {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.section-mark {
+  flex: 0 0 auto;
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: linear-gradient(135deg, rgba(232, 191, 173, 0.96), rgba(244, 220, 204, 0.96));
+  color: #79564a;
+  font-size: 13px;
+  font-weight: 700;
+  box-shadow: 0 10px 20px rgba(218, 189, 170, 0.24);
+}
+
+.section-copy {
+  min-width: 0;
+}
+
+.section-copy h4 {
+  margin: 0;
+  color: #63463b;
+  font-size: 16px;
+  font-weight: 700;
+}
+
 .form-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.form-grid--intro {
   gap: 14px 12px;
+}
+
+.form-grid--meta {
+  align-items: end;
+}
+
+.display-toggle {
+  min-height: 42px;
+  padding: 0 14px;
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  border-radius: 14px;
+  background: rgba(251, 245, 239, 0.94);
+  border: 1px solid rgba(231, 216, 204, 0.94);
+  color: #8a6a5d;
+  font-size: 12px;
 }
 
 .form-item--wide {
   grid-column: 1 / -1;
 }
 
+.form-item--toggle :deep(.el-form-item__content) {
+  justify-content: flex-start;
+}
+
 .editor-card {
   display: grid;
-  gap: 12px;
-  padding: 14px;
-  border-radius: 20px;
-  border: 1px solid rgba(236, 220, 228, 0.88);
+  gap: 14px;
+  padding: 17px;
+  border-radius: 24px;
+  border: 1px solid rgba(230, 216, 204, 0.92);
   background:
-    linear-gradient(180deg, rgba(255, 252, 253, 0.94), rgba(255, 248, 250, 0.9)),
-    radial-gradient(circle at top right, rgba(255, 218, 230, 0.12), transparent 42%);
+    linear-gradient(180deg, rgba(252, 249, 245, 0.97), rgba(249, 243, 236, 0.94)),
+    radial-gradient(circle at top right, rgba(243, 224, 210, 0.14), transparent 42%);
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.82),
-    0 14px 26px rgba(223, 188, 198, 0.08);
-}
-
-.editor-card__head {
-  display: grid;
-  gap: 4px;
-
-  h4 {
-    margin: 0;
-    color: #563943;
-    font-size: 15px;
-  }
-}
-
-.editor-card__head--split {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.editor-card__head p,
-.entry-section__head p {
-  color: var(--text-tertiary);
-  font-size: 13px;
-  line-height: 1.6;
-  margin: 0;
+    0 14px 26px rgba(212, 191, 177, 0.1);
 }
 
 .coordinate-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1.15fr) minmax(160px, 0.85fr);
-  gap: 12px;
+  grid-template-columns: minmax(0, 1.05fr) minmax(176px, 0.95fr);
+  gap: 14px;
   align-items: start;
 }
 
 .editor-map-card {
   overflow: hidden;
   border-radius: 18px;
-  border: 1px solid rgba(237, 221, 228, 0.92);
-  background: rgba(255, 255, 255, 0.74);
+  border: 1px solid rgba(228, 214, 202, 0.94);
+  background: rgba(255, 252, 249, 0.88);
 }
 
 .editor-map-card :deep(.travel-map-shell.is-picker-mode) {
-  min-height: 160px;
+  min-height: 170px;
   border-radius: 18px;
   box-shadow: none;
 }
 
 .editor-map-card :deep(.travel-map-canvas) {
-  min-height: 160px;
+  min-height: 170px;
 }
 
 .coordinate-fields {
@@ -729,25 +838,26 @@ onMounted(() => {
 }
 
 .coordinate-adjust-hint {
-  min-height: 36px;
+  min-height: 38px;
   border-radius: 999px;
-  border: 1px solid rgba(241, 194, 206, 0.88);
-  background: rgba(255, 247, 249, 0.92);
-  color: #d77493;
+  border: 1px solid rgba(227, 195, 178, 0.92);
+  background: rgba(252, 245, 239, 0.96);
+  color: #bb7e67;
   font-size: 13px;
   cursor: pointer;
 }
 
 .cover-preview-row {
   display: grid;
+  gap: 10px;
 }
 
 .cover-preview-card {
-  height: 108px;
-  border-radius: 14px;
+  height: 138px;
+  border-radius: 16px;
   overflow: hidden;
-  border: 1px solid rgba(237, 221, 228, 0.92);
-  background: rgba(255, 255, 255, 0.76);
+  border: 1px solid rgba(228, 214, 202, 0.94);
+  background: rgba(255, 252, 249, 0.88);
 
   img {
     width: 100%;
@@ -760,9 +870,25 @@ onMounted(() => {
   min-width: 104px;
 }
 
+:deep(.cover-action),
+:deep(.section-upload-btn),
+:deep(.entry-empty__button) {
+  --el-button-bg-color: rgba(251, 245, 239, 0.96);
+  --el-button-border-color: rgba(226, 196, 180, 0.96);
+  --el-button-hover-bg-color: rgba(248, 238, 229, 0.98);
+  --el-button-hover-border-color: rgba(220, 190, 174, 0.98);
+  --el-button-active-bg-color: rgba(244, 233, 224, 1);
+  --el-button-active-border-color: rgba(214, 184, 168, 1);
+  --el-button-text-color: #b77461;
+  border-color: rgba(226, 196, 180, 0.96) !important;
+  background: rgba(251, 245, 239, 0.96) !important;
+  color: #b77461 !important;
+  box-shadow: none !important;
+}
+
 .thumbnail-strip {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(86px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(82px, 1fr));
   gap: 10px;
 }
 
@@ -770,10 +896,10 @@ onMounted(() => {
   position: relative;
   height: 68px;
   padding: 0;
-  border: 1px solid rgba(237, 221, 228, 0.92);
-  border-radius: 12px;
+  border: 1px solid rgba(228, 214, 202, 0.94);
+  border-radius: 14px;
   overflow: hidden;
-  background: rgba(255, 255, 255, 0.78);
+  background: rgba(255, 252, 249, 0.9);
   cursor: pointer;
   transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
 
@@ -786,8 +912,8 @@ onMounted(() => {
   &:hover,
   &.is-active {
     transform: translateY(-1px);
-    border-color: rgba(236, 147, 177, 0.86);
-    box-shadow: 0 10px 20px rgba(225, 180, 193, 0.16);
+    border-color: rgba(219, 172, 159, 0.94);
+    box-shadow: 0 10px 20px rgba(219, 194, 178, 0.18);
   }
 }
 
@@ -801,51 +927,70 @@ onMounted(() => {
   display: inline-flex;
   align-items: center;
   border-radius: 999px;
-  background: rgba(255, 248, 250, 0.92);
-  color: #d46d8d;
+  background: rgba(249, 239, 229, 0.96);
+  color: #b87463;
   font-size: 10px;
-}
-
-.entry-section__head {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 16px;
-
-  h3 {
-    margin: 0 0 6px;
-    color: var(--text-primary);
-  }
 }
 
 .entry-empty {
   min-height: 120px;
   display: grid;
   place-items: center;
+  gap: 12px;
+  padding: 18px;
   border-radius: 18px;
-  border: 1px dashed rgba(235, 219, 228, 0.92);
-  color: var(--text-tertiary);
+  border: 1px dashed rgba(229, 213, 201, 0.94);
+  color: #a28a7e;
+  text-align: center;
 }
 
 .entry-empty--compact {
   min-height: 88px;
 }
 
-.entry-editor-panel {
-  display: grid;
-  grid-template-columns: 152px minmax(0, 1fr);
-  gap: 14px;
-  padding: 14px;
-  border-radius: 18px;
-  border: 1px solid rgba(236, 220, 228, 0.86);
-  background: rgba(255, 251, 253, 0.8);
+.entry-empty--upload {
+  min-height: 160px;
 }
 
-.entry-editor-panel__preview {
-  height: 152px;
+.entry-board {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  padding-bottom: 8px;
+}
+
+.memory-entry-card {
+  display: grid;
+  gap: 12px;
+  padding: 13px;
+  border-radius: 20px;
+  border: 1px solid rgba(230, 216, 204, 0.92);
+  background: rgba(253, 249, 245, 0.92);
+  transition: transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease;
+}
+
+.memory-entry-card:hover,
+.memory-entry-card.is-active {
+  transform: translateY(-2px);
+  border-color: rgba(219, 172, 159, 0.95);
+  box-shadow: 0 16px 28px rgba(217, 193, 177, 0.16);
+}
+
+.memory-entry-card.is-cover {
+  background:
+    linear-gradient(180deg, rgba(253, 250, 246, 0.98), rgba(250, 244, 238, 0.94)),
+    radial-gradient(circle at top right, rgba(243, 223, 210, 0.2), transparent 40%);
+}
+
+.memory-entry-card__preview {
+  position: relative;
+  height: 132px;
+  padding: 0;
   border-radius: 14px;
   overflow: hidden;
-  background: rgba(249, 244, 247, 0.86);
+  border: 1px solid rgba(228, 214, 202, 0.94);
+  background: rgba(248, 242, 236, 0.9);
+  cursor: pointer;
 
   img {
     width: 100%;
@@ -854,34 +999,163 @@ onMounted(() => {
   }
 }
 
-.entry-editor-panel__body {
+.memory-entry-card__cover-badge {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  min-height: 22px;
+  padding: 0 8px;
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  background: rgba(221, 141, 127, 0.96);
+  color: #fff;
+  font-size: 11px;
+  box-shadow: 0 8px 16px rgba(210, 164, 144, 0.26);
+}
+
+.memory-entry-card__fields {
   display: grid;
   gap: 10px;
 }
 
-.entry-editor-panel__actions {
+.memory-entry-card__meta {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  flex-wrap: wrap;
+  gap: 10px;
+  color: #8a6a5d;
+  font-size: 12px;
 }
 
-.entry-inline > * {
-  flex: 1;
+.entry-inline-action {
+  min-height: 24px;
+  padding: 0 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(231, 208, 193, 0.94);
+  background: rgba(249, 241, 234, 0.94);
+  color: #bf826d;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.memory-entry-card__inline {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(88px, 104px);
+  gap: 10px;
+}
+
+.memory-entry-card__field {
+  display: grid;
+  gap: 6px;
+
+  span {
+    color: #8a6a5d;
+    font-size: 12px;
+  }
+}
+
+.memory-entry-card__actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 2px;
+  border-top: 1px dashed rgba(229, 214, 202, 0.94);
+}
+
+.memory-entry-card__actions :deep(.el-button) {
+  min-height: 28px;
+  padding: 0 6px;
+  border-radius: 999px;
+}
+
+.memory-entry-card__actions :deep(.el-button + .el-button) {
+  margin-left: 8px;
+}
+
+.entry-upload-tile {
+  min-height: 100%;
+  cursor: pointer;
+}
+
+.entry-upload-tile__inner {
+  min-height: 100%;
+  display: grid;
+  place-items: center;
+  gap: 10px;
+  padding: 20px 16px;
+  border-radius: 18px;
+  border: 1px dashed rgba(226, 196, 180, 0.96);
+  background:
+    linear-gradient(180deg, rgba(252, 249, 245, 0.98), rgba(249, 243, 236, 0.94)),
+    radial-gradient(circle at bottom right, rgba(242, 224, 211, 0.24), transparent 40%);
+  text-align: center;
+
+  strong {
+    color: #aa725e;
+    font-size: 15px;
+  }
+
+  span {
+    color: #a18679;
+    font-size: 12px;
+    line-height: 1.6;
+  }
+}
+
+.entry-upload-tile__plus {
+  width: 48px;
+  height: 48px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: rgba(246, 230, 218, 0.96);
+  color: #cd846b;
+  font-size: 28px;
+  line-height: 1;
 }
 
 .drawer-footer {
-  position: sticky;
-  bottom: 0;
-  z-index: 2;
+  position: relative;
   display: flex;
   justify-content: flex-end;
   gap: 12px;
-  padding: 14px 0 2px;
-  background: linear-gradient(180deg, rgba(255, 250, 252, 0), rgba(255, 250, 252, 0.95) 36%);
+  padding: 14px 16px 10px;
+  margin: 10px 0 0;
+  border: 1px solid rgba(229, 214, 202, 0.94);
+  border-radius: 20px 20px 0 0;
+  background:
+    linear-gradient(180deg, rgba(252, 248, 243, 0.94), rgba(249, 243, 236, 0.98)),
+    radial-gradient(circle at top center, rgba(242, 224, 211, 0.22), transparent 52%);
+  box-shadow: 0 -8px 20px rgba(214, 191, 176, 0.1);
+  backdrop-filter: blur(10px);
+}
+
+:deep(.footer-button) {
+  border-radius: 14px;
+}
+
+:deep(.footer-button--neutral) {
+  border-color: rgba(229, 214, 202, 0.94) !important;
+  background: rgba(252, 248, 243, 0.96) !important;
+  color: #8a6759 !important;
+}
+
+:deep(.footer-button--danger) {
+  border-color: rgba(233, 206, 196, 0.96) !important;
+  background: rgba(252, 245, 240, 0.94) !important;
+  color: #c98874 !important;
+}
+
+:deep(.footer-button--save) {
+  color: #fff !important;
+  border-color: rgba(213, 147, 126, 0.96) !important;
+  background: linear-gradient(135deg, rgba(218, 153, 131, 0.98), rgba(231, 176, 156, 0.98)) !important;
+  box-shadow: 0 10px 18px rgba(214, 180, 164, 0.18) !important;
 }
 
 :deep(.travel-memory-drawer) {
+  width: min(760px, 96vw) !important;
   border-top-left-radius: 30px;
   border-bottom-left-radius: 30px;
   overflow: hidden;
@@ -891,16 +1165,124 @@ onMounted(() => {
   margin-bottom: 0;
   padding: 18px 20px 10px;
   background:
-    linear-gradient(145deg, rgba(255, 252, 253, 0.94), rgba(255, 245, 248, 0.82)),
-    radial-gradient(circle at top right, rgba(255, 219, 230, 0.18), transparent 42%);
-  border-bottom: 1px solid rgba(239, 220, 227, 0.82);
+    linear-gradient(145deg, rgba(252, 248, 243, 0.96), rgba(248, 240, 232, 0.9)),
+    radial-gradient(circle at top right, rgba(242, 224, 211, 0.2), transparent 42%);
+  border-bottom: 1px solid rgba(229, 214, 202, 0.9);
 }
 
 :deep(.travel-memory-drawer .el-drawer__body) {
   padding: 0 20px 14px;
   background:
-    linear-gradient(180deg, rgba(255, 252, 253, 0.96), rgba(255, 247, 250, 0.94)),
-    radial-gradient(circle at top right, rgba(255, 218, 230, 0.14), transparent 40%);
+    linear-gradient(180deg, rgba(251, 247, 242, 0.98), rgba(248, 241, 234, 0.96)),
+    radial-gradient(circle at top right, rgba(243, 224, 210, 0.14), transparent 40%);
+}
+
+:deep(.travel-memory-drawer .el-form-item) {
+  margin-bottom: 0;
+}
+
+:deep(.travel-memory-drawer .el-form-item__label) {
+  padding-bottom: 7px;
+  color: #785b4f;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+:deep(.travel-memory-drawer .el-input__wrapper),
+:deep(.travel-memory-drawer .el-textarea__inner),
+:deep(.travel-memory-drawer .el-input-number),
+:deep(.travel-memory-drawer .el-date-editor.el-input__wrapper),
+:deep(.travel-memory-drawer .el-date-editor .el-input__wrapper) {
+  border-radius: 14px;
+  width: 100%;
+}
+
+:deep(.travel-memory-drawer .el-input__wrapper),
+:deep(.travel-memory-drawer .el-input-number__decrease),
+:deep(.travel-memory-drawer .el-input-number__increase),
+:deep(.travel-memory-drawer .el-textarea__inner) {
+  background: rgba(253, 249, 245, 0.96);
+  box-shadow: 0 0 0 1px rgba(227, 213, 201, 0.96) inset;
+}
+
+:deep(.travel-memory-drawer .el-date-editor) {
+  width: 100%;
+}
+
+:deep(.travel-memory-drawer .el-input-number) {
+  width: 100%;
+}
+
+:deep(.travel-memory-drawer .el-input__wrapper.is-focus),
+:deep(.travel-memory-drawer .el-textarea__inner:focus),
+:deep(.travel-memory-drawer .el-input-number.is-controls-right .el-input__wrapper.is-focus) {
+  box-shadow:
+    0 0 0 1px rgba(210, 145, 125, 0.98) inset,
+    0 0 0 4px rgba(242, 221, 207, 0.56);
+}
+
+:deep(.travel-memory-drawer .el-button) {
+  border-radius: 14px;
+}
+
+:deep(.travel-memory-drawer .el-button--primary),
+:deep(.travel-memory-drawer .el-button--primary:hover),
+:deep(.travel-memory-drawer .el-button--primary:focus-visible) {
+  --el-button-bg-color: #da9983;
+  --el-button-border-color: #d5957d;
+  --el-button-hover-bg-color: #df9f88;
+  --el-button-hover-border-color: #db9b84;
+  --el-button-active-bg-color: #cd8c75;
+  --el-button-active-border-color: #cb8b74;
+  --el-button-text-color: #fff;
+  color: #fff !important;
+  border-color: rgba(213, 147, 126, 0.96) !important;
+  background: linear-gradient(135deg, rgba(218, 153, 131, 0.98), rgba(231, 176, 156, 0.98)) !important;
+  box-shadow: 0 10px 18px rgba(214, 180, 164, 0.18);
+}
+
+:deep(.travel-memory-drawer .el-button--primary.is-plain),
+:deep(.travel-memory-drawer .el-button--primary.is-plain:hover),
+:deep(.travel-memory-drawer .el-button--primary.is-plain:focus-visible) {
+  --el-button-bg-color: rgba(251, 245, 239, 0.96);
+  --el-button-border-color: rgba(226, 196, 180, 0.96);
+  --el-button-hover-bg-color: rgba(248, 238, 229, 0.98);
+  --el-button-hover-border-color: rgba(220, 190, 174, 0.98);
+  --el-button-active-bg-color: rgba(244, 233, 224, 1);
+  --el-button-active-border-color: rgba(214, 184, 168, 1);
+  --el-button-text-color: #b77461;
+  border-color: rgba(226, 196, 180, 0.96) !important;
+  background: rgba(251, 245, 239, 0.96) !important;
+  color: #b77461 !important;
+  box-shadow: none !important;
+}
+
+:deep(.travel-memory-drawer .el-button--danger.is-plain),
+:deep(.travel-memory-drawer .el-button--danger.is-plain:hover),
+:deep(.travel-memory-drawer .el-button--danger.is-plain:focus-visible) {
+  --el-button-bg-color: rgba(252, 245, 240, 0.94);
+  --el-button-border-color: rgba(233, 206, 196, 0.96);
+  --el-button-hover-bg-color: rgba(249, 238, 231, 0.98);
+  --el-button-hover-border-color: rgba(227, 200, 190, 0.98);
+  --el-button-active-bg-color: rgba(245, 233, 225, 1);
+  --el-button-active-border-color: rgba(220, 192, 182, 1);
+  --el-button-text-color: #c98874;
+  border-color: rgba(233, 206, 196, 0.96) !important;
+  background: rgba(252, 245, 240, 0.94) !important;
+  color: #c98874 !important;
+}
+
+:deep(.travel-memory-drawer .drawer-footer .el-button:not(.el-button--primary):not(.el-button--danger)) {
+  --el-button-bg-color: rgba(252, 248, 243, 0.96);
+  --el-button-border-color: rgba(229, 214, 202, 0.94);
+  --el-button-hover-bg-color: rgba(248, 242, 236, 0.98);
+  --el-button-hover-border-color: rgba(223, 208, 196, 0.96);
+  --el-button-active-bg-color: rgba(244, 238, 232, 1);
+  --el-button-active-border-color: rgba(217, 202, 190, 1);
+  --el-button-text-color: #8a6759;
+  border-color: rgba(229, 214, 202, 0.94) !important;
+  background: rgba(252, 248, 243, 0.96) !important;
+  color: #8a6759 !important;
 }
 
 @media (max-width: 1100px) {
@@ -911,22 +1293,19 @@ onMounted(() => {
 }
 
 @media (max-width: 768px) {
-  .entry-section__head {
-    align-items: flex-start;
-  }
-
   .manager-toolbar__controls,
   .manager-actions,
-  .entry-section__head,
+  .section-head--split,
+  .section-head__main,
   .drawer-header,
-  .drawer-footer,
-  .editor-card__head--split {
+  .drawer-footer {
     flex-direction: column;
   }
 
   .form-grid,
   .coordinate-layout,
-  .entry-editor-panel {
+  .memory-entry-card__inline,
+  .entry-board {
     grid-template-columns: 1fr;
   }
 
@@ -938,6 +1317,10 @@ onMounted(() => {
 
   .cover-action {
     width: 100%;
+  }
+
+  .entry-upload-tile__inner {
+    min-height: 180px;
   }
 }
 </style>

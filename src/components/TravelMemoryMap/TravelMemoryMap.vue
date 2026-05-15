@@ -10,8 +10,9 @@
       <div class="travel-map-haze travel-map-haze--left" />
       <div class="travel-map-haze travel-map-haze--right" />
       <div class="travel-map-controls">
-        <button type="button" class="travel-map-control" @click="zoomIn">+</button>
-        <button type="button" class="travel-map-control" @click="zoomOut">-</button>
+        <button type="button" class="travel-map-control" title="放大地图" @click="zoomIn">+</button>
+        <button type="button" class="travel-map-control" title="缩小地图" @click="zoomOut">-</button>
+        <button type="button" class="travel-map-control travel-map-control--reset" title="恢复初始比例" @click="resetZoom">⌖</button>
       </div>
 
       <div class="travel-map-board" :style="{ transform: `scale(${displayScale})` }">
@@ -90,15 +91,14 @@
               class="travel-map-marker__ripple"
               cx="0"
               cy="0"
-              r="26"
+              r="30"
               filter="url(#markerGlow)"
             />
-            <circle class="travel-map-marker__outer" cx="0" cy="0" r="17" />
-            <circle class="travel-map-marker__inner" cx="0" cy="0" r="10" />
             <path
-              class="travel-map-marker__petal"
-              d="M0 -7 C4 -11 8 -9 8 -4 C8 0 4 2 0 5 C-4 2 -8 0 -8 -4 C-8 -9 -4 -11 0 -7 Z"
+              class="travel-map-marker__pin"
+              :d="point.id === activeId ? ACTIVE_PIN_PATH : PIN_PATH"
             />
+            <circle class="travel-map-marker__core" :cy="point.id === activeId ? -7 : -6" :r="point.id === activeId ? 5.4 : 4.2" />
             <text
               class="travel-map-marker__label"
               :class="{ 'travel-map-marker__label--left': getMarkerLabelOffset(point).align === 'left' }"
@@ -113,7 +113,7 @@
 
       <div class="travel-map-legend">
         <span class="travel-map-legend__flower"></span>
-        <span>点亮地图上的樱花印章，查看旅途记忆</span>
+        <span>点击城市，查看旅行故事</span>
       </div>
       <div class="travel-map-petals">
         <span class="petal petal--one" />
@@ -121,10 +121,6 @@
         <span class="petal petal--three" />
       </div>
 
-      <div v-if="showEmptyState" class="travel-map-empty-callout">
-        <strong>第一枚樱花印章正在等你点亮</strong>
-        <span>先新建一个旅行地点，地图和纪念册就会一起苏醒。</span>
-      </div>
     </div>
 
     <div v-if="loading" class="travel-map-state travel-map-state--loading">地图加载中...</div>
@@ -185,6 +181,11 @@ const SVG_VIEWBOX = {
   width: 774,
   height: 569,
 }
+const BASE_SCALE = 1.02
+const MIN_SCALE = 0.9
+const MAX_SCALE = 1.18
+const PIN_PATH = 'M0 -18 C9 -18 16 -11 16 -2 C16 7 8 16 0 27 C-8 16 -16 7 -16 -2 C-16 -11 -9 -18 0 -18 Z'
+const ACTIVE_PIN_PATH = 'M0 -22 C11 -22 19 -14 19 -3 C19 9 10 19 0 33 C-10 19 -19 9 -19 -3 C-19 -14 -11 -22 0 -22 Z'
 
 const props = withDefaults(defineProps<Props>(), {
   locations: () => [],
@@ -202,7 +203,7 @@ const emit = defineEmits<{
 const containerRef = ref<HTMLDivElement | null>(null)
 const loading = ref(true)
 const errorText = ref('')
-const displayScale = ref(0.96)
+const displayScale = ref(BASE_SCALE)
 
 let map: any = null
 let AMapRef: any = null
@@ -252,10 +253,6 @@ const routePath = computed(() =>
         decorativeCities.value.filter((city) => ['喀什', '成都', '西安', '北京', '厦门', '三亚'].includes(city.name)),
       ),
 )
-const showEmptyState = computed(
-  () => !props.pickerMode && !loading.value && !errorText.value && displayPoints.value.length === 0,
-)
-
 function projectPoint(longitude: number, latitude: number) {
   const normalizedX = (longitude - MAP_BOUNDS.minLng) / (MAP_BOUNDS.maxLng - MAP_BOUNDS.minLng)
   const normalizedY = (MAP_BOUNDS.maxLat - latitude) / (MAP_BOUNDS.maxLat - MAP_BOUNDS.minLat)
@@ -329,11 +326,15 @@ function getMarkerLabelOffset(point: ProjectedPoint) {
 }
 
 function zoomIn() {
-  displayScale.value = Math.min(1.1, Number((displayScale.value + 0.05).toFixed(2)))
+  displayScale.value = Math.min(MAX_SCALE, Number((displayScale.value + 0.05).toFixed(2)))
 }
 
 function zoomOut() {
-  displayScale.value = Math.max(0.86, Number((displayScale.value - 0.05).toFixed(2)))
+  displayScale.value = Math.max(MIN_SCALE, Number((displayScale.value - 0.05).toFixed(2)))
+}
+
+function resetZoom() {
+  displayScale.value = BASE_SCALE
 }
 
 async function initMap() {
@@ -467,7 +468,7 @@ onBeforeUnmount(() => {
   min-height: 472px;
   border-radius: 20px;
   overflow: hidden;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.46), rgba(255, 250, 251, 0.32));
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.18), rgba(255, 250, 251, 0.08));
 }
 
 .travel-map-shell.is-picker-mode {
@@ -486,13 +487,13 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 456px;
-  padding: 14px 16px 72px;
+  min-height: 500px;
+  padding: 8px 8px 76px;
 }
 
 .travel-map-board {
   position: relative;
-  width: 94%;
+  width: 98%;
   margin: 0 auto;
   transform-origin: center center;
   transition: transform 0.28s ease;
@@ -529,13 +530,14 @@ onBeforeUnmount(() => {
 .travel-map-route {
   fill: none;
   stroke: url(#routeLine);
-  stroke-width: 2.1;
+  stroke-width: 2.4;
   stroke-linecap: round;
-  stroke-dasharray: 5 8;
+  stroke-dasharray: 6 7;
+  opacity: 0.92;
 }
 
 .travel-map-city {
-  opacity: 0.5;
+  opacity: 0.42;
 }
 
 .travel-map-city__dot {
@@ -549,7 +551,7 @@ onBeforeUnmount(() => {
 }
 
 .travel-map-city__label {
-  fill: rgba(130, 104, 113, 0.72);
+  fill: rgba(119, 94, 103, 0.68);
   font-size: 11px;
   font-family:
     'Microsoft YaHei UI',
@@ -569,26 +571,23 @@ onBeforeUnmount(() => {
 }
 
 .travel-map-marker__ripple {
-  fill: rgba(255, 190, 211, 0.22);
+  fill: rgba(255, 167, 196, 0.2);
 }
 
-.travel-map-marker__outer {
-  fill: rgba(255, 245, 248, 0.94);
-  stroke: rgba(255, 182, 201, 0.86);
-  stroke-width: 2;
+.travel-map-marker__pin {
+  fill: rgba(255, 133, 175, 0.96);
+  stroke: rgba(255, 255, 255, 0.96);
+  stroke-width: 2.2;
+  filter: drop-shadow(0 10px 18px rgba(246, 136, 173, 0.24));
 }
 
-.travel-map-marker__inner {
-  fill: rgba(255, 166, 191, 0.98);
-}
-
-.travel-map-marker__petal {
-  fill: rgba(255, 236, 244, 0.95);
+.travel-map-marker__core {
+  fill: rgba(255, 255, 255, 0.98);
 }
 
 .travel-map-marker__label {
-  fill: #725560;
-  font-size: 13px;
+  fill: #6b4f59;
+  font-size: 12.5px;
   font-family:
     'Microsoft YaHei UI',
     'PingFang SC',
@@ -606,105 +605,96 @@ onBeforeUnmount(() => {
   text-anchor: end;
 }
 
-.travel-map-marker.is-active .travel-map-marker__outer {
-  fill: rgba(255, 245, 248, 0.98);
-  stroke: rgba(255, 126, 170, 0.92);
-}
-
-.travel-map-marker.is-active .travel-map-marker__inner {
-  fill: rgba(255, 117, 163, 0.98);
+.travel-map-marker.is-active .travel-map-marker__pin {
+  fill: rgba(255, 104, 156, 0.98);
+  stroke: rgba(255, 248, 251, 0.98);
+  filter: drop-shadow(0 14px 24px rgba(246, 112, 158, 0.36));
 }
 
 .travel-map-controls {
   position: absolute;
-  left: 18px;
-  bottom: 18px;
+  left: 12px;
+  bottom: 14px;
   z-index: 2;
   display: grid;
-  gap: 7px;
+  gap: 10px;
 }
 
 .travel-map-control {
-  width: 36px;
-  height: 36px;
-  border-radius: 12px;
-  border: 1px solid rgba(236, 221, 227, 0.92);
-  background: rgba(255, 255, 255, 0.96);
+  width: 42px;
+  height: 42px;
+  border-radius: 14px;
+  border: 1px solid rgba(238, 221, 227, 0.94);
+  background: rgba(255, 255, 255, 0.94);
   color: #765662;
-  font-size: 20px;
+  font-size: 22px;
   cursor: pointer;
-  box-shadow: 0 10px 20px rgba(208, 181, 190, 0.12);
+  box-shadow: 0 12px 24px rgba(208, 181, 190, 0.14);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.travel-map-control--reset {
+  font-size: 18px;
+}
+
+.travel-map-control:hover {
+  transform: translateY(-1px);
+  border-color: rgba(233, 180, 198, 0.96);
+  box-shadow: 0 14px 28px rgba(231, 177, 194, 0.18);
 }
 
 .travel-map-legend {
   position: absolute;
-  right: 18px;
-  bottom: 18px;
+  right: 8px;
+  bottom: 12px;
   z-index: 2;
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  min-height: 34px;
-  padding: 0 14px;
+  gap: 9px;
+  min-height: 38px;
+  padding: 0 16px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.9);
+  background: rgba(255, 255, 255, 0.92);
   border: 1px solid rgba(239, 223, 229, 0.92);
   color: #8d6a77;
-  font-size: 11px;
+  font-size: 12px;
+  box-shadow: 0 10px 20px rgba(217, 188, 197, 0.1);
 }
 
 .travel-map-legend__flower {
   width: 14px;
   height: 14px;
   border-radius: 999px;
-  background: radial-gradient(circle at center, #fff 0 20%, #ff8fb2 22% 56%, transparent 58%);
+  background: radial-gradient(
+    circle at center,
+    #fff 0%,
+    #fff 20%,
+    #ff8fb2 22%,
+    #ff8fb2 56%,
+    transparent 58%,
+    transparent 100%
+  );
   box-shadow: 0 0 0 4px rgba(255, 204, 220, 0.34);
 }
 
 .travel-map-haze {
   position: absolute;
   inset: 0 auto 0 0;
-  width: 160px;
+  width: 120px;
   pointer-events: none;
-  opacity: 0.4;
-  background: radial-gradient(circle at left center, rgba(255, 235, 241, 0.42), transparent 72%);
+  opacity: 0.26;
+  background: radial-gradient(circle at left center, rgba(255, 235, 241, 0.32), transparent 72%);
 }
 
 .travel-map-haze--right {
   inset: 0 0 0 auto;
-  background: radial-gradient(circle at right center, rgba(255, 235, 241, 0.36), transparent 72%);
+  background: radial-gradient(circle at right center, rgba(255, 235, 241, 0.26), transparent 72%);
 }
 
 .travel-map-petals {
   position: absolute;
   inset: 0;
   pointer-events: none;
-}
-
-.travel-map-empty-callout {
-  position: absolute;
-  right: 18px;
-  top: 18px;
-  z-index: 2;
-  display: grid;
-  gap: 4px;
-  max-width: 232px;
-  padding: 10px 12px;
-  border-radius: 18px;
-  background: rgba(255, 255, 255, 0.92);
-  border: 1px solid rgba(239, 223, 229, 0.92);
-  color: #815d69;
-  box-shadow: 0 12px 24px rgba(213, 183, 194, 0.12);
-
-  strong {
-    color: #5f424c;
-    font-size: 13px;
-  }
-
-  span {
-    font-size: 10px;
-    line-height: 1.65;
-  }
 }
 
 .petal {
@@ -717,22 +707,22 @@ onBeforeUnmount(() => {
 }
 
 .petal--one {
-  right: 52px;
-  bottom: 110px;
+  right: 44px;
+  bottom: 104px;
   transform: rotate(18deg);
 }
 
 .petal--two {
-  left: 74px;
-  bottom: 82px;
+  left: 58px;
+  bottom: 76px;
   width: 14px;
   height: 20px;
   transform: rotate(-28deg);
 }
 
 .petal--three {
-  right: 120px;
-  top: 46px;
+  right: 104px;
+  top: 58px;
   width: 12px;
   height: 18px;
   transform: rotate(32deg);
@@ -766,7 +756,7 @@ onBeforeUnmount(() => {
 @media (max-width: 768px) {
   .travel-map-stage {
     min-height: 420px;
-    padding: 18px 16px 74px;
+    padding: 10px 0 74px;
   }
 
   .travel-map-board {
@@ -774,7 +764,7 @@ onBeforeUnmount(() => {
   }
 
   .travel-map-controls {
-    left: 18px;
+    left: 10px;
     bottom: 22px;
   }
 
@@ -786,12 +776,6 @@ onBeforeUnmount(() => {
     font-size: 12px;
   }
 
-  .travel-map-empty-callout {
-    left: 18px;
-    right: 18px;
-    top: 18px;
-    max-width: none;
-  }
 }
 </style>
 
