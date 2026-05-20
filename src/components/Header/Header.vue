@@ -11,10 +11,10 @@
         <nav class="nav-menu" v-if="!isMobile">
           <router-link
             v-for="item in navItems"
-            :key="item.path"
-            :to="item.path"
+            :key="item.key"
+            :to="item.to"
             class="nav-item"
-            :class="{ 'is-active': $route.path === item.path }"
+            :class="{ 'is-active': isNavItemActive(item) }"
           >
             <el-icon class="nav-icon">
               <component :is="item.icon" />
@@ -97,8 +97,8 @@
       <div class="mobile-menu-content">
         <router-link
           v-for="item in navItems"
-          :key="item.path"
-          :to="item.path"
+          :key="item.key"
+          :to="item.to"
           class="mobile-nav-item"
           @click="closeMobileMenu"
         >
@@ -177,7 +177,8 @@
 
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, computed, watch } from 'vue';
-import { useRouter } from 'vue-router';
+import type { RouteLocationRaw } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import {
   HomeFilled,
@@ -194,17 +195,20 @@ import {
   SwitchButton,
   Setting,
   Place,
+  Postcard,
 } from '@element-plus/icons-vue';
 import { useUserStore } from '@/stores/user';
 import { storeToRefs } from 'pinia';
 import { logout as logoutApi } from '@/api/auth';
 import { useSiteConfig } from '@/composables/useSiteConfig';
-import { getTrustLevelLabel, isAdminUser, isFriendUser } from '@/utils/permission';
+import { getTrustLevelLabel, isAdminUser } from '@/utils/permission';
 import { resolveSiteLogo, resolveSiteName } from '@/utils/siteConfig';
 import { useLayoutMobile } from '@/composables/useLayoutMobile';
 
 const router = useRouter();
+const route = useRoute();
 const userStore = useUserStore();
+userStore.initUser();
 const { isLoggedIn, user } = storeToRefs(userStore);
 const { siteConfig, loadSiteConfig } = useSiteConfig();
 const siteName = computed(() => resolveSiteName(siteConfig.value));
@@ -216,7 +220,6 @@ const roleText = computed(() => getTrustLevelLabel(user.value));
 // 是否为管理员
 const isAdmin = computed(() => isAdminUser(user.value));
 
-const canViewMemoryMap = computed(() => isFriendUser(user.value));
 
 // 是否可以创建文章（仅管理员）
 const canCreateArticle = computed(() => {
@@ -224,24 +227,48 @@ const canCreateArticle = computed(() => {
   return isAdminUser(user.value);
 });
 
+interface NavItem {
+  key: string;
+  name: string;
+  path: string;
+  to: RouteLocationRaw;
+  icon: object;
+  activeWhen?: (currentPath: string, currentTab?: string | null) => boolean;
+}
+
 // 导航项
-const navItems = computed(() => {
-  const items = [
-    { name: '首页', path: '/', icon: HomeFilled },
-    { name: '分类', path: '/category', icon: List },
-    { name: '时光轴', path: '/archive', icon: Folder },
-  ];
+const navItems = computed<NavItem[]>(() => [
+  { key: 'home', name: '首页', path: '/', to: '/', icon: HomeFilled },
+  { key: 'category', name: '分类', path: '/category', to: '/category', icon: List },
+  { key: 'archive', name: '时光轴', path: '/archive', to: '/archive', icon: Folder },
+  { key: 'memory-map', name: '旅行地图', path: '/memory-map', to: '/memory-map', icon: Place },
+  {
+    key: 'trust-request',
+    name: '受信申请',
+    path: '/trust-request',
+    to: '/trust-request',
+    icon: Postcard,
+    activeWhen: (currentPath: string, currentTab?: string | null) =>
+      currentPath === '/trust-request' || (currentPath === '/profile' && currentTab === 'trust'),
+  },
+  { key: 'guestbook', name: '留言板', path: '/guestbook', to: '/guestbook', icon: ChatDotRound },
+  { key: 'about', name: '关于', path: '/about', to: '/about', icon: InfoFilled },
+]);
 
-  if (canViewMemoryMap.value) {
-    items.push({ name: '旅行地图', path: '/memory-map', icon: Place });
-  }
-
-  items.push(
-    { name: '留言板', path: '/guestbook', icon: ChatDotRound },
-    { name: '关于', path: '/about', icon: InfoFilled },
-  );
-  return items;
+const currentRouteTab = computed(() => {
+  const value = route.query.tab;
+  return typeof value === 'string' ? value : null;
 });
+
+function isNavItemActive(item: {
+  path: string;
+  activeWhen?: (currentPath: string, currentTab?: string | null) => boolean;
+}) {
+  if (item.activeWhen) {
+    return item.activeWhen(route.path, currentRouteTab.value);
+  }
+  return route.path === item.path;
+}
 
 // 滚动相关
 const isScrolled = ref(false);
@@ -259,7 +286,6 @@ const { isMobile } = useLayoutMobile();
 
 onMounted(() => {
   window.addEventListener('scroll', handleScroll);
-  userStore.initUser();
   void loadSiteConfig();
 });
 

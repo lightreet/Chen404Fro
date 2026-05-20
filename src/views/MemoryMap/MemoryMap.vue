@@ -14,227 +14,235 @@
     </template>
 
     <div class="memory-map-page">
-      <section class="memory-spread">
-        <div class="memory-spread__spine" aria-hidden="true">
-          <span v-for="ring in 7" :key="ring" class="memory-spread__ring" />
-        </div>
+      <FeatureAccessCover
+        v-if="!canViewContent"
+        v-bind="memoryMapCover"
+        :icon="Location"
+      />
 
-        <article class="memory-spread__page memory-spread__page--map">
-          <div class="spread-map-card">
-            <div class="spread-map-card__hero">
-              <div class="spread-heading">
-                <div class="spread-heading__copy">
-                  <span class="eyebrow">Memory Map</span>
-                  <div class="spread-heading__title">
-                    <h2>旅行足迹</h2>
-                    <span class="spread-heading__flower">✿</span>
+      <template v-else>
+        <section class="memory-spread">
+          <div class="memory-spread__spine" aria-hidden="true">
+            <span v-for="ring in 7" :key="ring" class="memory-spread__ring" />
+          </div>
+
+          <article class="memory-spread__page memory-spread__page--map">
+            <div class="spread-map-card">
+              <div class="spread-map-card__hero">
+                <div class="spread-heading">
+                  <div class="spread-heading__copy">
+                    <span class="eyebrow">Memory Map</span>
+                    <div class="spread-heading__title">
+                      <h2>旅行足迹</h2>
+                      <span class="spread-heading__flower">✿</span>
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              <div class="spread-badge">
-                <span class="spread-badge__label">当前地点</span>
-                <div class="spread-badge__body">
-                  <el-icon><Location /></el-icon>
-                  <strong>{{ currentLocationName }}</strong>
-                </div>
-              </div>
-            </div>
-
-            <TravelMemoryMap
-              :locations="locations"
-              :active-id="activeId"
-              @select="handleSelectLocation"
-            />
-
-            <div v-if="canManage" class="spread-map-actions">
-              <el-button type="primary" plain class="journal-action journal-action--primary map-action" @click="openCreateDialog">
-                <span class="map-action__lead">
-                  <el-icon><Location /></el-icon>
-                  <span>新增旅游地点</span>
-                </span>
-                <span class="map-action__arrow" aria-hidden="true">→</span>
-              </el-button>
-            </div>
-          </div>
-        </article>
-
-        <aside class="memory-spread__page memory-spread__page--detail">
-          <div v-if="loadingDetail" class="journal-state">地点详情加载中...</div>
-          <template v-else-if="activeDetail">
-            <div class="travel-journal">
-              <div class="travel-journal__head">
-                <div class="travel-journal__copy">
-                  <span class="eyebrow">Travel Detail</span>
-                <div class="travel-journal__headline">
-                  <span class="travel-journal__flower">✿</span>
-                  <h2>{{ journalTitle }}</h2>
-                </div>
-                <div class="travel-journal__facts">
-                  <span v-if="journalLocationText" class="travel-journal__fact travel-journal__fact--location">
+                <div class="spread-badge">
+                  <span class="spread-badge__label">当前地点</span>
+                  <div class="spread-badge__body">
                     <el-icon><Location /></el-icon>
-                    <span>{{ journalLocationText }}</span>
+                    <strong>{{ currentLocationName }}</strong>
+                  </div>
+                </div>
+              </div>
+
+              <TravelMemoryMap
+                :locations="locations"
+                :active-id="activeId"
+                @select="handleSelectLocation"
+              />
+
+              <div v-if="canManage" class="spread-map-actions">
+                <el-button type="primary" plain class="journal-action journal-action--primary map-action" @click="openCreateDialog">
+                  <span class="map-action__lead">
+                    <el-icon><Location /></el-icon>
+                    <span>新增旅游地点</span>
                   </span>
-                  <span v-if="journalDateRange" class="travel-journal__fact travel-journal__fact--date">
-                    <el-icon><Calendar /></el-icon>
-                    <span>{{ journalDateRange }}</span>
-                  </span>
-                </div>
-              </div>
-
-                <div class="travel-journal__stamp">
-                  <span>旅途邮戳</span>
-                  <strong>{{ journalStampLabel }}</strong>
-                </div>
-              </div>
-
-              <div class="travel-journal__cover">
-                <img class="travel-journal__tape" :src="tapeCornerAsset" alt="" aria-hidden="true" />
-                <img
-                  v-if="coverEntry?.imageUrl"
-                  :src="coverEntry.imageUrl"
-                  :alt="coverEntry.remark || activeDetail.title"
-                />
-                <div v-else class="travel-journal__cover-empty">等待封面图片</div>
-              </div>
-
-              <div class="travel-journal__entries">
-                <article
-                  v-for="entry in noteEntries"
-                  :key="entry.id || entry.imageUrl"
-                  class="journal-note"
-                >
-                  <div class="journal-note__thumb">
-                    <img :src="entry.imageUrl" :alt="entry.remark || activeDetail.title" />
-                  </div>
-                  <div class="journal-note__body">
-                    <h4>{{ entry.remark || '旅途碎片' }}</h4>
-                    <p>{{ entry.thanksNote || '把这一刻写进记忆里，留给未来再次翻阅。' }}</p>
-                    <span>{{ formatDate(entry.shotAt) || '留白的一天' }}</span>
-                  </div>
-                </article>
-              </div>
-
-              <div class="travel-journal__quote">
-                <span class="travel-journal__quote-mark">❝</span>
-                <p>{{ journalQuote }}</p>
-              </div>
-
-              <div v-if="canManage" class="travel-journal__actions travel-journal__actions--note">
-                <el-button plain class="journal-action journal-action--note-edit" @click="openCurrentEditDialog">
-                  <el-icon><EditPen /></el-icon>
-                  编辑该游记
+                  <span class="map-action__arrow" aria-hidden="true">→</span>
                 </el-button>
-                <el-button class="journal-action journal-action--note-danger" @click="deleteCurrentLocation">
-                  <el-icon><Delete /></el-icon>
-                  删除该游记
-                </el-button>
-              </div>
-            </div>
-          </template>
-          <template v-else>
-            <div class="travel-journal travel-journal--empty">
-              <div class="travel-journal__head">
-                <div class="travel-journal__copy">
-                  <span class="eyebrow">Travel Detail</span>
-                  <div class="travel-journal__headline">
-                    <span class="travel-journal__flower">✿</span>
-                    <h2>等待旅程开始</h2>
-                  </div>
-                </div>
-
-                <div class="travel-journal__stamp travel-journal__stamp--placeholder">
-                  Waiting
-                  <strong>Stamp</strong>
-                </div>
-              </div>
-
-              <div class="travel-journal__cover travel-journal__cover--placeholder">
-                <img class="travel-journal__tape" :src="tapeCornerAsset" alt="" aria-hidden="true" />
-                <div class="travel-journal__cover-empty">Your First Journey</div>
-              </div>
-
-              <div class="travel-journal__entries travel-journal__entries--placeholder">
-                <article
-                  v-for="card in placeholderNotes"
-                  :key="card.title"
-                  class="journal-note journal-note--placeholder"
-                >
-                  <div class="journal-note__thumb journal-note__thumb--placeholder" />
-                  <div class="journal-note__body">
-                    <h4>{{ card.title }}</h4>
-                    <p>{{ card.copy }}</p>
-                    <span>{{ card.date }}</span>
-                  </div>
-                </article>
-              </div>
-            </div>
-          </template>
-        </aside>
-      </section>
-
-      <section id="memory-gallery" class="memory-panel memory-panel--gallery">
-        <div class="panel-heading panel-heading--gallery">
-          <div class="panel-heading__copy">
-            <span class="eyebrow">Travel Gallery</span>
-            <div class="panel-heading__title">
-              <h2>旅行胶片</h2>
-            </div>
-          </div>
-          <div class="panel-caption">
-            <span>{{ locations.length }} 个地点 · {{ totalPhotoCount }} 张照片</span>
-          </div>
-        </div>
-
-        <div v-if="loading" class="gallery-state">地点加载中...</div>
-        <div v-else-if="!locations.length" class="gallery-track gallery-track--placeholder">
-          <article
-            v-for="card in placeholderFilmCards"
-            :key="card.title"
-            class="gallery-card gallery-card--placeholder"
-          >
-            <div class="gallery-card__cover gallery-card__cover--placeholder">
-              <span>{{ card.label }}</span>
-            </div>
-            <div class="gallery-card__body">
-              <h3>{{ card.title }}</h3>
-              <div class="gallery-card__meta">
-                <span>{{ card.copy }}</span>
-                <strong>{{ card.meta }}</strong>
               </div>
             </div>
           </article>
-        </div>
-        <div v-else class="gallery-grid">
-          <button
-            v-for="location in visibleGalleryLocations"
-            :key="location.id"
-            type="button"
-            class="gallery-card"
-            :class="{ 'is-active': activeId === location.id }"
-            @click="openTravelDetail(location.id)"
-          >
-            <div class="gallery-card__cover">
-              <img v-if="location.coverImage" :src="location.coverImage" :alt="location.title" />
-              <div v-else class="gallery-card__cover-empty">TRAVEL</div>
-            </div>
-            <div class="gallery-card__body">
-              <h3>{{ location.title }}</h3>
-              <div class="gallery-card__meta">
-                <span>{{ location.city || location.province || '未标注城市' }}</span>
-                <strong>{{ location.entryCount || 0 }} 张照片</strong>
+
+          <aside class="memory-spread__page memory-spread__page--detail">
+            <div v-if="loadingDetail" class="journal-state">地点详情加载中...</div>
+            <template v-else-if="activeDetail">
+              <div class="travel-journal">
+                <div class="travel-journal__head">
+                  <div class="travel-journal__copy">
+                    <span class="eyebrow">Travel Detail</span>
+                  <div class="travel-journal__headline">
+                    <span class="travel-journal__flower">✿</span>
+                    <h2>{{ journalTitle }}</h2>
+                  </div>
+                  <div class="travel-journal__facts">
+                    <span v-if="journalLocationText" class="travel-journal__fact travel-journal__fact--location">
+                      <el-icon><Location /></el-icon>
+                      <span>{{ journalLocationText }}</span>
+                    </span>
+                    <span v-if="journalDateRange" class="travel-journal__fact travel-journal__fact--date">
+                      <el-icon><Calendar /></el-icon>
+                      <span>{{ journalDateRange }}</span>
+                    </span>
+                  </div>
+                </div>
+
+                  <div class="travel-journal__stamp">
+                    <span>旅途邮戳</span>
+                    <strong>{{ journalStampLabel }}</strong>
+                  </div>
+                </div>
+
+                <div class="travel-journal__cover">
+                  <img class="travel-journal__tape" :src="tapeCornerAsset" alt="" aria-hidden="true" />
+                  <img
+                    v-if="coverEntry?.imageUrl"
+                    :src="coverEntry.imageUrl"
+                    :alt="coverEntry.remark || activeDetail.title"
+                  />
+                  <div v-else class="travel-journal__cover-empty">等待封面图片</div>
+                </div>
+
+                <div class="travel-journal__entries">
+                  <article
+                    v-for="entry in noteEntries"
+                    :key="entry.id || entry.imageUrl"
+                    class="journal-note"
+                  >
+                    <div class="journal-note__thumb">
+                      <img :src="entry.imageUrl" :alt="entry.remark || activeDetail.title" />
+                    </div>
+                    <div class="journal-note__body">
+                      <h4>{{ entry.remark || '旅途碎片' }}</h4>
+                      <p>{{ entry.thanksNote || '把这一刻写进记忆里，留给未来再次翻阅。' }}</p>
+                      <span>{{ formatDate(entry.shotAt) || '留白的一天' }}</span>
+                    </div>
+                  </article>
+                </div>
+
+                <div class="travel-journal__quote">
+                  <span class="travel-journal__quote-mark">❝</span>
+                  <p>{{ journalQuote }}</p>
+                </div>
+
+                <div v-if="canManage" class="travel-journal__actions travel-journal__actions--note">
+                  <el-button plain class="journal-action journal-action--note-edit" @click="openCurrentEditDialog">
+                    <el-icon><EditPen /></el-icon>
+                    编辑该游记
+                  </el-button>
+                  <el-button class="journal-action journal-action--note-danger" @click="deleteCurrentLocation">
+                    <el-icon><Delete /></el-icon>
+                    删除该游记
+                  </el-button>
+                </div>
+              </div>
+            </template>
+            <template v-else>
+              <div class="travel-journal travel-journal--empty">
+                <div class="travel-journal__head">
+                  <div class="travel-journal__copy">
+                    <span class="eyebrow">Travel Detail</span>
+                    <div class="travel-journal__headline">
+                      <span class="travel-journal__flower">✿</span>
+                      <h2>等待旅程开始</h2>
+                    </div>
+                  </div>
+
+                  <div class="travel-journal__stamp travel-journal__stamp--placeholder">
+                    Waiting
+                    <strong>Stamp</strong>
+                  </div>
+                </div>
+
+                <div class="travel-journal__cover travel-journal__cover--placeholder">
+                  <img class="travel-journal__tape" :src="tapeCornerAsset" alt="" aria-hidden="true" />
+                  <div class="travel-journal__cover-empty">Your First Journey</div>
+                </div>
+
+                <div class="travel-journal__entries travel-journal__entries--placeholder">
+                  <article
+                    v-for="card in placeholderNotes"
+                    :key="card.title"
+                    class="journal-note journal-note--placeholder"
+                  >
+                    <div class="journal-note__thumb journal-note__thumb--placeholder" />
+                    <div class="journal-note__body">
+                      <h4>{{ card.title }}</h4>
+                      <p>{{ card.copy }}</p>
+                      <span>{{ card.date }}</span>
+                    </div>
+                  </article>
+                </div>
+              </div>
+            </template>
+          </aside>
+        </section>
+
+        <section id="memory-gallery" class="memory-panel memory-panel--gallery">
+          <div class="panel-heading panel-heading--gallery">
+            <div class="panel-heading__copy">
+              <span class="eyebrow">Travel Gallery</span>
+              <div class="panel-heading__title">
+                <h2>旅行胶片</h2>
               </div>
             </div>
-          </button>
-        </div>
+            <div class="panel-caption">
+              <span>{{ locations.length }} 个地点 · {{ totalPhotoCount }} 张照片</span>
+            </div>
+          </div>
 
-        <div v-if="canLoadMoreGallery" class="gallery-load-more">
-          <el-button plain class="gallery-load-more__button" @click="loadMoreGallery">
-            加载更多
-            <span class="gallery-load-more__count">剩余 {{ remainingGalleryCount }} 个地点</span>
-          </el-button>
-        </div>
-      </section>
+          <div v-if="loading" class="gallery-state">地点加载中...</div>
+          <div v-else-if="!locations.length" class="gallery-track gallery-track--placeholder">
+            <article
+              v-for="card in placeholderFilmCards"
+              :key="card.title"
+              class="gallery-card gallery-card--placeholder"
+            >
+              <div class="gallery-card__cover gallery-card__cover--placeholder">
+                <span>{{ card.label }}</span>
+              </div>
+              <div class="gallery-card__body">
+                <h3>{{ card.title }}</h3>
+                <div class="gallery-card__meta">
+                  <span>{{ card.copy }}</span>
+                  <strong>{{ card.meta }}</strong>
+                </div>
+              </div>
+            </article>
+          </div>
+          <div v-else class="gallery-grid">
+            <button
+              v-for="location in visibleGalleryLocations"
+              :key="location.id"
+              type="button"
+              class="gallery-card"
+              :class="{ 'is-active': activeId === location.id }"
+              @click="openTravelDetail(location.id)"
+            >
+              <div class="gallery-card__cover">
+                <img v-if="location.coverImage" :src="location.coverImage" :alt="location.title" />
+                <div v-else class="gallery-card__cover-empty">TRAVEL</div>
+              </div>
+              <div class="gallery-card__body">
+                <h3>{{ location.title }}</h3>
+                <div class="gallery-card__meta">
+                  <span>{{ location.city || location.province || '未标注城市' }}</span>
+                  <strong>{{ location.entryCount || 0 }} 张照片</strong>
+                </div>
+              </div>
+            </button>
+          </div>
+
+          <div v-if="canLoadMoreGallery" class="gallery-load-more">
+            <el-button plain class="gallery-load-more__button" @click="loadMoreGallery">
+              加载更多
+              <span class="gallery-load-more__count">剩余 {{ remainingGalleryCount }} 个地点</span>
+            </el-button>
+          </div>
+        </section>
+      </template>
     </div>
   </DefaultLayout>
 </template>
@@ -248,28 +256,27 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { Calendar, Delete, EditPen, Location } from '@element-plus/icons-vue'
 import DefaultLayout from '@/layouts/DefaultLayout.vue'
 import PageHero from '@/components/PageHero/PageHero.vue'
+import FeatureAccessCover from '@/components/FeatureAccessCover.vue'
 import TravelMemoryMap from '@/components/TravelMemoryMap/TravelMemoryMap.vue'
 import { deleteTravelMemory, getTravelMemories, getTravelMemoryDetail } from '@/api/travel-memory'
 import { useSiteConfig } from '@/composables/useSiteConfig'
+import { buildMemoryMapCoverConfig, resolveFeatureHero } from '@/modules/feature-access/constants'
 import { useUserStore } from '@/stores/user'
 import type { TravelMemoryEntry, TravelMemoryLocationDetail, TravelMemoryLocationListItem } from '@/types'
-import { isAdminUser } from '@/utils/permission'
-import { resolveHeroImage, resolveHeroImagePosition } from '@/utils/siteConfig'
+import { isAdminUser, isFriendUser } from '@/utils/permission'
 import tapeCornerAsset from '@/assets/memory-map/tape-corner.svg'
 
-const DEFAULT_HERO =
-  'https://images.unsplash.com/photo-1528127269322-539801943592?w=1920&q=80'
-const DEFAULT_HERO_POSITION = '50% 56%'
 const INITIAL_GALLERY_VISIBLE_COUNT = 4
 const GALLERY_LOAD_MORE_STEP = 5
 
 const { siteConfig, loadSiteConfig } = useSiteConfig()
 const userStore = useUserStore()
-const { user } = storeToRefs(userStore)
+const { isLoggedIn, user } = storeToRefs(userStore)
 const router = useRouter()
 
-const heroBgImage = ref(DEFAULT_HERO)
-const heroBgPosition = ref(DEFAULT_HERO_POSITION)
+const defaultHero = resolveFeatureHero(null, 'memory-map')
+const heroBgImage = ref(defaultHero.bgImage)
+const heroBgPosition = ref(defaultHero.bgPosition)
 const loading = ref(false)
 const loadingDetail = ref(false)
 const locations = ref<TravelMemoryLocationListItem[]>([])
@@ -278,6 +285,8 @@ const activeId = ref<number | null>(null)
 const activeDetail = ref<TravelMemoryLocationDetail | null>(null)
 const detailCache = ref<Record<number, TravelMemoryLocationDetail>>({})
 const canManage = computed(() => isAdminUser(user.value))
+const canViewContent = computed(() => isFriendUser(user.value))
+const memoryMapCover = computed(() => buildMemoryMapCoverConfig(isLoggedIn.value))
 const coverEntry = computed<TravelMemoryEntry | null>(() => {
   const entries = activeDetail.value?.entries || []
   return entries.find((entry) => entry.cover) || entries[0] || null
@@ -489,10 +498,18 @@ function resolveDefaultLocationId(
 }
 
 onMounted(async () => {
-  await loadSiteConfig().catch(() => null)
-  heroBgImage.value = resolveHeroImage(siteConfig.value, 'memory-map', DEFAULT_HERO)
-  heroBgPosition.value = resolveHeroImagePosition(siteConfig.value, 'memory-map', DEFAULT_HERO_POSITION)
-  await loadMemories()
+  await Promise.all([
+    userStore.syncAuthState().catch(() => false),
+    loadSiteConfig().catch(() => null),
+  ])
+
+  const hero = resolveFeatureHero(siteConfig.value, 'memory-map')
+  heroBgImage.value = hero.bgImage
+  heroBgPosition.value = hero.bgPosition
+
+  if (canViewContent.value) {
+    await loadMemories()
+  }
 })
 </script>
 

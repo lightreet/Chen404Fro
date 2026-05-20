@@ -52,8 +52,6 @@ const routes: RouteRecordRaw[] = [
     component: () => import('@/views/MemoryMap/MemoryMap.vue'),
     meta: {
       title: '旅行地图',
-      requiresAuth: true,
-      requiresFriend: true,
     },
   },
   {
@@ -160,6 +158,14 @@ const routes: RouteRecordRaw[] = [
     meta: {
       title: '注册',
       guest: true,
+    },
+  },
+  {
+    path: '/trust-request',
+    name: 'TrustRequest',
+    component: () => import('@/views/TrustRequest/TrustRequest.vue'),
+    meta: {
+      title: '受信申请',
     },
   },
   {

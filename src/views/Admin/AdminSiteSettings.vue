@@ -326,11 +326,12 @@ import { useSiteConfig } from '@/composables/useSiteConfig';
 import type { SiteConfig } from '@/types';
 import { DEFAULT_IMAGE_MAX_MB, validateImageFile } from '@/utils/validation';
 
-type HeroKey = 'home' | 'archive' | 'memory-map' | 'category' | 'tag' | 'about' | 'guestbook';
+type HeroKey = 'home' | 'archive' | 'memory-map' | 'trust-request' | 'category' | 'tag' | 'about' | 'guestbook';
 type AssetKey = 'siteLogo' | 'siteFavicon';
 type UploadingKey = HeroKey | AssetKey | '';
 
 const heroPages: Array<{ key: HeroKey; label: string; desc: string }> = [
+  { key: 'trust-request', label: '受信申请', desc: '受信申请页面顶部封面' },
   { key: 'home', label: '首页', desc: '首页主视觉封面' },
   { key: 'archive', label: '时光轴', desc: '时光轴页面顶部封面' },
   { key: 'memory-map', label: '旅行地图', desc: '旅行纪念地图页面顶部封面' },
@@ -343,6 +344,7 @@ const HERO_DEFAULT_POSITIONS: Record<HeroKey, string> = {
   home: '50% 58%',
   archive: '50% 44%',
   'memory-map': '50% 48%',
+  'trust-request': '50% 48%',
   category: '50% 40%',
   tag: '50% 38%',
   about: '50% 42%',
@@ -377,6 +379,7 @@ const heroImages = reactive<Record<HeroKey, string>>({
   home: '',
   archive: '',
   'memory-map': '',
+  'trust-request': '',
   category: '',
   tag: '',
   about: '',
@@ -386,6 +389,7 @@ const heroImagePositions = reactive<Record<HeroKey, string>>({
   home: HERO_DEFAULT_POSITIONS.home,
   archive: HERO_DEFAULT_POSITIONS.archive,
   'memory-map': HERO_DEFAULT_POSITIONS['memory-map'],
+  'trust-request': HERO_DEFAULT_POSITIONS['trust-request'],
   category: HERO_DEFAULT_POSITIONS.category,
   tag: HERO_DEFAULT_POSITIONS.tag,
   about: HERO_DEFAULT_POSITIONS.about,
@@ -418,6 +422,7 @@ function applyConfig(config: SiteConfig) {
   heroImages.home = config.heroImages?.home ?? '';
   heroImages.archive = config.heroImages?.archive ?? '';
   heroImages['memory-map'] = config.heroImages?.['memory-map'] ?? '';
+  heroImages['trust-request'] = config.heroImages?.['trust-request'] ?? '';
   heroImages.category = config.heroImages?.category ?? '';
   heroImages.tag = config.heroImages?.tag ?? '';
   heroImages.about = config.heroImages?.about ?? '';
@@ -427,6 +432,8 @@ function applyConfig(config: SiteConfig) {
   heroImagePositions.archive = config.heroImagePositions?.archive ?? HERO_DEFAULT_POSITIONS.archive;
   heroImagePositions['memory-map'] =
     config.heroImagePositions?.['memory-map'] ?? HERO_DEFAULT_POSITIONS['memory-map'];
+  heroImagePositions['trust-request'] =
+    config.heroImagePositions?.['trust-request'] ?? HERO_DEFAULT_POSITIONS['trust-request'];
   heroImagePositions.category = config.heroImagePositions?.category ?? HERO_DEFAULT_POSITIONS.category;
   heroImagePositions.tag = config.heroImagePositions?.tag ?? HERO_DEFAULT_POSITIONS.tag;
   heroImagePositions.about = config.heroImagePositions?.about ?? HERO_DEFAULT_POSITIONS.about;
@@ -452,6 +459,7 @@ function toPayload(): SiteConfig {
       home: heroImages.home.trim(),
       archive: heroImages.archive.trim(),
       'memory-map': heroImages['memory-map'].trim(),
+      'trust-request': heroImages['trust-request'].trim(),
       category: heroImages.category.trim(),
       tag: heroImages.tag.trim(),
       about: heroImages.about.trim(),
@@ -461,6 +469,7 @@ function toPayload(): SiteConfig {
       home: heroImagePositions.home.trim(),
       archive: heroImagePositions.archive.trim(),
       'memory-map': heroImagePositions['memory-map'].trim(),
+      'trust-request': heroImagePositions['trust-request'].trim(),
       category: heroImagePositions.category.trim(),
       tag: heroImagePositions.tag.trim(),
       about: heroImagePositions.about.trim(),
