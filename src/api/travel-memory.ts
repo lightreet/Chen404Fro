@@ -18,6 +18,10 @@ export function getAdminTravelMemories(): Promise<TravelMemoryLocationDetail[]> 
   return get('/admin/travel-memories')
 }
 
+export function getAdminTravelMemoryDetail(id: number | string): Promise<TravelMemoryLocationDetail> {
+  return get(`/admin/travel-memories/${String(id)}`)
+}
+
 export function createTravelMemory(data: CreateTravelMemoryCommand): Promise<TravelMemoryLocationDetail> {
   return post('/admin/travel-memories', data)
 }

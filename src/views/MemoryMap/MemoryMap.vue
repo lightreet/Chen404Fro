@@ -4,25 +4,16 @@
       <PageHero
         title="旅行纪念地图"
         eyebrow="Memory Map"
+        subtitle="把途经的城市、光影与心情，整理成一张可以慢慢翻阅的旅行地图。"
         :bg-image="heroBgImage"
         :bg-position="heroBgPosition"
-        min-height="52vh"
-        :overlay-opacity="0.56"
+        min-height="70vh"
+        :overlay-opacity="0.5"
         compact
       />
     </template>
 
     <div class="memory-map-page">
-      <TravelMemoryManager
-        v-if="canManage"
-        ref="managerRef"
-        :selected-id="activeId"
-        :active-location="activeDetail"
-        :show-toolbar="false"
-        @changed="handleManagerChanged"
-        @focus="handleSelectLocation"
-      />
-
       <section class="memory-spread">
         <div class="memory-spread__spine" aria-hidden="true">
           <span v-for="ring in 7" :key="ring" class="memory-spread__ring" />
@@ -253,13 +244,12 @@ import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import dayjs from 'dayjs'
 import { storeToRefs } from 'pinia'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { Calendar, Delete, EditPen, Location } from '@element-plus/icons-vue'
-import TravelMemoryManager from '@/components/TravelMemoryManager/TravelMemoryManager.vue'
 import DefaultLayout from '@/layouts/DefaultLayout.vue'
 import PageHero from '@/components/PageHero/PageHero.vue'
 import TravelMemoryMap from '@/components/TravelMemoryMap/TravelMemoryMap.vue'
-import { getTravelMemories, getTravelMemoryDetail } from '@/api/travel-memory'
+import { deleteTravelMemory, getTravelMemories, getTravelMemoryDetail } from '@/api/travel-memory'
 import { useSiteConfig } from '@/composables/useSiteConfig'
 import { useUserStore } from '@/stores/user'
 import type { TravelMemoryEntry, TravelMemoryLocationDetail, TravelMemoryLocationListItem } from '@/types'
@@ -277,11 +267,6 @@ const { siteConfig, loadSiteConfig } = useSiteConfig()
 const userStore = useUserStore()
 const { user } = storeToRefs(userStore)
 const router = useRouter()
-
-const managerRef = ref<{
-  confirmDelete: (row: TravelMemoryLocationDetail) => void
-  openEditDialog: (row: TravelMemoryLocationDetail) => void
-} | null>(null)
 
 const heroBgImage = ref(DEFAULT_HERO)
 const heroBgPosition = ref(DEFAULT_HERO_POSITION)
@@ -423,29 +408,45 @@ async function handleSelectLocation(id: number) {
   }
 }
 
-async function handleManagerChanged(payload: { selectedId?: number | null }) {
-  detailCache.value = {}
-  await loadMemories(payload.selectedId ?? null)
-}
-
 function openCurrentEditDialog() {
   if (!activeDetail.value) {
     ElMessage.info('先选择一个地点，再进行编辑。')
     return
   }
-  managerRef.value?.openEditDialog(activeDetail.value)
+  router.push({ name: 'TravelMemoryEdit', params: { id: activeDetail.value.id } })
 }
 
 function openCreateDialog() {
   router.push({ name: 'TravelMemoryCreate' })
 }
 
-function deleteCurrentLocation() {
+async function deleteCurrentLocation() {
   if (!activeDetail.value) {
     ElMessage.info('先选择一个地点，再进行删除。')
     return
   }
-  managerRef.value?.confirmDelete(activeDetail.value)
+
+  const target = activeDetail.value
+  try {
+    await ElMessageBox.confirm(
+      `确定要删除“${target.title}”吗？删除后将无法恢复。`,
+      '删除旅行地点',
+      {
+        confirmButtonText: '删除',
+        cancelButtonText: '取消',
+        type: 'warning',
+      },
+    )
+    await deleteTravelMemory(target.id)
+    ElMessage.success('地点已删除')
+    detailCache.value = {}
+    await loadMemories()
+  } catch (error) {
+    if (error === 'cancel' || error === 'close') {
+      return
+    }
+    ElMessage.error('删除地点失败')
+  }
 }
 
 function formatDate(value?: string) {
@@ -484,11 +485,7 @@ function resolveDefaultLocationId(
     return currentId
   }
 
-  const latestVisited = [...list]
-    .filter((item) => item.visitedAt)
-    .sort((left, right) => dayjs(right.visitedAt).valueOf() - dayjs(left.visitedAt).valueOf())[0]
-
-  return latestVisited?.id ?? list[0]?.id ?? null
+  return list[0]?.id ?? null
 }
 
 onMounted(async () => {

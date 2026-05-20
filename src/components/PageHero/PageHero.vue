@@ -460,8 +460,8 @@ function normalizeMinHeight(value: string) {
 }
 
 .page-hero__fog {
-  bottom: calc(var(--page-hero-wave-height) - 34px);
-  height: 148px;
+  bottom: calc(var(--page-hero-wave-height) - 106px);
+  height: 92px;
   background: linear-gradient(
     to bottom,
     rgba(255, 248, 250, 0) 0%,
@@ -637,8 +637,8 @@ function normalizeMinHeight(value: string) {
   }
 
   .page-hero__fog {
-    bottom: calc(var(--page-hero-wave-height) - 18px);
-    height: 96px;
+    bottom: calc(var(--page-hero-wave-height) - 58px);
+    height: 64px;
     filter: blur(10px);
   }
 

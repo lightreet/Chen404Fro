@@ -310,8 +310,8 @@ import DefaultLayout from '@/layouts/DefaultLayout.vue'
 import TravelMemoryMap from '@/components/TravelMemoryMap/TravelMemoryMap.vue'
 import {
   createTravelMemory,
+  getAdminTravelMemoryDetail,
   getAdminTravelMemories,
-  getTravelMemoryDetail,
   updateTravelMemory,
 } from '@/api/travel-memory'
 import { uploadTravelMemoryImage } from '@/api/upload'
@@ -462,7 +462,7 @@ async function loadEditingDetail() {
   }
 
   try {
-    const detail = await getTravelMemoryDetail(editingId.value)
+    const detail = await getAdminTravelMemoryDetail(editingId.value)
     editingDetail.value = detail
     fillFormFromDetail(detail)
     if ((!detail.province || !detail.city) && detail.latitude != null && detail.longitude != null) {
