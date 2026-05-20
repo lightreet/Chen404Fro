@@ -27,7 +27,6 @@
                 <el-menu-item index="articles"><el-icon><Document /></el-icon><span>我的文章</span></el-menu-item>
                 <el-menu-item index="likes"><el-icon><Medal /></el-icon><span>我的点赞</span></el-menu-item>
                 <el-menu-item index="favorites"><el-icon><Star /></el-icon><span>我的收藏</span></el-menu-item>
-                <el-menu-item index="trust"><el-icon><Postcard /></el-icon><span>受信申请</span></el-menu-item>
               </el-menu>
             </section>
           </aside>

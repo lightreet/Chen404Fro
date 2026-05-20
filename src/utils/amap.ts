@@ -1,0 +1,131 @@
+let loadingPromise: Promise<any> | null = null
+let geocoderPromise: Promise<any> | null = null
+let geocoderInstance: any = null
+
+const AMAP_SCRIPT_ID = 'chen404-amap-script'
+
+export interface AmapReverseGeocodeResult {
+  province: string
+  city: string
+  district: string
+  formattedAddress: string
+}
+
+function getAmapKey() {
+  return (import.meta.env.VITE_AMAP_KEY || '').trim()
+}
+
+function getAmapSecurityCode() {
+  return (import.meta.env.VITE_AMAP_SECURITY_CODE || '').trim()
+}
+
+export function getAmapUnavailableReason() {
+  return getAmapKey() ? '' : '未配置 VITE_AMAP_KEY，地图能力暂不可用。'
+}
+
+export function loadAmap(): Promise<any> {
+  if (typeof window === 'undefined') {
+    return Promise.reject(new Error('AMap 只能在浏览器环境使用'))
+  }
+
+  const key = getAmapKey()
+  if (!key) {
+    return Promise.reject(new Error('未配置 VITE_AMAP_KEY'))
+  }
+
+  const current = (window as any).AMap
+  if (current) {
+    return Promise.resolve(current)
+  }
+
+  if (loadingPromise) {
+    return loadingPromise
+  }
+
+  const securityCode = getAmapSecurityCode()
+  if (securityCode) {
+    ;(window as any)._AMapSecurityConfig = {
+      securityJsCode: securityCode,
+    }
+  }
+
+  loadingPromise = new Promise((resolve, reject) => {
+    const existing = document.getElementById(AMAP_SCRIPT_ID) as HTMLScriptElement | null
+    if (existing) {
+      existing.addEventListener('load', () => resolve((window as any).AMap))
+      existing.addEventListener('error', () => reject(new Error('高德地图脚本加载失败')))
+      return
+    }
+
+    const script = document.createElement('script')
+    script.id = AMAP_SCRIPT_ID
+    script.async = true
+    script.src = `https://webapi.amap.com/maps?v=2.0&key=${encodeURIComponent(key)}`
+    script.onload = () => resolve((window as any).AMap)
+    script.onerror = () => reject(new Error('高德地图脚本加载失败'))
+    document.head.appendChild(script)
+  }).finally(() => {
+    loadingPromise = null
+  })
+
+  return loadingPromise
+}
+
+async function loadAmapGeocoder() {
+  const AMap = await loadAmap()
+  if (geocoderInstance) {
+    return geocoderInstance
+  }
+  if (geocoderPromise) {
+    return geocoderPromise
+  }
+
+  geocoderPromise = new Promise((resolve, reject) => {
+    AMap.plugin(['AMap.Geocoder'], () => {
+      try {
+        geocoderInstance = new AMap.Geocoder({
+          extensions: 'base',
+        })
+        resolve(geocoderInstance)
+      } catch (error) {
+        reject(error)
+      }
+    })
+  }).finally(() => {
+    geocoderPromise = null
+  })
+
+  return geocoderPromise
+}
+
+export async function reverseGeocodeLocation(
+  latitude: number,
+  longitude: number,
+): Promise<AmapReverseGeocodeResult> {
+  const geocoder = await loadAmapGeocoder()
+
+  return new Promise((resolve, reject) => {
+    geocoder.getAddress([longitude, latitude], (status: string, result: any) => {
+      const addressComponent = result?.regeocode?.addressComponent
+      if (status !== 'complete' || !addressComponent) {
+        reject(new Error('AMap reverse geocode failed'))
+        return
+      }
+
+      const province = String(addressComponent.province || '').trim()
+      const rawCity = addressComponent.city
+      const city = Array.isArray(rawCity)
+        ? String(rawCity[0] || '').trim()
+        : String(rawCity || '').trim()
+      const district = String(addressComponent.district || '').trim()
+      const formattedAddress = String(result?.regeocode?.formattedAddress || '').trim()
+
+      resolve({
+        province,
+        city: city || district,
+        district,
+        formattedAddress,
+      })
+    })
+  })
+}

@@ -192,6 +192,72 @@ export interface HomeData {
   recentComments: RecentComment[];
 }
 
+// ==================== 旅行纪念地图相关类型 ====================
+
+export type TravelMemoryGeoSource = 'NONE' | 'EXIF' | 'MANUAL';
+
+export interface TravelMemoryEntry {
+  id?: number;
+  imageUrl: string;
+  remark?: string;
+  thanksNote?: string;
+  shotAt?: string;
+  displayOrder?: number;
+  cover?: boolean;
+  sourceLatitude?: number;
+  sourceLongitude?: number;
+  geoSource?: TravelMemoryGeoSource;
+}
+
+export interface TravelMemoryLocationListItem {
+  id: number;
+  title: string;
+  province?: string;
+  city?: string;
+  latitude?: number;
+  longitude?: number;
+  summaryNote?: string;
+  coverImage?: string;
+  visitedAt?: string;
+  entryCount?: number;
+}
+
+export interface TravelMemoryLocationDetail extends TravelMemoryLocationListItem {
+  status?: number;
+  sortOrder?: number;
+  entries: TravelMemoryEntry[];
+  createTime?: string;
+  updateTime?: string;
+}
+
+export interface TravelMemoryEntryUpsertCommand {
+  id?: number;
+  imageUrl: string;
+  remark?: string;
+  thanksNote?: string;
+  shotAt?: string;
+  displayOrder?: number;
+  cover?: boolean;
+  sourceLatitude?: number;
+  sourceLongitude?: number;
+  geoSource?: TravelMemoryGeoSource;
+}
+
+export interface CreateTravelMemoryCommand {
+  title: string;
+  province?: string;
+  city?: string;
+  latitude?: number;
+  longitude?: number;
+  summaryNote?: string;
+  visitedAt?: string;
+  status?: number;
+  sortOrder?: number;
+  entries: TravelMemoryEntryUpsertCommand[];
+}
+
+export interface UpdateTravelMemoryCommand extends CreateTravelMemoryCommand {}
+
 // ==================== 文章相关类型 ====================
 
 export interface ArticleAuthorSummary {

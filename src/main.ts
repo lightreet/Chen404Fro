@@ -2,6 +2,7 @@ import { createApp } from 'vue'
 import { createPinia } from 'pinia'
 import * as ElementPlusIconsVue from '@element-plus/icons-vue'
 import 'virtual:uno.css'
+import '@fontsource/ma-shan-zheng/400.css'
 
 import App from './App.vue'
 import router, { CHUNK_RELOAD_KEY } from './router'

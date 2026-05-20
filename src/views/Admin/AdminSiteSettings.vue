@@ -326,13 +326,15 @@ import { useSiteConfig } from '@/composables/useSiteConfig';
 import type { SiteConfig } from '@/types';
 import { DEFAULT_IMAGE_MAX_MB, validateImageFile } from '@/utils/validation';
 
-type HeroKey = 'home' | 'archive' | 'category' | 'tag' | 'about' | 'guestbook';
+type HeroKey = 'home' | 'archive' | 'memory-map' | 'trust-request' | 'category' | 'tag' | 'about' | 'guestbook';
 type AssetKey = 'siteLogo' | 'siteFavicon';
 type UploadingKey = HeroKey | AssetKey | '';
 
 const heroPages: Array<{ key: HeroKey; label: string; desc: string }> = [
+  { key: 'trust-request', label: '受信申请', desc: '受信申请页面顶部封面' },
   { key: 'home', label: '首页', desc: '首页主视觉封面' },
   { key: 'archive', label: '时光轴', desc: '时光轴页面顶部封面' },
+  { key: 'memory-map', label: '旅行地图', desc: '旅行纪念地图页面顶部封面' },
   { key: 'category', label: '分类页', desc: '分类列表顶部封面' },
   { key: 'tag', label: '标签页', desc: '标签云顶部封面（当前无主导航入口）' },
   { key: 'about', label: '关于页', desc: '关于页面顶部封面' },
@@ -341,6 +343,8 @@ const heroPages: Array<{ key: HeroKey; label: string; desc: string }> = [
 const HERO_DEFAULT_POSITIONS: Record<HeroKey, string> = {
   home: '50% 58%',
   archive: '50% 44%',
+  'memory-map': '50% 48%',
+  'trust-request': '50% 48%',
   category: '50% 40%',
   tag: '50% 38%',
   about: '50% 42%',
@@ -353,6 +357,7 @@ const activeTab = ref('basic');
 const loading = ref(false);
 const saving = ref(false);
 const uploadingKey = ref<UploadingKey>('');
+const SUCCESS_MESSAGE_DURATION = 1800;
 
 const form = reactive<Required<Omit<SiteConfig, 'heroImages' | 'heroImagePositions'>>>({
   siteName: '',
@@ -373,6 +378,8 @@ const form = reactive<Required<Omit<SiteConfig, 'heroImages' | 'heroImagePositio
 const heroImages = reactive<Record<HeroKey, string>>({
   home: '',
   archive: '',
+  'memory-map': '',
+  'trust-request': '',
   category: '',
   tag: '',
   about: '',
@@ -381,6 +388,8 @@ const heroImages = reactive<Record<HeroKey, string>>({
 const heroImagePositions = reactive<Record<HeroKey, string>>({
   home: HERO_DEFAULT_POSITIONS.home,
   archive: HERO_DEFAULT_POSITIONS.archive,
+  'memory-map': HERO_DEFAULT_POSITIONS['memory-map'],
+  'trust-request': HERO_DEFAULT_POSITIONS['trust-request'],
   category: HERO_DEFAULT_POSITIONS.category,
   tag: HERO_DEFAULT_POSITIONS.tag,
   about: HERO_DEFAULT_POSITIONS.about,
@@ -412,6 +421,8 @@ function applyConfig(config: SiteConfig) {
 
   heroImages.home = config.heroImages?.home ?? '';
   heroImages.archive = config.heroImages?.archive ?? '';
+  heroImages['memory-map'] = config.heroImages?.['memory-map'] ?? '';
+  heroImages['trust-request'] = config.heroImages?.['trust-request'] ?? '';
   heroImages.category = config.heroImages?.category ?? '';
   heroImages.tag = config.heroImages?.tag ?? '';
   heroImages.about = config.heroImages?.about ?? '';
@@ -419,6 +430,10 @@ function applyConfig(config: SiteConfig) {
 
   heroImagePositions.home = config.heroImagePositions?.home ?? HERO_DEFAULT_POSITIONS.home;
   heroImagePositions.archive = config.heroImagePositions?.archive ?? HERO_DEFAULT_POSITIONS.archive;
+  heroImagePositions['memory-map'] =
+    config.heroImagePositions?.['memory-map'] ?? HERO_DEFAULT_POSITIONS['memory-map'];
+  heroImagePositions['trust-request'] =
+    config.heroImagePositions?.['trust-request'] ?? HERO_DEFAULT_POSITIONS['trust-request'];
   heroImagePositions.category = config.heroImagePositions?.category ?? HERO_DEFAULT_POSITIONS.category;
   heroImagePositions.tag = config.heroImagePositions?.tag ?? HERO_DEFAULT_POSITIONS.tag;
   heroImagePositions.about = config.heroImagePositions?.about ?? HERO_DEFAULT_POSITIONS.about;
@@ -443,6 +458,8 @@ function toPayload(): SiteConfig {
     heroImages: {
       home: heroImages.home.trim(),
       archive: heroImages.archive.trim(),
+      'memory-map': heroImages['memory-map'].trim(),
+      'trust-request': heroImages['trust-request'].trim(),
       category: heroImages.category.trim(),
       tag: heroImages.tag.trim(),
       about: heroImages.about.trim(),
@@ -451,6 +468,8 @@ function toPayload(): SiteConfig {
     heroImagePositions: {
       home: heroImagePositions.home.trim(),
       archive: heroImagePositions.archive.trim(),
+      'memory-map': heroImagePositions['memory-map'].trim(),
+      'trust-request': heroImagePositions['trust-request'].trim(),
       category: heroImagePositions.category.trim(),
       tag: heroImagePositions.tag.trim(),
       about: heroImagePositions.about.trim(),
@@ -512,7 +531,10 @@ async function handleAssetUpload(key: AssetKey, options: UploadRequestOptions) {
     const res = await uploadSiteAsset(options.file);
     form[key] = res.url;
     options.onSuccess?.(res as any);
-    ElMessage.success('品牌图片上传成功');
+    ElMessage.success({
+      message: '品牌图片上传成功',
+      duration: SUCCESS_MESSAGE_DURATION,
+    });
   } catch (error) {
     options.onError?.(error as any);
     ElMessage.error('上传失败');
@@ -528,7 +550,10 @@ async function handleHeroUpload(key: HeroKey, options: UploadRequestOptions) {
     heroImages[key] = res.url;
     heroImagePositions[key] = HERO_DEFAULT_POSITIONS[key];
     options.onSuccess?.(res as any);
-    ElMessage.success(`${heroPages.find((item) => item.key === key)?.label ?? '页面'}封面上传成功`);
+    ElMessage.success({
+      message: `${heroPages.find((item) => item.key === key)?.label ?? '页面'}封面上传成功`,
+      duration: SUCCESS_MESSAGE_DURATION,
+    });
   } catch (error) {
     options.onError?.(error as any);
     ElMessage.error('上传失败');
@@ -551,7 +576,10 @@ async function saveConfig() {
     const nextConfig = await updateSiteConfig(payload);
     applyConfig(nextConfig);
     setSiteConfig(nextConfig);
-    ElMessage.success('站点配置保存成功');
+    ElMessage.success({
+      message: '站点配置保存成功',
+      duration: SUCCESS_MESSAGE_DURATION,
+    });
   } catch {
     ElMessage.error('保存失败');
   } finally {
@@ -944,6 +972,7 @@ onMounted(() => {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 16px;
+  align-items: start;
 }
 
 .hero-panel {
@@ -951,6 +980,7 @@ onMounted(() => {
   border-radius: 8px;
   overflow: hidden;
   background: rgba(255, 255, 255, 0.74);
+  align-self: start;
 }
 
 .hero-preview {

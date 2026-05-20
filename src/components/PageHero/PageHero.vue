@@ -42,8 +42,12 @@
       </div>
     </div>
 
-    <div v-if="showWave" class="page-hero__wave" aria-hidden="true">
-      <HeroWave color="white" :height="waveHeight" :intensity="waveIntensity" />
+    <div v-if="showWave" class="page-hero__transition" aria-hidden="true">
+      <div class="page-hero__fog"></div>
+      <div class="page-hero__wave">
+        <HeroWave color="white" :height="waveHeight" :intensity="waveIntensity" />
+      </div>
+      <div class="page-hero__mist"></div>
     </div>
 
     <a v-if="scrollTarget" :href="scrollTarget" class="page-hero__scroll-hint" aria-label="向下滚动">
@@ -91,8 +95,8 @@ const props = withDefaults(defineProps<Props>(), {
   compact: false,
   showWave: true,
   scrollTarget: '',
-  waveHeight: 112,
-  waveIntensity: 1.08,
+  waveHeight: 138,
+  waveIntensity: 1.02,
   highlightText: '',
   variant: 'default',
 });
@@ -162,6 +166,11 @@ function normalizeMinHeight(value: string) {
   --page-hero-fade-glow-soft: rgba(255, 255, 255, 0.38);
   --page-hero-fade-side-main: rgba(255, 255, 255, 0.56);
   --page-hero-fade-side-soft: rgba(255, 255, 255, 0.18);
+  --page-hero-wave-back: #ffffff;
+  --page-hero-wave-mid: #fff8fa;
+  --page-hero-wave-front: #fdf3f6;
+  --page-hero-wave-mist: rgba(255, 249, 252, 0.9);
+  --page-hero-wave-shadow: rgba(255, 231, 239, 0.72);
 }
 
 .page-hero--sakura-diary {
@@ -170,6 +179,11 @@ function normalizeMinHeight(value: string) {
   --sakura-hero-accent: #ff7faa;
   --sakura-hero-accent-soft: #f7b6ca;
   --sakura-hero-shadow: rgba(52, 33, 46, 0.34);
+  --page-hero-wave-back: #fffafc;
+  --page-hero-wave-mid: #fff3f7;
+  --page-hero-wave-front: #fdf0f4;
+  --page-hero-wave-mist: rgba(255, 246, 250, 0.9);
+  --page-hero-wave-shadow: rgba(255, 226, 236, 0.68);
 
   .page-hero__bg {
     filter: saturate(0.94) brightness(1.02) blur(0.45px);
@@ -247,34 +261,29 @@ function normalizeMinHeight(value: string) {
 
 .page-hero__fade {
   top: auto;
-  height: 190px;
+  height: 208px;
   z-index: 1;
   pointer-events: none;
   background:
     radial-gradient(
-      56% 126% at 87% 102%,
-      var(--page-hero-fade-glow-main) 0%,
-      var(--page-hero-fade-glow-secondary) 26%,
-      var(--page-hero-fade-glow-soft) 42%,
-      rgba(255, 255, 255, 0) 64%
-    ),
-    radial-gradient(
-      34% 88% at 14% 104%,
-      var(--page-hero-fade-side-main) 0%,
-      var(--page-hero-fade-side-soft) 34%,
-      rgba(255, 255, 255, 0) 62%
+      72% 128% at 50% 100%,
+      var(--page-hero-wave-shadow) 0%,
+      rgba(255, 255, 255, 0.22) 34%,
+      rgba(255, 255, 255, 0) 68%
     ),
     linear-gradient(
       to bottom,
-      rgba(255, 255, 255, 0) 0%,
-      rgba(255, 255, 255, 0) 76%,
-      color-mix(in srgb, var(--hero-fade-base) 92%, white) 100%
+      rgba(255, 248, 250, 0) 0%,
+      rgba(255, 248, 250, 0.18) 36%,
+      rgba(255, 248, 250, 0.62) 74%,
+      var(--hero-fade-base) 100%
     );
+  backdrop-filter: blur(3px);
 }
 
 .page-hero__content {
   position: relative;
-  z-index: 1;
+  z-index: 3;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -434,14 +443,58 @@ function normalizeMinHeight(value: string) {
   margin-top: 1.2rem;
 }
 
+.page-hero__transition {
+  position: absolute;
+  inset-inline: 0;
+  bottom: -1px;
+  height: calc(var(--page-hero-wave-height) + 64px);
+  z-index: 2;
+  pointer-events: none;
+}
+
+.page-hero__fog,
 .page-hero__wave {
   position: absolute;
   left: 0;
   right: 0;
+}
+
+.page-hero__fog {
+  bottom: calc(var(--page-hero-wave-height) - 106px);
+  height: 92px;
+  background: linear-gradient(
+    to bottom,
+    rgba(255, 248, 250, 0) 0%,
+    rgba(255, 248, 250, 0.3) 32%,
+    rgba(255, 248, 250, 0.74) 72%,
+    rgba(255, 248, 250, 0.98) 100%
+  );
+  filter: blur(12px);
+  opacity: 0.96;
+}
+
+.page-hero__wave {
   bottom: 0;
   height: var(--page-hero-wave-height);
-  z-index: 1;
   line-height: 0;
+  filter: drop-shadow(0 -8px 24px rgba(255, 231, 239, 0.38));
+}
+
+.page-hero__mist {
+  position: absolute;
+  left: -2%;
+  right: -2%;
+  bottom: calc(var(--page-hero-wave-height) - 14px);
+  height: 78px;
+  background:
+    radial-gradient(
+      66% 100% at 50% 100%,
+      var(--page-hero-wave-mist) 0%,
+      rgba(255, 255, 255, 0.56) 34%,
+      rgba(255, 255, 255, 0) 74%
+    );
+  filter: blur(20px);
+  opacity: 0.92;
 }
 
 .page-hero__scroll-hint {
@@ -449,7 +502,7 @@ function normalizeMinHeight(value: string) {
   bottom: 1rem;
   left: 50%;
   transform: translateX(-50%);
-  z-index: 2;
+  z-index: 4;
   display: inline-flex;
   flex-direction: column;
   align-items: center;
@@ -468,11 +521,11 @@ function normalizeMinHeight(value: string) {
 }
 
 [data-theme='dark'] .page-hero--sakura-diary {
-  --page-hero-fade-glow-main: rgba(97, 72, 104, 0.62);
-  --page-hero-fade-glow-secondary: rgba(76, 58, 86, 0.46);
-  --page-hero-fade-glow-soft: rgba(52, 41, 61, 0.18);
-  --page-hero-fade-side-main: rgba(102, 77, 107, 0.32);
-  --page-hero-fade-side-soft: rgba(73, 56, 82, 0.14);
+  --page-hero-wave-back: #413442;
+  --page-hero-wave-mid: #342b38;
+  --page-hero-wave-front: #241f2b;
+  --page-hero-wave-mist: rgba(100, 80, 103, 0.64);
+  --page-hero-wave-shadow: rgba(97, 74, 101, 0.32);
 
   .page-hero__overlay {
     background: linear-gradient(
@@ -486,24 +539,32 @@ function normalizeMinHeight(value: string) {
   .page-hero__fade {
     background:
       radial-gradient(
-        56% 126% at 87% 102%,
-        rgba(109, 83, 111, 0.46) 0%,
-        rgba(73, 58, 84, 0.34) 26%,
-        rgba(49, 40, 58, 0.16) 42%,
-        rgba(255, 255, 255, 0) 64%
-      ),
-      radial-gradient(
-        34% 88% at 14% 104%,
-        rgba(102, 77, 108, 0.24) 0%,
-        rgba(73, 56, 82, 0.12) 34%,
-        rgba(255, 255, 255, 0) 62%
+        72% 128% at 50% 100%,
+        rgba(108, 82, 111, 0.4) 0%,
+        rgba(76, 59, 85, 0.18) 36%,
+        rgba(255, 255, 255, 0) 68%
       ),
       linear-gradient(
         to bottom,
         rgba(255, 255, 255, 0) 0%,
-        rgba(48, 38, 58, 0.08) 72%,
-        color-mix(in srgb, var(--hero-fade-base) 94%, #2f2738) 100%
+        rgba(48, 38, 58, 0.08) 42%,
+        rgba(42, 33, 50, 0.54) 74%,
+        var(--hero-fade-base) 100%
       );
+  }
+
+  .page-hero__fog {
+    background: linear-gradient(
+      to bottom,
+      rgba(64, 52, 69, 0) 0%,
+      rgba(64, 52, 69, 0.16) 34%,
+      rgba(58, 47, 63, 0.56) 74%,
+      rgba(45, 37, 51, 0.94) 100%
+    );
+  }
+
+  .page-hero__wave {
+    filter: drop-shadow(0 -8px 24px rgba(68, 50, 71, 0.28));
   }
 
   .page-hero__scroll-hint {
@@ -568,7 +629,23 @@ function normalizeMinHeight(value: string) {
   }
 
   .page-hero__fade {
-    height: 118px;
+    height: 142px;
+  }
+
+  .page-hero__transition {
+    height: calc(var(--page-hero-wave-height) + 42px);
+  }
+
+  .page-hero__fog {
+    bottom: calc(var(--page-hero-wave-height) - 58px);
+    height: 64px;
+    filter: blur(10px);
+  }
+
+  .page-hero__mist {
+    bottom: calc(var(--page-hero-wave-height) - 6px);
+    height: 54px;
+    filter: blur(16px);
   }
 
   .page-hero__scroll-hint {

@@ -60,7 +60,10 @@ import AdminTrustRequests from './AdminTrustRequests.vue'
 const route = useRoute()
 const router = useRouter()
 
-const normalizeTab = (tab?: string) => (tab === 'hero' ? 'site-settings' : tab || 'categories')
+const normalizeTab = (tab?: string) => {
+  if (tab === 'hero') return 'site-settings'
+  return tab || 'categories'
+}
 const activeMenu = ref<string>(normalizeTab(route.query.tab as string | undefined))
 
 const currentTabQuery = computed(() => ({ ...route.query, tab: activeMenu.value }))

@@ -24,3 +24,6 @@ export * from './upload';
 
 // 受信申请相关 API
 export * from './trust-request';
+
+// 旅行纪念地图相关 API
+export * from './travel-memory';

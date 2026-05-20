@@ -1,0 +1,29 @@
+<svg width="320" height="320" viewBox="0 0 320 320" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="320" height="320" fill="#FFF9F4"/>
+  <g opacity="0.22">
+    <circle cx="48" cy="44" r="1.5" fill="#E7C8CC"/>
+    <circle cx="132" cy="72" r="1" fill="#E7C8CC"/>
+    <circle cx="282" cy="54" r="1.25" fill="#E7C8CC"/>
+    <circle cx="74" cy="144" r="1.25" fill="#E7C8CC"/>
+    <circle cx="194" cy="122" r="1.5" fill="#E7C8CC"/>
+    <circle cx="262" cy="174" r="1" fill="#E7C8CC"/>
+    <circle cx="102" cy="244" r="1.5" fill="#E7C8CC"/>
+    <circle cx="210" cy="232" r="1.25" fill="#E7C8CC"/>
+    <circle cx="286" cy="266" r="1" fill="#E7C8CC"/>
+  </g>
+  <g opacity="0.28" stroke="#EED7D0" stroke-width="1.4">
+    <path d="M16 58C48 40 90 42 128 50C174 60 208 64 254 56C278 52 300 50 320 54"/>
+    <path d="M8 128C44 112 88 110 132 116C178 122 214 130 262 126C286 124 302 120 320 116"/>
+    <path d="M0 202C40 188 92 186 144 194C188 202 226 210 274 208C296 206 306 202 320 198"/>
+    <path d="M18 278C68 262 116 260 164 268C214 276 256 286 320 280"/>
+  </g>
+  <g opacity="0.12" filter="url(#blur)">
+    <ellipse cx="92" cy="96" rx="68" ry="24" fill="#F5CCD7"/>
+    <ellipse cx="246" cy="220" rx="84" ry="28" fill="#F2D6C4"/>
+  </g>
+  <defs>
+    <filter id="blur" x="-16" y="32" width="368" height="252" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feGaussianBlur stdDeviation="12"/>
+    </filter>
+  </defs>
+</svg>

@@ -5,11 +5,24 @@
 
 import { Service } from '@/sdk/generated'
 import { unwrapResult, type ResultEnvelope } from '@/sdk/runtime'
+import { post } from './request'
 
 export interface UploadResult {
   url: string
   name: string
   size?: string
+  latitude?: number
+  longitude?: number
+  shotAt?: string
+}
+
+type UploadPayload = {
+  url?: string
+  name?: string
+  size?: string
+  latitude?: number
+  longitude?: number
+  shotAt?: string
 }
 
 async function uploadSingleFile(
@@ -18,12 +31,15 @@ async function uploadSingleFile(
 ): Promise<UploadResult> {
   const payload = unwrapResult(await handler({
     formData: { file },
-  }) as ResultEnvelope<{ url?: string; name?: string; size?: string }>)
+  }) as ResultEnvelope<UploadPayload>)
 
   return {
     url: payload.url || '',
     name: payload.name || '',
     size: payload.size,
+    latitude: payload.latitude as number | undefined,
+    longitude: payload.longitude as number | undefined,
+    shotAt: payload.shotAt as string | undefined,
   }
 }
 
@@ -34,12 +50,15 @@ export function uploadImage(file: File): Promise<UploadResult> {
 export async function uploadImages(files: File[]): Promise<UploadResult[]> {
   const payload = unwrapResult(await Service.uploadImages({
     formData: { files },
-  }) as ResultEnvelope<Array<{ url?: string; name?: string; size?: string }>>)
+  }) as ResultEnvelope<UploadPayload[]>)
 
   return payload.map((item) => ({
     url: item.url || '',
     name: item.name || '',
     size: item.size,
+    latitude: item.latitude as number | undefined,
+    longitude: item.longitude as number | undefined,
+    shotAt: item.shotAt as string | undefined,
   }))
 }
 
@@ -57,6 +76,21 @@ export function uploadAvatar(file: File): Promise<UploadResult> {
 
 export function uploadTrustAttachment(file: File): Promise<UploadResult> {
   return uploadSingleFile(file, Service.uploadTrustAttachment)
+}
+
+export async function uploadTravelMemoryImage(file: File): Promise<UploadResult> {
+  const formData = new FormData()
+  formData.append('file', file)
+  const payload = await post<UploadPayload>('/upload/travel-memory-image', formData as any)
+
+  return {
+    url: payload.url || '',
+    name: payload.name || '',
+    size: payload.size,
+    latitude: payload.latitude,
+    longitude: payload.longitude,
+    shotAt: payload.shotAt,
+  }
 }
 
 export async function deleteFile(url: string): Promise<void> {

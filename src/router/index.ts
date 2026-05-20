@@ -2,7 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router';
 import type { RouteRecordRaw } from 'vue-router';
 import { ElMessage } from 'element-plus';
 import { useSiteConfig } from '@/composables/useSiteConfig';
-import { isAdminUser } from '@/utils/permission';
+import { isAdminUser, isFriendUser } from '@/utils/permission';
 import { applySiteMeta } from '@/utils/siteConfig';
 import { useUserStore } from '@/stores/user';
 
@@ -44,6 +44,46 @@ const routes: RouteRecordRaw[] = [
     component: () => import('@/views/Archive/Archive.vue'),
     meta: {
       title: '时光轴',
+    },
+  },
+  {
+    path: '/memory-map',
+    name: 'MemoryMap',
+    component: () => import('@/views/MemoryMap/MemoryMap.vue'),
+    meta: {
+      title: '旅行地图',
+    },
+  },
+  {
+    path: '/memory-map/detail/:id',
+    name: 'TravelMemoryDetail',
+    component: () => import('@/views/MemoryMap/TravelMemoryDetail.vue'),
+    meta: {
+      title: '旅行游记',
+      requiresAuth: true,
+      requiresFriend: true,
+    },
+  },
+  {
+    path: '/memory-map/create',
+    name: 'TravelMemoryCreate',
+    component: () => import('@/views/MemoryMap/TravelMemoryCreate.vue'),
+    meta: {
+      title: '新增旅游地点',
+      requiresAuth: true,
+      requiresFriend: true,
+      requiresAdmin: true,
+    },
+  },
+  {
+    path: '/memory-map/edit/:id',
+    name: 'TravelMemoryEdit',
+    component: () => import('@/views/MemoryMap/TravelMemoryCreate.vue'),
+    meta: {
+      title: '编辑旅游地点',
+      requiresAuth: true,
+      requiresFriend: true,
+      requiresAdmin: true,
     },
   },
   {
@@ -118,6 +158,14 @@ const routes: RouteRecordRaw[] = [
     meta: {
       title: '注册',
       guest: true,
+    },
+  },
+  {
+    path: '/trust-request',
+    name: 'TrustRequest',
+    component: () => import('@/views/TrustRequest/TrustRequest.vue'),
+    meta: {
+      title: '受信申请',
     },
   },
   {
@@ -212,6 +260,15 @@ router.beforeEach(async (to, _from, next) => {
     const ok = await userStore.syncAuthState();
     if (!ok || !isAdminUser(userStore.user)) {
       ElMessage.error('仅管理员可访问');
+      next({ path: '/' });
+      return;
+    }
+  }
+
+  if (to.meta.requiresFriend) {
+    const ok = await userStore.syncAuthState();
+    if (!ok || !isFriendUser(userStore.user)) {
+      ElMessage.error('仅管理员与知友可访问');
       next({ path: '/' });
       return;
     }
