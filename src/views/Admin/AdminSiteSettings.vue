@@ -6,7 +6,6 @@
           <el-icon class="settings-title__icon"><Setting /></el-icon>
           <div>
             <h2>站点配置</h2>
-            <p>管理站点基础资料、品牌资源、SEO 与各页面封面。</p>
           </div>
         </div>
         <div class="settings-actions">
@@ -23,7 +22,6 @@
             <img :src="form.siteLogo || '/logo.png'" alt="站点 Logo" />
           </div>
           <div>
-            <span class="overview-kicker">Chen404 Config</span>
             <h3>{{ form.siteName || 'Chen404 Blog' }}</h3>
             <p>{{ form.siteDescription || '一个写下技术，也收藏温柔日常的小小角落' }}</p>
           </div>
@@ -49,7 +47,6 @@
           <section class="settings-section">
             <div class="section-head">
               <div>
-                <span class="section-kicker">Basic</span>
                 <h3>站点基础信息</h3>
               </div>
               <el-tag effect="plain">已接入</el-tag>
@@ -91,7 +88,6 @@
           <section class="settings-section">
             <div class="section-head">
               <div>
-                <span class="section-kicker">Brand</span>
                 <h3>Logo、图标与版权</h3>
               </div>
               <el-tag type="warning" effect="plain">部分前台待接入</el-tag>
@@ -161,7 +157,6 @@
           <section class="settings-section">
             <div class="section-head">
               <div>
-                <span class="section-kicker">SEO</span>
                 <h3>搜索展示信息</h3>
               </div>
               <el-tag type="success" effect="plain">已接入</el-tag>
@@ -192,7 +187,6 @@
           <section class="settings-section">
             <div class="section-head section-head--runtime">
               <div>
-                <span class="section-kicker">Runtime</span>
                 <h3>评论互动策略</h3>
                 <p class="runtime-summary">把真正需要日常调整的评论开关留在这里，其余分页和上传限制固定为后端默认值。</p>
               </div>
@@ -255,7 +249,6 @@
           <section class="settings-section">
             <div class="section-head">
               <div>
-                <span class="section-kicker">Hero Images</span>
                 <h3>页面封面</h3>
               </div>
               <el-tag effect="plain">已接入</el-tag>
@@ -636,12 +629,6 @@ onMounted(() => {
     color: var(--text-primary);
     font-size: 18px;
   }
-
-  p {
-    margin: 4px 0 0;
-    color: var(--text-tertiary);
-    font-size: 13px;
-  }
 }
 
 .settings-title__icon {
@@ -713,13 +700,6 @@ onMounted(() => {
   }
 }
 
-.overview-kicker,
-.section-kicker {
-  color: #b97a94;
-  font-size: 12px;
-  letter-spacing: 0;
-}
-
 .overview-stats {
   display: grid;
   grid-template-columns: repeat(3, minmax(96px, 1fr));
@@ -760,7 +740,7 @@ onMounted(() => {
   margin-bottom: 18px;
 
   h3 {
-    margin: 4px 0 0;
+    margin: 0;
     color: var(--text-primary);
     font-size: 18px;
   }

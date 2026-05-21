@@ -5,7 +5,6 @@
         <div class="admin-header">
           <div class="title">
             <span class="title-main">后台管理</span>
-            <span class="title-sub">仅管理员可见</span>
           </div>
         </div>
 
@@ -86,7 +85,7 @@ const handleSelect = (key: string) => {
 }
 
 .admin-container {
-  width: min(1360px, calc(100vw - 48px));
+  width: min(1520px, calc(100vw - 40px));
   margin: 0 auto;
   padding: 0;
   display: flex;
@@ -116,14 +115,9 @@ const handleSelect = (key: string) => {
   color: var(--text-primary);
 }
 
-.title-sub {
-  font-size: 12px;
-  color: var(--text-tertiary);
-}
-
 .admin-main {
   display: grid;
-  grid-template-columns: 240px minmax(0, 1fr);
+  grid-template-columns: 220px minmax(0, 1fr);
   gap: var(--spacing-lg);
   align-items: start;
   width: 100%;
@@ -153,6 +147,10 @@ const handleSelect = (key: string) => {
 }
 
 @media (max-width: 900px) {
+  .admin-container {
+    width: min(100%, calc(100vw - 24px));
+  }
+
   .admin-main {
     grid-template-columns: 1fr;
   }

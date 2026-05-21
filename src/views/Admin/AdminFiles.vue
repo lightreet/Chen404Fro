@@ -7,7 +7,6 @@
             <el-icon class="files-title__icon"><Files /></el-icon>
             <div>
               <h2>文件管理</h2>
-              <p>统一查看上传文件、业务归属和当前引用情况，便于排查资源遗漏与历史脏数据。</p>
             </div>
           </div>
           <div class="files-actions">
@@ -39,15 +38,11 @@
               <strong>{{ unreferencedCount }}</strong>
             </div>
           </div>
-          <p class="overview-note">
-            当前后台以统一引用表为准；对于历史资源，建议在完成数据检查后再执行“重建引用”。
-          </p>
         </section>
 
         <section class="files-section">
           <div class="section-head">
             <div>
-              <span class="section-kicker">Filters</span>
               <h3>筛选与检索</h3>
             </div>
             <el-button text @click="resetFilters">清空筛选</el-button>
@@ -84,84 +79,102 @@
           </div>
         </section>
 
-        <section class="files-section">
-          <div class="section-head">
+        <section class="files-section files-section--table">
+          <div class="section-head section-head--table">
             <div>
-              <span class="section-kicker">Assets</span>
               <h3>文件列表</h3>
             </div>
             <span class="section-meta">共 {{ total }} 条</span>
           </div>
 
-          <el-table :data="files" v-loading="loading" style="width: 100%">
-            <el-table-column label="预览" width="96">
-              <template #default="{ row }">
-                <button class="asset-thumb" type="button" @click="openDetail(row)">
-                  <img v-if="isImage(row)" :src="row.fileUrl" :alt="displayName(row)" />
-                  <span v-else>{{ fileKindLabel(row) }}</span>
-                </button>
-              </template>
-            </el-table-column>
+          <div class="files-table-panel">
+            <div class="files-table-shell">
+              <el-table :data="files" v-loading="loading" style="width: 100%" table-layout="fixed">
+                <el-table-column label="预览" width="108">
+                <template #default="{ row }">
+                  <button class="asset-thumb" type="button" @click="openDetail(row)">
+                    <img v-if="isImage(row)" :src="row.fileUrl" :alt="displayName(row)" />
+                    <span v-else>{{ fileKindLabel(row) }}</span>
+                  </button>
+                </template>
+              </el-table-column>
 
-            <el-table-column label="文件" min-width="260">
-              <template #default="{ row }">
-                <div class="file-main">
-                  <strong>{{ displayName(row) }}</strong>
-                  <span>{{ row.fileOriginalName || row.fileName || row.objectName || '-' }}</span>
-                </div>
-              </template>
-            </el-table-column>
+              <el-table-column label="文件" min-width="320" show-overflow-tooltip>
+                <template #default="{ row }">
+                  <div class="file-main">
+                    <strong>{{ displayName(row) }}</strong>
+                    <span>{{ row.fileOriginalName || row.fileName || row.objectName || '-' }}</span>
+                  </div>
+                </template>
+              </el-table-column>
 
-            <el-table-column label="归属类型" min-width="160">
-              <template #default="{ row }">
-                <el-tag effect="plain">{{ refTypeLabel(row.refType) }}</el-tag>
-              </template>
-            </el-table-column>
+              <el-table-column label="归属类型" min-width="128">
+                <template #default="{ row }">
+                  <el-tag effect="plain">{{ refTypeLabel(row.refType) }}</el-tag>
+                </template>
+              </el-table-column>
 
-            <el-table-column label="引用状态" min-width="140">
-              <template #default="{ row }">
-                <el-tag :type="referenceStatusType(row.referenceStatus)">
-                  {{ referenceStatusLabel(row.referenceStatus) }}
-                </el-tag>
-                <span class="reference-count">{{ row.referenceCount }} 处</span>
-              </template>
-            </el-table-column>
+              <el-table-column label="引用状态" min-width="128">
+                <template #default="{ row }">
+                  <el-tag :type="referenceStatusType(row.referenceStatus)">
+                    {{ referenceStatusLabel(row.referenceStatus) }}
+                  </el-tag>
+                  <span class="reference-count">{{ row.referenceCount }} 处</span>
+                </template>
+              </el-table-column>
 
-            <el-table-column label="上传人" min-width="120">
-              <template #default="{ row }">
-                <span>{{ row.username || '-' }}</span>
-              </template>
-            </el-table-column>
+              <el-table-column label="上传人" min-width="112" show-overflow-tooltip>
+                <template #default="{ row }">
+                  <span>{{ row.username || '-' }}</span>
+                </template>
+              </el-table-column>
 
-            <el-table-column label="大小" min-width="120">
-              <template #default="{ row }">
-                <span>{{ formatFileSize(row.fileSize) }}</span>
-              </template>
-            </el-table-column>
+              <el-table-column label="大小" min-width="104">
+                <template #default="{ row }">
+                  <span>{{ formatFileSize(row.fileSize) }}</span>
+                </template>
+              </el-table-column>
 
-            <el-table-column label="上传时间" min-width="170">
-              <template #default="{ row }">
-                <span>{{ formatDateTime(row.createTime) }}</span>
-              </template>
-            </el-table-column>
+              <el-table-column label="上传时间" min-width="156">
+                <template #default="{ row }">
+                  <span>{{ formatDateTime(row.createTime) }}</span>
+                </template>
+              </el-table-column>
 
-            <el-table-column label="操作" width="180" fixed="right">
-              <template #default="{ row }">
-                <el-button type="primary" link @click="openDetail(row)">详情</el-button>
-                <el-button link @click="copyUrl(row.fileUrl)">复制链接</el-button>
-              </template>
-            </el-table-column>
-          </el-table>
+              <el-table-column label="操作" width="92" align="center">
+                <template #default="{ row }">
+                  <div class="table-actions">
+                    <el-button
+                      type="primary"
+                      link
+                      :icon="View"
+                      title="详情"
+                      aria-label="查看详情"
+                      @click="openDetail(row)"
+                    />
+                    <el-button
+                      link
+                      :icon="Download"
+                      title="下载"
+                      aria-label="下载文件"
+                      @click="downloadFile(row)"
+                    />
+                  </div>
+                </template>
+              </el-table-column>
+              </el-table>
+            </div>
 
-          <div class="table-footer">
-            <el-pagination
-              background
-              layout="total, prev, pager, next"
-              :current-page="page"
-              :page-size="pageSize"
-              :total="total"
-              @current-change="loadFiles"
-            />
+            <div class="table-footer">
+              <el-pagination
+                background
+                layout="total, prev, pager, next"
+                :current-page="page"
+                :page-size="pageSize"
+                :total="total"
+                @current-change="loadFiles"
+              />
+            </div>
           </div>
         </section>
       </div>
@@ -170,7 +183,6 @@
     <el-drawer v-model="detailVisible" size="560px" destroy-on-close>
       <template #header>
         <div class="drawer-title">
-          <span class="section-kicker">File Detail</span>
           <h3>{{ detail ? displayName(detail) : '文件详情' }}</h3>
         </div>
       </template>
@@ -227,7 +239,6 @@
         <div class="drawer-section">
           <div class="section-head section-head--compact">
             <div>
-              <span class="section-kicker">References</span>
               <h3>引用详情</h3>
             </div>
             <span class="section-meta">{{ detail.references.length }} 条</span>
@@ -258,7 +269,7 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
 import { ElMessage } from 'element-plus'
-import { Files, Refresh, Search } from '@element-plus/icons-vue'
+import { Download, Files, Refresh, Search, View } from '@element-plus/icons-vue'
 import {
   getAdminFileDetail,
   getAdminFiles,
@@ -466,6 +477,21 @@ async function copyUrl(url?: string) {
   }
 }
 
+function downloadFile(row: Pick<AdminFile, 'fileUrl' | 'fileOriginalName' | 'fileName' | 'objectName'>) {
+  if (!row.fileUrl) {
+    ElMessage.warning('当前文件没有可下载的地址')
+    return
+  }
+  const link = document.createElement('a')
+  link.href = row.fileUrl
+  link.download = displayName(row)
+  link.target = '_blank'
+  link.rel = 'noopener noreferrer'
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+}
+
 function windowOpen(url?: string) {
   if (!url) return
   window.open(url, '_blank', 'noopener,noreferrer')
@@ -521,13 +547,6 @@ onMounted(() => {
     margin: 0;
     color: var(--text-primary);
     font-size: 18px;
-  }
-
-  p {
-    margin: 4px 0 0;
-    color: var(--text-tertiary);
-    font-size: 13px;
-    line-height: 1.7;
   }
 }
 
@@ -586,23 +605,11 @@ onMounted(() => {
   }
 }
 
-.overview-note {
-  margin: 12px 0 0;
-  color: rgba(101, 79, 92, 0.72);
-  font-size: 13px;
-  line-height: 1.7;
-}
-
-.section-kicker {
-  color: #b97a94;
-  font-size: 12px;
-}
-
 .section-head {
   margin-bottom: 18px;
 
   h3 {
-    margin: 4px 0 0;
+    margin: 0;
     color: var(--text-primary);
     font-size: 18px;
   }
@@ -612,9 +619,18 @@ onMounted(() => {
   margin-bottom: 14px;
 }
 
+.section-head--table {
+  margin-bottom: 14px;
+  align-items: end;
+}
+
 .section-meta {
   color: var(--text-tertiary);
   font-size: 12px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.82);
+  border: 1px solid rgba(235, 219, 228, 0.76);
 }
 
 .filter-grid {
@@ -622,6 +638,68 @@ onMounted(() => {
   grid-template-columns: 2.2fr 1fr 1.2fr 1fr auto;
   gap: 12px;
   align-items: center;
+}
+
+.files-table-shell {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.files-table-panel {
+  max-width: 1260px;
+  margin: 0 auto;
+  padding: 10px 12px 8px;
+  border-radius: 20px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.58), rgba(255, 250, 252, 0.34));
+  border: 1px solid rgba(238, 225, 232, 0.74);
+}
+
+.files-table-shell :deep(.el-table) {
+  min-width: 1080px;
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.files-table-shell :deep(.el-table__inner-wrapper) {
+  min-width: 1080px;
+}
+
+.files-table-shell :deep(.el-table th.el-table__cell) {
+  height: 52px;
+  background: rgba(255, 249, 252, 0.9);
+}
+
+.files-table-shell :deep(.el-table td.el-table__cell) {
+  padding: 10px 0;
+}
+
+.files-table-shell :deep(.el-table .cell) {
+  padding-left: 12px;
+  padding-right: 12px;
+}
+
+.files-table-shell :deep(.el-table__row) {
+  transition: background-color 0.2s ease;
+}
+
+.files-table-shell :deep(.el-table__row:hover > td.el-table__cell) {
+  background: rgba(255, 247, 251, 0.76);
+}
+
+.table-actions {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  width: 100%;
+}
+
+.table-actions :deep(.el-button) {
+  min-height: 28px;
+  min-width: 28px;
+  margin-left: 0;
+  padding: 4px;
+  border-radius: 999px;
 }
 
 .asset-thumb {
@@ -675,8 +753,8 @@ onMounted(() => {
 
 .table-footer {
   display: flex;
-  justify-content: flex-end;
-  margin-top: 20px;
+  justify-content: center;
+  margin-top: 18px;
 }
 
 .drawer-title {
@@ -793,10 +871,37 @@ onMounted(() => {
 }
 
 @media (max-width: 1080px) {
-  .overview-grid,
-  .filter-grid,
   .drawer-meta {
     grid-template-columns: 1fr 1fr;
+  }
+
+  .overview-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .filter-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .filter-actions {
+    grid-column: 1 / -1;
+    justify-content: flex-end;
+  }
+}
+
+@media (max-width: 1280px) {
+  .files-card :deep(.el-card__body) {
+    padding: 16px;
+  }
+
+  .filter-grid {
+    grid-template-columns: minmax(0, 1.4fr) repeat(3, minmax(0, 1fr));
+  }
+
+  .files-table-panel {
+    max-width: none;
+    padding-left: 8px;
+    padding-right: 8px;
   }
 }
 
@@ -819,6 +924,22 @@ onMounted(() => {
   .filter-grid,
   .drawer-meta {
     grid-template-columns: 1fr;
+  }
+
+  .filter-actions,
+  .table-footer {
+    justify-content: stretch;
+  }
+
+  .filter-actions :deep(.el-button),
+  .table-footer :deep(.el-pagination) {
+    width: 100%;
+  }
+
+  .files-table-panel {
+    padding: 8px 0 0;
+    border: 0;
+    background: transparent;
   }
 }
 </style>
