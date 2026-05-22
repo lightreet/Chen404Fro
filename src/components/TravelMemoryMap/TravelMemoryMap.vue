@@ -1,5 +1,10 @@
 <template>
-  <div class="travel-map-shell" :class="{ 'is-picker-mode': pickerMode }">
+  <div
+    class="travel-map-shell"
+    :class="{ 'is-picker-mode': pickerMode }"
+    :data-city-map-status="cityMapStatus"
+    :data-city-boundary-count="cityBoundaryCount || undefined"
+  >
     <div
       v-if="pickerMode"
       ref="containerRef"
@@ -10,111 +15,141 @@
       <div class="travel-map-haze travel-map-haze--left" />
       <div class="travel-map-haze travel-map-haze--right" />
       <div class="travel-map-controls">
-        <button type="button" class="travel-map-control" title="放大地图" @click="zoomIn">+</button>
-        <button type="button" class="travel-map-control" title="缩小地图" @click="zoomOut">-</button>
-        <button type="button" class="travel-map-control travel-map-control--reset" title="恢复初始比例" @click="resetZoom">⌖</button>
+        <button type="button" class="travel-map-control" title="放大地图" @click="zoomIn">
+          <el-icon><Plus /></el-icon>
+        </button>
+        <button type="button" class="travel-map-control" title="缩小地图" @click="zoomOut">
+          <el-icon><Minus /></el-icon>
+        </button>
+        <button type="button" class="travel-map-control travel-map-control--reset" title="恢复初始比例" @click="resetZoom">
+          <el-icon><Refresh /></el-icon>
+        </button>
       </div>
 
-      <div class="travel-map-board" :style="{ transform: `scale(${displayScale})` }">
-        <svg class="travel-map-illustration" :viewBox="mapViewBox" aria-label="旅行纪念地图">
-          <defs>
-            <filter id="paperShadow" x="-20%" y="-20%" width="140%" height="140%">
-              <feDropShadow dx="0" dy="20" stdDeviation="20" flood-color="rgba(176, 149, 160, 0.24)" />
-            </filter>
-            <filter id="markerGlow" x="-120%" y="-120%" width="340%" height="340%">
-              <feGaussianBlur stdDeviation="10" result="blur" />
-              <feMerge>
-                <feMergeNode in="blur" />
-                <feMergeNode in="SourceGraphic" />
-              </feMerge>
-            </filter>
-            <linearGradient id="paperFill" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stop-color="#fffdfb" />
-              <stop offset="55%" stop-color="#fef4ef" />
-              <stop offset="100%" stop-color="#fff9f6" />
-            </linearGradient>
-            <linearGradient id="routeLine" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stop-color="rgba(243, 166, 188, 0.72)" />
-              <stop offset="100%" stop-color="rgba(233, 145, 174, 0.48)" />
-            </linearGradient>
-            <filter id="provinceShadow" x="-6%" y="-6%" width="112%" height="112%">
-              <feDropShadow dx="0" dy="10" stdDeviation="7" flood-color="rgba(214, 185, 195, 0.16)" />
-            </filter>
-          </defs>
+      <div
+        ref="viewportRef"
+        class="travel-map-viewport"
+        :class="{ 'is-dragging': isDragging }"
+        @wheel.prevent="handleWheelZoom"
+        @pointerdown="handlePointerDown"
+        @pointermove="handlePointerMove"
+        @pointerup="handlePointerUp"
+        @pointercancel="handlePointerUp"
+        @pointerleave="handlePointerUp"
+      >
+        <div ref="boardRef" class="travel-map-board" :style="mapBoardStyle">
+          <svg class="travel-map-illustration" :viewBox="mapViewBox" aria-label="旅行纪念地图">
+            <defs>
+              <filter id="paperShadow" x="-20%" y="-20%" width="140%" height="140%">
+                <feDropShadow dx="0" dy="20" stdDeviation="20" flood-color="rgba(176, 149, 160, 0.24)" />
+              </filter>
+              <filter id="markerGlow" x="-120%" y="-120%" width="340%" height="340%">
+                <feGaussianBlur stdDeviation="10" result="blur" />
+                <feMerge>
+                  <feMergeNode in="blur" />
+                  <feMergeNode in="SourceGraphic" />
+                </feMerge>
+              </filter>
+              <linearGradient id="paperFill" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#fffdfb" />
+                <stop offset="55%" stop-color="#fef4ef" />
+                <stop offset="100%" stop-color="#fff9f6" />
+              </linearGradient>
+              <linearGradient id="routeLine" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="rgba(243, 166, 188, 0.72)" />
+                <stop offset="100%" stop-color="rgba(233, 145, 174, 0.48)" />
+              </linearGradient>
+              <filter id="provinceShadow" x="-6%" y="-6%" width="112%" height="112%">
+                <feDropShadow dx="0" dy="10" stdDeviation="7" flood-color="rgba(214, 185, 195, 0.16)" />
+              </filter>
+            </defs>
 
-          <g class="travel-map-provinces" filter="url(#provinceShadow)">
+            <g class="travel-map-provinces" filter="url(#provinceShadow)">
+              <path
+                v-for="province in provincePaths"
+                :key="province.id"
+                :d="province.path"
+                class="travel-map-province"
+                :class="province.tone"
+                fill="url(#paperFill)"
+              />
+            </g>
+            <g class="travel-map-city-boundaries">
+              <path
+                v-for="cityBoundary in cityBoundaryPaths"
+                :key="cityBoundary.id"
+                :d="cityBoundary.path"
+                class="travel-map-city-boundary"
+                :class="getBoundaryStateClass(cityBoundary.id)"
+                @click.stop="handleBoundaryClick(cityBoundary.id)"
+              />
+            </g>
             <path
-              v-for="province in provincePaths"
-              :key="province.id"
-              :d="province.path"
-              class="travel-map-province"
-              :class="province.tone"
-              fill="url(#paperFill)"
+              v-if="routePath"
+              :d="routePath"
+              class="travel-map-route"
             />
-          </g>
-          <path
-            v-if="routePath"
-            :d="routePath"
-            class="travel-map-route"
-          />
 
-          <g
-            v-for="city in decorativeCities"
-            :key="city.name"
-            class="travel-map-city"
-            :transform="`translate(${city.x}, ${city.y})`"
-          >
-            <circle class="travel-map-city__dot" cx="0" cy="0" r="6" />
-            <path
-              class="travel-map-city__petal"
-              d="M0 -5 C3 -8 6 -7 6 -3 C6 0 3 1 0 4 C-3 1 -6 0 -6 -3 C-6 -7 -3 -8 0 -5 Z"
-            />
-            <text
-              class="travel-map-city__label"
-              :x="city.labelDx"
-              :y="city.labelDy"
+            <g
+              v-for="city in decorativeCities"
+              :key="city.name"
+              class="travel-map-city"
+              :transform="`translate(${city.x}, ${city.y})`"
             >
-              {{ city.name }}
-            </text>
-          </g>
+              <circle class="travel-map-city__dot" cx="0" cy="0" r="6" />
+              <path
+                class="travel-map-city__petal"
+                d="M0 -5 C3 -8 6 -7 6 -3 C6 0 3 1 0 4 C-3 1 -6 0 -6 -3 C-6 -7 -3 -8 0 -5 Z"
+              />
+              <text
+                class="travel-map-city__label"
+                :x="city.labelDx"
+                :y="city.labelDy"
+              >
+                {{ city.name }}
+              </text>
+            </g>
 
-          <g
-            v-for="point in displayPoints"
-            :key="point.id"
-            class="travel-map-marker"
-            :class="{ 'is-active': point.id === activeId }"
-            :transform="`translate(${point.x}, ${point.y})`"
-            @click="emit('select', point.id)"
-          >
-            <circle
-              v-if="point.id === activeId"
-              class="travel-map-marker__ripple"
-              cx="0"
-              cy="0"
-              r="30"
-              filter="url(#markerGlow)"
-            />
-            <path
-              class="travel-map-marker__pin"
-              :d="point.id === activeId ? ACTIVE_PIN_PATH : PIN_PATH"
-            />
-            <circle class="travel-map-marker__core" :cy="point.id === activeId ? -7 : -6" :r="point.id === activeId ? 5.4 : 4.2" />
-            <text
-              class="travel-map-marker__label"
-              :class="{ 'travel-map-marker__label--left': getMarkerLabelOffset(point).align === 'left' }"
-              :x="getMarkerLabelOffset(point).x"
-              :y="getMarkerLabelOffset(point).y"
+            <g
+              v-for="point in displayPoints"
+              :key="point.id"
+              class="travel-map-marker"
+              :class="{ 'is-active': point.id === activeId }"
+              :transform="`translate(${point.x}, ${point.y})`"
+              @click.stop="handleMarkerClick(point.id)"
             >
-              {{ point.city || point.province || point.title }}
-            </text>
-          </g>
-        </svg>
+              <circle
+                v-if="point.id === activeId"
+                class="travel-map-marker__ripple"
+                cx="0"
+                cy="0"
+                r="30"
+                filter="url(#markerGlow)"
+              />
+              <path
+                class="travel-map-marker__pin"
+                :d="point.id === activeId ? ACTIVE_PIN_PATH : PIN_PATH"
+              />
+              <circle class="travel-map-marker__core" :cy="point.id === activeId ? -7 : -6" :r="point.id === activeId ? 5.4 : 4.2" />
+              <text
+                class="travel-map-marker__label"
+                :class="{ 'travel-map-marker__label--left': getMarkerLabelOffset(point).align === 'left' }"
+                :x="getMarkerLabelOffset(point).x"
+                :y="getMarkerLabelOffset(point).y"
+              >
+                {{ point.city || point.province || point.title }}
+              </text>
+            </g>
+          </svg>
+        </div>
       </div>
 
       <div class="travel-map-legend">
         <span class="travel-map-legend__flower"></span>
-        <span>点击城市，查看旅行故事</span>
+        <span>滚轮缩放，按住左键拖动地图</span>
       </div>
+      <div v-if="cityMapFallbackText" class="travel-map-data-note">{{ cityMapFallbackText }}</div>
+
       <div class="travel-map-petals">
         <span class="petal petal--one" />
         <span class="petal petal--two" />
@@ -132,10 +167,20 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue'
+import { Minus, Plus, Refresh } from '@element-plus/icons-vue'
+import { geoContains, geoMercator, geoPath } from 'd3-geo'
 import chinaMapData from '@svg-maps/china'
 import type { TravelMemoryLocationListItem } from '@/types'
 import { getAmapUnavailableReason, loadAmap } from '@/utils/amap'
+import { getCityNameCandidates, hasCityNameIntersection } from '@/utils/cityName'
+import { gcj02ToWgs84, isValidCoordinate, wgs84ToGcj02 } from '@/utils/coordinate'
+import {
+  loadChinaCityMap,
+  type ChinaCityMapFeature,
+  type ChinaCityMapGeoJson,
+  type ChinaProvinceMapGeoJson,
+} from '@/utils/mapData'
 
 interface Props {
   locations?: TravelMemoryLocationListItem[]
@@ -164,6 +209,7 @@ type SvgProvince = {
   id: string
   path: string
   tone: string
+  name?: string
 }
 
 type SvgProvinceSource = {
@@ -183,7 +229,11 @@ const SVG_VIEWBOX = {
 }
 const BASE_SCALE = 1.02
 const MIN_SCALE = 0.9
-const MAX_SCALE = 1.18
+const MAX_SCALE = 2.8
+const ZOOM_STEP = 0.14
+const DRAG_THRESHOLD = 4
+const DRAG_SUPPRESS_DURATION = 180
+const CITY_MAP_PADDING = 38
 const PIN_PATH = 'M0 -18 C9 -18 16 -11 16 -2 C16 7 8 16 0 27 C-8 16 -16 7 -16 -2 C-16 -11 -9 -18 0 -18 Z'
 const ACTIVE_PIN_PATH = 'M0 -22 C11 -22 19 -14 19 -3 C19 9 10 19 0 33 C-10 19 -19 9 -19 -3 C-19 -14 -11 -22 0 -22 Z'
 
@@ -200,29 +250,114 @@ const emit = defineEmits<{
   (e: 'pick', payload: { latitude: number; longitude: number }): void
 }>()
 
+const viewportRef = ref<HTMLDivElement | null>(null)
+const boardRef = ref<HTMLDivElement | null>(null)
 const containerRef = ref<HTMLDivElement | null>(null)
 const loading = ref(true)
 const errorText = ref('')
+const cityMapData = shallowRef<ChinaCityMapGeoJson | null>(null)
+const provinceMapData = shallowRef<ChinaProvinceMapGeoJson | null>(null)
+const cityMapStatus = ref<'idle' | 'loading' | 'ready' | 'fallback'>(props.pickerMode ? 'idle' : 'loading')
+const cityMapFallbackText = ref('')
 const displayScale = ref(BASE_SCALE)
+const mapPan = ref({ x: 0, y: 0 })
+const isDragging = ref(false)
 
 let map: any = null
 let AMapRef: any = null
 let markers: any[] = []
 let pickerMarker: any = null
 let clickHandler: ((event: any) => void) | null = null
+let dragStart:
+  | {
+      pointerId: number
+      x: number
+      y: number
+      panX: number
+      panY: number
+      moved: boolean
+    }
+  | null = null
+let lastDragEndedAt = 0
 
-const provincePaths = computed<SvgProvince[]>(() =>
-  ((chinaMapData.locations || []) as SvgProvinceSource[]).map((province, index) => ({
+const cityProjection = computed(() => {
+  const projectionSource = provinceMapData.value?.features.length
+    ? provinceMapData.value
+    : cityMapData.value
+  if (!projectionSource?.features.length) return null
+
+  return geoMercator().fitExtent(
+    [
+      [CITY_MAP_PADDING, CITY_MAP_PADDING],
+      [SVG_VIEWBOX.width - CITY_MAP_PADDING, SVG_VIEWBOX.height - CITY_MAP_PADDING],
+    ],
+    projectionSource as any,
+  )
+})
+const cityPathGenerator = computed(() => {
+  if (!cityProjection.value) return null
+  return geoPath(cityProjection.value)
+})
+const provincePaths = computed<SvgProvince[]>(() => {
+  const pathGenerator = cityPathGenerator.value
+  const provinceFeatures = provinceMapData.value?.features
+  if (pathGenerator && provinceFeatures?.length) {
+    return provinceFeatures
+      .map((feature, index) => ({
+        id: feature.id,
+        path: pathGenerator(feature as any) ?? '',
+        tone: index % 5 === 0 ? 'tone-soft' : index % 3 === 0 ? 'tone-blush' : 'tone-base',
+        name: feature.properties.name,
+      }))
+      .filter((shape) => shape.path)
+  }
+
+  return ((chinaMapData.locations || []) as SvgProvinceSource[]).map((province, index) => ({
     id: province.id,
     path: province.path,
     tone: index % 5 === 0 ? 'tone-soft' : index % 3 === 0 ? 'tone-blush' : 'tone-base',
-  })),
-)
+  }))
+})
+const cityBoundaryPaths = computed<SvgProvince[]>(() => {
+  const pathGenerator = cityPathGenerator.value
+  const cityFeatures = cityMapData.value?.features
+  if (!pathGenerator || !cityFeatures?.length) return []
+
+  return cityFeatures
+    .map((feature, index) => ({
+      id: feature.id,
+      path: pathGenerator(feature as any) ?? '',
+      tone: index % 7 === 0 ? 'tone-soft' : index % 4 === 0 ? 'tone-blush' : 'tone-base',
+      name: feature.properties.name,
+    }))
+    .filter((shape) => shape.path)
+})
 const mapViewBox = `0 0 ${SVG_VIEWBOX.width} ${SVG_VIEWBOX.height}`
+const cityBoundaryCount = computed(() => cityMapData.value?.features.length ?? 0)
+const locationBoundaryMap = computed(() => {
+  const features = cityMapData.value?.features ?? []
+  if (!features.length) return new Map<number, string>()
+
+  const result = new Map<number, string>()
+  props.locations.forEach((location) => {
+    const matchedFeature = findBoundaryFeature(location, features)
+    if (matchedFeature) {
+      result.set(location.id, matchedFeature.id)
+    }
+  })
+  return result
+})
+const visitedBoundaryIds = computed(() => new Set(locationBoundaryMap.value.values()))
+const activeBoundaryId = computed(() =>
+  props.activeId != null ? locationBoundaryMap.value.get(props.activeId) ?? null : null,
+)
+const mapBoardStyle = computed(() => ({
+  transform: `translate3d(${mapPan.value.x}px, ${mapPan.value.y}px, 0) scale(${displayScale.value})`,
+}))
 
 const displayPoints = computed<ProjectedPoint[]>(() =>
   props.locations
-    .filter((item) => Number.isFinite(item.latitude) && Number.isFinite(item.longitude))
+    .filter((item) => isValidCoordinate(item.latitude, item.longitude))
     .map((item) => {
       const { x, y } = projectPoint(Number(item.longitude), Number(item.latitude))
       return {
@@ -254,6 +389,14 @@ const routePath = computed(() =>
       ),
 )
 function projectPoint(longitude: number, latitude: number) {
+  const projectedPoint = cityProjection.value?.([longitude, latitude])
+  if (projectedPoint) {
+    return {
+      x: projectedPoint[0],
+      y: projectedPoint[1],
+    }
+  }
+
   const normalizedX = (longitude - MAP_BOUNDS.minLng) / (MAP_BOUNDS.maxLng - MAP_BOUNDS.minLng)
   const normalizedY = (MAP_BOUNDS.maxLat - latitude) / (MAP_BOUNDS.maxLat - MAP_BOUNDS.minLat)
 
@@ -325,16 +468,182 @@ function getMarkerLabelOffset(point: ProjectedPoint) {
   }
 }
 
+function getBoundaryStateClass(id: string) {
+  return {
+    'is-visited': visitedBoundaryIds.value.has(id),
+    'is-active': activeBoundaryId.value === id,
+    'is-clickable': visitedBoundaryIds.value.has(id),
+  }
+}
+
+function findBoundaryFeature(
+  location: TravelMemoryLocationListItem,
+  features: ChinaCityMapFeature[],
+) {
+  if (isValidCoordinate(location.latitude, location.longitude)) {
+    const coordinate: [number, number] = [Number(location.longitude), Number(location.latitude)]
+    const matchedFeature = features.find((feature) => geoContains(feature as any, coordinate))
+    if (matchedFeature) {
+      return matchedFeature
+    }
+  }
+
+  return findBoundaryFeatureByName(location, features)
+}
+
+function findBoundaryFeatureByName(
+  location: TravelMemoryLocationListItem,
+  features: ChinaCityMapFeature[],
+) {
+  const cityCandidates = getCityNameCandidates(location.city)
+  if (cityCandidates.size) {
+    return features.find((feature) =>
+      hasCityNameIntersection(
+        cityCandidates,
+        getCityNameCandidates(feature.properties.name, feature.properties.provinceName),
+      ),
+    )
+  }
+
+  const titleCandidates = getCityNameCandidates(location.title)
+  if (!titleCandidates.size) return undefined
+
+  return features.find((feature) =>
+    hasCityNameIntersection(titleCandidates, getCityNameCandidates(feature.properties.name)),
+  )
+}
+
+function handleBoundaryClick(id: string) {
+  if (Date.now() - lastDragEndedAt < DRAG_SUPPRESS_DURATION) {
+    return
+  }
+
+  const target = props.locations.find((location) => locationBoundaryMap.value.get(location.id) === id)
+  if (target) {
+    emit('select', target.id)
+  }
+}
+
 function zoomIn() {
-  displayScale.value = Math.min(MAX_SCALE, Number((displayScale.value + 0.05).toFixed(2)))
+  updateScale(displayScale.value + ZOOM_STEP)
 }
 
 function zoomOut() {
-  displayScale.value = Math.max(MIN_SCALE, Number((displayScale.value - 0.05).toFixed(2)))
+  updateScale(displayScale.value - ZOOM_STEP)
 }
 
 function resetZoom() {
   displayScale.value = BASE_SCALE
+  mapPan.value = { x: 0, y: 0 }
+}
+
+function updateScale(value: number) {
+  displayScale.value = clampScale(value)
+  if (displayScale.value <= BASE_SCALE) {
+    mapPan.value = { x: 0, y: 0 }
+    return
+  }
+  mapPan.value = clampPan(mapPan.value)
+}
+
+function clampScale(value: number) {
+  return Math.min(MAX_SCALE, Math.max(MIN_SCALE, Number(value.toFixed(2))))
+}
+
+function clampPan(pan = mapPan.value) {
+  if (displayScale.value <= BASE_SCALE) {
+    return { x: 0, y: 0 }
+  }
+
+  const viewport = viewportRef.value
+  const board = boardRef.value
+  if (!viewport || !board) {
+    return pan
+  }
+
+  const boardWidth = board.offsetWidth
+  const boardHeight = board.offsetHeight || (boardWidth * SVG_VIEWBOX.height) / SVG_VIEWBOX.width
+  const extraX = Math.max(0, (boardWidth * displayScale.value - viewport.clientWidth) / 2)
+  const extraY = Math.max(0, (boardHeight * displayScale.value - viewport.clientHeight) / 2)
+  const cushion = 36
+
+  return {
+    x: Math.min(extraX + cushion, Math.max(-extraX - cushion, pan.x)),
+    y: Math.min(extraY + cushion, Math.max(-extraY - cushion, pan.y)),
+  }
+}
+
+function handleWheelZoom(event: WheelEvent) {
+  const nextScale = displayScale.value + (event.deltaY < 0 ? ZOOM_STEP : -ZOOM_STEP)
+  updateScale(nextScale)
+}
+
+function handlePointerDown(event: PointerEvent) {
+  if (event.button !== 0) return
+  const target = event.target as HTMLElement | SVGElement | null
+  if (target?.closest?.('.travel-map-controls, .travel-map-legend')) return
+
+  dragStart = {
+    pointerId: event.pointerId,
+    x: event.clientX,
+    y: event.clientY,
+    panX: mapPan.value.x,
+    panY: mapPan.value.y,
+    moved: false,
+  }
+  ;(event.currentTarget as HTMLElement).setPointerCapture?.(event.pointerId)
+}
+
+function handlePointerMove(event: PointerEvent) {
+  if (!dragStart || dragStart.pointerId !== event.pointerId) return
+  const deltaX = event.clientX - dragStart.x
+  const deltaY = event.clientY - dragStart.y
+
+  if (!dragStart.moved && Math.hypot(deltaX, deltaY) < DRAG_THRESHOLD) {
+    return
+  }
+
+  dragStart.moved = true
+  isDragging.value = true
+  mapPan.value = clampPan({
+    x: dragStart.panX + deltaX,
+    y: dragStart.panY + deltaY,
+  })
+}
+
+function handlePointerUp(event: PointerEvent) {
+  if (!dragStart || dragStart.pointerId !== event.pointerId) return
+  ;(event.currentTarget as HTMLElement).releasePointerCapture?.(event.pointerId)
+  if (dragStart.moved) {
+    lastDragEndedAt = Date.now()
+  }
+  dragStart = null
+  isDragging.value = false
+}
+
+function handleMarkerClick(id: number) {
+  if (Date.now() - lastDragEndedAt < DRAG_SUPPRESS_DURATION) {
+    return
+  }
+  emit('select', id)
+}
+
+async function initCityMapData() {
+  if (props.pickerMode) return
+
+  cityMapStatus.value = 'loading'
+  cityMapFallbackText.value = ''
+  try {
+    const bundle = await loadChinaCityMap()
+    cityMapData.value = bundle.geoJson
+    provinceMapData.value = bundle.provinceGeoJson
+    cityMapStatus.value = 'ready'
+  } catch {
+    cityMapData.value = null
+    provinceMapData.value = null
+    cityMapStatus.value = 'fallback'
+    cityMapFallbackText.value = '地图数据暂未加载，已切换基础地图'
+  }
 }
 
 async function initMap() {
@@ -359,9 +668,10 @@ async function initMap() {
     clickHandler = (event: any) => {
       const lng = Number(event?.lnglat?.getLng?.())
       const lat = Number(event?.lnglat?.getLat?.())
-      if (Number.isFinite(lat) && Number.isFinite(lng)) {
-        setPickerMarker(lat, lng)
-        emit('pick', { latitude: lat, longitude: lng })
+      if (isValidCoordinate(lat, lng)) {
+        const coordinate = gcj02ToWgs84(lat, lng)
+        setPickerMarker(coordinate.latitude, coordinate.longitude)
+        emit('pick', coordinate)
       }
     }
     map.on('click', clickHandler)
@@ -384,10 +694,11 @@ function refreshMarkers() {
   if (!props.pickerMode || !map || !AMapRef) return
   clearMarkers()
 
-  const points = props.locations.filter((item) => Number.isFinite(item.latitude) && Number.isFinite(item.longitude))
+  const points = props.locations.filter((item) => isValidCoordinate(item.latitude, item.longitude))
   markers = points.map((item) => {
+    const coordinate = wgs84ToGcj02(Number(item.latitude), Number(item.longitude))
     const marker = new AMapRef.Marker({
-      position: [Number(item.longitude), Number(item.latitude)],
+      position: [coordinate.longitude, coordinate.latitude],
       title: item.title,
       offset: new AMapRef.Pixel(-12, -12),
       content: buildMarkerHtml(item.id === props.activeId),
@@ -409,7 +720,8 @@ function buildMarkerHtml(active: boolean) {
 
 function setPickerMarker(latitude: number, longitude: number) {
   if (!map || !AMapRef) return
-  const position = [longitude, latitude]
+  const coordinate = wgs84ToGcj02(latitude, longitude)
+  const position = [coordinate.longitude, coordinate.latitude]
   if (!pickerMarker) {
     pickerMarker = new AMapRef.Marker({
       position,
@@ -444,11 +756,18 @@ watch(
   },
 )
 
+function handleResize() {
+  mapPan.value = clampPan(mapPan.value)
+}
+
 onMounted(() => {
+  window.addEventListener('resize', handleResize)
+  void initCityMapData()
   void initMap()
 })
 
 onBeforeUnmount(() => {
+  window.removeEventListener('resize', handleResize)
   if (map && clickHandler) {
     map.off('click', clickHandler)
   }
@@ -491,6 +810,28 @@ onBeforeUnmount(() => {
   padding: 8px 8px 76px;
 }
 
+.travel-map-viewport {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 424px;
+  overflow: hidden;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+
+.travel-map-viewport.is-dragging {
+  cursor: grabbing;
+}
+
+.travel-map-viewport.is-dragging .travel-map-board {
+  transition: none;
+}
+
 .travel-map-board {
   position: relative;
   width: 98%;
@@ -502,6 +843,8 @@ onBeforeUnmount(() => {
 .travel-map-illustration {
   width: 100%;
   height: 100%;
+  display: block;
+  pointer-events: auto;
 }
 
 .travel-map-provinces {
@@ -510,9 +853,9 @@ onBeforeUnmount(() => {
 
 .travel-map-province {
   fill-opacity: 0.98;
-  stroke: rgba(232, 217, 223, 0.84);
-  stroke-width: 1.1;
-  transition: fill 0.24s ease, opacity 0.24s ease;
+  stroke: rgba(226, 197, 208, 0.92);
+  stroke-width: 1.35;
+  transition: fill 0.24s ease, opacity 0.24s ease, stroke 0.24s ease;
 }
 
 .travel-map-province.tone-base {
@@ -525,6 +868,42 @@ onBeforeUnmount(() => {
 
 .travel-map-province.tone-blush {
   fill: rgba(250, 244, 245, 0.98);
+}
+
+.travel-map-city-boundaries {
+  pointer-events: none;
+}
+
+.travel-map-city-boundary {
+  fill: transparent;
+  stroke: rgba(224, 196, 207, 0.32);
+  stroke-width: 0.55;
+  transition: fill 0.24s ease, opacity 0.24s ease, stroke 0.24s ease;
+  pointer-events: none;
+}
+
+.travel-map-city-boundary.is-visited {
+  fill: rgba(255, 232, 241, 0.98);
+  stroke: rgba(235, 157, 185, 0.78);
+  stroke-width: 1.25;
+  pointer-events: auto;
+}
+
+.travel-map-city-boundary.is-clickable {
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+.travel-map-city-boundary.is-clickable:hover {
+  fill: rgba(255, 224, 236, 0.98);
+  stroke: rgba(236, 135, 171, 0.86);
+}
+
+.travel-map-city-boundary.is-active {
+  fill: rgba(255, 211, 228, 0.98);
+  stroke: rgba(240, 111, 157, 0.92);
+  stroke-width: 1.75;
+  pointer-events: auto;
 }
 
 .travel-map-route {
@@ -568,6 +947,7 @@ onBeforeUnmount(() => {
 
 .travel-map-marker {
   cursor: pointer;
+  pointer-events: auto;
 }
 
 .travel-map-marker__ripple {
@@ -615,7 +995,7 @@ onBeforeUnmount(() => {
   position: absolute;
   left: 12px;
   bottom: 14px;
-  z-index: 2;
+  z-index: 3;
   display: grid;
   gap: 10px;
 }
@@ -633,8 +1013,13 @@ onBeforeUnmount(() => {
   transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
 }
 
-.travel-map-control--reset {
+.travel-map-control .el-icon {
   font-size: 18px;
+  pointer-events: none;
+}
+
+.travel-map-control--reset {
+  color: #8a6672;
 }
 
 .travel-map-control:hover {
@@ -675,6 +1060,22 @@ onBeforeUnmount(() => {
     transparent 100%
   );
   box-shadow: 0 0 0 4px rgba(255, 204, 220, 0.34);
+}
+
+.travel-map-data-note {
+  position: absolute;
+  right: 8px;
+  bottom: 62px;
+  z-index: 2;
+  max-width: min(360px, calc(100% - 24px));
+  padding: 9px 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(239, 223, 229, 0.92);
+  background: rgba(255, 255, 255, 0.94);
+  color: #8d6a77;
+  font-size: 12px;
+  line-height: 1.4;
+  box-shadow: 0 10px 20px rgba(217, 188, 197, 0.1);
 }
 
 .travel-map-haze {
@@ -757,6 +1158,10 @@ onBeforeUnmount(() => {
   .travel-map-stage {
     min-height: 420px;
     padding: 10px 0 74px;
+  }
+
+  .travel-map-viewport {
+    min-height: 336px;
   }
 
   .travel-map-board {

@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "vue-tsc -b && vite build",
     "preview": "vite preview",
-    "gen:sdk": "node ./scripts/generate-openapi-sdk.mjs"
+    "gen:sdk": "node ./scripts/generate-openapi-sdk.mjs",
+    "maps:build": "node ./scripts/build-china-city-map.mjs"
   },
   "dependencies": {
     "@element-plus/icons-vue": "^2.3.2",
@@ -30,10 +31,12 @@
     "vue-router": "^4.6.4"
   },
   "devDependencies": {
+    "@types/d3-geo": "^3.1.0",
     "@types/node": "^24.12.0",
     "@unocss/reset": "^66.6.7",
     "@vitejs/plugin-vue": "^6.0.5",
     "@vue/tsconfig": "^0.9.0",
+    "china-map-geojson": "^1.0.4",
     "openapi-typescript-codegen": "^0.29.0",
     "typescript": "~5.9.3",
     "unocss": "^66.6.7",

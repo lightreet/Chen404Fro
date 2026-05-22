@@ -1,3 +1,5 @@
+import { wgs84ToGcj02 } from '@/utils/coordinate'
+
 let loadingPromise: Promise<any> | null = null
 let geocoderPromise: Promise<any> | null = null
 let geocoderInstance: any = null
@@ -103,9 +105,10 @@ export async function reverseGeocodeLocation(
   longitude: number,
 ): Promise<AmapReverseGeocodeResult> {
   const geocoder = await loadAmapGeocoder()
+  const amapCoordinate = wgs84ToGcj02(latitude, longitude)
 
   return new Promise((resolve, reject) => {
-    geocoder.getAddress([longitude, latitude], (status: string, result: any) => {
+    geocoder.getAddress([amapCoordinate.longitude, amapCoordinate.latitude], (status: string, result: any) => {
       const addressComponent = result?.regeocode?.addressComponent
       if (status !== 'complete' || !addressComponent) {
         reject(new Error('AMap reverse geocode failed'))

@@ -1,0 +1,22 @@
+{
+  "id": "china-city-boundaries",
+  "version": "1.0.4",
+  "source": {
+    "package": "china-map-geojson",
+    "version": "1.0.4",
+    "repository": "https://github.com/twobin/china-map-geojson.git",
+    "license": "ISC"
+  },
+  "coordinateSystem": "WGS84",
+  "files": {
+    "cityGeoJson": "/maps/china-city.geojson",
+    "provinceGeoJson": "/maps/china-province.geojson"
+  },
+  "featureCount": 455,
+  "provinceFeatureCount": 34,
+  "byteSize": 1710404,
+  "provinceByteSize": 339851,
+  "sha256": "a62c44a9d7b1a8bfa7caff21c4e389c377b83ddba3489d0b353f4d7f9ebc048c",
+  "provinceSha256": "8562d43fa1d2aaf2d6cc0c7977a2c3e54db3d3b726f492269cb21900209fe507",
+  "generatedBy": "scripts/build-china-city-map.mjs"
+}

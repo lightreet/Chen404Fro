@@ -66,10 +66,10 @@
                 <el-form-item label="城市">
                   <el-input v-model="form.city" placeholder="例如：厦门市" />
                 </el-form-item>
-                <el-form-item label="纬度">
+                <el-form-item label="纬度（WGS84）">
                   <el-input-number v-model="form.latitude" :precision="6" :step="0.0001" class="w-full" />
                 </el-form-item>
-                <el-form-item label="经度">
+                <el-form-item label="经度（WGS84）">
                   <el-input-number v-model="form.longitude" :precision="6" :step="0.0001" class="w-full" />
                 </el-form-item>
                 </div>
@@ -322,6 +322,7 @@ import type {
   TravelMemoryLocationDetail,
 } from '@/types'
 import { reverseGeocodeLocation } from '@/utils/amap'
+import { normalizeCoordinate } from '@/utils/coordinate'
 import { DEFAULT_IMAGE_MAX_MB, validateImageFile } from '@/utils/validation'
 import { applySiteMeta } from '@/utils/siteConfig'
 
@@ -525,8 +526,9 @@ async function handleUploadEntryImage(options: UploadRequestOptions) {
 }
 
 function updateCoordinateFields(latitude: number, longitude: number) {
-  form.latitude = Number(latitude.toFixed(6))
-  form.longitude = Number(longitude.toFixed(6))
+  const coordinate = normalizeCoordinate(latitude, longitude)
+  form.latitude = coordinate.latitude
+  form.longitude = coordinate.longitude
 }
 
 async function resolveLocationMetaFromCoordinate(

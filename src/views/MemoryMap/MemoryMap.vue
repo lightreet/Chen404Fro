@@ -219,7 +219,8 @@
               type="button"
               class="gallery-card"
               :class="{ 'is-active': activeId === location.id }"
-              @click="openTravelDetail(location.id)"
+              :ref="(element) => setGalleryCardRef(location.id, element)"
+              @click="selectGalleryLocation(location.id)"
             >
               <div class="gallery-card__cover">
                 <img v-if="location.coverImage" :src="location.coverImage" :alt="location.title" />
@@ -248,7 +249,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, nextTick, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import dayjs from 'dayjs'
 import { storeToRefs } from 'pinia'
@@ -284,8 +285,9 @@ const visibleGalleryCount = ref(INITIAL_GALLERY_VISIBLE_COUNT)
 const activeId = ref<number | null>(null)
 const activeDetail = ref<TravelMemoryLocationDetail | null>(null)
 const detailCache = ref<Record<number, TravelMemoryLocationDetail>>({})
+const galleryCardRefs = new Map<number, HTMLElement>()
 const canManage = computed(() => isAdminUser(user.value))
-const canViewContent = computed(() => isFriendUser(user.value))
+const canViewContent = computed(() => isAdminUser(user.value) || isFriendUser(user.value))
 const memoryMapCover = computed(() => buildMemoryMapCoverConfig(isLoggedIn.value))
 const coverEntry = computed<TravelMemoryEntry | null>(() => {
   const entries = activeDetail.value?.entries || []
@@ -373,7 +375,7 @@ async function loadMemories(preferredId?: number | null) {
       const nextId = resolveDefaultLocationId(locations.value, preferredId, activeId.value)
 
       if (nextId != null) {
-        await handleSelectLocation(nextId)
+        await handleSelectLocation(nextId, { syncGallery: false })
       } else {
         activeId.value = null
         activeDetail.value = null
@@ -397,8 +399,14 @@ async function loadMemories(preferredId?: number | null) {
   }
 }
 
-async function handleSelectLocation(id: number) {
+async function handleSelectLocation(id: number, options: { syncGallery?: boolean } = {}) {
   activeId.value = id
+  ensureGalleryLocationVisible(id)
+  await nextTick()
+  if (options.syncGallery !== false) {
+    scrollGalleryCardIntoView(id)
+  }
+
   if (detailCache.value[id]) {
     activeDetail.value = detailCache.value[id]
     return
@@ -478,8 +486,35 @@ function loadMoreGallery() {
   )
 }
 
-function openTravelDetail(id: number) {
-  router.push({ name: 'TravelMemoryDetail', params: { id } })
+function ensureGalleryLocationVisible(id: number) {
+  const targetIndex = locations.value.findIndex((location) => location.id === id)
+  if (targetIndex >= visibleGalleryCount.value) {
+    visibleGalleryCount.value = targetIndex + 1
+  }
+}
+
+function setGalleryCardRef(id: number, element: unknown) {
+  if (element instanceof HTMLElement) {
+    galleryCardRefs.set(id, element)
+    return
+  }
+  galleryCardRefs.delete(id)
+}
+
+function scrollGalleryCardIntoView(id: number) {
+  galleryCardRefs.get(id)?.scrollIntoView({
+    behavior: 'smooth',
+    block: 'nearest',
+    inline: 'nearest',
+  })
+}
+
+async function selectGalleryLocation(id: number) {
+  await handleSelectLocation(id, { syncGallery: false })
+  document.querySelector('.memory-spread')?.scrollIntoView({
+    behavior: 'smooth',
+    block: 'start',
+  })
 }
 
 function resolveDefaultLocationId(
@@ -1303,15 +1338,18 @@ onMounted(async () => {
 
 .gallery-track {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(236px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(220px, 260px));
   gap: 16px;
+  justify-content: start;
   padding-bottom: 4px;
 }
 
 .gallery-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(236px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(220px, 260px));
   gap: 18px;
+  justify-content: start;
+  align-items: start;
 }
 
 .gallery-card {

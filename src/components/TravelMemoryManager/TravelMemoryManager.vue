@@ -125,10 +125,10 @@
               </div>
 
               <div class="coordinate-fields">
-                <el-form-item label="纬度">
+                <el-form-item label="纬度（WGS84）">
                   <el-input-number v-model="form.latitude" :precision="6" :step="0.0001" class="w-full" />
                 </el-form-item>
-                <el-form-item label="经度">
+                <el-form-item label="经度（WGS84）">
                   <el-input-number v-model="form.longitude" :precision="6" :step="0.0001" class="w-full" />
                 </el-form-item>
                 <button type="button" class="coordinate-adjust-hint">在地图上调整</button>
@@ -312,6 +312,7 @@ import type {
   TravelMemoryEntryUpsertCommand,
   TravelMemoryLocationDetail,
 } from '@/types'
+import { normalizeCoordinate } from '@/utils/coordinate'
 import { DEFAULT_IMAGE_MAX_MB, validateImageFile } from '@/utils/validation'
 
 interface Props {
@@ -453,8 +454,9 @@ async function handleUploadEntryImage(options: UploadRequestOptions) {
     form.entries.push(nextEntry)
     selectedEntryIndex.value = form.entries.length - 1
     if ((form.latitude == null || form.longitude == null) && result.latitude != null && result.longitude != null) {
-      form.latitude = result.latitude
-      form.longitude = result.longitude
+      const coordinate = normalizeCoordinate(result.latitude, result.longitude)
+      form.latitude = coordinate.latitude
+      form.longitude = coordinate.longitude
     }
     options.onSuccess?.(result as never)
     ElMessage.success('旅行照片上传成功')
@@ -467,8 +469,9 @@ async function handleUploadEntryImage(options: UploadRequestOptions) {
 }
 
 function handlePickCoordinate(payload: { latitude: number; longitude: number }) {
-  form.latitude = Number(payload.latitude.toFixed(6))
-  form.longitude = Number(payload.longitude.toFixed(6))
+  const coordinate = normalizeCoordinate(payload.latitude, payload.longitude)
+  form.latitude = coordinate.latitude
+  form.longitude = coordinate.longitude
 }
 
 function setCover(index: number) {
