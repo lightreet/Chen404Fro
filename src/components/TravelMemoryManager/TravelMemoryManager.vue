@@ -136,50 +136,10 @@
             </div>
           </section>
 
-          <section class="editor-card editor-card--cover">
-            <div class="section-head section-head--split">
-              <div class="section-head__main">
-                <span class="section-mark">3</span>
-                <div class="section-copy">
-                  <h4>封面图片</h4>
-                </div>
-              </div>
-              <el-button
-                v-if="selectedEntry"
-                plain
-                type="primary"
-                class="cover-action"
-                @click="setCover(selectedEntryIndex)"
-              >
-                {{ selectedEntry.cover ? '当前封面' : '设为封面' }}
-              </el-button>
-            </div>
-
-            <div v-if="coverEntry" class="cover-preview-row">
-              <div class="cover-preview-card">
-                <img :src="coverEntry.imageUrl" :alt="coverEntry.remark || form.title || '封面照片'" />
-              </div>
-            </div>
-            <div v-else class="entry-empty entry-empty--compact">先上传一张照片，封面区就会出现。</div>
-
-            <div v-if="form.entries.length" class="thumbnail-strip">
-              <button
-                v-for="(entry, index) in form.entries"
-                :key="entry.id || entry.imageUrl || index"
-                type="button"
-                class="thumbnail-chip"
-                :class="{ 'is-active': selectedEntryIndex === index, 'is-cover': entry.cover }"
-                @click="selectedEntryIndex = index"
-              >
-                <img :src="entry.imageUrl" :alt="entry.remark || `旅行照片 ${index + 1}`" />
-              </button>
-            </div>
-          </section>
-
           <section class="entry-section editor-card">
             <div class="section-head section-head--split">
               <div class="section-head__main">
-                <span class="section-mark">4</span>
+                <span class="section-mark">3</span>
                 <div class="section-copy">
                   <h4>照片记忆</h4>
                 </div>
@@ -214,11 +174,10 @@
                 v-for="(entry, index) in form.entries"
                 :key="entry.id || entry.imageUrl || index"
                 class="memory-entry-card"
-                :class="{ 'is-cover': entry.cover, 'is-active': selectedEntryIndex === index }"
+                :class="{ 'is-active': selectedEntryIndex === index }"
               >
                 <button type="button" class="memory-entry-card__preview" @click="selectedEntryIndex = index">
                   <img :src="entry.imageUrl" :alt="entry.remark || form.title || `旅行照片 ${index + 1}`" />
-                  <span v-if="entry.cover" class="memory-entry-card__cover-badge">好封面</span>
                 </button>
 
                 <div class="memory-entry-card__fields">
@@ -259,26 +218,10 @@
                   </div>
 
                   <div class="memory-entry-card__actions">
-                    <el-button text type="primary" @click="setCover(index)">设为封面</el-button>
                     <el-button text type="danger" @click="removeEntry(index)">删除</el-button>
                   </div>
                 </div>
               </article>
-
-              <el-upload
-                class="entry-upload-tile"
-                :show-file-list="false"
-                :before-upload="beforeImageUpload"
-                :http-request="handleUploadEntryImage"
-                accept="image/*"
-                multiple
-              >
-                <div class="entry-upload-tile__inner">
-                  <span class="entry-upload-tile__plus">+</span>
-                  <strong>上传照片</strong>
-                  <span>支持 JPG / PNG / GIF</span>
-                </div>
-              </el-upload>
             </div>
           </section>
         </div>
@@ -346,8 +289,6 @@ const dialogTitle = computed(() => (editingId.value ? '编辑旅行地点' : '�
 const currentEditingLocation = computed(() =>
   editingId.value != null ? list.value.find((item) => item.id === editingId.value) || null : null,
 )
-const selectedEntry = computed(() => form.entries[selectedEntryIndex.value] || null)
-const coverEntry = computed(() => form.entries.find((entry) => entry.cover) || form.entries[0] || null)
 
 const createEmptyForm = (): CreateTravelMemoryCommand => ({
   title: '',
@@ -472,12 +413,6 @@ function handlePickCoordinate(payload: { latitude: number; longitude: number }) 
   const coordinate = normalizeCoordinate(payload.latitude, payload.longitude)
   form.latitude = coordinate.latitude
   form.longitude = coordinate.longitude
-}
-
-function setCover(index: number) {
-  form.entries.forEach((entry, currentIndex) => {
-    entry.cover = currentIndex === index
-  })
 }
 
 function removeEntry(index: number) {
@@ -850,30 +785,6 @@ onMounted(() => {
   cursor: pointer;
 }
 
-.cover-preview-row {
-  display: grid;
-  gap: 10px;
-}
-
-.cover-preview-card {
-  height: 138px;
-  border-radius: 16px;
-  overflow: hidden;
-  border: 1px solid rgba(228, 214, 202, 0.94);
-  background: rgba(255, 252, 249, 0.88);
-
-  img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-  }
-}
-
-.cover-action {
-  min-width: 104px;
-}
-
-:deep(.cover-action),
 :deep(.section-upload-btn),
 :deep(.entry-empty__button) {
   --el-button-bg-color: rgba(251, 245, 239, 0.96);
@@ -889,52 +800,6 @@ onMounted(() => {
   box-shadow: none !important;
 }
 
-.thumbnail-strip {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(82px, 1fr));
-  gap: 10px;
-}
-
-.thumbnail-chip {
-  position: relative;
-  height: 68px;
-  padding: 0;
-  border: 1px solid rgba(228, 214, 202, 0.94);
-  border-radius: 14px;
-  overflow: hidden;
-  background: rgba(255, 252, 249, 0.9);
-  cursor: pointer;
-  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
-
-  img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-  }
-
-  &:hover,
-  &.is-active {
-    transform: translateY(-1px);
-    border-color: rgba(219, 172, 159, 0.94);
-    box-shadow: 0 10px 20px rgba(219, 194, 178, 0.18);
-  }
-}
-
-.thumbnail-chip.is-cover::after {
-  content: '封面';
-  position: absolute;
-  top: 6px;
-  left: 6px;
-  min-height: 18px;
-  padding: 0 6px;
-  display: inline-flex;
-  align-items: center;
-  border-radius: 999px;
-  background: rgba(249, 239, 229, 0.96);
-  color: #b87463;
-  font-size: 10px;
-}
-
 .entry-empty {
   min-height: 120px;
   display: grid;
@@ -947,24 +812,24 @@ onMounted(() => {
   text-align: center;
 }
 
-.entry-empty--compact {
-  min-height: 88px;
-}
-
 .entry-empty--upload {
   min-height: 160px;
 }
 
 .entry-board {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px;
+  grid-template-columns: 1fr;
+  gap: 14px;
   padding-bottom: 8px;
+  justify-items: center;
 }
 
 .memory-entry-card {
   display: grid;
-  gap: 12px;
+  width: min(100%, 920px);
+  grid-template-columns: minmax(170px, 210px) minmax(0, 1fr);
+  align-items: start;
+  gap: 18px;
   padding: 13px;
   border-radius: 20px;
   border: 1px solid rgba(230, 216, 204, 0.92);
@@ -979,47 +844,31 @@ onMounted(() => {
   box-shadow: 0 16px 28px rgba(217, 193, 177, 0.16);
 }
 
-.memory-entry-card.is-cover {
-  background:
-    linear-gradient(180deg, rgba(253, 250, 246, 0.98), rgba(250, 244, 238, 0.94)),
-    radial-gradient(circle at top right, rgba(243, 223, 210, 0.2), transparent 40%);
-}
-
 .memory-entry-card__preview {
   position: relative;
-  height: 132px;
+  width: 100%;
+  aspect-ratio: 4 / 3;
   padding: 0;
   border-radius: 14px;
   overflow: hidden;
   border: 1px solid rgba(228, 214, 202, 0.94);
-  background: rgba(248, 242, 236, 0.9);
+  background:
+    linear-gradient(135deg, rgba(253, 249, 245, 0.96), rgba(248, 242, 236, 0.9)),
+    radial-gradient(circle at center, rgba(242, 224, 211, 0.22), transparent 58%);
   cursor: pointer;
 
   img {
     width: 100%;
     height: 100%;
-    object-fit: cover;
+    display: block;
+    object-fit: contain;
   }
-}
-
-.memory-entry-card__cover-badge {
-  position: absolute;
-  top: 10px;
-  left: 10px;
-  min-height: 22px;
-  padding: 0 8px;
-  display: inline-flex;
-  align-items: center;
-  border-radius: 999px;
-  background: rgba(221, 141, 127, 0.96);
-  color: #fff;
-  font-size: 11px;
-  box-shadow: 0 8px 16px rgba(210, 164, 144, 0.26);
 }
 
 .memory-entry-card__fields {
   display: grid;
-  gap: 10px;
+  gap: 9px;
+  min-width: 0;
 }
 
 .memory-entry-card__meta {
@@ -1060,7 +909,7 @@ onMounted(() => {
 
 .memory-entry-card__actions {
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-end;
   align-items: center;
   padding-top: 2px;
   border-top: 1px dashed rgba(229, 214, 202, 0.94);
@@ -1074,48 +923,6 @@ onMounted(() => {
 
 .memory-entry-card__actions :deep(.el-button + .el-button) {
   margin-left: 8px;
-}
-
-.entry-upload-tile {
-  min-height: 100%;
-  cursor: pointer;
-}
-
-.entry-upload-tile__inner {
-  min-height: 100%;
-  display: grid;
-  place-items: center;
-  gap: 10px;
-  padding: 20px 16px;
-  border-radius: 18px;
-  border: 1px dashed rgba(226, 196, 180, 0.96);
-  background:
-    linear-gradient(180deg, rgba(252, 249, 245, 0.98), rgba(249, 243, 236, 0.94)),
-    radial-gradient(circle at bottom right, rgba(242, 224, 211, 0.24), transparent 40%);
-  text-align: center;
-
-  strong {
-    color: #aa725e;
-    font-size: 15px;
-  }
-
-  span {
-    color: #a18679;
-    font-size: 12px;
-    line-height: 1.6;
-  }
-}
-
-.entry-upload-tile__plus {
-  width: 48px;
-  height: 48px;
-  display: grid;
-  place-items: center;
-  border-radius: 999px;
-  background: rgba(246, 230, 218, 0.96);
-  color: #cd846b;
-  font-size: 28px;
-  line-height: 1;
 }
 
 .drawer-footer {
@@ -1307,6 +1114,7 @@ onMounted(() => {
 
   .form-grid,
   .coordinate-layout,
+  .memory-entry-card,
   .memory-entry-card__inline,
   .entry-board {
     grid-template-columns: 1fr;
@@ -1318,12 +1126,5 @@ onMounted(() => {
     justify-content: flex-start;
   }
 
-  .cover-action {
-    width: 100%;
-  }
-
-  .entry-upload-tile__inner {
-    min-height: 180px;
-  }
 }
 </style>

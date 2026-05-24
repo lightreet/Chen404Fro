@@ -205,8 +205,16 @@
               </div>
               <div class="gallery-card__body">
                 <h3>{{ card.title }}</h3>
-                <div class="gallery-card__meta">
-                  <span>{{ card.copy }}</span>
+                <div class="gallery-card__place">
+                  <el-icon><Location /></el-icon>
+                  <span>{{ card.place }}</span>
+                </div>
+                <p>{{ card.copy }}</p>
+                <div class="gallery-card__footer">
+                  <span class="gallery-card__date">
+                    <el-icon><Calendar /></el-icon>
+                    {{ card.date }}
+                  </span>
                   <strong>{{ card.meta }}</strong>
                 </div>
               </div>
@@ -220,7 +228,7 @@
               class="gallery-card"
               :class="{ 'is-active': activeId === location.id }"
               :ref="(element) => setGalleryCardRef(location.id, element)"
-              @click="selectGalleryLocation(location.id)"
+              @click="openGalleryLocationDetail(location.id)"
             >
               <div class="gallery-card__cover">
                 <img v-if="location.coverImage" :src="location.coverImage" :alt="location.title" />
@@ -228,8 +236,16 @@
               </div>
               <div class="gallery-card__body">
                 <h3>{{ location.title }}</h3>
-                <div class="gallery-card__meta">
-                  <span>{{ location.city || location.province || '未标注城市' }}</span>
+                <div class="gallery-card__place">
+                  <el-icon><Location /></el-icon>
+                  <span>{{ formatLocation(location) }}</span>
+                </div>
+                <p>{{ galleryLocationSummary(location) }}</p>
+                <div class="gallery-card__footer">
+                  <span class="gallery-card__date">
+                    <el-icon><Calendar /></el-icon>
+                    {{ galleryLocationDate(location) }}
+                  </span>
                   <strong>{{ location.entryCount || 0 }} 张照片</strong>
                 </div>
               </div>
@@ -295,8 +311,7 @@ const coverEntry = computed<TravelMemoryEntry | null>(() => {
 })
 const noteEntries = computed(() => {
   const entries = activeDetail.value?.entries || []
-  const filtered = entries.filter((entry) => entry !== coverEntry.value)
-  return filtered.length ? filtered.slice(0, 3) : entries.slice(0, 3)
+  return entries.slice(0, 3)
 })
 const totalPhotoCount = computed(() =>
   locations.value.reduce((sum, location) => sum + Number(location.entryCount || 0), 0),
@@ -317,7 +332,9 @@ const journalLocationText = computed(() => {
   const value = formatLocation(activeDetail.value)
   return value === '未标注地点' ? '' : value
 })
-const journalDateRange = computed(() => formatDate(activeDetail.value?.visitedAt))
+const journalDateRange = computed(() =>
+  formatDateRange(activeDetail.value?.visitedAt, activeDetail.value?.visitedEndAt),
+)
 const journalStampLabel = computed(() => currentLocationName.value)
 const journalQuote = computed(() => {
   const summary = activeDetail.value?.summaryNote?.trim()
@@ -348,19 +365,25 @@ const placeholderFilmCards = [
   {
     label: 'SPRING',
     title: '樱花季的小旅行',
+    place: '等待标注城市',
     copy: '第一段回忆会从这里展开',
+    date: '等待日期',
     meta: '等待收藏',
   },
   {
     label: 'SEA',
     title: '海边的晚风',
+    place: '等待标注城市',
     copy: '把夕阳和潮声装进胶片里',
+    date: '等待日期',
     meta: '等待收藏',
   },
   {
     label: 'MOUNTAIN',
     title: '山野来信',
+    place: '等待标注城市',
     copy: '留给未来再翻阅的一页',
+    date: '等待日期',
     meta: '等待收藏',
   },
 ] as const
@@ -470,9 +493,25 @@ function formatDate(value?: string) {
   return value ? dayjs(value).format('YYYY.MM.DD') : ''
 }
 
+function formatDateRange(start?: string, end?: string) {
+  const startText = formatDate(start)
+  const endText = formatDate(end)
+  if (!startText) return endText
+  if (!endText || endText === startText) return startText
+  return `${startText} - ${endText}`
+}
+
 function formatLocation(location?: { province?: string; city?: string }) {
   if (!location) return '未标注地点'
   return [location.province, location.city].filter(Boolean).join(' · ') || '未标注地点'
+}
+
+function galleryLocationSummary(location: TravelMemoryLocationListItem) {
+  return location.summaryNote?.trim() || '把旅途里的光影、街道和心情收进这一张胶片。'
+}
+
+function galleryLocationDate(location: TravelMemoryLocationListItem) {
+  return formatDateRange(location.visitedAt, location.visitedEndAt) || '留白的一天'
 }
 
 function resetGalleryVisibleCount() {
@@ -509,12 +548,8 @@ function scrollGalleryCardIntoView(id: number) {
   })
 }
 
-async function selectGalleryLocation(id: number) {
-  await handleSelectLocation(id, { syncGallery: false })
-  document.querySelector('.memory-spread')?.scrollIntoView({
-    behavior: 'smooth',
-    block: 'start',
-  })
+function openGalleryLocationDetail(id: number) {
+  router.push({ name: 'TravelMemoryDetail', params: { id } })
 }
 
 function resolveDefaultLocationId(
@@ -668,8 +703,7 @@ onMounted(async () => {
 }
 
 .travel-journal__head,
-.travel-journal__footer,
-.gallery-card__meta {
+.travel-journal__footer {
   display: flex;
   justify-content: space-between;
   gap: 16px;
@@ -1295,7 +1329,7 @@ onMounted(async () => {
 
 .memory-panel--gallery {
   overflow: hidden;
-  padding: clamp(22px, 1.8vw, 26px);
+  padding: clamp(18px, 1.6vw, 22px);
 }
 
 .panel-heading {
@@ -1303,7 +1337,7 @@ onMounted(async () => {
   justify-content: space-between;
   align-items: flex-start;
   gap: 16px;
-  margin-bottom: 18px;
+  margin-bottom: 16px;
 }
 
 .panel-heading__copy {
@@ -1320,7 +1354,7 @@ onMounted(async () => {
   margin: 0;
   color: #4e353e;
   font-family: var(--memory-title-font);
-  font-size: clamp(24px, 1.7vw, 30px);
+  font-size: clamp(20px, 1.35vw, 24px);
   font-weight: 700;
   line-height: 1.16;
 }
@@ -1339,7 +1373,7 @@ onMounted(async () => {
 .gallery-track {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(220px, 260px));
-  gap: 16px;
+  gap: 14px;
   justify-content: start;
   padding-bottom: 4px;
 }
@@ -1347,7 +1381,7 @@ onMounted(async () => {
 .gallery-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(220px, 260px));
-  gap: 18px;
+  gap: 16px;
   justify-content: start;
   align-items: start;
 }
@@ -1356,30 +1390,36 @@ onMounted(async () => {
   position: relative;
   width: 100%;
   padding: 0;
-  border-radius: 22px;
-  border: 1px solid rgba(238, 223, 229, 0.9);
-  background: rgba(255, 255, 255, 0.98);
+  border-radius: 16px;
+  border: 1px solid rgba(246, 191, 211, 0.74);
+  background: rgba(255, 255, 255, 0.97);
   overflow: hidden;
   text-align: left;
   cursor: pointer;
+  box-shadow:
+    0 12px 24px rgba(220, 171, 188, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.92);
   transition: transform 0.24s ease, border-color 0.24s ease, box-shadow 0.24s ease;
 }
 
 .gallery-card:hover,
 .gallery-card.is-active {
   transform: translateY(-3px);
-  border-color: rgba(240, 173, 195, 0.94);
-  box-shadow: 0 18px 32px rgba(226, 189, 200, 0.18);
+  border-color: rgba(237, 133, 173, 0.82);
+  box-shadow:
+    0 14px 28px rgba(218, 158, 180, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.96);
 }
 
 .gallery-card__cover {
-  height: 136px;
+  height: clamp(148px, 15vw, 168px);
   background: linear-gradient(135deg, #fff0f5, #f5f8ff);
 }
 
 .gallery-card__cover img {
   width: 100%;
   height: 100%;
+  display: block;
   object-fit: cover;
 }
 
@@ -1396,39 +1436,83 @@ onMounted(async () => {
 
 .gallery-card__body {
   display: grid;
-  gap: 12px;
-  padding: 16px 18px 18px;
+  gap: 8px;
+  min-height: 132px;
+  padding: 12px 14px 11px;
+  border-top: 1px solid rgba(243, 224, 231, 0.84);
 }
 
 .gallery-card__body h3 {
   margin: 0;
-  color: var(--text-primary);
-  font-size: 17px;
+  color: #4f3c46;
+  font-size: 15px;
   font-weight: 700;
+  line-height: 1.32;
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.gallery-card__place,
+.gallery-card__date {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  color: #d7689a;
+  font-size: 12px;
+  font-weight: 600;
   line-height: 1.3;
 }
 
-.gallery-card__meta {
+.gallery-card__place span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.gallery-card__place :deep(.el-icon),
+.gallery-card__date :deep(.el-icon) {
+  flex: 0 0 auto;
+  font-size: 13px;
+}
+
+.gallery-card__body p {
+  min-height: 40px;
+  margin: 0;
+  color: #8d7b84;
+  font-size: 12px;
+  line-height: 1.65;
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.gallery-card__footer {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
+  min-height: 28px;
+  padding-top: 9px;
+  border-top: 1px solid rgba(244, 224, 231, 0.86);
 }
 
-.gallery-card__meta span {
-  color: #8e737e;
-  font-size: 13px;
-  line-height: 1.2;
+.gallery-card__date {
+  color: #a58c98;
+  font-weight: 600;
 }
 
-.gallery-card__meta strong {
+.gallery-card__footer strong {
   flex: 0 0 auto;
-  padding: 6px 10px;
+  padding: 6px 9px;
   border-radius: 999px;
   background: rgba(255, 244, 247, 0.95);
   border: 1px solid rgba(237, 214, 223, 0.92);
-  color: #c17895;
-  font-size: 12px;
+  color: #e66f9a;
+  font-size: 11px;
   font-weight: 600;
   line-height: 1;
 }
@@ -1584,7 +1668,8 @@ onMounted(async () => {
 
   .gallery-grid,
   .gallery-track {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 260px));
+    justify-content: center;
   }
 }
 
@@ -1610,7 +1695,7 @@ onMounted(async () => {
     grid-template-columns: 1fr;
   }
 
-  .gallery-card__meta {
+  .gallery-card__footer {
     align-items: flex-start;
     flex-direction: column;
   }

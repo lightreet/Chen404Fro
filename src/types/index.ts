@@ -219,6 +219,7 @@ export interface TravelMemoryLocationListItem {
   summaryNote?: string;
   coverImage?: string;
   visitedAt?: string;
+  visitedEndAt?: string;
   entryCount?: number;
 }
 
@@ -251,6 +252,7 @@ export interface CreateTravelMemoryCommand {
   longitude?: number;
   summaryNote?: string;
   visitedAt?: string;
+  visitedEndAt?: string;
   status?: number;
   sortOrder?: number;
   entries: TravelMemoryEntryUpsertCommand[];

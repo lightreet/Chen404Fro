@@ -188,6 +188,8 @@ interface Props {
   pickerMode?: boolean
   pickerLatitude?: number | null
   pickerLongitude?: number | null
+  searchKeyword?: string
+  searchRequest?: number
 }
 
 type ProjectedPoint = TravelMemoryLocationListItem & {
@@ -243,11 +245,14 @@ const props = withDefaults(defineProps<Props>(), {
   pickerMode: false,
   pickerLatitude: null,
   pickerLongitude: null,
+  searchKeyword: '',
+  searchRequest: 0,
 })
 
 const emit = defineEmits<{
   (e: 'select', id: number): void
   (e: 'pick', payload: { latitude: number; longitude: number }): void
+  (e: 'search-error', message: string): void
 }>()
 
 const viewportRef = ref<HTMLDivElement | null>(null)
@@ -268,6 +273,7 @@ let AMapRef: any = null
 let markers: any[] = []
 let pickerMarker: any = null
 let clickHandler: ((event: any) => void) | null = null
+let geocoder: any = null
 let dragStart:
   | {
       pointerId: number
@@ -739,6 +745,65 @@ function syncPickerMarker() {
   setPickerMarker(props.pickerLatitude, props.pickerLongitude)
 }
 
+function getPickerGeocoder() {
+  if (!AMapRef) {
+    return Promise.reject(new Error('地图还没有加载完成。'))
+  }
+  if (geocoder) {
+    return Promise.resolve(geocoder)
+  }
+
+  return new Promise((resolve, reject) => {
+    AMapRef.plugin(['AMap.Geocoder'], () => {
+      try {
+        geocoder = new AMapRef.Geocoder({
+          extensions: 'base',
+          city: '全国',
+        })
+        resolve(geocoder)
+      } catch (error) {
+        reject(error)
+      }
+    })
+  })
+}
+
+async function searchPickerLocation(keyword: string) {
+  const trimmedKeyword = keyword.trim()
+  if (!props.pickerMode || !trimmedKeyword) return
+  if (!map || !AMapRef) {
+    emit('search-error', '地图还没有加载完成，请稍后再试。')
+    return
+  }
+
+  try {
+    const pickerGeocoder = await getPickerGeocoder()
+    const result = await new Promise<any>((resolve, reject) => {
+      pickerGeocoder.getLocation(trimmedKeyword, (status: string, response: any) => {
+        const firstGeocode = response?.geocodes?.[0]
+        if (status !== 'complete' || !firstGeocode?.location) {
+          reject(new Error('没有找到匹配地点。'))
+          return
+        }
+        resolve(firstGeocode)
+      })
+    })
+    const lng = Number(result.location?.lng ?? result.location?.getLng?.())
+    const lat = Number(result.location?.lat ?? result.location?.getLat?.())
+    if (!isValidCoordinate(lat, lng)) {
+      emit('search-error', '没有找到可用坐标，请换个关键词。')
+      return
+    }
+
+    const coordinate = gcj02ToWgs84(lat, lng)
+    setPickerMarker(coordinate.latitude, coordinate.longitude)
+    map.setZoomAndCenter(8, [lng, lat])
+    emit('pick', coordinate)
+  } catch {
+    emit('search-error', '没有找到匹配地点，请换个城市、景点或国家试试。')
+  }
+}
+
 watch(
   () => [props.locations, props.activeId] as const,
   async () => {
@@ -753,6 +818,13 @@ watch(
   () => [props.pickerLatitude, props.pickerLongitude] as const,
   () => {
     syncPickerMarker()
+  },
+)
+
+watch(
+  () => props.searchRequest,
+  () => {
+    void searchPickerLocation(props.searchKeyword)
   },
 )
 
@@ -777,6 +849,7 @@ onBeforeUnmount(() => {
   map = null
   markers = []
   pickerMarker = null
+  geocoder = null
 })
 </script>
 

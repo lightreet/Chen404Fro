@@ -17,7 +17,6 @@
         <article class="travel-memory-journal">
           <div class="travel-memory-journal__head">
             <div class="travel-memory-journal__copy">
-              <span class="eyebrow">Travel Detail</span>
               <div class="travel-memory-journal__headline">
                 <span class="travel-memory-journal__flower">✿</span>
                 <h1>{{ detail.title }}</h1>
@@ -62,7 +61,7 @@
                 <img :src="entry.imageUrl" :alt="entry.remark || detail.title" />
               </div>
               <div class="travel-memory-note__body">
-                <h2>{{ entry.remark || '旅途碎片' }}</h2>
+                <h2 v-if="entry.remark">{{ entry.remark }}</h2>
                 <p>{{ entry.thanksNote || '把这一刻留给未来，再慢慢翻阅。' }}</p>
                 <span>{{ formatDate(entry.shotAt) || '留白的一天' }}</span>
               </div>
@@ -106,11 +105,10 @@ const coverEntry = computed<TravelMemoryEntry | null>(() => {
 })
 const entryCards = computed(() => {
   const entries = detail.value?.entries || []
-  const filtered = entries.filter((entry) => entry !== coverEntry.value)
-  return filtered.length ? filtered : entries
+  return entries.slice(0, 3)
 })
 const locationText = computed(() => formatLocation(detail.value))
-const visitDate = computed(() => formatDate(detail.value?.visitedAt))
+const visitDate = computed(() => formatDateRange(detail.value?.visitedAt, detail.value?.visitedEndAt))
 const stampLabel = computed(() => detail.value?.city || detail.value?.province || detail.value?.title || '旅途')
 const journalQuote = computed(() => {
   const summary = detail.value?.summaryNote?.trim()
@@ -123,6 +121,14 @@ const journalQuote = computed(() => {
 
 function formatDate(value?: string) {
   return value ? dayjs(value).format('YYYY.MM.DD') : ''
+}
+
+function formatDateRange(start?: string, end?: string) {
+  const startText = formatDate(start)
+  const endText = formatDate(end)
+  if (!startText) return endText
+  if (!endText || endText === startText) return startText
+  return `${startText} - ${endText}`
 }
 
 function formatLocation(location?: { province?: string; city?: string } | null) {
@@ -367,20 +373,27 @@ onMounted(() => {
 
 .travel-memory-journal__entries {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(240px, 286px));
+  justify-content: start;
   gap: 18px;
 }
 
 .travel-memory-note {
   overflow: hidden;
-  border-radius: 24px;
-  background: rgba(255, 255, 255, 0.94);
-  border: 1px solid rgba(238, 220, 228, 0.94);
-  box-shadow: 0 16px 32px rgba(223, 193, 202, 0.12);
+  display: grid;
+  grid-template-rows: 172px 1fr;
+  min-height: 374px;
+  border-radius: 18px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(255, 250, 252, 0.9)),
+    radial-gradient(circle at top right, rgba(255, 230, 238, 0.2), transparent 40%);
+  border: 1px solid rgba(239, 218, 227, 0.96);
+  box-shadow:
+    0 16px 30px rgba(222, 190, 200, 0.13),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
 }
 
 .travel-memory-note__thumb {
-  height: 160px;
   background: linear-gradient(135deg, #fff0f5, #f5f8ff);
 }
 
@@ -392,28 +405,43 @@ onMounted(() => {
 
 .travel-memory-note__body {
   display: grid;
-  gap: 12px;
-  padding: 18px;
+  grid-template-rows: auto auto 1fr auto;
+  gap: 10px;
+  min-height: 202px;
+  padding: 15px 17px 16px;
+  border-top: 1px solid rgba(244, 224, 231, 0.86);
 }
 
 .travel-memory-note__body h2 {
   margin: 0;
-  color: #5b3f4a;
+  color: #4f3c46;
   font-size: 17px;
   font-weight: 700;
-  line-height: 1.35;
+  line-height: 1.36;
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
 }
 
 .travel-memory-note__body p {
   margin: 0;
-  color: #7d646f;
-  font-size: 14px;
-  line-height: 1.85;
+  color: #7f6c76;
+  font-size: 13px;
+  line-height: 1.72;
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
 }
 
 .travel-memory-note__body span {
-  color: #d18ca5;
-  font-size: 13px;
+  align-self: end;
+  padding-top: 10px;
+  border-top: 1px solid rgba(244, 224, 231, 0.86);
+  color: #c57f9a;
+  font-size: 12px;
+  font-weight: 600;
 }
 
 .travel-memory-journal__quote {

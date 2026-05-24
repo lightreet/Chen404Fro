@@ -1,289 +1,296 @@
 <template>
-  <DefaultLayout :wide-content="true" :show-live2-d="false">
-    <div class="travel-memory-create-page">
-      <section v-loading="loading" class="travel-memory-create-sheet">
-        <div class="travel-memory-create__toolbar">
-          <el-button text class="travel-memory-create__back" @click="goBack">
-            <el-icon><ArrowLeft /></el-icon>
-            返回
-          </el-button>
-
-          <div class="travel-memory-create__meta">
-            <span>{{ list.length }} 个地点</span>
-            <span>{{ form.entries.length }} 张照片</span>
-          </div>
-        </div>
-
-        <div class="travel-memory-create__hero">
-          <div class="travel-memory-create__copy">
-            <span class="eyebrow">Travel Editor</span>
-            <h1>{{ pageTitle }}</h1>
-            <p>{{ pageDescription }}</p>
-          </div>
-
-          <el-button text class="travel-memory-create__map-link" @click="router.push('/memory-map')">
-            回到旅行地图
-          </el-button>
-        </div>
-
-        <div class="travel-memory-create__content">
-          <section class="editor-card editor-card--coordinate">
-            <div class="section-head">
-              <span class="section-mark">1</span>
-              <div class="section-copy">
-                <h4>先在地图上选点</h4>
-                <p>先确定旅行发生的位置，我们会尝试根据高德地图坐标自动匹配省份和城市。</p>
-              </div>
+  <div class="travel-memory-create-page">
+      <section v-loading="loading" class="travel-memory-editor">
+        <div class="travel-memory-create__topbar">
+          <div class="travel-memory-create__topbar-inner">
+            <el-button text class="travel-memory-create__back" @click="goBack">
+              <el-icon><ArrowLeft /></el-icon>
+              返回
+            </el-button>
+            <div class="travel-memory-create__meta">
+              <span>{{ pageTitle }}</span>
+              <span>{{ form.entries.length }} 张照片</span>
             </div>
+          </div>
+        </div>
 
-            <div class="coordinate-layout">
-              <div class="editor-map-card">
-                <TravelMemoryMap
-                  :locations="list"
-                  picker-mode
-                  :picker-latitude="form.latitude ?? null"
-                  :picker-longitude="form.longitude ?? null"
-                  @pick="handlePickCoordinate"
-                />
-              </div>
+        <aside class="travel-memory-map-panel">
+          <div class="map-panel__head">
+            <div class="panel-title">
+              <span class="panel-title__dot panel-title__dot--pin">
+                <el-icon><Location /></el-icon>
+              </span>
+              <strong>选择地点</strong>
+            </div>
+            <span class="panel-title__hint">在地图上选择你去过的地点</span>
+          </div>
 
-              <div class="coordinate-fields">
-                <div
-                  class="coordinate-status"
-                  :class="{
-                    'is-loading': resolvingLocationMeta,
-                    'is-warning': locationMetaNeedsManualConfirm,
-                  }"
-                >
-                  <strong>{{ locationMetaStatusTitle }}</strong>
-                  <span>{{ locationMetaStatusText }}</span>
-                </div>
-
-                <div class="form-grid form-grid--coordinate-meta">
-                <el-form-item label="省份">
-                  <el-input v-model="form.province" placeholder="例如：福建省" />
-                </el-form-item>
-                <el-form-item label="城市">
-                  <el-input v-model="form.city" placeholder="例如：厦门市" />
-                </el-form-item>
-                <el-form-item label="纬度（WGS84）">
-                  <el-input-number v-model="form.latitude" :precision="6" :step="0.0001" class="w-full" />
-                </el-form-item>
-                <el-form-item label="经度（WGS84）">
-                  <el-input-number v-model="form.longitude" :precision="6" :step="0.0001" class="w-full" />
-                </el-form-item>
-                </div>
-
-                <button type="button" class="coordinate-adjust-hint" @click="focusCoordinateHint">
-                  重新在地图上调整
+          <div class="map-search">
+            <el-input
+              v-model="locationSearchKeyword"
+              placeholder="搜索城市、景点或国家"
+              clearable
+              @keyup.enter="handleLocationSearch"
+            >
+              <template #suffix>
+                <button type="button" class="map-search__button" title="搜索地点" @click="handleLocationSearch">
+                  <el-icon><Search /></el-icon>
                 </button>
-              </div>
-            </div>
-          </section>
+              </template>
+            </el-input>
+          </div>
 
-          <section class="editor-card editor-card--intro">
-            <div class="section-head">
-              <span class="section-mark">2</span>
-              <div class="section-copy">
-                <h4>补充地点内容</h4>
-                <p>位置确认后，再写下这次旅行的标语、简介和到访时间。</p>
-              </div>
-            </div>
+          <div class="map-panel__canvas">
+            <TravelMemoryMap
+              :locations="list"
+              picker-mode
+              :picker-latitude="form.latitude ?? null"
+              :picker-longitude="form.longitude ?? null"
+              :search-keyword="locationSearchKeyword"
+              :search-request="locationSearchRequest"
+              @pick="handlePickCoordinate"
+              @select="handleExistingLocationSelect"
+              @search-error="handleLocationSearchError"
+            />
+          </div>
 
-            <el-form label-position="top" class="editor-form">
-              <div class="form-grid form-grid--intro">
-                <el-form-item label="地点标语" class="form-item--wide">
+          <div class="map-panel__tools" aria-label="地图操作">
+            <button type="button" title="放大地图">
+              <el-icon><Plus /></el-icon>
+            </button>
+            <button type="button" title="缩小地图">
+              <span>−</span>
+            </button>
+            <button type="button" title="重新选择" @click="focusCoordinateHint">
+              <el-icon><Location /></el-icon>
+            </button>
+          </div>
+
+          <button type="button" class="map-panel__locate" @click="focusCoordinateHint">
+            <el-icon><Location /></el-icon>
+            <span>自动定位</span>
+          </button>
+
+          <div v-if="hasPickedLocation" class="map-picked-card">
+            <span class="map-picked-card__pin">
+              <el-icon><Location /></el-icon>
+            </span>
+            <div>
+              <strong>当前选择：{{ currentLocationTitle }}</strong>
+              <span>{{ currentLocationSubTitle }}</span>
+            </div>
+            <button type="button" @click="clearCoordinateSelection">清除选择</button>
+          </div>
+        </aside>
+
+        <main class="travel-memory-form-panel">
+          <div class="travel-memory-form-top">
+            <section class="editor-card editor-card--main-info">
+              <div class="section-title">
+                <span></span>
+                <strong>旅行主信息</strong>
+              </div>
+
+              <el-form label-position="top" class="editor-form">
+                <el-form-item label="旅行标题">
                   <el-input
                     v-model="form.title"
-                    placeholder="例如：海风把这一站轻轻吹亮"
-                  />
+                    maxlength="50"
+                    placeholder="给这段旅程起个标题吧（如：厦门的海风与日落）"
+                  >
+                    <template #suffix>{{ titleLength }}/50</template>
+                  </el-input>
                 </el-form-item>
-                <el-form-item label="到访时间" class="form-item--wide">
-                  <el-date-picker
-                    v-model="form.visitedAt"
-                    type="datetime"
-                    value-format="YYYY-MM-DDTHH:mm:ss"
-                    placeholder="可选"
-                    class="w-full"
-                  />
+
+                <el-form-item label="旅行时间">
+                  <div class="date-range-row">
+                    <el-date-picker
+                      v-model="form.visitedAt"
+                      type="date"
+                      value-format="YYYY-MM-DDTHH:mm:ss"
+                      placeholder="开始日期"
+                      class="w-full"
+                    />
+                    <span class="date-range-row__divider">-</span>
+                    <el-date-picker
+                      v-model="form.visitedEndAt"
+                      type="date"
+                      value-format="YYYY-MM-DDTHH:mm:ss"
+                      placeholder="结束日期"
+                      class="w-full"
+                    />
+                  </div>
                 </el-form-item>
-                <el-form-item label="地点简介" class="form-item--wide">
+
+                <el-form-item label="总体感想">
                   <el-input
                     v-model="form.summaryNote"
                     type="textarea"
                     :rows="4"
-                    maxlength="1000"
-                    show-word-limit
-                    placeholder="写下这次旅行最想留住的一段气味、光线、风景或心情。"
+                    maxlength="500"
+                    placeholder="记录这段旅程的整体感受吧..."
                   />
+                  <span class="field-counter">{{ summaryLength }}/500</span>
                 </el-form-item>
+
+                <div class="form-meta-row">
+                  <el-form-item label="省份">
+                    <el-input v-model="form.province" placeholder="例如：福建省" />
+                  </el-form-item>
+                  <el-form-item label="城市">
+                    <el-input v-model="form.city" placeholder="例如：厦门市" />
+                  </el-form-item>
+                <div
+                  class="coordinate-status"
+                  :class="{
+                      'is-loading': resolvingLocationMeta,
+                      'is-warning': locationMetaNeedsManualConfirm,
+                    }"
+                  >
+                  <strong>{{ locationMetaStatusTitle }}</strong>
+                  <span>{{ locationMetaStatusText }}</span>
+                </div>
+                </div>
+              </el-form>
+            </section>
+
+            <section class="editor-card editor-card--cover-panel">
+              <div class="section-title">
+                <span></span>
+                <strong>封面图片</strong>
               </div>
 
-              <div class="form-grid form-grid--meta">
-                <el-form-item label="是否展示" class="form-item--toggle">
-                  <div class="display-toggle">
-                    <el-switch v-model="form.status" :active-value="1" :inactive-value="0" />
-                    <span>{{ form.status === 1 ? '会在地图中展示' : '暂不展示' }}</span>
+              <el-upload
+                class="cover-upload"
+                drag
+                :show-file-list="false"
+                :before-upload="beforeImageUpload"
+                :http-request="handleUploadCoverImage"
+                accept="image/*"
+              >
+                <div v-if="coverEntry?.imageUrl" class="cover-upload__filled">
+                  <div class="cover-upload__preview-frame">
+                    <img class="cover-upload__image" :src="coverEntry.imageUrl" :alt="coverEntry.remark || form.title || '旅行封面'" />
                   </div>
-                </el-form-item>
-              </div>
-            </el-form>
-          </section>
+                  <div class="cover-upload__actions">
+                    <button type="button" class="cover-action cover-action--ghost" @click.stop.prevent="removeCoverEntry">
+                      移除封面
+                    </button>
+                    <button type="button" class="cover-action cover-action--primary">
+                      更换封面
+                    </button>
+                  </div>
+                </div>
+                <div v-else class="cover-upload__empty">
+                  <div class="cover-upload__placeholder">
+                    <el-icon><Plus /></el-icon>
+                    <strong>上传封面</strong>
+                  </div>
+                </div>
+              </el-upload>
+            </section>
+          </div>
 
-          <section class="editor-card editor-card--cover">
-            <div class="section-head section-head--split">
-              <div class="section-head__main">
-                <span class="section-mark">3</span>
-                <div class="section-copy">
-                  <h4>封面图片</h4>
-                  <p>先挑一张最能代表这段旅途的照片，详情页会优先展示它。</p>
+          <section class="editor-card editor-card--advanced">
+            <button type="button" class="advanced-toggle" @click="advancedOpen = !advancedOpen">
+              <span>高级参数</span>
+              <el-icon class="toggle-icon" :class="{ open: advancedOpen }"><ArrowDown /></el-icon>
+            </button>
+            <Transition name="slide-down">
+              <div v-show="advancedOpen" class="advanced-content">
+                <div class="advanced-field advanced-field--inline">
+                  <div>
+                    <label class="advanced-field-label">地图展示</label>
+                    <span class="advanced-field-hint">
+                      {{ form.status === 1 ? '保存后会在旅行地图中展示' : '保存后暂不公开展示在旅行地图中' }}
+                    </span>
+                  </div>
+                  <el-switch v-model="form.status" :active-value="1" :inactive-value="0" />
                 </div>
               </div>
-              <el-button
-                v-if="selectedEntry"
-                plain
-                type="primary"
-                class="cover-action"
-                @click="setCover(selectedEntryIndex)"
-              >
-                {{ selectedEntry.cover ? '当前封面' : '设为封面' }}
-              </el-button>
-            </div>
-
-            <div v-if="coverEntry" class="cover-preview-row">
-              <div class="cover-preview-card">
-                <img :src="coverEntry.imageUrl" :alt="coverEntry.remark || form.title || '封面照片'" />
-              </div>
-            </div>
-            <div v-else class="entry-empty entry-empty--compact">先上传一张照片，封面区就会出现。</div>
-
-            <div v-if="form.entries.length" class="thumbnail-strip">
-              <button
-                v-for="(entry, index) in form.entries"
-                :key="entry.id || entry.imageUrl || index"
-                type="button"
-                class="thumbnail-chip"
-                :class="{ 'is-active': selectedEntryIndex === index, 'is-cover': entry.cover }"
-                @click="selectedEntryIndex = index"
-              >
-                <img :src="entry.imageUrl" :alt="entry.remark || `旅行照片 ${index + 1}`" />
-              </button>
-            </div>
+            </Transition>
           </section>
 
-          <section class="entry-section editor-card">
-            <div class="section-head section-head--split">
-              <div class="section-head__main">
-                <span class="section-mark">4</span>
-                <div class="section-copy">
-                  <h4>照片记忆</h4>
-                  <p>给每张照片写一句标题和一点感想，这会组成详情页下方的小卡片。</p>
-                </div>
+          <section class="editor-card">
+            <div class="section-title section-title--inline">
+              <div>
+                <span></span>
+                <strong>旅行照片</strong>
               </div>
-              <el-upload
-                class="entry-upload-trigger"
-                :show-file-list="false"
-                :before-upload="beforeImageUpload"
-                :http-request="handleUploadEntryImage"
-                accept="image/*"
-                multiple
-              >
-                <el-button class="section-upload-btn" type="primary" plain :loading="uploading">
-                  上传照片
-                </el-button>
-              </el-upload>
             </div>
 
-            <div v-if="!form.entries.length" class="entry-empty entry-empty--upload">
-              <span>至少需要上传一张照片。</span>
-              <el-upload
-                :show-file-list="false"
-                :before-upload="beforeImageUpload"
-                :http-request="handleUploadEntryImage"
-                accept="image/*"
-                multiple
-              >
-                <el-button class="entry-empty__button" type="primary" plain :loading="uploading">
-                  上传第一张照片
-                </el-button>
-              </el-upload>
-            </div>
-
-            <div v-else class="entry-board">
+            <div class="entry-board">
               <article
                 v-for="(entry, index) in form.entries"
                 :key="entry.id || entry.imageUrl || index"
                 class="memory-entry-card"
-                :class="{ 'is-cover': entry.cover, 'is-active': selectedEntryIndex === index }"
+                :class="{
+                  'is-cover': entry.cover,
+                  'is-active': selectedEntryIndex === index,
+                  'is-drag-over': dragOverEntryIndex === index,
+                  'is-dragging': draggedEntryIndex === index,
+                }"
+                @dragover.prevent="handleEntryDragOver($event, index)"
+                @drop.prevent="handleEntryDrop($event, index)"
               >
-                <button type="button" class="memory-entry-card__preview" @click="selectedEntryIndex = index">
+                <div
+                  class="memory-entry-card__media"
+                  draggable="true"
+                  @click="selectedEntryIndex = index"
+                  @dragstart="handleEntryDragStart($event, index)"
+                  @dragend="handleEntryDragEnd"
+                >
                   <img :src="entry.imageUrl" :alt="entry.remark || form.title || `旅行照片 ${index + 1}`" />
-                  <span v-if="entry.cover" class="memory-entry-card__cover-badge">好封面</span>
-                </button>
+                  <button
+                    v-if="!entry.cover"
+                    type="button"
+                    class="memory-entry-card__cover-action"
+                    @click.stop="setCover(index)"
+                  >
+                    设封面
+                  </button>
+                  <span v-else class="memory-entry-card__cover-badge">封面</span>
+                  <button type="button" class="memory-entry-card__remove" title="删除照片" @click.stop="removeEntry(index)">
+                    <el-icon><Close /></el-icon>
+                  </button>
+                </div>
 
-                <div class="memory-entry-card__fields">
-                  <div class="memory-entry-card__meta">
-                    <span>备注标题</span>
-                    <button type="button" class="entry-inline-action" @click="selectedEntryIndex = index">
-                      聚焦编辑
-                    </button>
-                  </div>
-                  <el-input v-model="entry.remark" placeholder="照片标题" />
-
-                  <div class="memory-entry-card__meta">
-                    <span>感想</span>
-                    <span>{{ entry.thanksNote?.length || 0 }}/2000</span>
-                  </div>
+                <div class="memory-entry-card__body">
                   <el-input
                     v-model="entry.thanksNote"
                     type="textarea"
                     :rows="3"
-                    maxlength="2000"
-                    show-word-limit
-                    placeholder="为这张照片写一点感想"
+                    maxlength="100"
+                    placeholder="为这张照片写一点描述..."
                   />
-
-                  <div class="memory-entry-card__inline">
-                    <div class="memory-entry-card__field">
-                      <span>拍摄时间</span>
-                      <el-date-picker
-                        v-model="entry.shotAt"
-                        type="datetime"
-                        value-format="YYYY-MM-DDTHH:mm:ss"
-                        placeholder="拍摄时间"
-                        class="w-full"
-                      />
-                    </div>
-                    <div class="memory-entry-card__field">
-                      <span>排序</span>
-                      <el-input-number v-model="entry.displayOrder" :min="0" :max="9999" class="w-full" />
-                    </div>
-                  </div>
-
-                  <div class="memory-entry-card__actions">
-                    <el-button text type="primary" @click="setCover(index)">设为封面</el-button>
-                    <el-button text type="danger" @click="removeEntry(index)">删除</el-button>
-                  </div>
+                  <label>
+                    <el-date-picker
+                      v-model="entry.shotAt"
+                      type="date"
+                      value-format="YYYY-MM-DDTHH:mm:ss"
+                      placeholder="选择日期"
+                      class="w-full"
+                    />
+                  </label>
                 </div>
               </article>
 
               <el-upload
-                class="entry-upload-tile"
+                class="entry-add-card"
                 :show-file-list="false"
                 :before-upload="beforeImageUpload"
                 :http-request="handleUploadEntryImage"
                 accept="image/*"
                 multiple
               >
-                <div class="entry-upload-tile__inner">
-                  <span class="entry-upload-tile__plus">+</span>
-                  <strong>继续上传</strong>
-                  <span>支持 JPG / PNG / GIF</span>
-                </div>
+                <button type="button" class="entry-add-card__button">
+                  <el-icon><Plus /></el-icon>
+                  <span>添加照片</span>
+                </button>
               </el-upload>
             </div>
           </section>
-        </div>
+        </main>
 
         <div class="travel-memory-create__footer">
           <div class="travel-memory-create__footer-inner">
@@ -297,16 +304,14 @@
         </div>
       </section>
     </div>
-  </DefaultLayout>
 </template>
 
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import type { UploadRequestOptions } from 'element-plus'
 import { ElMessage } from 'element-plus'
-import { ArrowLeft } from '@element-plus/icons-vue'
+import { ArrowDown, ArrowLeft, Close, Location, Plus, Search } from '@element-plus/icons-vue'
 import { useRoute, useRouter } from 'vue-router'
-import DefaultLayout from '@/layouts/DefaultLayout.vue'
 import TravelMemoryMap from '@/components/TravelMemoryMap/TravelMemoryMap.vue'
 import {
   createTravelMemory,
@@ -337,8 +342,13 @@ const uploading = ref(false)
 const resolvingLocationMeta = ref(false)
 const locationMetaNeedsManualConfirm = ref(false)
 const lastResolvedAddress = ref('')
+const locationSearchKeyword = ref('')
+const locationSearchRequest = ref(0)
+const advancedOpen = ref(false)
 let locationResolveRequestId = 0
 const selectedEntryIndex = ref(0)
+const draggedEntryIndex = ref<number | null>(null)
+const dragOverEntryIndex = ref<number | null>(null)
 const editingDetail = ref<TravelMemoryLocationDetail | null>(null)
 
 const editingId = computed(() => {
@@ -354,8 +364,19 @@ const pageDescription = computed(() =>
     : '把新的旅途整理成一张独立页面，再把它轻轻放回地图里。',
 )
 const saveButtonLabel = computed(() => (isEditMode.value ? '保存修改' : '保存地点'))
-const selectedEntry = computed(() => form.entries[selectedEntryIndex.value] || null)
+const titleLength = computed(() => form.title?.length || 0)
+const summaryLength = computed(() => form.summaryNote?.length || 0)
 const coverEntry = computed(() => form.entries.find((entry) => entry.cover) || form.entries[0] || null)
+const hasPickedLocation = computed(() => form.latitude != null && form.longitude != null)
+const currentLocationTitle = computed(() => form.city || form.province || form.title || '未命名地点')
+const currentLocationSubTitle = computed(() => {
+  const regionText = [form.province, form.city].filter(Boolean).join(' · ')
+  if (regionText) return regionText
+  if (form.latitude != null && form.longitude != null) {
+    return `${Number(form.latitude).toFixed(4)}，${Number(form.longitude).toFixed(4)}`
+  }
+  return '点击地图选择坐标'
+})
 const locationMetaStatusTitle = computed(() => {
   if (resolvingLocationMeta.value) return '正在识别地点'
   if (form.province || form.city) return '已自动匹配省市'
@@ -390,6 +411,7 @@ const createEmptyForm = (): CreateTravelMemoryCommand => ({
   longitude: undefined,
   summaryNote: '',
   visitedAt: '',
+  visitedEndAt: '',
   status: 1,
   sortOrder: 0,
   entries: [],
@@ -415,20 +437,24 @@ function fillFormFromDetail(detail: TravelMemoryLocationDetail) {
     longitude: detail.longitude,
     summaryNote: detail.summaryNote || '',
     visitedAt: detail.visitedAt || '',
+    visitedEndAt: detail.visitedEndAt || '',
     status: detail.status ?? 1,
     sortOrder: detail.sortOrder ?? 0,
-    entries: (detail.entries || []).map((entry) => ({
-      id: entry.id,
-      imageUrl: entry.imageUrl,
-      remark: entry.remark || '',
-      thanksNote: entry.thanksNote || '',
-      shotAt: entry.shotAt || '',
-      displayOrder: entry.displayOrder ?? 0,
-      cover: !!entry.cover,
-      sourceLatitude: entry.sourceLatitude,
-      sourceLongitude: entry.sourceLongitude,
-      geoSource: entry.geoSource || 'NONE',
-    })),
+    entries: (detail.entries || [])
+      .slice()
+      .sort((a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0))
+      .map((entry, index) => ({
+        id: entry.id,
+        imageUrl: entry.imageUrl,
+        remark: entry.remark || '',
+        thanksNote: entry.thanksNote || '',
+        shotAt: entry.shotAt || '',
+        displayOrder: index,
+        cover: !!entry.cover,
+        sourceLatitude: entry.sourceLatitude,
+        sourceLongitude: entry.sourceLongitude,
+        geoSource: entry.geoSource || 'NONE',
+      })),
   })
   selectedEntryIndex.value = 0
   resolvingLocationMeta.value = false
@@ -499,19 +525,7 @@ async function handleUploadEntryImage(options: UploadRequestOptions) {
   uploading.value = true
   try {
     const result = await uploadTravelMemoryImage(options.file as File)
-    const nextEntry: TravelMemoryEntryUpsertCommand = {
-      imageUrl: result.url,
-      remark: '',
-      thanksNote: '',
-      shotAt: result.shotAt,
-      displayOrder: form.entries.length,
-      cover: form.entries.length === 0,
-      sourceLatitude: result.latitude,
-      sourceLongitude: result.longitude,
-      geoSource: result.latitude != null && result.longitude != null ? 'EXIF' : 'NONE',
-    }
-    form.entries.push(nextEntry)
-    selectedEntryIndex.value = form.entries.length - 1
+    await appendUploadedEntry(result, { cover: form.entries.length === 0 })
     if ((form.latitude == null || form.longitude == null) && result.latitude != null && result.longitude != null) {
       await applyCoordinateSelection(result.latitude, result.longitude, { silent: true })
     }
@@ -523,6 +537,50 @@ async function handleUploadEntryImage(options: UploadRequestOptions) {
   } finally {
     uploading.value = false
   }
+}
+
+async function handleUploadCoverImage(options: UploadRequestOptions) {
+  uploading.value = true
+  try {
+    const result = await uploadTravelMemoryImage(options.file as File)
+    await appendUploadedEntry(result, { cover: true })
+    if ((form.latitude == null || form.longitude == null) && result.latitude != null && result.longitude != null) {
+      await applyCoordinateSelection(result.latitude, result.longitude, { silent: true })
+    }
+    options.onSuccess?.(result as never)
+    ElMessage.success('封面图片上传成功')
+  } catch (error) {
+    options.onError?.(error as never)
+    ElMessage.error('封面上传失败')
+  } finally {
+    uploading.value = false
+  }
+}
+
+async function appendUploadedEntry(
+  result: { url: string; shotAt?: string; latitude?: number; longitude?: number },
+  options: { cover?: boolean } = {},
+) {
+  if (options.cover) {
+    form.entries.forEach((entry) => {
+      entry.cover = false
+    })
+  }
+
+  const nextEntry: TravelMemoryEntryUpsertCommand = {
+    imageUrl: result.url,
+    remark: '',
+    thanksNote: '',
+    shotAt: result.shotAt,
+    displayOrder: form.entries.length,
+    cover: options.cover || form.entries.length === 0,
+    sourceLatitude: result.latitude,
+    sourceLongitude: result.longitude,
+    geoSource: result.latitude != null && result.longitude != null ? 'EXIF' : 'NONE',
+  }
+  form.entries.push(nextEntry)
+  normalizeEntryOrder()
+  selectedEntryIndex.value = form.entries.length - 1
 }
 
 function updateCoordinateFields(latitude: number, longitude: number) {
@@ -580,14 +638,97 @@ async function handlePickCoordinate(payload: { latitude: number; longitude: numb
   await applyCoordinateSelection(payload.latitude, payload.longitude)
 }
 
+async function handleExistingLocationSelect(id: number) {
+  const target = list.value.find((item) => item.id === id)
+  if (!target || target.latitude == null || target.longitude == null) return
+  await applyCoordinateSelection(Number(target.latitude), Number(target.longitude))
+  form.province = target.province || form.province
+  form.city = target.city || form.city
+  if (!form.title.trim()) {
+    form.title = target.title || ''
+  }
+}
+
+function handleLocationSearch() {
+  const keyword = locationSearchKeyword.value.trim()
+  if (!keyword) {
+    focusCoordinateHint()
+    return
+  }
+
+  locationSearchRequest.value += 1
+}
+
+function handleLocationSearchError(message: string) {
+  ElMessage.warning(message)
+}
+
 function focusCoordinateHint() {
   ElMessage.info('先在地图上点一下位置，我们会尝试自动补全省份和城市。')
+}
+
+function clearCoordinateSelection() {
+  form.latitude = undefined
+  form.longitude = undefined
+  form.province = ''
+  form.city = ''
+  lastResolvedAddress.value = ''
+  locationMetaNeedsManualConfirm.value = false
 }
 
 function setCover(index: number) {
   form.entries.forEach((entry, currentIndex) => {
     entry.cover = currentIndex === index
   })
+}
+
+function removeCoverEntry() {
+  const coverIndex = form.entries.findIndex((entry) => entry.cover)
+  if (coverIndex < 0) return
+  removeEntry(coverIndex)
+}
+
+function normalizeEntryOrder() {
+  form.entries.forEach((entry, index) => {
+    entry.displayOrder = index
+  })
+}
+
+function handleEntryDragStart(event: DragEvent, index: number) {
+  draggedEntryIndex.value = index
+  dragOverEntryIndex.value = index
+  selectedEntryIndex.value = index
+  event.dataTransfer?.setData('text/plain', String(index))
+  if (event.dataTransfer) {
+    event.dataTransfer.effectAllowed = 'move'
+  }
+}
+
+function handleEntryDragOver(event: DragEvent, index: number) {
+  if (draggedEntryIndex.value == null || draggedEntryIndex.value === index) return
+  dragOverEntryIndex.value = index
+  if (event.dataTransfer) {
+    event.dataTransfer.dropEffect = 'move'
+  }
+}
+
+function handleEntryDrop(event: DragEvent, index: number) {
+  const rawIndex = draggedEntryIndex.value ?? Number(event.dataTransfer?.getData('text/plain'))
+  if (!Number.isInteger(rawIndex) || rawIndex < 0 || rawIndex >= form.entries.length || rawIndex === index) {
+    handleEntryDragEnd()
+    return
+  }
+
+  const [movedEntry] = form.entries.splice(rawIndex, 1)
+  form.entries.splice(index, 0, movedEntry)
+  selectedEntryIndex.value = index
+  normalizeEntryOrder()
+  handleEntryDragEnd()
+}
+
+function handleEntryDragEnd() {
+  draggedEntryIndex.value = null
+  dragOverEntryIndex.value = null
 }
 
 function removeEntry(index: number) {
@@ -598,6 +739,7 @@ function removeEntry(index: number) {
   if (selectedEntryIndex.value >= form.entries.length) {
     selectedEntryIndex.value = Math.max(0, form.entries.length - 1)
   }
+  normalizeEntryOrder()
 }
 
 async function handleSave() {
@@ -629,7 +771,7 @@ async function handleSave() {
         remark: entry.remark?.trim() || '',
         thanksNote: entry.thanksNote?.trim() || '',
         shotAt: entry.shotAt,
-        displayOrder: entry.displayOrder ?? index,
+        displayOrder: index,
         cover: !!entry.cover,
         sourceLatitude: entry.sourceLatitude,
         sourceLongitude: entry.sourceLongitude,
@@ -974,30 +1116,6 @@ watch(
   cursor: pointer;
 }
 
-.cover-preview-row {
-  display: grid;
-  gap: 10px;
-}
-
-.cover-preview-card {
-  height: 220px;
-  border-radius: 18px;
-  overflow: hidden;
-  border: 1px solid var(--memory-page-border);
-  background: rgba(255, 250, 253, 0.88);
-}
-
-.cover-preview-card img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.cover-action {
-  min-width: 104px;
-}
-
-:deep(.cover-action),
 :deep(.section-upload-btn),
 :deep(.entry-empty__button) {
   --el-button-bg-color: rgba(250, 244, 248, 0.96);
@@ -1013,52 +1131,6 @@ watch(
   box-shadow: none !important;
 }
 
-.thumbnail-strip {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(88px, 1fr));
-  gap: 10px;
-}
-
-.thumbnail-chip {
-  position: relative;
-  height: 72px;
-  padding: 0;
-  border: 1px solid var(--memory-page-border);
-  border-radius: 14px;
-  overflow: hidden;
-  background: rgba(255, 250, 253, 0.9);
-  cursor: pointer;
-  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
-}
-
-.thumbnail-chip img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.thumbnail-chip:hover,
-.thumbnail-chip.is-active {
-  transform: translateY(-1px);
-  border-color: rgba(206, 170, 190, 0.96);
-  box-shadow: 0 10px 20px rgba(214, 185, 201, 0.18);
-}
-
-.thumbnail-chip.is-cover::after {
-  content: '封面';
-  position: absolute;
-  top: 6px;
-  left: 6px;
-  min-height: 18px;
-  padding: 0 6px;
-  display: inline-flex;
-  align-items: center;
-  border-radius: 999px;
-  background: rgba(247, 236, 242, 0.98);
-  color: var(--memory-page-accent-strong);
-  font-size: 10px;
-}
-
 .entry-empty {
   min-height: 120px;
   display: grid;
@@ -1071,25 +1143,25 @@ watch(
   text-align: center;
 }
 
-.entry-empty--compact {
-  min-height: 88px;
-}
-
 .entry-empty--upload {
   min-height: 160px;
 }
 
 .entry-board {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px;
+  grid-template-columns: 1fr;
+  gap: 14px;
   padding-bottom: 8px;
+  justify-items: center;
 }
 
 .memory-entry-card {
   display: grid;
-  gap: 12px;
-  padding: 13px;
+  width: min(100%, 940px);
+  grid-template-columns: minmax(170px, 220px) minmax(0, 1fr);
+  align-items: start;
+  gap: 18px;
+  padding: 14px;
   border-radius: 18px;
   border: 1px solid var(--memory-page-border);
   background: rgba(255, 250, 253, 0.94);
@@ -1111,19 +1183,23 @@ watch(
 
 .memory-entry-card__preview {
   position: relative;
-  height: 144px;
+  width: 100%;
+  aspect-ratio: 4 / 3;
   padding: 0;
   border-radius: 14px;
   overflow: hidden;
   border: 1px solid var(--memory-page-border);
-  background: rgba(248, 242, 247, 0.92);
+  background:
+    linear-gradient(135deg, rgba(255, 250, 253, 0.96), rgba(248, 242, 247, 0.92)),
+    radial-gradient(circle at center, rgba(222, 187, 206, 0.18), transparent 58%);
   cursor: pointer;
 }
 
 .memory-entry-card__preview img {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  display: block;
+  object-fit: contain;
 }
 
 .memory-entry-card__cover-badge {
@@ -1143,7 +1219,8 @@ watch(
 
 .memory-entry-card__fields {
   display: grid;
-  gap: 10px;
+  gap: 9px;
+  min-width: 0;
 }
 
 .memory-entry-card__meta {
@@ -1198,48 +1275,6 @@ watch(
 
 .memory-entry-card__actions :deep(.el-button + .el-button) {
   margin-left: 8px;
-}
-
-.entry-upload-tile {
-  min-height: 100%;
-  cursor: pointer;
-}
-
-.entry-upload-tile__inner {
-  min-height: 100%;
-  display: grid;
-  place-items: center;
-  gap: 10px;
-  padding: 20px 16px;
-  border-radius: 18px;
-  border: 1px dashed var(--memory-page-border-strong);
-  background:
-    linear-gradient(180deg, rgba(255, 250, 253, 0.98), rgba(250, 243, 248, 0.94)),
-    radial-gradient(circle at bottom right, rgba(220, 185, 204, 0.2), transparent 40%);
-  text-align: center;
-}
-
-.entry-upload-tile__inner strong {
-  color: var(--memory-page-accent-strong);
-  font-size: 15px;
-}
-
-.entry-upload-tile__inner span {
-  color: var(--memory-page-text-muted);
-  font-size: 12px;
-  line-height: 1.6;
-}
-
-.entry-upload-tile__plus {
-  width: 48px;
-  height: 48px;
-  display: grid;
-  place-items: center;
-  border-radius: 999px;
-  background: rgba(244, 229, 238, 0.98);
-  color: var(--memory-page-accent);
-  font-size: 28px;
-  line-height: 1;
 }
 
 .travel-memory-create__footer {
@@ -1410,6 +1445,7 @@ watch(
   }
 
   .coordinate-layout,
+  .memory-entry-card,
   .entry-board {
     grid-template-columns: 1fr;
   }
@@ -1439,10 +1475,6 @@ watch(
     grid-template-columns: 1fr;
   }
 
-  .cover-preview-card {
-    height: 180px;
-  }
-
   .editor-map-card :deep(.travel-map-shell.is-picker-mode),
   .editor-map-card :deep(.travel-map-canvas) {
     min-height: 220px;
@@ -1450,6 +1482,963 @@ watch(
 
   :deep(.footer-button) {
     width: 100%;
+  }
+}
+</style>
+
+<style scoped lang="scss">
+.travel-memory-create-page {
+  width: min(1540px, calc(100vw - 72px));
+  min-height: 100vh;
+  margin: 0 auto;
+  padding: 78px 0 calc(96px + env(safe-area-inset-bottom, 0));
+  color: #43343c;
+}
+
+.travel-memory-editor {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(430px, 0.9fr) minmax(650px, 1.55fr);
+  gap: 14px;
+  align-items: stretch;
+  min-height: calc(100vh - 146px);
+  padding: 0;
+}
+
+.travel-memory-editor::before,
+.travel-memory-editor::after {
+  content: "";
+  position: fixed;
+  z-index: 0;
+  width: 26px;
+  height: 18px;
+  border-radius: 80% 20% 70% 30%;
+  pointer-events: none;
+  background: linear-gradient(135deg, rgba(255, 126, 174, 0.24), rgba(255, 204, 220, 0.04));
+}
+
+.travel-memory-editor::before {
+  right: 34px;
+  top: 11vh;
+  transform: rotate(-24deg);
+}
+
+.travel-memory-editor::after {
+  right: 20px;
+  bottom: 13vh;
+  transform: rotate(31deg);
+}
+
+.travel-memory-map-panel,
+.travel-memory-form-panel,
+.travel-memory-create__topbar,
+.travel-memory-create__footer {
+  position: relative;
+  z-index: 1;
+}
+
+.travel-memory-map-panel,
+.editor-card {
+  border: 1px solid rgba(238, 225, 234, 0.92);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.86), rgba(255, 250, 253, 0.76)),
+    radial-gradient(circle at 88% 8%, rgba(255, 206, 224, 0.22), transparent 28%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.86),
+    0 18px 40px rgba(211, 184, 199, 0.12);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.travel-memory-map-panel {
+  position: sticky;
+  top: 12px;
+  overflow: hidden;
+  display: grid;
+  grid-template-rows: auto auto 1fr;
+  min-height: calc(100vh - 146px);
+  padding: 22px;
+  border-radius: 16px;
+}
+
+.map-panel__head,
+.panel-title,
+.travel-memory-create__topbar-inner,
+.travel-memory-create__meta,
+.section-title,
+.section-title--inline,
+.section-title--inline > div,
+.display-toggle,
+.map-panel__locate,
+.map-picked-card {
+  display: flex;
+  align-items: center;
+}
+
+.map-panel__head {
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 22px;
+}
+
+.panel-title {
+  gap: 10px;
+}
+
+.panel-title strong,
+.section-title strong {
+  color: #2f2730;
+  font-size: 17px;
+  font-weight: 800;
+}
+
+.panel-title__dot {
+  display: inline-grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 999px;
+  color: #fff;
+  background: linear-gradient(135deg, #ff4f91, #ff8cb4);
+  box-shadow: 0 8px 18px rgba(255, 99, 151, 0.26);
+}
+
+.panel-title__dot .el-icon {
+  font-size: 15px;
+}
+
+.panel-title__hint {
+  color: #8f8792;
+  font-size: 13px;
+}
+
+.map-search {
+  width: min(260px, 100%);
+  margin-bottom: 16px;
+}
+
+.map-search :deep(.el-input__wrapper) {
+  min-height: 42px;
+  padding: 0 14px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow:
+    0 0 0 1px rgba(235, 222, 232, 0.96) inset,
+    0 10px 24px rgba(221, 199, 211, 0.12);
+}
+
+.map-search__button {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 0;
+  color: #8c8390;
+  background: transparent;
+  cursor: pointer;
+}
+
+.map-panel__canvas {
+  position: relative;
+  min-height: 500px;
+  overflow: hidden;
+  border-radius: 18px;
+}
+
+.map-panel__canvas :deep(.travel-map-shell.is-picker-mode),
+.map-panel__canvas :deep(.travel-map-canvas) {
+  min-height: 100%;
+  height: 100%;
+  border-radius: 18px;
+}
+
+.map-panel__canvas :deep(.travel-map-state) {
+  border-radius: 18px;
+}
+
+.map-panel__tools {
+  position: absolute;
+  left: 24px;
+  bottom: 152px;
+  z-index: 4;
+  display: grid;
+  gap: 9px;
+}
+
+.map-panel__tools button,
+.map-panel__locate {
+  border: 1px solid rgba(235, 224, 232, 0.94);
+  background: rgba(255, 255, 255, 0.92);
+  color: #615866;
+  box-shadow: 0 12px 28px rgba(203, 182, 195, 0.14);
+  cursor: pointer;
+}
+
+.map-panel__tools button {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  font-size: 22px;
+}
+
+.map-panel__locate {
+  position: absolute;
+  left: 24px;
+  bottom: 28px;
+  z-index: 4;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 18px;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.map-picked-card {
+  position: absolute;
+  right: 22px;
+  bottom: 28px;
+  z-index: 4;
+  gap: 13px;
+  width: min(230px, calc(100% - 52px));
+  padding: 16px 18px;
+  border-radius: 14px;
+  border: 1px solid rgba(238, 228, 235, 0.96);
+  background: rgba(255, 255, 255, 0.88);
+  box-shadow: 0 18px 34px rgba(207, 184, 198, 0.2);
+}
+
+.map-picked-card__pin {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  flex: 0 0 auto;
+  border-radius: 999px;
+  color: #ff5592;
+  background: rgba(255, 235, 243, 0.96);
+}
+
+.map-picked-card div {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+
+.map-picked-card strong {
+  color: #4c3d47;
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.map-picked-card span {
+  color: #8d8290;
+  font-size: 12px;
+}
+
+.map-picked-card button {
+  margin-left: auto;
+  padding: 0;
+  border: 0;
+  color: #ff4f91;
+  background: transparent;
+  font-size: 12px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.travel-memory-form-panel {
+  display: grid;
+  align-content: start;
+  gap: 10px;
+  min-width: 0;
+}
+
+.travel-memory-create__topbar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  top: 0;
+  z-index: 285;
+  padding:
+    calc(9px + env(safe-area-inset-top, 0))
+    calc(24px + env(safe-area-inset-right, 0))
+    9px
+    calc(24px + env(safe-area-inset-left, 0));
+  border-bottom: 1px solid rgba(238, 226, 235, 0.78);
+  background: rgba(255, 250, 253, 0.78);
+  box-shadow: 0 10px 30px rgba(219, 192, 206, 0.08);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+.travel-memory-create__topbar-inner {
+  width: min(1540px, calc(100vw - 72px));
+  min-height: 38px;
+  margin: 0 auto;
+  justify-content: space-between;
+}
+
+.travel-memory-create__back {
+  color: #8f8290;
+  font-weight: 700;
+}
+
+.travel-memory-create__meta {
+  gap: 8px;
+}
+
+.travel-memory-create__meta span {
+  min-height: 30px;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(238, 226, 235, 0.88);
+  color: #8f8290;
+  font-size: 12px;
+}
+
+.travel-memory-form-top {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(286px, 320px);
+  gap: 10px;
+  align-items: stretch;
+}
+
+.editor-card {
+  display: grid;
+  gap: 16px;
+  padding: 18px 20px;
+  border-radius: 16px;
+}
+
+.editor-card--main-info,
+.editor-card--cover-panel {
+  align-content: start;
+}
+
+.editor-card--advanced {
+  gap: 0;
+  padding-top: 16px;
+  padding-bottom: 16px;
+}
+
+.advanced-toggle {
+  width: 100%;
+  min-height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #4f414b;
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.advanced-toggle .toggle-icon {
+  color: #9a8f9b;
+  transition: transform 0.2s ease;
+}
+
+.advanced-toggle .toggle-icon.open {
+  transform: rotate(180deg);
+}
+
+.advanced-content {
+  display: grid;
+  gap: 12px;
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(238, 226, 235, 0.92);
+}
+
+.advanced-field {
+  display: grid;
+  gap: 8px;
+}
+
+.advanced-field--inline {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+}
+
+.advanced-field-label {
+  display: block;
+  color: #4f414b;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.advanced-field-hint {
+  display: block;
+  margin-top: 4px;
+  color: #918695;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.section-title {
+  gap: 10px;
+}
+
+.section-title > span,
+.section-title--inline > div > span {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #ff4f91, #ff9dbc);
+  box-shadow: 0 0 0 5px rgba(255, 108, 161, 0.1);
+}
+
+.section-title--inline {
+  justify-content: flex-start;
+  gap: 14px;
+}
+
+.section-title--inline > div {
+  gap: 10px;
+}
+
+.section-title--inline small {
+  color: #8f8792;
+  font-size: 13px;
+}
+
+.editor-form {
+  display: grid;
+  gap: 10px;
+}
+
+.date-range-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  gap: 12px;
+  align-items: center;
+}
+
+.date-range-row__divider {
+  color: #9a8f9b;
+  font-size: 18px;
+}
+
+.field-counter {
+  position: absolute;
+  right: 12px;
+  bottom: 8px;
+  color: #9a909d;
+  font-size: 12px;
+}
+
+.form-meta-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  align-items: end;
+}
+
+.form-meta-row .coordinate-status {
+  grid-column: 1 / -1;
+}
+
+.form-meta-row .display-toggle {
+  justify-self: start;
+}
+
+.coordinate-status {
+  display: grid;
+  gap: 4px;
+  min-height: 56px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(235, 224, 232, 0.94);
+  background: rgba(255, 251, 253, 0.9);
+}
+
+.coordinate-status strong {
+  color: #4f414b;
+  font-size: 12px;
+}
+
+.coordinate-status span {
+  overflow: hidden;
+  color: #918695;
+  font-size: 12px;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.coordinate-status.is-loading {
+  border-color: rgba(255, 172, 203, 0.96);
+}
+
+.coordinate-status.is-warning {
+  background: rgba(255, 247, 251, 0.98);
+  border-color: rgba(255, 187, 211, 0.98);
+}
+
+.display-toggle {
+  gap: 8px;
+  min-height: 56px;
+  padding: 0 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(235, 224, 232, 0.94);
+  background: rgba(255, 251, 253, 0.9);
+  color: #837783;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.cover-upload,
+.cover-upload :deep(.el-upload),
+.cover-upload :deep(.el-upload-dragger) {
+  width: 100%;
+  height: 100%;
+}
+
+.cover-upload :deep(.el-upload-dragger) {
+  overflow: hidden;
+  min-height: 250px;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+.cover-upload__empty,
+.cover-upload__filled {
+  display: grid;
+  gap: 12px;
+  min-height: 250px;
+}
+
+.cover-upload__empty {
+  grid-template-rows: minmax(180px, 1fr);
+}
+
+.cover-upload__filled {
+  align-content: start;
+  grid-template-rows: auto auto;
+}
+
+.cover-upload__placeholder {
+  overflow: hidden;
+  position: relative;
+  min-height: 180px;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 10px;
+  border-radius: 14px;
+  border: 1.5px dashed rgba(255, 143, 184, 0.72);
+  background: rgba(255, 250, 253, 0.74);
+  color: #ff5e99;
+}
+
+.cover-upload__placeholder .el-icon {
+  position: relative;
+  z-index: 1;
+  color: #ff5e99;
+  font-size: 32px;
+}
+
+.cover-upload__placeholder strong {
+  position: relative;
+  z-index: 1;
+  color: #4d404a;
+  font-size: 14px;
+}
+
+.cover-upload__preview-frame {
+  overflow: hidden;
+  width: 100%;
+  height: 180px;
+  border-radius: 14px;
+  border: 1.5px dashed rgba(255, 143, 184, 0.72);
+  background: rgba(255, 250, 253, 0.74);
+}
+
+.cover-upload__image {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+}
+
+.cover-upload__actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.cover-action {
+  min-height: 38px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  border-radius: 999px;
+  border: 1px solid rgba(238, 226, 235, 0.96);
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.cover-action--ghost {
+  color: #6f6570;
+  background: rgba(255, 255, 255, 0.82);
+}
+
+.cover-action--primary {
+  color: #fff;
+  border-color: rgba(255, 91, 144, 0.96);
+  background: linear-gradient(135deg, #ff4f91, #ff8bb4);
+  box-shadow: 0 12px 24px rgba(255, 91, 144, 0.22);
+}
+
+.entry-board {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(218px, 218px));
+  gap: 16px;
+  align-items: start;
+  justify-items: start;
+  padding: 0;
+}
+
+.memory-entry-card,
+.entry-add-card__button {
+  min-height: 300px;
+  border-radius: 16px;
+  border: 1px solid rgba(238, 226, 235, 0.96);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.9), rgba(255, 248, 252, 0.84)),
+    radial-gradient(circle at 50% 6%, rgba(255, 184, 210, 0.14), transparent 36%);
+  box-shadow: 0 14px 26px rgba(213, 190, 203, 0.1);
+}
+
+.memory-entry-card {
+  overflow: hidden;
+  display: grid;
+  width: 218px;
+  grid-template-columns: 1fr;
+  grid-template-rows: 134px 1fr;
+  padding: 10px;
+}
+
+.memory-entry-card.is-active,
+.memory-entry-card:hover {
+  border-color: rgba(255, 151, 189, 0.82);
+}
+
+.memory-entry-card.is-drag-over {
+  border-color: rgba(255, 91, 144, 0.92);
+  box-shadow:
+    0 0 0 3px rgba(255, 166, 200, 0.18),
+    0 18px 30px rgba(213, 190, 203, 0.14);
+}
+
+.memory-entry-card.is-dragging {
+  opacity: 0.68;
+}
+
+.memory-entry-card__media {
+  position: relative;
+  overflow: hidden;
+  height: 124px;
+  border: 1.5px dashed rgba(255, 142, 184, 0.76);
+  border-radius: 14px;
+  background: rgba(255, 250, 253, 0.74);
+  cursor: grab;
+}
+
+.memory-entry-card__media:active {
+  cursor: grabbing;
+}
+
+.memory-entry-card__media img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+  border-radius: 12px;
+}
+
+.memory-entry-card__cover-badge,
+.memory-entry-card__cover-action,
+.memory-entry-card__remove {
+  position: absolute;
+  border: 0;
+  border-radius: 999px;
+  color: #fff;
+  background: rgba(255, 91, 144, 0.92);
+}
+
+.memory-entry-card__cover-badge,
+.memory-entry-card__cover-action {
+  top: 8px;
+  left: 8px;
+  min-height: 22px;
+  padding: 0 8px;
+  display: inline-flex;
+  align-items: center;
+  font-size: 12px;
+}
+
+.memory-entry-card__cover-action {
+  opacity: 0;
+  cursor: pointer;
+  transition: opacity 0.2s ease;
+}
+
+.memory-entry-card:hover .memory-entry-card__cover-action {
+  opacity: 1;
+}
+
+.memory-entry-card__remove {
+  top: 7px;
+  right: 7px;
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  color: #ff6f9f;
+  background: rgba(255, 255, 255, 0.92);
+  cursor: pointer;
+}
+
+.memory-entry-card__body {
+  display: grid;
+  gap: 7px;
+  align-content: start;
+  padding-top: 8px;
+}
+
+.memory-entry-card__body :deep(.el-textarea__inner) {
+  min-height: 64px !important;
+  padding: 9px 10px;
+  line-height: 1.5;
+  resize: vertical;
+}
+
+.memory-entry-card__body :deep(.el-input__wrapper) {
+  min-height: 34px;
+}
+
+.memory-entry-card__body label {
+  display: grid;
+  gap: 0;
+}
+
+.entry-add-card :deep(.el-upload) {
+  width: 218px;
+  height: 300px;
+}
+
+.entry-add-card__button {
+  width: 100%;
+  height: 300px;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 10px;
+  border-style: dashed;
+  border-color: rgba(255, 154, 191, 0.72);
+  color: #5f5962;
+  cursor: pointer;
+}
+
+.entry-add-card__button .el-icon {
+  color: #5f5962;
+  font-size: 28px;
+}
+
+.entry-add-card__button span {
+  font-size: 13px;
+}
+
+:deep(.el-form-item) {
+  margin-bottom: 0;
+}
+
+:deep(.el-form-item__label) {
+  padding-bottom: 6px;
+  color: #3d333b;
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+:deep(.el-input__wrapper),
+:deep(.el-textarea__inner),
+:deep(.el-date-editor.el-input__wrapper),
+:deep(.el-date-editor .el-input__wrapper),
+:deep(.el-input-number) {
+  width: 100%;
+  border-radius: 9px;
+}
+
+:deep(.el-input__wrapper),
+:deep(.el-textarea__inner),
+:deep(.el-input-number__decrease),
+:deep(.el-input-number__increase) {
+  background: rgba(255, 255, 255, 0.78);
+  box-shadow: 0 0 0 1px rgba(224, 218, 226, 0.98) inset;
+}
+
+:deep(.el-input__wrapper) {
+  min-height: 38px;
+}
+
+:deep(.el-input__wrapper.is-focus),
+:deep(.el-textarea__inner:focus) {
+  box-shadow:
+    0 0 0 1px rgba(255, 91, 144, 0.92) inset,
+    0 0 0 4px rgba(255, 191, 214, 0.22);
+}
+
+:deep(.el-input__suffix) {
+  color: #9a909d;
+  font-size: 12px;
+}
+
+.travel-memory-create__footer {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 290;
+  padding:
+    11px calc(24px + env(safe-area-inset-right, 0))
+    calc(11px + env(safe-area-inset-bottom, 0))
+    calc(24px + env(safe-area-inset-left, 0));
+  border-top: 1px solid rgba(238, 226, 235, 0.9);
+  background: rgba(255, 250, 253, 0.88);
+  box-shadow: 0 -8px 30px rgba(219, 192, 206, 0.1);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+.travel-memory-create__footer-inner {
+  width: min(1540px, calc(100vw - 72px));
+  margin: 0 auto;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 12px;
+}
+
+:deep(.footer-button) {
+  min-width: 126px;
+  min-height: 42px;
+  border-radius: 999px;
+  font-weight: 800;
+}
+
+:deep(.footer-button--neutral) {
+  border-color: rgba(227, 216, 225, 0.98) !important;
+  background: rgba(255, 255, 255, 0.92) !important;
+  color: #766a76 !important;
+}
+
+:deep(.footer-button--save) {
+  border-color: rgba(255, 91, 144, 0.96) !important;
+  background: linear-gradient(135deg, #ff4f91, #ff8bb4) !important;
+  color: #fff !important;
+  box-shadow: 0 12px 24px rgba(255, 91, 144, 0.26) !important;
+}
+
+@media (max-width: 1180px) {
+  .travel-memory-editor {
+    grid-template-columns: 1fr;
+  }
+
+  .travel-memory-map-panel {
+    position: relative;
+    top: 0;
+    min-height: 520px;
+  }
+
+  .map-panel__canvas {
+    min-height: 420px;
+  }
+
+  .entry-board {
+    grid-template-columns: repeat(3, minmax(150px, 1fr));
+  }
+
+  .travel-memory-form-top {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 760px) {
+  .travel-memory-create-page {
+    width: min(100vw - 18px, 100%);
+  }
+
+  .travel-memory-map-panel,
+  .editor-card {
+    padding: 16px;
+    border-radius: 14px;
+  }
+
+  .travel-memory-create__topbar {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+
+  .travel-memory-create__topbar-inner {
+    width: min(100vw - 18px, 100%);
+  }
+
+  .travel-memory-create__topbar-inner,
+  .map-panel__head,
+  .form-meta-row {
+    grid-template-columns: 1fr;
+  }
+
+  .travel-memory-create__topbar-inner {
+    display: grid;
+    gap: 8px;
+  }
+
+  .date-range-row {
+    grid-template-columns: 1fr;
+  }
+
+  .date-range-row__divider {
+    display: none;
+  }
+
+  .form-meta-row,
+  .entry-board {
+    grid-template-columns: 1fr;
+  }
+
+  .advanced-field--inline {
+    grid-template-columns: 1fr;
+  }
+
+  .map-picked-card {
+    left: 16px;
+    right: 16px;
+    width: auto;
+  }
+
+  .travel-memory-create__footer-inner {
+    width: min(100vw - 18px, 100%);
+  }
+
+  :deep(.footer-button) {
+    flex: 1;
+    min-width: 0;
   }
 }
 </style>
