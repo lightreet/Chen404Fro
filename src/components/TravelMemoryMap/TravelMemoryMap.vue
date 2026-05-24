@@ -141,6 +141,23 @@
               </text>
             </g>
           </svg>
+
+          <div v-if="boundaryChoiceLocations.length" class="travel-map-choice-card">
+            <div class="travel-map-choice-card__head">
+              <strong>这个城市有多段旅行</strong>
+              <button type="button" aria-label="关闭地点选择" @click="closeBoundaryChoice">×</button>
+            </div>
+            <button
+              v-for="location in boundaryChoiceLocations"
+              :key="location.id"
+              type="button"
+              class="travel-map-choice-card__item"
+              @click="selectBoundaryChoice(location.id)"
+            >
+              <span>{{ location.title }}</span>
+              <small>{{ [location.province, location.city].filter(Boolean).join(' · ') || '查看这段旅行' }}</small>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -267,6 +284,7 @@ const cityMapFallbackText = ref('')
 const displayScale = ref(BASE_SCALE)
 const mapPan = ref({ x: 0, y: 0 })
 const isDragging = ref(false)
+const boundaryChoiceId = ref<string | null>(null)
 
 let map: any = null
 let AMapRef: any = null
@@ -387,13 +405,24 @@ const decorativeCities = computed<DecorativeCity[]>(() =>
     ...projectPoint(city.longitude, city.latitude),
   })),
 )
-const routePath = computed(() =>
-  displayPoints.value.length >= 2
-    ? buildSmoothRoute(displayPoints.value)
-    : buildSmoothRoute(
-        decorativeCities.value.filter((city) => ['喀什', '成都', '西安', '北京', '厦门', '三亚'].includes(city.name)),
-      ),
+const boundaryLocationsMap = computed(() => {
+  const result = new Map<string, TravelMemoryLocationListItem[]>()
+  props.locations.forEach((location) => {
+    const boundaryId = locationBoundaryMap.value.get(location.id)
+    if (!boundaryId) return
+    const locations = result.get(boundaryId) ?? []
+    locations.push(location)
+    result.set(boundaryId, locations)
+  })
+
+  return result
+})
+const boundaryChoiceLocations = computed(() =>
+  boundaryChoiceId.value
+    ? (boundaryLocationsMap.value.get(boundaryChoiceId.value) ?? [])
+    : [],
 )
+const routePath = computed(() => (displayPoints.value.length >= 2 ? buildSmoothRoute(displayPoints.value) : ''))
 function projectPoint(longitude: number, latitude: number) {
   const projectedPoint = cityProjection.value?.([longitude, latitude])
   if (projectedPoint) {
@@ -524,23 +553,71 @@ function handleBoundaryClick(id: string) {
     return
   }
 
-  const target = props.locations.find((location) => locationBoundaryMap.value.get(location.id) === id)
-  if (target) {
-    emit('select', target.id)
+  const targets = boundaryLocationsMap.value.get(id) ?? []
+  if (targets.length === 1) {
+    closeBoundaryChoice()
+    emit('select', targets[0].id)
+    return
   }
+
+  boundaryChoiceId.value = targets.length > 1 ? id : null
+}
+
+function closeBoundaryChoice() {
+  boundaryChoiceId.value = null
+}
+
+function selectBoundaryChoice(id: number) {
+  closeBoundaryChoice()
+  emit('select', id)
 }
 
 function zoomIn() {
+  if (props.pickerMode && map?.zoomIn) {
+    map.zoomIn()
+    return
+  }
   updateScale(displayScale.value + ZOOM_STEP)
 }
 
 function zoomOut() {
+  if (props.pickerMode && map?.zoomOut) {
+    map.zoomOut()
+    return
+  }
   updateScale(displayScale.value - ZOOM_STEP)
 }
 
 function resetZoom() {
   displayScale.value = BASE_SCALE
   mapPan.value = { x: 0, y: 0 }
+}
+
+function resetPickerView() {
+  if (!props.pickerMode || !map) {
+    resetZoom()
+    return
+  }
+  if (markers.length) {
+    map.setFitView(markers, false, [70, 70, 70, 70], 4)
+    return
+  }
+  map.setZoomAndCenter(4.4, [104.0, 35.0])
+}
+
+function focusPickerLocation(latitude?: number, longitude?: number) {
+  if (!props.pickerMode || !map) return
+
+  const targetLatitude = latitude ?? props.pickerLatitude
+  const targetLongitude = longitude ?? props.pickerLongitude
+  if (targetLatitude != null && targetLongitude != null && isValidCoordinate(targetLatitude, targetLongitude)) {
+    const coordinate = wgs84ToGcj02(Number(targetLatitude), Number(targetLongitude))
+    setPickerMarker(Number(targetLatitude), Number(targetLongitude))
+    map.setZoomAndCenter(11, [coordinate.longitude, coordinate.latitude])
+    return
+  }
+
+  resetPickerView()
 }
 
 function updateScale(value: number) {
@@ -631,6 +708,7 @@ function handleMarkerClick(id: number) {
   if (Date.now() - lastDragEndedAt < DRAG_SUPPRESS_DURATION) {
     return
   }
+  closeBoundaryChoice()
   emit('select', id)
 }
 
@@ -851,6 +929,13 @@ onBeforeUnmount(() => {
   pickerMarker = null
   geocoder = null
 })
+
+defineExpose({
+  zoomIn,
+  zoomOut,
+  focusPickerLocation,
+  resetPickerView,
+})
 </script>
 
 <style scoped lang="scss">
@@ -1016,6 +1101,82 @@ onBeforeUnmount(() => {
   stroke: rgba(255, 255, 255, 0.92);
   stroke-width: 4;
   stroke-linejoin: round;
+}
+
+.travel-map-choice-card {
+  position: absolute;
+  left: 24px;
+  bottom: 24px;
+  z-index: 4;
+  width: min(280px, calc(100% - 48px));
+  max-height: min(320px, calc(100% - 48px));
+  overflow: auto;
+  padding: 12px;
+  border-radius: 20px;
+  border: 1px solid rgba(239, 206, 218, 0.92);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(255, 249, 252, 0.92)),
+    radial-gradient(circle at 14% 8%, rgba(255, 205, 224, 0.36), transparent 34%);
+  box-shadow: 0 18px 38px rgba(184, 126, 148, 0.18);
+  backdrop-filter: blur(14px);
+}
+
+.travel-map-choice-card__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+  color: #5d4650;
+}
+
+.travel-map-choice-card__head strong {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.travel-map-choice-card__head button {
+  width: 26px;
+  height: 26px;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(255, 233, 241, 0.92);
+  color: #9b6a7a;
+  cursor: pointer;
+}
+
+.travel-map-choice-card__item {
+  width: 100%;
+  display: grid;
+  gap: 3px;
+  margin-top: 7px;
+  padding: 10px 12px;
+  text-align: left;
+  border: 1px solid rgba(239, 218, 226, 0.86);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.72);
+  color: #5b4650;
+  cursor: pointer;
+  transition:
+    transform 0.18s ease,
+    border-color 0.18s ease,
+    box-shadow 0.18s ease;
+}
+
+.travel-map-choice-card__item:hover {
+  transform: translateY(-1px);
+  border-color: rgba(239, 151, 181, 0.72);
+  box-shadow: 0 10px 22px rgba(220, 150, 174, 0.14);
+}
+
+.travel-map-choice-card__item span {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.travel-map-choice-card__item small {
+  color: rgba(93, 70, 80, 0.62);
+  font-size: 11px;
 }
 
 .travel-map-marker {

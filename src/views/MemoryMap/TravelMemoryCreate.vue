@@ -42,6 +42,7 @@
 
           <div class="map-panel__canvas">
             <TravelMemoryMap
+              ref="pickerMapRef"
               :locations="list"
               picker-mode
               :picker-latitude="form.latitude ?? null"
@@ -55,18 +56,18 @@
           </div>
 
           <div class="map-panel__tools" aria-label="地图操作">
-            <button type="button" title="放大地图">
+            <button type="button" title="放大地图" @click="zoomInPickerMap">
               <el-icon><Plus /></el-icon>
             </button>
-            <button type="button" title="缩小地图">
+            <button type="button" title="缩小地图" @click="zoomOutPickerMap">
               <span>−</span>
             </button>
-            <button type="button" title="重新选择" @click="focusCoordinateHint">
+            <button type="button" title="重新选择" @click="resetPickerMapView">
               <el-icon><Location /></el-icon>
             </button>
           </div>
 
-          <button type="button" class="map-panel__locate" @click="focusCoordinateHint">
+          <button type="button" class="map-panel__locate" @click="locateCurrentPosition">
             <el-icon><Location /></el-icon>
             <span>自动定位</span>
           </button>
@@ -177,9 +178,10 @@
                       移除封面
                     </button>
                     <button type="button" class="cover-action cover-action--primary">
-                      更换封面
+                      上传新封面
                     </button>
                   </div>
+                  <p class="cover-upload__hint">会新增一张照片并设为封面，也可以在下方照片中点“设封面”。</p>
                 </div>
                 <div v-else class="cover-upload__empty">
                   <div class="cover-upload__placeholder">
@@ -297,7 +299,7 @@
             <el-button class="footer-button footer-button--neutral" @click="router.push('/memory-map')">
               返回地图
             </el-button>
-            <el-button class="footer-button footer-button--save" type="primary" :loading="saving" @click="handleSave">
+            <el-button class="footer-button footer-button--save" type="primary" :loading="saving" :disabled="uploading" @click="handleSave">
               {{ saveButtonLabel }}
             </el-button>
           </div>
@@ -308,6 +310,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref, watch } from 'vue'
+import type { AxiosError } from 'axios'
 import type { UploadRequestOptions } from 'element-plus'
 import { ElMessage } from 'element-plus'
 import { ArrowDown, ArrowLeft, Close, Location, Plus, Search } from '@element-plus/icons-vue'
@@ -334,6 +337,7 @@ import { applySiteMeta } from '@/utils/siteConfig'
 const route = useRoute()
 const router = useRouter()
 const { siteConfig, loadSiteConfig } = useSiteConfig()
+const pickerMapRef = ref<InstanceType<typeof TravelMemoryMap> | null>(null)
 
 const list = ref<TravelMemoryLocationDetail[]>([])
 const loading = ref(false)
@@ -402,6 +406,7 @@ const locationMetaStatusText = computed(() => {
 
   return '点击地图后会自动尝试补全省份和城市。'
 })
+const hasInvalidTravelDateRange = computed(() => isEndDateBeforeStartDate(form.visitedAt, form.visitedEndAt))
 
 const createEmptyForm = (): CreateTravelMemoryCommand => ({
   title: '',
@@ -519,6 +524,31 @@ function beforeImageUpload(file: File) {
     return false
   }
   return true
+}
+
+function isEndDateBeforeStartDate(start?: string, end?: string) {
+  if (!start || !end) return false
+
+  const startTime = new Date(start).getTime()
+  const endTime = new Date(end).getTime()
+  if (!Number.isFinite(startTime) || !Number.isFinite(endTime)) return false
+
+  return endTime < startTime
+}
+
+function resolveSaveErrorMessage(error: unknown) {
+  const fallback = '保存失败，请检查权限、坐标、日期和图片后再试'
+  const axiosError = error as AxiosError<{ message?: string }> | undefined
+  const responseMessage = axiosError?.response?.data?.message
+  if (responseMessage) {
+    return responseMessage
+  }
+
+  if (error instanceof Error && error.message) {
+    return error.message
+  }
+
+  return fallback
 }
 
 async function handleUploadEntryImage(options: UploadRequestOptions) {
@@ -667,6 +697,45 @@ function focusCoordinateHint() {
   ElMessage.info('先在地图上点一下位置，我们会尝试自动补全省份和城市。')
 }
 
+function zoomInPickerMap() {
+  pickerMapRef.value?.zoomIn()
+}
+
+function zoomOutPickerMap() {
+  pickerMapRef.value?.zoomOut()
+}
+
+function resetPickerMapView() {
+  clearCoordinateSelection()
+  pickerMapRef.value?.resetPickerView()
+  ElMessage.info('已清除当前选点，请在地图上重新选择')
+}
+
+function locateCurrentPosition() {
+  if (!navigator.geolocation) {
+    ElMessage.warning('当前浏览器不支持自动定位')
+    return
+  }
+
+  navigator.geolocation.getCurrentPosition(
+    async (position) => {
+      const latitude = position.coords.latitude
+      const longitude = position.coords.longitude
+      await applyCoordinateSelection(latitude, longitude)
+      pickerMapRef.value?.focusPickerLocation(latitude, longitude)
+      ElMessage.success('已定位到当前位置')
+    },
+    () => {
+      ElMessage.warning('自动定位失败，请手动搜索或点击地图选择')
+    },
+    {
+      enableHighAccuracy: true,
+      timeout: 10000,
+      maximumAge: 60000,
+    },
+  )
+}
+
 function clearCoordinateSelection() {
   form.latitude = undefined
   form.longitude = undefined
@@ -743,6 +812,11 @@ function removeEntry(index: number) {
 }
 
 async function handleSave() {
+  if (uploading.value) {
+    ElMessage.warning('照片还在上传中，请等上传完成后再保存')
+    return
+  }
+
   if (!form.title.trim()) {
     ElMessage.warning('请输入地点标题')
     return
@@ -754,6 +828,11 @@ async function handleSave() {
 
   if (form.latitude == null || form.longitude == null) {
     ElMessage.warning('请先在地图上选择地点坐标')
+    return
+  }
+
+  if (hasInvalidTravelDateRange.value) {
+    ElMessage.warning('旅行结束日期不能早于开始日期')
     return
   }
 
@@ -785,8 +864,8 @@ async function handleSave() {
     ElMessage.success(isEditMode.value ? '旅行地点更新成功' : '旅行地点创建成功')
     await loadList()
     router.push({ name: 'TravelMemoryDetail', params: { id: saved.id } })
-  } catch {
-    ElMessage.error('保存失败')
+  } catch (error) {
+    ElMessage.error(resolveSaveErrorMessage(error))
   } finally {
     saving.value = false
   }
@@ -2075,6 +2154,13 @@ watch(
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 10px;
+}
+
+.cover-upload__hint {
+  margin: 0;
+  color: rgba(77, 64, 74, 0.62);
+  font-size: 12px;
+  line-height: 1.6;
 }
 
 .cover-action {

@@ -105,7 +105,7 @@ const coverEntry = computed<TravelMemoryEntry | null>(() => {
 })
 const entryCards = computed(() => {
   const entries = detail.value?.entries || []
-  return entries.slice(0, 3)
+  return entries
 })
 const locationText = computed(() => formatLocation(detail.value))
 const visitDate = computed(() => formatDateRange(detail.value?.visitedAt, detail.value?.visitedEndAt))
