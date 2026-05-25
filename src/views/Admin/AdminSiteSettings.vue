@@ -16,32 +16,6 @@
     </template>
 
     <div v-loading="loading" class="settings-body">
-      <section class="settings-overview">
-        <div class="overview-brand">
-          <div class="overview-logo">
-            <img :src="form.siteLogo || '/logo.png'" alt="站点 Logo" />
-          </div>
-          <div>
-            <h3>{{ form.siteName || 'Chen404 Blog' }}</h3>
-            <p>{{ form.siteDescription || '一个写下技术，也收藏温柔日常的小小角落' }}</p>
-          </div>
-        </div>
-        <div class="overview-stats">
-          <div>
-            <span>基础信息</span>
-            <strong>{{ filledBasicCount }}/6</strong>
-          </div>
-          <div>
-            <span>品牌资源</span>
-            <strong>{{ filledBrandCount }}/3</strong>
-          </div>
-          <div>
-            <span>页面封面</span>
-            <strong>{{ filledHeroCount }}/{{ heroPages.length }}</strong>
-          </div>
-        </div>
-      </section>
-
       <el-tabs v-model="activeTab" class="settings-tabs">
         <el-tab-pane label="基础信息" name="basic">
           <section class="settings-section">
@@ -185,12 +159,10 @@
 
         <el-tab-pane label="运行配置" name="runtime">
           <section class="settings-section">
-            <div class="section-head section-head--runtime">
+            <div class="section-head">
               <div>
                 <h3>评论互动策略</h3>
-                <p class="runtime-summary">把真正需要日常调整的评论开关留在这里，其余分页和上传限制固定为后端默认值。</p>
               </div>
-              <el-tag type="success" effect="plain">仅保留必要开关</el-tag>
             </div>
 
             <div class="runtime-grid">
@@ -237,10 +209,6 @@
                   </div>
                 </div>
               </section>
-            </div>
-
-            <div class="runtime-footer-note">
-              <p>文章列表分页大小、图片上传大小限制与允许后缀已固定为后端默认配置，不再通过数据库管理。</p>
             </div>
           </section>
         </el-tab-pane>
@@ -311,7 +279,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref } from 'vue';
+import { onMounted, reactive, ref } from 'vue';
 import type { UploadRequestOptions } from 'element-plus';
 import { ElMessage } from 'element-plus';
 import { Delete, Refresh, Setting, UploadFilled } from '@element-plus/icons-vue';
@@ -392,14 +360,6 @@ const heroImagePositions = reactive<Record<HeroKey, string>>({
   about: HERO_DEFAULT_POSITIONS.about,
   guestbook: HERO_DEFAULT_POSITIONS.guestbook,
 });
-
-const filledBasicCount = computed(() =>
-  [form.siteName, form.siteDescription, form.email, form.icp, form.beian, form.github].filter(Boolean).length
-);
-const filledBrandCount = computed(() =>
-  [form.siteLogo, form.siteFavicon, form.copyright].filter(Boolean).length
-);
-const filledHeroCount = computed(() => Object.values(heroImages).filter(Boolean).length);
 
 function applyConfig(config: SiteConfig) {
   form.siteName = config.siteName ?? '';
@@ -650,84 +610,12 @@ onMounted(() => {
   gap: 18px;
 }
 
-.settings-overview,
 .settings-section {
   border: 1px solid rgba(235, 219, 228, 0.86);
   border-radius: 8px;
   background:
     linear-gradient(145deg, rgba(255, 255, 255, 0.92), rgba(255, 249, 252, 0.76)),
     radial-gradient(circle at right top, rgba(255, 214, 230, 0.2), transparent 40%);
-}
-
-.settings-overview {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 18px;
-  padding: 18px;
-}
-
-.overview-brand {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  min-width: 0;
-
-  h3 {
-    margin: 3px 0 4px;
-    color: #573848;
-    font-size: 20px;
-  }
-
-  p {
-    margin: 0;
-    color: rgba(93, 70, 84, 0.72);
-    font-size: 13px;
-    line-height: 1.6;
-  }
-}
-
-.overview-logo {
-  width: 76px;
-  height: 58px;
-  flex: 0 0 auto;
-  display: grid;
-  place-items: center;
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.72);
-  border: 1px solid rgba(235, 219, 228, 0.74);
-
-  img {
-    width: 66px;
-    height: 46px;
-    object-fit: contain;
-  }
-}
-
-.overview-stats {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(96px, 1fr));
-  gap: 10px;
-
-  div {
-    padding: 12px 14px;
-    border-radius: 8px;
-    background: rgba(255, 255, 255, 0.7);
-    border: 1px solid rgba(235, 219, 228, 0.72);
-  }
-
-  span {
-    display: block;
-    color: var(--text-tertiary);
-    font-size: 12px;
-  }
-
-  strong {
-    display: block;
-    margin-top: 6px;
-    color: #5f4050;
-    font-size: 18px;
-  }
 }
 
 .settings-tabs {
@@ -747,17 +635,6 @@ onMounted(() => {
     margin: 0;
     color: var(--text-primary);
     font-size: 18px;
-  }
-}
-
-.section-head--runtime {
-  align-items: flex-start;
-
-  p {
-    margin: 8px 0 0;
-    color: var(--text-tertiary);
-    font-size: 13px;
-    line-height: 1.7;
   }
 }
 
@@ -862,21 +739,6 @@ onMounted(() => {
 .runtime-note {
   background: rgba(255, 255, 255, 0.72);
   color: rgba(95, 73, 86, 0.7);
-}
-
-.runtime-footer-note {
-  margin-top: 18px;
-  padding: 14px 16px;
-  border-radius: 14px;
-  background: rgba(255, 250, 252, 0.74);
-  border: 1px dashed rgba(227, 208, 218, 0.92);
-
-  p {
-    margin: 0;
-    color: rgba(111, 88, 100, 0.76);
-    font-size: 13px;
-    line-height: 1.7;
-  }
 }
 
 .form-grid {
@@ -1006,7 +868,6 @@ onMounted(() => {
 
 @media (max-width: 760px) {
   .settings-header,
-  .settings-overview,
   .section-head,
   .settings-footer {
     align-items: flex-start;
@@ -1022,7 +883,6 @@ onMounted(() => {
     }
   }
 
-  .overview-stats,
   .asset-panel {
     width: 100%;
     grid-template-columns: 1fr;

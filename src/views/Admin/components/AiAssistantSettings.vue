@@ -4,10 +4,6 @@
       <div>
         <p class="eyebrow">Lyra Control Room</p>
         <h3>AI 助手配置</h3>
-        <p>
-          这里负责模型、API Key、女仆人设、站内检索和小气泡策略。API Key 只写入不回显，
-          当前状态会以脱敏预览展示。
-        </p>
       </div>
       <div class="hero-actions">
         <el-button :icon="Refresh" :loading="loading" @click="loadConfig">重新加载</el-button>
@@ -154,12 +150,6 @@
       </el-tab-pane>
 
       <el-tab-pane label="小气泡" name="bubble">
-        <div class="bubble-preview">
-          <div class="bubble-preview__figure">Lyra</div>
-          <div class="bubble-preview__bubble">
-            {{ bubblePreviewText }}
-          </div>
-        </div>
         <el-form label-position="top" class="settings-form">
           <el-form-item label="小气泡最大字符数">
             <el-input-number v-model="form.chat.bubbleMaxChars" :min="12" :max="60" />
@@ -193,7 +183,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref } from 'vue';
+import { onMounted, reactive, ref } from 'vue';
 import { ElMessage } from 'element-plus';
 import { Connection, Refresh } from '@element-plus/icons-vue';
 import { getAiAdminConfig, testAiAdminConfig, updateAiAdminConfig } from '@/api/ai-admin';
@@ -207,12 +197,6 @@ const testMessage = ref('你好，Lyra。请用一句话确认你可以正常工
 const testResult = ref<AiConfigTestResponse | null>(null);
 
 const form = reactive<AiAdminConfig>(createDefaultConfig());
-
-const bubblePreviewText = computed(() => {
-  const maxChars = form.chat.bubbleMaxChars ?? 36;
-  const sample = '我已经把长内容整理到聊天面板里啦。';
-  return sample.length > maxChars ? form.chat.bubbleLongReplyText || '我整理好了，打开聊天框看详细内容吧。' : sample;
-});
 
 function createDefaultConfig(): AiAdminConfig {
   return {
@@ -334,8 +318,7 @@ onMounted(() => {
 
 .ai-settings__hero,
 .status-card,
-.settings-form,
-.bubble-preview {
+.settings-form {
   border: 1px solid rgba(235, 219, 228, 0.86);
   background:
     linear-gradient(145deg, rgba(255, 255, 255, 0.94), rgba(255, 249, 252, 0.78)),
@@ -450,52 +433,6 @@ onMounted(() => {
   color: rgba(96, 72, 86, 0.62);
   font-size: 12px;
   line-height: 1.6;
-}
-
-.bubble-preview {
-  position: relative;
-  min-height: 132px;
-  margin-bottom: 16px;
-  padding: 18px 18px 18px 132px;
-  border-radius: 20px;
-  overflow: hidden;
-}
-
-.bubble-preview__figure {
-  position: absolute;
-  left: 24px;
-  bottom: 18px;
-  width: 78px;
-  height: 96px;
-  display: grid;
-  place-items: center;
-  border-radius: 34px 34px 26px 26px;
-  background: linear-gradient(165deg, #e9f6ff, #ffe6f0);
-  color: #9b6c82;
-  font-weight: 700;
-}
-
-.bubble-preview__bubble {
-  position: relative;
-  max-width: 280px;
-  padding: 12px 14px;
-  border-radius: 16px;
-  background: #fff;
-  color: #573848;
-  line-height: 1.6;
-  box-shadow: 0 14px 28px rgba(151, 106, 127, 0.12);
-
-  &::before {
-    content: '';
-    position: absolute;
-    left: -7px;
-    top: 34px;
-    width: 16px;
-    height: 16px;
-    border-radius: 3px;
-    background: #fff;
-    transform: rotate(45deg);
-  }
 }
 
 .test-result {
