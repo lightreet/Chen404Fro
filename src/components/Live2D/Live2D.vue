@@ -219,6 +219,18 @@ const pushAssistantMessage = (payload: Pick<ChatPanelMessage, 'content'> & Parti
   });
 };
 
+const removeEmptyAssistantMessage = (messageId: string) => {
+  if (!messageId) {
+    return;
+  }
+  const index = chatMessages.value.findIndex(
+    (message) => message.id === messageId && message.role === 'assistant' && !message.content.trim(),
+  );
+  if (index >= 0) {
+    chatMessages.value.splice(index, 1);
+  }
+};
+
 const getOrCreateVisitorId = () => {
   const saved = window.localStorage.getItem(CHAT_VISITOR_STORAGE_KEY);
   if (saved) {
@@ -246,10 +258,12 @@ const openChatPanel = () => {
 };
 
 const buildChatRequestMessages = (): AiChatMessage[] => {
-  return chatMessages.value.map((message) => ({
-    role: message.role,
-    content: message.content,
-  }));
+  return chatMessages.value
+    .map((message) => ({
+      role: message.role,
+      content: message.content.trim(),
+    }))
+    .filter((message) => message.content);
 };
 
 const buildChatRequest = (): AiChatMessage[] => {
@@ -394,6 +408,8 @@ const handleSendMessage = async (content: string) => {
     if (activeAbortController.value?.signal.aborted) {
       return;
     }
+    removeEmptyAssistantMessage(activeStreamMessageId.value);
+    activeStreamMessageId.value = '';
     try {
       const response = await sendMaidChat({
         sessionId: activeSessionId.value || undefined,
