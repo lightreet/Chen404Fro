@@ -1,6 +1,6 @@
 ﻿<template>
   <div class="admin-page">
-    <DefaultLayout>
+    <DefaultLayout wide-content>
       <div class="admin-container">
         <div class="admin-header">
           <div class="title">
@@ -85,7 +85,7 @@ const handleSelect = (key: string) => {
 }
 
 .admin-container {
-  width: min(1520px, calc(100vw - 40px));
+  width: min(1520px, 100%);
   margin: 0 auto;
   padding: 0;
   display: flex;
@@ -117,15 +117,17 @@ const handleSelect = (key: string) => {
 
 .admin-main {
   display: grid;
-  grid-template-columns: 220px minmax(0, 1fr);
+  grid-template-columns: minmax(180px, 220px) minmax(0, 1fr);
   gap: var(--spacing-lg);
   align-items: start;
   width: 100%;
+  min-width: 0;
 }
 
 .admin-nav {
   display: flex;
   align-self: start;
+  min-width: 0;
 }
 
 .admin-menu {
@@ -142,13 +144,30 @@ const handleSelect = (key: string) => {
   justify-self: stretch;
 }
 
+.admin-page :deep(.container) {
+  max-width: none;
+  width: 100%;
+  padding-inline: clamp(12px, 2vw, 24px);
+}
+
 .admin-page :deep(.content-wrapper.no-right-sidebar .main-area) {
   max-width: none;
 }
 
+.admin-page :deep(.main-content) {
+  overflow: visible;
+}
+
+@media (max-width: 1320px) {
+  .admin-main {
+    grid-template-columns: minmax(168px, 190px) minmax(0, 1fr);
+    gap: 16px;
+  }
+}
+
 @media (max-width: 900px) {
   .admin-container {
-    width: min(100%, calc(100vw - 24px));
+    width: 100%;
   }
 
   .admin-main {

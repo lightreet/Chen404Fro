@@ -101,6 +101,9 @@ const BASE_WIDGET_WIDTH = 252;
 const BASE_WIDGET_HEIGHT = 456;
 const WIDGET_WIDTH = Math.round(BASE_WIDGET_WIDTH * LIVE2D_SCALE);
 const WIDGET_HEIGHT = Math.round(BASE_WIDGET_HEIGHT * LIVE2D_SCALE);
+const BUBBLE_MAX_CHARS = 36;
+const LONG_REPLY_BUBBLE_TEXT = '我整理好了，打开聊天框看详细内容吧。';
+const STREAMING_BUBBLE_TEXT = '我在整理，详细内容会放进聊天框。';
 const WELCOME_MESSAGE = '你好呀，我是 Lyra。想聊聊，还是让我帮你看看这页内容呀？';
 
 interface ChatPanelMessage {
@@ -205,7 +208,7 @@ const visibleSpeechText = computed(() => {
   if (!text || panelVisible.value) {
     return '';
   }
-  return text.length > 36 ? `${text.slice(0, 34)}...` : text;
+  return toBubbleText(text);
 });
 
 const stageStyle = computed(() => ({
@@ -218,11 +221,22 @@ const showRandomSpeech = () => {
     suppressClick.value = false;
     return;
   }
-  speechText.value = speeches[Math.floor(Math.random() * speeches.length)];
+  speechText.value = toBubbleText(speeches[Math.floor(Math.random() * speeches.length)]);
 };
 
 const clearSpeech = () => {
   speechText.value = '';
+};
+
+const toBubbleText = (text?: string) => {
+  const normalized = (text ?? '').trim();
+  if (!normalized) {
+    return '';
+  }
+  if (normalized.length > BUBBLE_MAX_CHARS || normalized.includes('\n')) {
+    return LONG_REPLY_BUBBLE_TEXT;
+  }
+  return normalized;
 };
 
 const pushAssistantMessage = (payload: Pick<ChatPanelMessage, 'content'> & Partial<ChatPanelMessage>) => {
@@ -266,7 +280,7 @@ const ensureGreetingMessage = () => {
     content: WELCOME_MESSAGE,
     suggestions: panelSuggestions.value,
   });
-  speechText.value = WELCOME_MESSAGE;
+  speechText.value = toBubbleText(WELCOME_MESSAGE);
 };
 
 const openChatPanel = () => {
@@ -347,6 +361,7 @@ const applyStreamEvent = (event: AiChatStreamEvent) => {
       break;
     case 'message_start':
       activeStreamMessageId.value = event.data.messageId;
+      speechText.value = STREAMING_BUBBLE_TEXT;
       chatMessages.value.push({
         id: event.data.messageId,
         role: 'assistant',
@@ -359,7 +374,6 @@ const applyStreamEvent = (event: AiChatStreamEvent) => {
     case 'delta':
       updateAssistantMessage(event.data.messageId, (message) => {
         message.content += event.data.text;
-        speechText.value = message.content || speechText.value;
       });
       break;
     case 'citation':
@@ -379,9 +393,7 @@ const applyStreamEvent = (event: AiChatStreamEvent) => {
       break;
     case 'done': {
       const lastAssistant = getLastAssistantMessage();
-      if (lastAssistant?.content) {
-        speechText.value = lastAssistant.content;
-      }
+      speechText.value = toBubbleText(event.data.bubbleText || lastAssistant?.content || '');
       activeStreamMessageId.value = '';
       break;
     }
@@ -455,12 +467,12 @@ const applyChatResponse = (response: AiChatResponse) => {
   window.localStorage.setItem(CHAT_SESSION_STORAGE_KEY, response.sessionId);
   pushAssistantMessage({
     id: response.messageId,
-    content: response.replyText,
+    content: response.panelAnswer || response.replyText,
     citations: response.citations,
     relatedArticles: response.relatedArticles,
     suggestions: response.suggestions,
   });
-  speechText.value = response.replyText;
+  speechText.value = toBubbleText(response.bubbleText || response.replyText);
 };
 
 const handleStopStreaming = () => {
@@ -470,7 +482,7 @@ const handleStopStreaming = () => {
   isChatLoading.value = false;
   const lastAssistant = getLastAssistantMessage();
   if (lastAssistant?.content) {
-    speechText.value = lastAssistant.content;
+    speechText.value = toBubbleText(lastAssistant.content);
   }
 };
 
@@ -670,10 +682,10 @@ onUnmounted(() => {
 
 .speech-bubble {
   position: absolute;
-  top: 28px;
+  top: 128px;
   z-index: 8;
-  width: min(188px, calc(100vw - 32px));
-  max-width: 188px;
+  width: min(168px, calc(100vw - 32px));
+  max-width: 168px;
   padding: 10px 14px;
   border-radius: 12px;
   background:
@@ -695,7 +707,7 @@ onUnmounted(() => {
   &::after {
     content: '';
     position: absolute;
-    top: 58px;
+    top: 34px;
     width: 16px;
     height: 16px;
     background: inherit;
@@ -705,7 +717,7 @@ onUnmounted(() => {
 }
 
 .speech-bubble.bubble-right {
-  left: calc(100% - 44px);
+  left: calc(100% - 24px);
 
   &::after {
     left: -7px;
@@ -713,7 +725,7 @@ onUnmounted(() => {
 }
 
 .speech-bubble.bubble-left {
-  right: calc(100% - 44px);
+  right: calc(100% - 24px);
 
   &::after {
     right: -7px;
@@ -977,10 +989,10 @@ onUnmounted(() => {
 @keyframes bubble-float {
   0%,
   100% {
-    transform: translateX(-50%) translateY(0);
+    transform: translateY(0);
   }
   50% {
-    transform: translateX(-50%) translateY(-3px);
+    transform: translateY(-3px);
   }
 }
 

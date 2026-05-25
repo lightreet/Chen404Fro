@@ -429,12 +429,66 @@ export interface AiChatResponse {
   messageId: string;
   scene: 'helper' | 'companion';
   replyText: string;
+  panelAnswer?: string;
+  bubbleText?: string;
   mood: string;
   citations: AiChatCitation[];
   relatedArticles: AiChatRelatedArticle[];
   suggestions: string[];
   traceId: string;
   finishReason: string;
+}
+
+export interface AiAdminConfig {
+  llm: {
+    enabled?: boolean;
+    baseUrl?: string;
+    model?: string;
+    apiStyle?: 'chat-completions' | 'responses' | string;
+    apiKeyConfigured?: boolean;
+    apiKeyPreview?: string;
+    apiKey?: string;
+    temperature?: number;
+    maxTokens?: number;
+    timeoutSeconds?: number;
+  };
+  maid: {
+    name?: string;
+    personaVersion?: string;
+    systemPrompt?: string;
+    helperPrompt?: string;
+    companionPrompt?: string;
+  };
+  chat: {
+    enabled?: boolean;
+    retrievalEnabled?: boolean;
+    maxCitationCount?: number;
+    maxContextMessages?: number;
+    maxArticleContentChars?: number;
+    maxArticleSummaryChars?: number;
+    maxSuggestionCount?: number;
+    relatedArticleLimit?: number;
+    requireRecommendIntentForRelatedArticles?: boolean;
+    bubbleMaxChars?: number;
+    bubbleLongReplyText?: string;
+  };
+  tools: {
+    webSearchEnabled?: boolean;
+  };
+}
+
+export interface AiConfigTestRequest {
+  message?: string;
+  useUnsavedConfig?: boolean;
+  config?: AiAdminConfig;
+}
+
+export interface AiConfigTestResponse {
+  success: boolean;
+  message: string;
+  sampleText?: string;
+  traceId?: string;
+  latencyMs?: number;
 }
 
 export interface AiChatHistoryMessage {

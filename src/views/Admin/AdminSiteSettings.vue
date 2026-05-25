@@ -8,7 +8,7 @@
             <h2>站点配置</h2>
           </div>
         </div>
-        <div class="settings-actions">
+        <div v-if="activeTab !== 'ai'" class="settings-actions">
           <el-button :icon="Refresh" :loading="loading" @click="loadConfig">刷新</el-button>
           <el-button type="primary" :loading="saving" @click="saveConfig">保存配置</el-button>
         </div>
@@ -297,9 +297,12 @@
             </div>
           </section>
         </el-tab-pane>
+        <el-tab-pane label="AI 助手" name="ai">
+          <AiAssistantSettings />
+        </el-tab-pane>
       </el-tabs>
 
-      <div class="settings-footer">
+      <div v-if="activeTab !== 'ai'" class="settings-footer">
         <el-button @click="loadConfig">重置</el-button>
         <el-button type="primary" :loading="saving" @click="saveConfig">保存配置</el-button>
       </div>
@@ -314,6 +317,7 @@ import { ElMessage } from 'element-plus';
 import { Delete, Refresh, Setting, UploadFilled } from '@element-plus/icons-vue';
 import { getSiteConfig, updateSiteConfig } from '@/api/home';
 import { uploadSiteAsset } from '@/api/upload';
+import AiAssistantSettings from '@/views/Admin/components/AiAssistantSettings.vue';
 import HeroImageFocusEditor from '@/components/HeroImageFocusEditor/HeroImageFocusEditor.vue';
 import { useSiteConfig } from '@/composables/useSiteConfig';
 import type { SiteConfig } from '@/types';

@@ -16,7 +16,7 @@ export type AiChatStreamEvent =
   | { event: 'citation'; data: { articleId: number | string; articleTitle: string; url: string; snippet?: string } }
   | { event: 'related_articles'; data: { messageId: string; items: Array<{ articleId: number | string; articleTitle: string; url: string }> } }
   | { event: 'suggestions'; data: { messageId: string; items: string[] } }
-  | { event: 'done'; data: { messageId: string; finishReason: string; traceId: string } }
+  | { event: 'done'; data: { messageId: string; finishReason: string; traceId: string; panelAnswer?: string; bubbleText?: string } }
   | { event: 'error'; data: { message: string } };
 
 export function generateArticleAiAssist(data: AiArticleAssistRequest): Promise<AiArticleAssistResponse> {
