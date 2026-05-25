@@ -19,8 +19,13 @@
     />
 
     <div class="live2d-wrapper">
-      <div v-if="speechText" class="speech-bubble" @click="clearSpeech">
-        {{ speechText }}
+      <div
+        v-if="visibleSpeechText"
+        class="speech-bubble"
+        :class="speechBubblePlacementClass"
+        @click="clearSpeech"
+      >
+        {{ visibleSpeechText }}
       </div>
 
       <div
@@ -189,6 +194,18 @@ const panelSuggestions = computed(() => {
 
 const chatPanelPlacementClass = computed(() => {
   return positionX.value > 360 ? 'panel-left' : 'panel-right';
+});
+
+const speechBubblePlacementClass = computed(() => {
+  return positionX.value > 360 ? 'bubble-left' : 'bubble-right';
+});
+
+const visibleSpeechText = computed(() => {
+  const text = speechText.value.trim();
+  if (!text || panelVisible.value) {
+    return '';
+  }
+  return text.length > 36 ? `${text.slice(0, 34)}...` : text;
 });
 
 const stageStyle = computed(() => ({
@@ -653,11 +670,10 @@ onUnmounted(() => {
 
 .speech-bubble {
   position: absolute;
-  top: -54px;
-  left: 50%;
+  top: 28px;
   z-index: 8;
-  transform: translateX(-50%);
-  max-width: 212px;
+  width: min(188px, calc(100vw - 32px));
+  max-width: 188px;
   padding: 10px 14px;
   border-radius: 12px;
   background:
@@ -668,20 +684,39 @@ onUnmounted(() => {
   color: var(--text-primary);
   font-size: 13px;
   line-height: 1.5;
-  text-align: center;
+  text-align: left;
   cursor: pointer;
   animation: bubble-float 3.6s ease-in-out infinite;
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
 
   &::after {
     content: '';
     position: absolute;
-    bottom: -8px;
-    left: 50%;
+    top: 58px;
     width: 16px;
     height: 16px;
     background: inherit;
-    transform: translateX(-50%) rotate(45deg);
+    transform: rotate(45deg);
     border-radius: 2px;
+  }
+}
+
+.speech-bubble.bubble-right {
+  left: calc(100% - 44px);
+
+  &::after {
+    left: -7px;
+  }
+}
+
+.speech-bubble.bubble-left {
+  right: calc(100% - 44px);
+
+  &::after {
+    right: -7px;
   }
 }
 
