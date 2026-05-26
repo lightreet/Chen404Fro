@@ -58,6 +58,7 @@ export interface AdminFileQueryParams extends PageParams {
   status?: string
   refType?: string
   referenced?: boolean
+  referenceStatus?: 'REFERENCED' | 'PENDING' | 'UNREFERENCED' | 'DELETED'
 }
 
 export function getAdminFiles(params?: AdminFileQueryParams): Promise<PageResult<AdminFile>> {

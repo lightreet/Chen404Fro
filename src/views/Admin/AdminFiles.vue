@@ -10,7 +10,7 @@
             </div>
           </div>
           <div class="files-actions">
-            <el-button :icon="Refresh" :loading="activeTab === 'list' ? loading : statsLoading" @click="handleRefresh">
+            <el-button :icon="Refresh" :loading="loading || statsLoading" @click="handleRefresh">
               刷新
             </el-button>
           </div>
@@ -18,214 +18,192 @@
       </template>
 
       <div class="files-body">
-        <el-tabs v-model="activeTab" class="files-tabs">
-          <el-tab-pane label="文件列表" name="list">
-            <section class="files-section">
-              <div class="section-head">
-                <div>
-                  <h3>筛选与检索</h3>
-                </div>
-                <el-button text @click="resetFilters">清空筛选</el-button>
-              </div>
+        <section v-loading="statsLoading" class="stats-hero">
+          <button
+            v-for="item in summaryCards"
+            :key="item.key"
+            type="button"
+            class="stats-card"
+            :class="[`stats-card--${item.tone}`, { 'is-active': isSummaryCardActive(item.key) }]"
+            @click="applySummaryFilter(item.key)"
+          >
+            <span>{{ item.label }}</span>
+            <strong>{{ item.value }}</strong>
+            <small>{{ item.hint }}</small>
+            <em class="stats-card__action">{{ item.key === 'total' ? '查看全部文件' : '点击筛选列表' }}</em>
+          </button>
+        </section>
 
-              <div class="filter-grid">
-                <el-input
-                  v-model="query.keyword"
-                  clearable
-                  placeholder="搜索文件名、原始文件名或 URL"
-                  @keyup.enter="loadFiles(1)"
-                >
-                  <template #prefix>
-                    <el-icon><Search /></el-icon>
-                  </template>
-                </el-input>
-
-                <el-select v-model="query.status" clearable placeholder="文件状态">
-                  <el-option v-for="option in statusOptions" :key="option.value" :label="option.label" :value="option.value" />
-                </el-select>
-
-                <el-select v-model="query.refType" clearable filterable placeholder="上传归属类型">
-                  <el-option v-for="option in refTypeOptions" :key="option.value" :label="option.label" :value="option.value" />
-                </el-select>
-
-                <el-select v-model="referencedFilter" clearable placeholder="引用状态">
-                  <el-option label="仅已引用" value="true" />
-                  <el-option label="仅未引用" value="false" />
-                </el-select>
-
-                <div class="filter-actions">
-                  <el-button type="primary" @click="loadFiles(1)">查询</el-button>
-                </div>
-              </div>
-            </section>
-
-            <section class="files-section files-section--table">
-              <div class="section-head section-head--table">
-                <div>
-                  <h3>文件列表</h3>
-                </div>
-                <span class="section-meta">共 {{ total }} 条</span>
-              </div>
-
-              <div class="files-table-panel">
-                <div class="files-table-shell">
-                  <el-table :data="files" v-loading="loading" style="width: 100%" table-layout="fixed">
-                    <el-table-column label="预览" width="108">
-                      <template #default="{ row }">
-                        <button class="asset-thumb" type="button" @click="openDetail(row)">
-                          <img v-if="isImage(row)" :src="row.fileUrl" :alt="displayName(row)" />
-                          <span v-else>{{ fileKindLabel(row) }}</span>
-                        </button>
-                      </template>
-                    </el-table-column>
-
-                    <el-table-column label="文件" min-width="320" show-overflow-tooltip>
-                      <template #default="{ row }">
-                        <div class="file-main">
-                          <strong>{{ displayName(row) }}</strong>
-                          <span>{{ row.fileOriginalName || row.fileName || row.objectName || '-' }}</span>
-                        </div>
-                      </template>
-                    </el-table-column>
-
-                    <el-table-column label="归属类型" min-width="128">
-                      <template #default="{ row }">
-                        <el-tag effect="plain">{{ refTypeLabel(row.refType) }}</el-tag>
-                      </template>
-                    </el-table-column>
-
-                    <el-table-column label="引用状态" min-width="128">
-                      <template #default="{ row }">
-                        <el-tag :type="referenceStatusType(row.referenceStatus)">
-                          {{ referenceStatusLabel(row.referenceStatus) }}
-                        </el-tag>
-                        <span class="reference-count">{{ row.referenceCount }} 次</span>
-                      </template>
-                    </el-table-column>
-
-                    <el-table-column label="上传者" min-width="112" show-overflow-tooltip>
-                      <template #default="{ row }">
-                        <span>{{ row.username || '-' }}</span>
-                      </template>
-                    </el-table-column>
-
-                    <el-table-column label="大小" min-width="104">
-                      <template #default="{ row }">
-                        <span>{{ formatFileSize(row.fileSize) }}</span>
-                      </template>
-                    </el-table-column>
-
-                    <el-table-column label="上传时间" min-width="156">
-                      <template #default="{ row }">
-                        <span>{{ formatDateTime(row.createTime) }}</span>
-                      </template>
-                    </el-table-column>
-
-                    <el-table-column label="操作" width="92" align="center">
-                      <template #default="{ row }">
-                        <div class="table-actions">
-                          <el-button
-                            type="primary"
-                            link
-                            :icon="View"
-                            title="详情"
-                            aria-label="查看详情"
-                            @click="openDetail(row)"
-                          />
-                          <el-button
-                            link
-                            :icon="Download"
-                            title="下载"
-                            aria-label="下载文件"
-                            @click="downloadFile(row)"
-                          />
-                        </div>
-                      </template>
-                    </el-table-column>
-                  </el-table>
-                </div>
-
-                <div class="table-footer">
-                  <el-pagination
-                    background
-                    layout="total, prev, pager, next"
-                    :current-page="page"
-                    :page-size="pageSize"
-                    :total="total"
-                    @current-change="loadFiles"
-                  />
-                </div>
-              </div>
-            </section>
-          </el-tab-pane>
-
-          <el-tab-pane label="统计概览" name="stats">
-            <div v-loading="statsLoading" class="stats-body">
-              <section class="stats-hero">
-                <div v-for="item in summaryCards" :key="item.key" class="stats-card" :class="`stats-card--${item.tone}`">
-                  <span>{{ item.label }}</span>
-                  <strong>{{ item.value }}</strong>
-                  <small>{{ item.hint }}</small>
-                </div>
-              </section>
-
-              <section class="stats-grid">
-                <article class="files-section stats-panel">
-                  <div class="section-head section-head--panel">
-                    <div>
-                      <h3>引用状态分布</h3>
-                      <p>基于全量文件统计，不受当前分页影响</p>
-                    </div>
-                    <span class="section-meta">总文件 {{ stats?.totalFiles ?? 0 }}</span>
-                  </div>
-                  <div ref="statusChartRef" class="chart-shell"></div>
-                </article>
-
-                <article class="files-section stats-panel">
-                  <div class="section-head section-head--panel">
-                    <div>
-                      <h3>上传归属类型</h3>
-                      <p>展示不同业务归属下的文件量分布</p>
-                    </div>
-                    <span class="section-meta">总引用 {{ stats?.referenceRecordCount ?? 0 }}</span>
-                  </div>
-                  <div ref="refTypeChartRef" class="chart-shell chart-shell--bar"></div>
-                </article>
-              </section>
-
-              <section class="files-section stats-detail">
-                <div class="section-head section-head--table">
-                  <div>
-                    <h3>统计明细</h3>
-                  </div>
-                  <span class="section-meta">总容量 {{ totalSizeLabel }}</span>
-                </div>
-
-                <div class="stats-detail-grid">
-                  <div class="detail-card">
-                    <h4>引用状态</h4>
-                    <div class="detail-list">
-                      <div v-for="item in statusBuckets" :key="item.key" class="detail-item">
-                        <span>{{ item.label }}</span>
-                        <strong>{{ item.count }}</strong>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div class="detail-card">
-                    <h4>归属类型 Top {{ refTypeBuckets.length }}</h4>
-                    <div class="detail-list">
-                      <div v-for="item in refTypeBuckets" :key="item.key" class="detail-item">
-                        <span>{{ item.label }}</span>
-                        <strong>{{ item.count }}</strong>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </section>
+        <section class="files-section stats-panel">
+          <div class="section-head section-head--panel">
+            <div>
+              <h3>上传归属类型</h3>
+              <p>点击图表联动下方文件列表，快速定位对应来源的文件</p>
             </div>
-          </el-tab-pane>
-        </el-tabs>
+            <div class="insight-toolbar">
+              <span class="section-meta">总容量 {{ totalSizeLabel }}</span>
+              <el-button v-if="hasQuickFilters" text @click="clearQuickFilters">清除快捷筛选</el-button>
+            </div>
+          </div>
+
+          <div v-if="hasQuickFilters" class="quick-filter-bar">
+            <span class="quick-filter-bar__label">当前快捷筛选</span>
+            <el-tag
+              v-for="item in quickFilterTags"
+              :key="item.key"
+              effect="plain"
+              round
+              closable
+              @close="clearQuickFilter(item.key)"
+            >
+              {{ item.label }}
+            </el-tag>
+          </div>
+
+          <div ref="refTypeChartRef" class="chart-shell chart-shell--bar"></div>
+        </section>
+
+        <section class="files-section">
+          <div class="section-head">
+            <div>
+              <h3>筛选与搜索</h3>
+            </div>
+            <el-button text @click="resetFilters">清空筛选</el-button>
+          </div>
+
+          <div class="filter-grid">
+            <el-input
+              v-model="query.keyword"
+              clearable
+              placeholder="搜索文件名、原始文件名或 URL"
+              @keyup.enter="loadFiles(1)"
+            >
+              <template #prefix>
+                <el-icon><Search /></el-icon>
+              </template>
+            </el-input>
+
+            <el-select v-model="query.status" clearable placeholder="文件状态">
+              <el-option v-for="option in statusOptions" :key="option.value" :label="option.label" :value="option.value" />
+            </el-select>
+
+            <el-select v-model="query.refType" clearable filterable placeholder="上传归属类型">
+              <el-option v-for="option in refTypeOptions" :key="option.value" :label="option.label" :value="option.value" />
+            </el-select>
+
+            <el-select v-model="query.referenceStatus" clearable placeholder="引用状态">
+              <el-option
+                v-for="option in referenceStatusOptions"
+                :key="option.value"
+                :label="option.label"
+                :value="option.value"
+              />
+            </el-select>
+
+            <div class="filter-actions">
+              <el-button type="primary" @click="loadFiles(1)">查询</el-button>
+            </div>
+          </div>
+        </section>
+
+        <section class="files-section files-section--table">
+          <div class="section-head section-head--table">
+            <div>
+              <h3>文件列表</h3>
+            </div>
+            <span class="section-meta">共 {{ total }} 条</span>
+          </div>
+
+          <div class="files-table-panel">
+            <div class="files-table-shell">
+              <el-table :data="files" v-loading="loading" style="width: 100%" table-layout="fixed">
+                <el-table-column label="预览" width="108">
+                  <template #default="{ row }">
+                    <button class="asset-thumb" type="button" @click="openDetail(row)">
+                      <img v-if="isImage(row)" :src="row.fileUrl" :alt="displayName(row)" />
+                      <span v-else>{{ fileKindLabel(row) }}</span>
+                    </button>
+                  </template>
+                </el-table-column>
+
+                <el-table-column label="文件" min-width="320" show-overflow-tooltip>
+                  <template #default="{ row }">
+                    <div class="file-main">
+                      <strong>{{ displayName(row) }}</strong>
+                      <span>{{ row.fileOriginalName || row.fileName || row.objectName || '-' }}</span>
+                    </div>
+                  </template>
+                </el-table-column>
+
+                <el-table-column label="归属类型" min-width="128">
+                  <template #default="{ row }">
+                    <el-tag effect="plain">{{ refTypeLabel(row.refType) }}</el-tag>
+                  </template>
+                </el-table-column>
+
+                <el-table-column label="引用状态" min-width="128">
+                  <template #default="{ row }">
+                    <el-tag :type="referenceStatusType(row.referenceStatus)">
+                      {{ referenceStatusLabel(row.referenceStatus) }}
+                    </el-tag>
+                    <span class="reference-count">{{ row.referenceCount }} 次</span>
+                  </template>
+                </el-table-column>
+
+                <el-table-column label="上传者" min-width="112" show-overflow-tooltip>
+                  <template #default="{ row }">
+                    <span>{{ row.username || '-' }}</span>
+                  </template>
+                </el-table-column>
+
+                <el-table-column label="大小" min-width="104">
+                  <template #default="{ row }">
+                    <span>{{ formatFileSize(row.fileSize) }}</span>
+                  </template>
+                </el-table-column>
+
+                <el-table-column label="上传时间" min-width="156">
+                  <template #default="{ row }">
+                    <span>{{ formatDateTime(row.createTime) }}</span>
+                  </template>
+                </el-table-column>
+
+                <el-table-column label="操作" width="92" align="center">
+                  <template #default="{ row }">
+                    <div class="table-actions">
+                      <el-button
+                        type="primary"
+                        link
+                        :icon="View"
+                        title="详情"
+                        aria-label="查看详情"
+                        @click="openDetail(row)"
+                      />
+                      <el-button
+                        link
+                        :icon="Download"
+                        title="下载"
+                        aria-label="下载文件"
+                        @click="downloadFile(row)"
+                      />
+                    </div>
+                  </template>
+                </el-table-column>
+              </el-table>
+            </div>
+
+            <div class="table-footer">
+              <el-pagination
+                background
+                layout="total, prev, pager, next"
+                :current-page="page"
+                :page-size="pageSize"
+                :total="total"
+                @current-change="loadFiles"
+              />
+            </div>
+          </div>
+        </section>
       </div>
     </el-card>
 
@@ -325,6 +303,9 @@ import {
   type AdminFileStats,
 } from '@/api/admin-file'
 
+type ReferenceStatusFilter = '' | 'REFERENCED' | 'PENDING' | 'UNREFERENCED' | 'DELETED'
+type SummaryCardKey = 'total' | Exclude<ReferenceStatusFilter, ''>
+
 const statusOptions = [
   { label: '临时文件', value: 'TEMP' },
   { label: '永久文件', value: 'PERMANENT' },
@@ -342,15 +323,26 @@ const refTypeOptions = [
   { label: '其他', value: 'OTHER' },
 ]
 
+const referenceStatusOptions = [
+  { label: '已引用', value: 'REFERENCED' },
+  { label: '待绑定', value: 'PENDING' },
+  { label: '未引用', value: 'UNREFERENCED' },
+  { label: '已删除', value: 'DELETED' },
+]
+
 const chartPalette = ['#e58fb2', '#7fb6f1', '#f0bc6d', '#7dc6a1', '#ab94ea', '#93d3c8', '#f49ea6', '#5f8fe8']
 
-const activeTab = ref<'list' | 'stats'>('list')
-const query = reactive({
+const query = reactive<{
+  keyword: string
+  status: string
+  refType: string
+  referenceStatus: ReferenceStatusFilter
+}>({
   keyword: '',
   status: '',
   refType: '',
+  referenceStatus: '',
 })
-const referencedFilter = ref<'true' | 'false' | ''>('')
 
 const files = ref<AdminFile[]>([])
 const total = ref(0)
@@ -365,18 +357,10 @@ const detailVisible = ref(false)
 const detailLoading = ref(false)
 const detail = ref<AdminFileDetail | null>(null)
 
-const statusChartRef = ref<HTMLDivElement | null>(null)
 const refTypeChartRef = ref<HTMLDivElement | null>(null)
-let statusChart: echarts.ECharts | null = null
 let refTypeChart: echarts.ECharts | null = null
 let resizeObserver: ResizeObserver | null = null
 
-const statusBuckets = computed(() =>
-  (stats.value?.statusBuckets || []).map((item) => ({
-    ...item,
-    label: referenceStatusLabel(item.key),
-  })),
-)
 const refTypeBuckets = computed(() =>
   (stats.value?.refTypeBuckets || []).map((item) => ({
     ...item,
@@ -384,14 +368,25 @@ const refTypeBuckets = computed(() =>
   })),
 )
 const totalSizeLabel = computed(() => formatFileSize(stats.value?.totalSize))
+const hasQuickFilters = computed(() => Boolean(query.referenceStatus || query.refType))
+const quickFilterTags = computed(() => {
+  const tags: Array<{ key: 'referenceStatus' | 'refType'; label: string }> = []
+  if (query.referenceStatus) {
+    tags.push({ key: 'referenceStatus', label: `引用状态：${referenceStatusLabel(query.referenceStatus)}` })
+  }
+  if (query.refType) {
+    tags.push({ key: 'refType', label: `归属类型：${refTypeLabel(query.refType)}` })
+  }
+  return tags
+})
 
 const summaryCards = computed(() => {
   const data = stats.value
   return [
-    { key: 'total', label: '文件总数', value: data?.totalFiles ?? 0, hint: `总容量 ${formatFileSize(data?.totalSize)}`, tone: 'rose' },
-    { key: 'referenced', label: '已引用', value: data?.referencedCount ?? 0, hint: `引用记录 ${data?.referenceRecordCount ?? 0}`, tone: 'blue' },
-    { key: 'pending', label: '待绑定', value: data?.pendingCount ?? 0, hint: '临时上传待归档', tone: 'amber' },
-    { key: 'unreferenced', label: '未引用', value: data?.unreferencedCount ?? 0, hint: `已删除 ${data?.deletedCount ?? 0}`, tone: 'green' },
+    { key: 'total' as const, label: '文件总数', value: data?.totalFiles ?? 0, hint: `总容量 ${formatFileSize(data?.totalSize)}`, tone: 'rose' },
+    { key: 'REFERENCED' as const, label: '已引用', value: data?.referencedCount ?? 0, hint: `引用记录 ${data?.referenceRecordCount ?? 0}`, tone: 'blue' },
+    { key: 'PENDING' as const, label: '待绑定', value: data?.pendingCount ?? 0, hint: '临时上传待归档', tone: 'amber' },
+    { key: 'UNREFERENCED' as const, label: '未引用', value: data?.unreferencedCount ?? 0, hint: `已删除 ${data?.deletedCount ?? 0}`, tone: 'green' },
   ]
 })
 
@@ -404,7 +399,7 @@ async function loadFiles(nextPage = page.value) {
       keyword: query.keyword.trim() || undefined,
       status: query.status || undefined,
       refType: query.refType || undefined,
-      referenced: referencedFilter.value ? referencedFilter.value === 'true' : undefined,
+      referenceStatus: query.referenceStatus || undefined,
     })
     files.value = result.list || []
     total.value = result.total || 0
@@ -436,7 +431,7 @@ function resetFilters() {
   query.keyword = ''
   query.status = ''
   query.refType = ''
-  referencedFilter.value = ''
+  query.referenceStatus = ''
   void loadFiles(1)
 }
 
@@ -454,11 +449,36 @@ async function openDetail(row: AdminFile) {
 }
 
 function handleRefresh() {
-  if (activeTab.value === 'stats') {
-    void loadStats()
-    return
+  void Promise.all([loadFiles(1), loadStats()])
+}
+
+function isSummaryCardActive(key: SummaryCardKey) {
+  if (key === 'total') {
+    return !query.referenceStatus
   }
-  void loadFiles()
+  return query.referenceStatus === key
+}
+
+function applySummaryFilter(key: SummaryCardKey) {
+  query.referenceStatus = key === 'total' || query.referenceStatus === key ? '' : key
+  void loadFiles(1)
+}
+
+function clearQuickFilter(key: 'referenceStatus' | 'refType') {
+  query[key] = ''
+  void loadFiles(1)
+}
+
+function clearQuickFilters() {
+  query.referenceStatus = ''
+  query.refType = ''
+  void loadFiles(1)
+}
+
+function toggleRefTypeFilter(refType?: string) {
+  if (!refType) return
+  query.refType = query.refType === refType ? '' : refType
+  void loadFiles(1)
 }
 
 function displayName(row: Pick<AdminFile, 'fileOriginalName' | 'fileName' | 'objectName'>) {
@@ -590,52 +610,7 @@ function ensureChart(refEl: HTMLDivElement | null, current: echarts.ECharts | nu
 }
 
 function renderCharts() {
-  renderStatusChart()
   renderRefTypeChart()
-}
-
-function renderStatusChart() {
-  statusChart = ensureChart(statusChartRef.value, statusChart)
-  if (!statusChart) return
-
-  const data = statusBuckets.value.map((item, index) => ({
-    value: item.count,
-    name: item.label,
-    itemStyle: { color: chartPalette[index % chartPalette.length] },
-  }))
-
-  statusChart.setOption({
-    tooltip: {
-      trigger: 'item',
-      valueFormatter: (value: number) => `${value} 个文件`,
-    },
-    legend: {
-      bottom: 0,
-      icon: 'circle',
-      textStyle: {
-        color: '#735462',
-      },
-    },
-    series: [
-      {
-        type: 'pie',
-        radius: ['45%', '72%'],
-        center: ['50%', '44%'],
-        avoidLabelOverlap: true,
-        label: {
-          show: true,
-          formatter: '{b}\n{c}',
-          color: '#5f4050',
-        },
-        labelLine: {
-          lineStyle: {
-            color: 'rgba(153, 115, 133, 0.4)',
-          },
-        },
-        data,
-      },
-    ],
-  })
 }
 
 function renderRefTypeChart() {
@@ -643,6 +618,8 @@ function renderRefTypeChart() {
   if (!refTypeChart) return
 
   const buckets = refTypeBuckets.value
+  const currentRefType = query.refType
+
   refTypeChart.setOption({
     tooltip: {
       trigger: 'axis',
@@ -681,19 +658,28 @@ function renderRefTypeChart() {
         type: 'bar',
         data: buckets.map((item, index) => ({
           value: item.count,
+          rawKey: item.key,
           itemStyle: {
             borderRadius: [0, 999, 999, 0],
             color: chartPalette[index % chartPalette.length],
+            opacity: !currentRefType || currentRefType === item.key ? 1 : 0.42,
+            shadowBlur: currentRefType === item.key ? 18 : 0,
+            shadowColor: currentRefType === item.key ? 'rgba(110, 74, 92, 0.18)' : 'transparent',
           },
         })),
         barWidth: 14,
       },
     ],
   })
+
+  refTypeChart.off('click')
+  refTypeChart.on('click', (params) => {
+    const rawKey = typeof params.data === 'object' && params.data ? (params.data as { rawKey?: string }).rawKey : ''
+    toggleRefTypeFilter(rawKey)
+  })
 }
 
 function resizeCharts() {
-  statusChart?.resize()
   refTypeChart?.resize()
 }
 
@@ -702,9 +688,6 @@ function setupResizeObserver() {
   resizeObserver = new ResizeObserver(() => {
     resizeCharts()
   })
-  if (statusChartRef.value) {
-    resizeObserver.observe(statusChartRef.value)
-  }
   if (refTypeChartRef.value) {
     resizeObserver.observe(refTypeChartRef.value)
   }
@@ -713,32 +696,25 @@ function setupResizeObserver() {
 function teardownCharts() {
   resizeObserver?.disconnect()
   resizeObserver = null
-  statusChart?.dispose()
   refTypeChart?.dispose()
-  statusChart = null
   refTypeChart = null
 }
 
-watch(activeTab, async (tab) => {
-  if (tab !== 'stats') return
-  if (!stats.value) {
-    await loadStats()
-    return
-  }
+watch(refTypeBuckets, async () => {
+  if (!stats.value) return
   await nextTick()
   renderCharts()
-  resizeCharts()
 })
 
-watch([statusBuckets, refTypeBuckets], async () => {
-  if (activeTab.value !== 'stats' || !stats.value) return
+watch(() => query.refType, async () => {
+  if (!stats.value) return
   await nextTick()
   renderCharts()
 })
 
 onMounted(async () => {
-  await loadFiles()
-  await loadStats()
+  await Promise.all([loadFiles(), loadStats()])
+  await nextTick()
   setupResizeObserver()
 })
 
@@ -804,12 +780,6 @@ onBeforeUnmount(() => {
 .files-body {
   display: grid;
   gap: 18px;
-}
-
-.files-tabs {
-  :deep(.el-tabs__header) {
-    margin-bottom: 14px;
-  }
 }
 
 .files-section {
@@ -983,11 +953,6 @@ onBeforeUnmount(() => {
   margin-top: 18px;
 }
 
-.stats-body {
-  display: grid;
-  gap: 18px;
-}
-
 .stats-hero {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -1002,9 +967,22 @@ onBeforeUnmount(() => {
     linear-gradient(150deg, rgba(255, 255, 255, 0.96), rgba(255, 247, 251, 0.82)),
     radial-gradient(circle at right top, rgba(255, 216, 231, 0.18), transparent 44%);
   box-shadow: 0 14px 34px rgba(211, 183, 194, 0.12);
+  cursor: pointer;
+  text-align: left;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease,
+    border-color 0.2s ease;
+  appearance: none;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 18px 38px rgba(211, 183, 194, 0.18);
+  }
 
   span,
-  small {
+  small,
+  em {
     display: block;
   }
 
@@ -1028,6 +1006,18 @@ onBeforeUnmount(() => {
   }
 }
 
+.stats-card.is-active {
+  border-color: rgba(214, 128, 171, 0.62);
+  box-shadow: 0 20px 40px rgba(198, 125, 158, 0.18);
+}
+
+.stats-card__action {
+  margin-top: 14px;
+  color: #c47d9e;
+  font-size: 12px;
+  font-style: normal;
+}
+
 .stats-card--rose strong {
   color: #c46f94;
 }
@@ -1044,69 +1034,37 @@ onBeforeUnmount(() => {
   color: #5d9e81;
 }
 
-.stats-grid {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr);
-  gap: 18px;
-}
-
 .stats-panel {
   min-width: 0;
 }
 
+.insight-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.quick-filter-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.quick-filter-bar__label {
+  color: var(--text-tertiary);
+  font-size: 12px;
+}
+
 .chart-shell {
   width: 100%;
-  height: 360px;
+  height: 320px;
 }
 
 .chart-shell--bar {
-  height: 360px;
-}
-
-.stats-detail-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px;
-}
-
-.detail-card {
-  border-radius: 16px;
-  border: 1px solid rgba(235, 219, 228, 0.78);
-  background: rgba(255, 255, 255, 0.78);
-  padding: 16px;
-
-  h4 {
-    margin: 0;
-    color: #573848;
-    font-size: 15px;
-  }
-}
-
-.detail-list {
-  display: grid;
-  gap: 10px;
-  margin-top: 14px;
-}
-
-.detail-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  padding: 12px 14px;
-  border-radius: 12px;
-  background: rgba(255, 249, 252, 0.82);
-  border: 1px solid rgba(235, 219, 228, 0.72);
-
-  span {
-    color: var(--text-secondary);
-    font-size: 13px;
-  }
-
-  strong {
-    color: #5f4050;
-    font-size: 14px;
-  }
+  height: 340px;
 }
 
 .drawer-title {
@@ -1223,14 +1181,8 @@ onBeforeUnmount(() => {
 }
 
 @media (max-width: 1180px) {
-  .stats-hero,
-  .stats-grid,
-  .stats-detail-grid {
+  .stats-hero {
     grid-template-columns: 1fr 1fr;
-  }
-
-  .stats-grid {
-    grid-template-columns: 1fr;
   }
 }
 
@@ -1281,7 +1233,6 @@ onBeforeUnmount(() => {
   }
 
   .stats-hero,
-  .stats-detail-grid,
   .filter-grid,
   .drawer-meta {
     grid-template-columns: 1fr;
