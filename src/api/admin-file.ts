@@ -1,4 +1,4 @@
-import { get, post } from './request'
+import { get } from './request'
 import type { PageParams, PageResult } from '@/types'
 
 export interface AdminFileReference {
@@ -60,14 +60,6 @@ export interface AdminFileQueryParams extends PageParams {
   referenced?: boolean
 }
 
-export interface RebuildFileReferencesResult {
-  articles: number
-  users: number
-  travelLocations: number
-  trustRequests: number
-  references: number
-}
-
 export function getAdminFiles(params?: AdminFileQueryParams): Promise<PageResult<AdminFile>> {
   return get('/admin/files', params)
 }
@@ -78,8 +70,4 @@ export function getAdminFileDetail(id: number | string): Promise<AdminFileDetail
 
 export function getAdminFileStats(): Promise<AdminFileStats> {
   return get('/admin/files/stats')
-}
-
-export function rebuildFileReferences(): Promise<RebuildFileReferencesResult> {
-  return post('/admin/files/rebuild-references')
 }

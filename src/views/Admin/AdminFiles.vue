@@ -13,9 +13,6 @@
             <el-button :icon="Refresh" :loading="activeTab === 'list' ? loading : statsLoading" @click="handleRefresh">
               刷新
             </el-button>
-            <el-button type="primary" plain :loading="rebuilding" @click="handleRebuildReferences">
-              重建引用
-            </el-button>
           </div>
         </div>
       </template>
@@ -322,7 +319,6 @@ import {
   getAdminFileDetail,
   getAdminFiles,
   getAdminFileStats,
-  rebuildFileReferences,
   type AdminFile,
   type AdminFileDetail,
   type AdminFileReference,
@@ -361,7 +357,6 @@ const total = ref(0)
 const page = ref(1)
 const pageSize = 10
 const loading = ref(false)
-const rebuilding = ref(false)
 
 const stats = ref<AdminFileStats | null>(null)
 const statsLoading = ref(false)
@@ -455,22 +450,6 @@ async function openDetail(row: AdminFile) {
     ElMessage.error('文件详情加载失败')
   } finally {
     detailLoading.value = false
-  }
-}
-
-async function handleRebuildReferences() {
-  rebuilding.value = true
-  try {
-    const result = await rebuildFileReferences()
-    ElMessage.success(`重建完成：文章 ${result.articles}，用户 ${result.users}，引用 ${result.references}`)
-    await Promise.all([loadFiles(page.value), loadStats()])
-    if (detail.value?.id != null) {
-      detail.value = await getAdminFileDetail(detail.value.id)
-    }
-  } catch {
-    ElMessage.error('引用重建失败')
-  } finally {
-    rebuilding.value = false
   }
 }
 
