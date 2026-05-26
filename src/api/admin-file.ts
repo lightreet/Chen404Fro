@@ -35,6 +35,24 @@ export interface AdminFileDetail extends AdminFile {
   references: AdminFileReference[]
 }
 
+export interface AdminFileStatsBucket {
+  key: string
+  label: string
+  count: number
+}
+
+export interface AdminFileStats {
+  totalFiles: number
+  totalSize: number
+  referencedCount: number
+  pendingCount: number
+  unreferencedCount: number
+  deletedCount: number
+  referenceRecordCount: number
+  statusBuckets: AdminFileStatsBucket[]
+  refTypeBuckets: AdminFileStatsBucket[]
+}
+
 export interface AdminFileQueryParams extends PageParams {
   keyword?: string
   status?: string
@@ -56,6 +74,10 @@ export function getAdminFiles(params?: AdminFileQueryParams): Promise<PageResult
 
 export function getAdminFileDetail(id: number | string): Promise<AdminFileDetail> {
   return get(`/admin/files/${id}`)
+}
+
+export function getAdminFileStats(): Promise<AdminFileStats> {
+  return get('/admin/files/stats')
 }
 
 export function rebuildFileReferences(): Promise<RebuildFileReferencesResult> {

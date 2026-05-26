@@ -10,7 +10,9 @@
             </div>
           </div>
           <div class="files-actions">
-            <el-button :icon="Refresh" :loading="loading" @click="loadFiles()">刷新</el-button>
+            <el-button :icon="Refresh" :loading="activeTab === 'list' ? loading : statsLoading" @click="handleRefresh">
+              刷新
+            </el-button>
             <el-button type="primary" plain :loading="rebuilding" @click="handleRebuildReferences">
               重建引用
             </el-button>
@@ -19,164 +21,214 @@
       </template>
 
       <div class="files-body">
-        <section class="files-overview">
-          <div class="overview-grid">
-            <div class="overview-item">
-              <span>当前页文件</span>
-              <strong>{{ files.length }}</strong>
-            </div>
-            <div class="overview-item">
-              <span>已引用</span>
-              <strong>{{ referencedCount }}</strong>
-            </div>
-            <div class="overview-item">
-              <span>待绑定</span>
-              <strong>{{ pendingCount }}</strong>
-            </div>
-            <div class="overview-item">
-              <span>未引用</span>
-              <strong>{{ unreferencedCount }}</strong>
-            </div>
-          </div>
-        </section>
+        <el-tabs v-model="activeTab" class="files-tabs">
+          <el-tab-pane label="文件列表" name="list">
+            <section class="files-section">
+              <div class="section-head">
+                <div>
+                  <h3>筛选与检索</h3>
+                </div>
+                <el-button text @click="resetFilters">清空筛选</el-button>
+              </div>
 
-        <section class="files-section">
-          <div class="section-head">
-            <div>
-              <h3>筛选与检索</h3>
-            </div>
-            <el-button text @click="resetFilters">清空筛选</el-button>
-          </div>
+              <div class="filter-grid">
+                <el-input
+                  v-model="query.keyword"
+                  clearable
+                  placeholder="搜索文件名、原始文件名或 URL"
+                  @keyup.enter="loadFiles(1)"
+                >
+                  <template #prefix>
+                    <el-icon><Search /></el-icon>
+                  </template>
+                </el-input>
 
-          <div class="filter-grid">
-            <el-input
-              v-model="query.keyword"
-              clearable
-              placeholder="搜索文件名、原始文件名或 URL"
-              @keyup.enter="loadFiles(1)"
-            >
-              <template #prefix>
-                <el-icon><Search /></el-icon>
-              </template>
-            </el-input>
+                <el-select v-model="query.status" clearable placeholder="文件状态">
+                  <el-option v-for="option in statusOptions" :key="option.value" :label="option.label" :value="option.value" />
+                </el-select>
 
-            <el-select v-model="query.status" clearable placeholder="文件状态">
-              <el-option v-for="option in statusOptions" :key="option.value" :label="option.label" :value="option.value" />
-            </el-select>
+                <el-select v-model="query.refType" clearable filterable placeholder="上传归属类型">
+                  <el-option v-for="option in refTypeOptions" :key="option.value" :label="option.label" :value="option.value" />
+                </el-select>
 
-            <el-select v-model="query.refType" clearable filterable placeholder="上传归属类型">
-              <el-option v-for="option in refTypeOptions" :key="option.value" :label="option.label" :value="option.value" />
-            </el-select>
+                <el-select v-model="referencedFilter" clearable placeholder="引用状态">
+                  <el-option label="仅已引用" value="true" />
+                  <el-option label="仅未引用" value="false" />
+                </el-select>
 
-            <el-select v-model="referencedFilter" clearable placeholder="引用状态">
-              <el-option label="仅已引用" value="true" />
-              <el-option label="仅未引用" value="false" />
-            </el-select>
+                <div class="filter-actions">
+                  <el-button type="primary" @click="loadFiles(1)">查询</el-button>
+                </div>
+              </div>
+            </section>
 
-            <div class="filter-actions">
-              <el-button type="primary" @click="loadFiles(1)">查询</el-button>
-            </div>
-          </div>
-        </section>
+            <section class="files-section files-section--table">
+              <div class="section-head section-head--table">
+                <div>
+                  <h3>文件列表</h3>
+                </div>
+                <span class="section-meta">共 {{ total }} 条</span>
+              </div>
 
-        <section class="files-section files-section--table">
-          <div class="section-head section-head--table">
-            <div>
-              <h3>文件列表</h3>
-            </div>
-            <span class="section-meta">共 {{ total }} 条</span>
-          </div>
+              <div class="files-table-panel">
+                <div class="files-table-shell">
+                  <el-table :data="files" v-loading="loading" style="width: 100%" table-layout="fixed">
+                    <el-table-column label="预览" width="108">
+                      <template #default="{ row }">
+                        <button class="asset-thumb" type="button" @click="openDetail(row)">
+                          <img v-if="isImage(row)" :src="row.fileUrl" :alt="displayName(row)" />
+                          <span v-else>{{ fileKindLabel(row) }}</span>
+                        </button>
+                      </template>
+                    </el-table-column>
 
-          <div class="files-table-panel">
-            <div class="files-table-shell">
-              <el-table :data="files" v-loading="loading" style="width: 100%" table-layout="fixed">
-                <el-table-column label="预览" width="108">
-                <template #default="{ row }">
-                  <button class="asset-thumb" type="button" @click="openDetail(row)">
-                    <img v-if="isImage(row)" :src="row.fileUrl" :alt="displayName(row)" />
-                    <span v-else>{{ fileKindLabel(row) }}</span>
-                  </button>
-                </template>
-              </el-table-column>
+                    <el-table-column label="文件" min-width="320" show-overflow-tooltip>
+                      <template #default="{ row }">
+                        <div class="file-main">
+                          <strong>{{ displayName(row) }}</strong>
+                          <span>{{ row.fileOriginalName || row.fileName || row.objectName || '-' }}</span>
+                        </div>
+                      </template>
+                    </el-table-column>
 
-              <el-table-column label="文件" min-width="320" show-overflow-tooltip>
-                <template #default="{ row }">
-                  <div class="file-main">
-                    <strong>{{ displayName(row) }}</strong>
-                    <span>{{ row.fileOriginalName || row.fileName || row.objectName || '-' }}</span>
+                    <el-table-column label="归属类型" min-width="128">
+                      <template #default="{ row }">
+                        <el-tag effect="plain">{{ refTypeLabel(row.refType) }}</el-tag>
+                      </template>
+                    </el-table-column>
+
+                    <el-table-column label="引用状态" min-width="128">
+                      <template #default="{ row }">
+                        <el-tag :type="referenceStatusType(row.referenceStatus)">
+                          {{ referenceStatusLabel(row.referenceStatus) }}
+                        </el-tag>
+                        <span class="reference-count">{{ row.referenceCount }} 次</span>
+                      </template>
+                    </el-table-column>
+
+                    <el-table-column label="上传者" min-width="112" show-overflow-tooltip>
+                      <template #default="{ row }">
+                        <span>{{ row.username || '-' }}</span>
+                      </template>
+                    </el-table-column>
+
+                    <el-table-column label="大小" min-width="104">
+                      <template #default="{ row }">
+                        <span>{{ formatFileSize(row.fileSize) }}</span>
+                      </template>
+                    </el-table-column>
+
+                    <el-table-column label="上传时间" min-width="156">
+                      <template #default="{ row }">
+                        <span>{{ formatDateTime(row.createTime) }}</span>
+                      </template>
+                    </el-table-column>
+
+                    <el-table-column label="操作" width="92" align="center">
+                      <template #default="{ row }">
+                        <div class="table-actions">
+                          <el-button
+                            type="primary"
+                            link
+                            :icon="View"
+                            title="详情"
+                            aria-label="查看详情"
+                            @click="openDetail(row)"
+                          />
+                          <el-button
+                            link
+                            :icon="Download"
+                            title="下载"
+                            aria-label="下载文件"
+                            @click="downloadFile(row)"
+                          />
+                        </div>
+                      </template>
+                    </el-table-column>
+                  </el-table>
+                </div>
+
+                <div class="table-footer">
+                  <el-pagination
+                    background
+                    layout="total, prev, pager, next"
+                    :current-page="page"
+                    :page-size="pageSize"
+                    :total="total"
+                    @current-change="loadFiles"
+                  />
+                </div>
+              </div>
+            </section>
+          </el-tab-pane>
+
+          <el-tab-pane label="统计概览" name="stats">
+            <div v-loading="statsLoading" class="stats-body">
+              <section class="stats-hero">
+                <div v-for="item in summaryCards" :key="item.key" class="stats-card" :class="`stats-card--${item.tone}`">
+                  <span>{{ item.label }}</span>
+                  <strong>{{ item.value }}</strong>
+                  <small>{{ item.hint }}</small>
+                </div>
+              </section>
+
+              <section class="stats-grid">
+                <article class="files-section stats-panel">
+                  <div class="section-head section-head--panel">
+                    <div>
+                      <h3>引用状态分布</h3>
+                      <p>基于全量文件统计，不受当前分页影响</p>
+                    </div>
+                    <span class="section-meta">总文件 {{ stats?.totalFiles ?? 0 }}</span>
                   </div>
-                </template>
-              </el-table-column>
+                  <div ref="statusChartRef" class="chart-shell"></div>
+                </article>
 
-              <el-table-column label="归属类型" min-width="128">
-                <template #default="{ row }">
-                  <el-tag effect="plain">{{ refTypeLabel(row.refType) }}</el-tag>
-                </template>
-              </el-table-column>
-
-              <el-table-column label="引用状态" min-width="128">
-                <template #default="{ row }">
-                  <el-tag :type="referenceStatusType(row.referenceStatus)">
-                    {{ referenceStatusLabel(row.referenceStatus) }}
-                  </el-tag>
-                  <span class="reference-count">{{ row.referenceCount }} 处</span>
-                </template>
-              </el-table-column>
-
-              <el-table-column label="上传人" min-width="112" show-overflow-tooltip>
-                <template #default="{ row }">
-                  <span>{{ row.username || '-' }}</span>
-                </template>
-              </el-table-column>
-
-              <el-table-column label="大小" min-width="104">
-                <template #default="{ row }">
-                  <span>{{ formatFileSize(row.fileSize) }}</span>
-                </template>
-              </el-table-column>
-
-              <el-table-column label="上传时间" min-width="156">
-                <template #default="{ row }">
-                  <span>{{ formatDateTime(row.createTime) }}</span>
-                </template>
-              </el-table-column>
-
-              <el-table-column label="操作" width="92" align="center">
-                <template #default="{ row }">
-                  <div class="table-actions">
-                    <el-button
-                      type="primary"
-                      link
-                      :icon="View"
-                      title="详情"
-                      aria-label="查看详情"
-                      @click="openDetail(row)"
-                    />
-                    <el-button
-                      link
-                      :icon="Download"
-                      title="下载"
-                      aria-label="下载文件"
-                      @click="downloadFile(row)"
-                    />
+                <article class="files-section stats-panel">
+                  <div class="section-head section-head--panel">
+                    <div>
+                      <h3>上传归属类型</h3>
+                      <p>展示不同业务归属下的文件量分布</p>
+                    </div>
+                    <span class="section-meta">总引用 {{ stats?.referenceRecordCount ?? 0 }}</span>
                   </div>
-                </template>
-              </el-table-column>
-              </el-table>
-            </div>
+                  <div ref="refTypeChartRef" class="chart-shell chart-shell--bar"></div>
+                </article>
+              </section>
 
-            <div class="table-footer">
-              <el-pagination
-                background
-                layout="total, prev, pager, next"
-                :current-page="page"
-                :page-size="pageSize"
-                :total="total"
-                @current-change="loadFiles"
-              />
+              <section class="files-section stats-detail">
+                <div class="section-head section-head--table">
+                  <div>
+                    <h3>统计明细</h3>
+                  </div>
+                  <span class="section-meta">总容量 {{ totalSizeLabel }}</span>
+                </div>
+
+                <div class="stats-detail-grid">
+                  <div class="detail-card">
+                    <h4>引用状态</h4>
+                    <div class="detail-list">
+                      <div v-for="item in statusBuckets" :key="item.key" class="detail-item">
+                        <span>{{ item.label }}</span>
+                        <strong>{{ item.count }}</strong>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="detail-card">
+                    <h4>归属类型 Top {{ refTypeBuckets.length }}</h4>
+                    <div class="detail-list">
+                      <div v-for="item in refTypeBuckets" :key="item.key" class="detail-item">
+                        <span>{{ item.label }}</span>
+                        <strong>{{ item.count }}</strong>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </section>
             </div>
-          </div>
-        </section>
+          </el-tab-pane>
+        </el-tabs>
       </div>
     </el-card>
 
@@ -187,7 +239,7 @@
         </div>
       </template>
 
-      <div v-loading="detailLoading" class="drawer-body" v-if="detail">
+      <div v-if="detail" v-loading="detailLoading" class="drawer-body">
         <div class="drawer-preview">
           <img v-if="isImage(detail)" :src="detail.fileUrl" :alt="displayName(detail)" />
           <div v-else class="drawer-fallback">
@@ -211,7 +263,7 @@
               <strong>{{ detail.objectName || '-' }}</strong>
             </div>
             <div>
-              <span>上传人</span>
+              <span>上传者</span>
               <strong>{{ detail.username || '-' }}</strong>
             </div>
             <div>
@@ -224,12 +276,7 @@
             </div>
           </div>
 
-          <el-input
-            :model-value="detail.fileUrl"
-            readonly
-            type="textarea"
-            :rows="3"
-          />
+          <el-input :model-value="detail.fileUrl" readonly type="textarea" :rows="3" />
           <div class="drawer-inline-actions">
             <el-button @click="copyUrl(detail.fileUrl)">复制链接</el-button>
             <el-button v-if="isImage(detail)" plain @click="windowOpen(detail.fileUrl)">新标签预览</el-button>
@@ -267,16 +314,19 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Download, Files, Refresh, Search, View } from '@element-plus/icons-vue'
+import * as echarts from 'echarts'
 import {
   getAdminFileDetail,
   getAdminFiles,
+  getAdminFileStats,
   rebuildFileReferences,
   type AdminFile,
   type AdminFileDetail,
   type AdminFileReference,
+  type AdminFileStats,
 } from '@/api/admin-file'
 
 const statusOptions = [
@@ -296,6 +346,9 @@ const refTypeOptions = [
   { label: '其他', value: 'OTHER' },
 ]
 
+const chartPalette = ['#e58fb2', '#7fb6f1', '#f0bc6d', '#7dc6a1', '#ab94ea', '#93d3c8', '#f49ea6', '#5f8fe8']
+
+const activeTab = ref<'list' | 'stats'>('list')
 const query = reactive({
   keyword: '',
   status: '',
@@ -310,13 +363,42 @@ const pageSize = 10
 const loading = ref(false)
 const rebuilding = ref(false)
 
+const stats = ref<AdminFileStats | null>(null)
+const statsLoading = ref(false)
+
 const detailVisible = ref(false)
 const detailLoading = ref(false)
 const detail = ref<AdminFileDetail | null>(null)
 
-const referencedCount = computed(() => files.value.filter((item) => item.referenceStatus === 'REFERENCED').length)
-const pendingCount = computed(() => files.value.filter((item) => item.referenceStatus === 'PENDING').length)
-const unreferencedCount = computed(() => files.value.filter((item) => item.referenceStatus === 'UNREFERENCED').length)
+const statusChartRef = ref<HTMLDivElement | null>(null)
+const refTypeChartRef = ref<HTMLDivElement | null>(null)
+let statusChart: echarts.ECharts | null = null
+let refTypeChart: echarts.ECharts | null = null
+let resizeObserver: ResizeObserver | null = null
+
+const statusBuckets = computed(() =>
+  (stats.value?.statusBuckets || []).map((item) => ({
+    ...item,
+    label: referenceStatusLabel(item.key),
+  })),
+)
+const refTypeBuckets = computed(() =>
+  (stats.value?.refTypeBuckets || []).map((item) => ({
+    ...item,
+    label: refTypeLabel(item.key),
+  })),
+)
+const totalSizeLabel = computed(() => formatFileSize(stats.value?.totalSize))
+
+const summaryCards = computed(() => {
+  const data = stats.value
+  return [
+    { key: 'total', label: '文件总数', value: data?.totalFiles ?? 0, hint: `总容量 ${formatFileSize(data?.totalSize)}`, tone: 'rose' },
+    { key: 'referenced', label: '已引用', value: data?.referencedCount ?? 0, hint: `引用记录 ${data?.referenceRecordCount ?? 0}`, tone: 'blue' },
+    { key: 'pending', label: '待绑定', value: data?.pendingCount ?? 0, hint: '临时上传待归档', tone: 'amber' },
+    { key: 'unreferenced', label: '未引用', value: data?.unreferencedCount ?? 0, hint: `已删除 ${data?.deletedCount ?? 0}`, tone: 'green' },
+  ]
+})
 
 async function loadFiles(nextPage = page.value) {
   loading.value = true
@@ -338,6 +420,20 @@ async function loadFiles(nextPage = page.value) {
     ElMessage.error('文件列表加载失败')
   } finally {
     loading.value = false
+  }
+}
+
+async function loadStats() {
+  statsLoading.value = true
+  try {
+    stats.value = await getAdminFileStats()
+    await nextTick()
+    renderCharts()
+  } catch {
+    stats.value = null
+    ElMessage.error('文件统计加载失败')
+  } finally {
+    statsLoading.value = false
   }
 }
 
@@ -367,7 +463,7 @@ async function handleRebuildReferences() {
   try {
     const result = await rebuildFileReferences()
     ElMessage.success(`重建完成：文章 ${result.articles}，用户 ${result.users}，引用 ${result.references}`)
-    await loadFiles(page.value)
+    await Promise.all([loadFiles(page.value), loadStats()])
     if (detail.value?.id != null) {
       detail.value = await getAdminFileDetail(detail.value.id)
     }
@@ -376,6 +472,14 @@ async function handleRebuildReferences() {
   } finally {
     rebuilding.value = false
   }
+}
+
+function handleRefresh() {
+  if (activeTab.value === 'stats') {
+    void loadStats()
+    return
+  }
+  void loadFiles()
 }
 
 function displayName(row: Pick<AdminFile, 'fileOriginalName' | 'fileName' | 'objectName'>) {
@@ -447,7 +551,7 @@ function moduleLabel(value?: string) {
   }
 }
 
-function formatFileSize(size?: number) {
+function formatFileSize(size?: number | null) {
   if (!size || size <= 0) return '-'
   if (size < 1024) return `${size} B`
   const kb = size / 1024
@@ -501,8 +605,166 @@ function referenceKey(item: AdminFileReference) {
   return `${item.fileId}-${item.moduleCode}-${item.bizType}-${item.bizId}-${item.fieldKey}`
 }
 
-onMounted(() => {
-  void loadFiles()
+function ensureChart(refEl: HTMLDivElement | null, current: echarts.ECharts | null) {
+  if (!refEl) return null
+  return current ?? echarts.init(refEl)
+}
+
+function renderCharts() {
+  renderStatusChart()
+  renderRefTypeChart()
+}
+
+function renderStatusChart() {
+  statusChart = ensureChart(statusChartRef.value, statusChart)
+  if (!statusChart) return
+
+  const data = statusBuckets.value.map((item, index) => ({
+    value: item.count,
+    name: item.label,
+    itemStyle: { color: chartPalette[index % chartPalette.length] },
+  }))
+
+  statusChart.setOption({
+    tooltip: {
+      trigger: 'item',
+      valueFormatter: (value: number) => `${value} 个文件`,
+    },
+    legend: {
+      bottom: 0,
+      icon: 'circle',
+      textStyle: {
+        color: '#735462',
+      },
+    },
+    series: [
+      {
+        type: 'pie',
+        radius: ['45%', '72%'],
+        center: ['50%', '44%'],
+        avoidLabelOverlap: true,
+        label: {
+          show: true,
+          formatter: '{b}\n{c}',
+          color: '#5f4050',
+        },
+        labelLine: {
+          lineStyle: {
+            color: 'rgba(153, 115, 133, 0.4)',
+          },
+        },
+        data,
+      },
+    ],
+  })
+}
+
+function renderRefTypeChart() {
+  refTypeChart = ensureChart(refTypeChartRef.value, refTypeChart)
+  if (!refTypeChart) return
+
+  const buckets = refTypeBuckets.value
+  refTypeChart.setOption({
+    tooltip: {
+      trigger: 'axis',
+      axisPointer: { type: 'shadow' },
+      valueFormatter: (value: number) => `${value} 个文件`,
+    },
+    grid: {
+      top: 12,
+      left: 12,
+      right: 22,
+      bottom: 8,
+      containLabel: true,
+    },
+    xAxis: {
+      type: 'value',
+      splitLine: {
+        lineStyle: {
+          color: 'rgba(229, 214, 223, 0.55)',
+        },
+      },
+      axisLabel: {
+        color: '#8a7280',
+      },
+    },
+    yAxis: {
+      type: 'category',
+      data: buckets.map((item) => item.label),
+      axisTick: { show: false },
+      axisLine: { show: false },
+      axisLabel: {
+        color: '#6b4f5d',
+      },
+    },
+    series: [
+      {
+        type: 'bar',
+        data: buckets.map((item, index) => ({
+          value: item.count,
+          itemStyle: {
+            borderRadius: [0, 999, 999, 0],
+            color: chartPalette[index % chartPalette.length],
+          },
+        })),
+        barWidth: 14,
+      },
+    ],
+  })
+}
+
+function resizeCharts() {
+  statusChart?.resize()
+  refTypeChart?.resize()
+}
+
+function setupResizeObserver() {
+  if (typeof ResizeObserver === 'undefined') return
+  resizeObserver = new ResizeObserver(() => {
+    resizeCharts()
+  })
+  if (statusChartRef.value) {
+    resizeObserver.observe(statusChartRef.value)
+  }
+  if (refTypeChartRef.value) {
+    resizeObserver.observe(refTypeChartRef.value)
+  }
+}
+
+function teardownCharts() {
+  resizeObserver?.disconnect()
+  resizeObserver = null
+  statusChart?.dispose()
+  refTypeChart?.dispose()
+  statusChart = null
+  refTypeChart = null
+}
+
+watch(activeTab, async (tab) => {
+  if (tab !== 'stats') return
+  if (!stats.value) {
+    await loadStats()
+    return
+  }
+  await nextTick()
+  renderCharts()
+  resizeCharts()
+})
+
+watch([statusBuckets, refTypeBuckets], async () => {
+  if (activeTab.value !== 'stats' || !stats.value) return
+  await nextTick()
+  renderCharts()
+})
+
+onMounted(async () => {
+  await loadFiles()
+  await loadStats()
+  setupResizeObserver()
+})
+
+onBeforeUnmount(() => {
+  teardownCharts()
 })
 </script>
 
@@ -565,44 +827,19 @@ onMounted(() => {
   gap: 18px;
 }
 
-.files-overview,
+.files-tabs {
+  :deep(.el-tabs__header) {
+    margin-bottom: 14px;
+  }
+}
+
 .files-section {
   border: 1px solid rgba(235, 219, 228, 0.86);
-  border-radius: 8px;
+  border-radius: 18px;
+  padding: 18px;
   background:
     linear-gradient(145deg, rgba(255, 255, 255, 0.92), rgba(255, 249, 252, 0.76)),
     radial-gradient(circle at right top, rgba(255, 214, 230, 0.18), transparent 38%);
-}
-
-.files-overview,
-.files-section {
-  padding: 18px;
-}
-
-.overview-grid {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 12px;
-}
-
-.overview-item {
-  padding: 14px 16px;
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.78);
-  border: 1px solid rgba(235, 219, 228, 0.72);
-
-  span {
-    display: block;
-    color: var(--text-tertiary);
-    font-size: 12px;
-  }
-
-  strong {
-    display: block;
-    margin-top: 6px;
-    color: #5f4050;
-    font-size: 20px;
-  }
 }
 
 .section-head {
@@ -613,6 +850,12 @@ onMounted(() => {
     color: var(--text-primary);
     font-size: 18px;
   }
+
+  p {
+    margin: 6px 0 0;
+    color: var(--text-tertiary);
+    font-size: 12px;
+  }
 }
 
 .section-head--compact {
@@ -622,6 +865,10 @@ onMounted(() => {
 .section-head--table {
   margin-bottom: 14px;
   align-items: end;
+}
+
+.section-head--panel {
+  align-items: flex-start;
 }
 
 .section-meta {
@@ -757,6 +1004,132 @@ onMounted(() => {
   margin-top: 18px;
 }
 
+.stats-body {
+  display: grid;
+  gap: 18px;
+}
+
+.stats-hero {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.stats-card {
+  padding: 18px 18px 16px;
+  border-radius: 20px;
+  border: 1px solid rgba(235, 219, 228, 0.76);
+  background:
+    linear-gradient(150deg, rgba(255, 255, 255, 0.96), rgba(255, 247, 251, 0.82)),
+    radial-gradient(circle at right top, rgba(255, 216, 231, 0.18), transparent 44%);
+  box-shadow: 0 14px 34px rgba(211, 183, 194, 0.12);
+
+  span,
+  small {
+    display: block;
+  }
+
+  span {
+    color: var(--text-tertiary);
+    font-size: 12px;
+  }
+
+  strong {
+    display: block;
+    margin-top: 10px;
+    color: #573848;
+    font-size: 28px;
+    line-height: 1;
+  }
+
+  small {
+    margin-top: 10px;
+    color: #a18593;
+    font-size: 12px;
+  }
+}
+
+.stats-card--rose strong {
+  color: #c46f94;
+}
+
+.stats-card--blue strong {
+  color: #678fc9;
+}
+
+.stats-card--amber strong {
+  color: #c08b3e;
+}
+
+.stats-card--green strong {
+  color: #5d9e81;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr);
+  gap: 18px;
+}
+
+.stats-panel {
+  min-width: 0;
+}
+
+.chart-shell {
+  width: 100%;
+  height: 360px;
+}
+
+.chart-shell--bar {
+  height: 360px;
+}
+
+.stats-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.detail-card {
+  border-radius: 16px;
+  border: 1px solid rgba(235, 219, 228, 0.78);
+  background: rgba(255, 255, 255, 0.78);
+  padding: 16px;
+
+  h4 {
+    margin: 0;
+    color: #573848;
+    font-size: 15px;
+  }
+}
+
+.detail-list {
+  display: grid;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.detail-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: rgba(255, 249, 252, 0.82);
+  border: 1px solid rgba(235, 219, 228, 0.72);
+
+  span {
+    color: var(--text-secondary);
+    font-size: 13px;
+  }
+
+  strong {
+    color: #5f4050;
+    font-size: 14px;
+  }
+}
+
 .drawer-title {
   display: grid;
   gap: 4px;
@@ -870,13 +1243,21 @@ onMounted(() => {
   font-size: 12px;
 }
 
-@media (max-width: 1080px) {
-  .drawer-meta {
+@media (max-width: 1180px) {
+  .stats-hero,
+  .stats-grid,
+  .stats-detail-grid {
     grid-template-columns: 1fr 1fr;
   }
 
-  .overview-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 1080px) {
+  .drawer-meta {
+    grid-template-columns: 1fr 1fr;
   }
 
   .filter-grid {
@@ -920,7 +1301,8 @@ onMounted(() => {
     }
   }
 
-  .overview-grid,
+  .stats-hero,
+  .stats-detail-grid,
   .filter-grid,
   .drawer-meta {
     grid-template-columns: 1fr;
@@ -934,6 +1316,11 @@ onMounted(() => {
   .filter-actions :deep(.el-button),
   .table-footer :deep(.el-pagination) {
     width: 100%;
+  }
+
+  .chart-shell,
+  .chart-shell--bar {
+    height: 320px;
   }
 
   .files-table-panel {
