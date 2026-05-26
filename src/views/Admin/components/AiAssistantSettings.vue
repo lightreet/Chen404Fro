@@ -99,15 +99,66 @@
                 <el-input v-model="form.maid.personaVersion" placeholder="v1.1" />
               </el-form-item>
             </div>
-            <el-form-item label="系统提示词">
-              <el-input v-model="form.maid.systemPrompt" type="textarea" :rows="5" />
+            <el-form-item>
+              <template #label>
+                <span class="field-label">
+                  系统提示词
+                  <el-tooltip
+                    content="控制 Lyra 的基础人设、语气、能力边界和回复长度规则。留空时使用后端 resources/prompts/ai 下的默认模板。"
+                    placement="top"
+                  >
+                    <el-icon class="field-help"><InfoFilled /></el-icon>
+                  </el-tooltip>
+                </span>
+              </template>
+              <el-input
+                v-model="form.maid.systemPrompt"
+                type="textarea"
+                :rows="5"
+                placeholder="留空则使用 maid-system-prompt.txt 默认模板"
+              />
             </el-form-item>
-            <el-form-item label="站内助手场景提示词">
-              <el-input v-model="form.maid.helperPrompt" type="textarea" :rows="5" />
+            <el-form-item>
+              <template #label>
+                <span class="field-label">
+                  站内助手场景提示词
+                  <el-tooltip
+                    content="控制总结文章、站内检索、引用和推荐等 helper 场景行为。留空时使用默认模板。"
+                    placement="top"
+                  >
+                    <el-icon class="field-help"><InfoFilled /></el-icon>
+                  </el-tooltip>
+                </span>
+              </template>
+              <el-input
+                v-model="form.maid.helperPrompt"
+                type="textarea"
+                :rows="5"
+                placeholder="留空则使用 maid-helper-task-prompt.txt 默认模板"
+              />
             </el-form-item>
-            <el-form-item label="陪聊场景提示词">
-              <el-input v-model="form.maid.companionPrompt" type="textarea" :rows="5" />
+            <el-form-item>
+              <template #label>
+                <span class="field-label">
+                  陪聊场景提示词
+                  <el-tooltip
+                    content="控制轻量陪伴、闲聊和从陪聊切回内容帮助的 companion 场景行为。留空时使用默认模板。"
+                    placement="top"
+                  >
+                    <el-icon class="field-help"><InfoFilled /></el-icon>
+                  </el-tooltip>
+                </span>
+              </template>
+              <el-input
+                v-model="form.maid.companionPrompt"
+                type="textarea"
+                :rows="5"
+                placeholder="留空则使用 maid-companion-task-prompt.txt 默认模板"
+              />
             </el-form-item>
+            <div class="persona-actions">
+              <el-button type="primary" :loading="saving" @click="saveConfig">保存提示词设置</el-button>
+            </div>
           </el-form>
         </div>
       </el-tab-pane>
@@ -154,13 +205,27 @@
           <el-form-item label="小气泡最大字符数">
             <el-input-number v-model="form.chat.bubbleMaxChars" :min="12" :max="60" />
           </el-form-item>
-          <el-form-item label="长回复替代文案">
+          <el-form-item>
+            <template #label>
+              <span class="field-label">
+                长回复替代文案
+                <el-tooltip content="长回复仍然完整展示在聊天面板里，小气泡只负责情绪反馈和引导。" placement="top">
+                  <el-icon class="field-help"><InfoFilled /></el-icon>
+                </el-tooltip>
+              </span>
+            </template>
             <el-input v-model="form.chat.bubbleLongReplyText" maxlength="40" show-word-limit />
-            <p class="field-hint">长回复仍然完整展示在聊天面板里，小气泡只负责情绪反馈和引导。</p>
           </el-form-item>
-          <el-form-item label="Web Search 工具">
+          <el-form-item>
+            <template #label>
+              <span class="field-label">
+                Web Search 工具
+                <el-tooltip content="当前为预留开关，后续接入真实搜索工具后可直接沿用。" placement="top">
+                  <el-icon class="field-help"><InfoFilled /></el-icon>
+                </el-tooltip>
+              </span>
+            </template>
             <el-switch v-model="form.tools.webSearchEnabled" />
-            <p class="field-hint">当前为预留开关，后续接入真实搜索工具后可直接沿用。</p>
           </el-form-item>
         </el-form>
       </el-tab-pane>
@@ -185,7 +250,7 @@
 <script setup lang="ts">
 import { onMounted, reactive, ref } from 'vue';
 import { ElMessage } from 'element-plus';
-import { Connection, Refresh } from '@element-plus/icons-vue';
+import { Connection, InfoFilled, Refresh } from '@element-plus/icons-vue';
 import { getAiAdminConfig, testAiAdminConfig, updateAiAdminConfig } from '@/api/ai-admin';
 import type { AiAdminConfig, AiConfigTestResponse } from '@/types';
 
@@ -428,11 +493,39 @@ onMounted(() => {
   width: 100%;
 }
 
+.field-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.field-help {
+  color: rgba(217, 132, 165, 0.86);
+  cursor: help;
+  font-size: 15px;
+  transform: translateY(1px);
+  transition:
+    color 0.18s ease,
+    transform 0.18s ease;
+
+  &:hover {
+    color: #4f9fff;
+    transform: translateY(1px) scale(1.08);
+  }
+}
+
 .field-hint {
   margin: 8px 0 0;
   color: rgba(96, 72, 86, 0.62);
   font-size: 12px;
   line-height: 1.6;
+}
+
+.persona-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  margin-top: 4px;
 }
 
 .test-result {
@@ -472,6 +565,16 @@ onMounted(() => {
 
   .hero-actions {
     width: 100%;
+
+    :deep(.el-button) {
+      flex: 1;
+    }
+  }
+
+  .persona-actions {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 8px;
 
     :deep(.el-button) {
       flex: 1;
