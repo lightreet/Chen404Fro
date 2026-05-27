@@ -55,6 +55,34 @@ const routes: RouteRecordRaw[] = [
     },
   },
   {
+    path: '/music',
+    name: 'Music',
+    component: () => import('@/views/Music/Music.vue'),
+    meta: {
+      title: '音乐馆',
+    },
+  },
+  {
+    path: '/music/tracks/new',
+    name: 'MusicTrackCreate',
+    component: () => import('@/views/Music/MusicTrackEdit.vue'),
+    meta: {
+      title: '新增歌曲',
+      requiresAuth: true,
+      requiresAdmin: true,
+    },
+  },
+  {
+    path: '/music/tracks/:id/edit',
+    name: 'MusicTrackEdit',
+    component: () => import('@/views/Music/MusicTrackEdit.vue'),
+    meta: {
+      title: '编辑歌曲',
+      requiresAuth: true,
+      requiresAdmin: true,
+    },
+  },
+  {
     path: '/memory-map/detail/:id',
     name: 'TravelMemoryDetail',
     component: () => import('@/views/MemoryMap/TravelMemoryDetail.vue'),

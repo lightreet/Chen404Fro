@@ -18,6 +18,13 @@
       @stop="handleStopStreaming"
     />
 
+    <Live2DMusicPanel
+      v-if="musicPanelVisible"
+      class="music-panel-shell"
+      :class="chatPanelPlacementClass"
+      @close="musicPanelVisible = false"
+    />
+
     <div class="live2d-wrapper">
       <div
         v-if="visibleSpeechText"
@@ -62,6 +69,15 @@
         <button class="tool-btn" type="button" aria-label="对话" @click="handleChat">
           <el-icon><ChatDotRound /></el-icon>
         </button>
+        <button
+          class="tool-btn"
+          :class="{ 'is-active': musicPanelVisible || musicPlayer.playing }"
+          type="button"
+          aria-label="音乐"
+          @click="handleMusic"
+        >
+          <el-icon><Headset /></el-icon>
+        </button>
         <button class="tool-btn" type="button" aria-label="换装" @click="handleChange">
           <el-icon><Refresh /></el-icon>
         </button>
@@ -79,11 +95,13 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue';
 import { useRoute } from 'vue-router';
-import { Camera, ChatDotRound, Close, Refresh } from '@element-plus/icons-vue';
+import { Camera, ChatDotRound, Close, Headset, Refresh } from '@element-plus/icons-vue';
 import { ElMessage } from 'element-plus';
 import Live2DChatPanel from './Live2DChatPanel.vue';
+import Live2DMusicPanel from './Live2DMusicPanel.vue';
 import maidImage from '@/assets/live2d/maid-witch.webp';
 import { getMaidChatSessionDetail, sendMaidChat, streamMaidChat, type AiChatStreamEvent } from '@/api/ai';
+import { useMusicPlayerStore } from '@/stores/music-player';
 import type {
   AiChatCitation,
   AiChatMessage,
@@ -119,6 +137,7 @@ const isVisible = ref(true);
 const isDragging = ref(false);
 const speechText = ref('');
 const panelVisible = ref(false);
+const musicPanelVisible = ref(false);
 const isChatLoading = ref(false);
 const tiltX = ref(0);
 const tiltY = ref(0);
@@ -132,6 +151,7 @@ const activeStreamMessageId = ref('');
 const activeAbortController = ref<AbortController | null>(null);
 const sessionRestoreLoaded = ref(false);
 const route = useRoute();
+const musicPlayer = useMusicPlayerStore();
 
 const speeches = [
   '欢迎来到 Chen404 的博客魔法屋。',
@@ -599,7 +619,30 @@ const handleChat = () => {
     panelVisible.value = false;
     return;
   }
+  musicPanelVisible.value = false;
   openChatPanel();
+};
+
+const handleMusic = async () => {
+  if (musicPanelVisible.value) {
+    musicPanelVisible.value = false;
+    return;
+  }
+  panelVisible.value = false;
+  musicPanelVisible.value = true;
+  try {
+    if (!musicPlayer.hasQueue) {
+      await musicPlayer.loadDefaultRadio();
+    }
+    if (!musicPlayer.playing) {
+      await musicPlayer.playCurrent();
+    }
+    speechText.value = 'Sakura Radio 已经调好频啦。';
+    setTimeout(clearSpeech, 2200);
+  } catch {
+    speechText.value = '这次电台没有接稳，等一下再试试。';
+    setTimeout(clearSpeech, 2200);
+  }
 };
 
 const handleChange = () => {
@@ -615,6 +658,7 @@ const handleScreenshot = () => {
 const handleClose = () => {
   isVisible.value = false;
   panelVisible.value = false;
+  musicPanelVisible.value = false;
 };
 
 let speechTimer: number | null = null;
@@ -662,11 +706,20 @@ onUnmounted(() => {
   animation: panel-fade-in 260ms ease;
 }
 
-.chat-panel-shell.panel-left {
+.music-panel-shell {
+  position: absolute;
+  top: 52px;
+  z-index: 18;
+  animation: panel-fade-in 260ms ease;
+}
+
+.chat-panel-shell.panel-left,
+.music-panel-shell.panel-left {
   left: -372px;
 }
 
-.chat-panel-shell.panel-right {
+.chat-panel-shell.panel-right,
+.music-panel-shell.panel-right {
   left: calc(var(--live2d-width) + 20px);
 }
 
@@ -911,6 +964,11 @@ onUnmounted(() => {
     background: linear-gradient(135deg, #f48aac, #fb7299);
     color: #fff;
   }
+
+  &.is-active {
+    background: linear-gradient(135deg, #fb7299, #ff95b7);
+    color: #fff;
+  }
 }
 
 .close-btn:hover {
@@ -997,7 +1055,8 @@ onUnmounted(() => {
 }
 
 @media (max-width: 768px) {
-  .chat-panel-shell {
+  .chat-panel-shell,
+  .music-panel-shell {
     position: fixed;
     left: 50% !important;
     top: auto;

@@ -27,3 +27,6 @@ export * from './trust-request';
 
 // 旅行纪念地图相关 API
 export * from './travel-memory';
+
+// 音乐电台相关 API
+export * from './music';

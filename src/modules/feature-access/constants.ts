@@ -2,7 +2,7 @@ import type { RouteLocationRaw } from 'vue-router'
 import type { SiteConfig } from '@/types'
 import { resolveHeroImage, resolveHeroImagePosition } from '@/utils/siteConfig'
 
-export type FeatureHeroKey = 'memory-map' | 'trust-request'
+export type FeatureHeroKey = 'memory-map' | 'trust-request' | 'music'
 
 export interface FeatureAccessCoverConfig {
   eyebrow: string
@@ -29,6 +29,10 @@ export const FEATURE_HERO_DEFAULTS: Record<FeatureHeroKey, FeatureHeroPreset> = 
   'trust-request': {
     image: 'https://images.unsplash.com/photo-1528127269322-539801943592?w=1920&q=80',
     position: '50% 56%',
+  },
+  music: {
+    image: 'https://images.unsplash.com/photo-1511379938547-c1f69419868d?w=1920&q=80',
+    position: '50% 52%',
   },
 }
 

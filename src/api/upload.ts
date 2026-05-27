@@ -8,6 +8,7 @@ import { unwrapResult, type ResultEnvelope } from '@/sdk/runtime'
 import { post } from './request'
 
 export interface UploadResult {
+  id?: number
   url: string
   name: string
   size?: string
@@ -17,6 +18,7 @@ export interface UploadResult {
 }
 
 type UploadPayload = {
+  id?: number
   url?: string
   name?: string
   size?: string
@@ -34,6 +36,7 @@ async function uploadSingleFile(
   }) as ResultEnvelope<UploadPayload>)
 
   return {
+    id: payload.id,
     url: payload.url || '',
     name: payload.name || '',
     size: payload.size,
@@ -53,6 +56,7 @@ export async function uploadImages(files: File[]): Promise<UploadResult[]> {
   }) as ResultEnvelope<UploadPayload[]>)
 
   return payload.map((item) => ({
+    id: item.id,
     url: item.url || '',
     name: item.name || '',
     size: item.size,
@@ -78,12 +82,37 @@ export function uploadTrustAttachment(file: File): Promise<UploadResult> {
   return uploadSingleFile(file, Service.uploadTrustAttachment)
 }
 
+async function uploadFileByEndpoint(file: File, endpoint: string): Promise<UploadResult> {
+  const formData = new FormData()
+  formData.append('file', file)
+  const payload = await post<UploadPayload>(endpoint, formData as any)
+
+  return {
+    id: payload.id,
+    url: payload.url || '',
+    name: payload.name || '',
+    size: payload.size,
+    latitude: payload.latitude,
+    longitude: payload.longitude,
+    shotAt: payload.shotAt,
+  }
+}
+
+export function uploadMusicAudio(file: File): Promise<UploadResult> {
+  return uploadFileByEndpoint(file, '/upload/music-audio')
+}
+
+export function uploadMusicCover(file: File): Promise<UploadResult> {
+  return uploadFileByEndpoint(file, '/upload/music-cover')
+}
+
 export async function uploadTravelMemoryImage(file: File): Promise<UploadResult> {
   const formData = new FormData()
   formData.append('file', file)
   const payload = await post<UploadPayload>('/upload/travel-memory-image', formData as any)
 
   return {
+    id: payload.id,
     url: payload.url || '',
     name: payload.name || '',
     size: payload.size,

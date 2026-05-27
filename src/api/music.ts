@@ -1,0 +1,72 @@
+import { del, get, patch, post, put } from './request'
+import type {
+  MusicPlaylist,
+  MusicPlaylistTracksCommand,
+  MusicPlaylistUpsertCommand,
+  MusicTrack,
+  MusicTrackStatus,
+  MusicTrackUpsertCommand,
+} from '@/types'
+
+export function getPublicMusicTracks(): Promise<MusicTrack[]> {
+  return get('/music/tracks')
+}
+
+export function getPublicMusicPlaylists(): Promise<MusicPlaylist[]> {
+  return get('/music/playlists')
+}
+
+export function getPublicMusicPlaylist(id: number | string): Promise<MusicPlaylist> {
+  return get(`/music/playlists/${String(id)}`)
+}
+
+export function getDefaultRadio(): Promise<MusicPlaylist> {
+  return get('/music/radio/default')
+}
+
+export function getAdminMusicTracks(): Promise<MusicTrack[]> {
+  return get('/admin/music/tracks')
+}
+
+export function getAdminMusicTrack(id: number | string): Promise<MusicTrack> {
+  return get(`/admin/music/tracks/${String(id)}`)
+}
+
+export function createMusicTrack(data: MusicTrackUpsertCommand): Promise<MusicTrack> {
+  return post('/admin/music/tracks', data)
+}
+
+export function updateMusicTrack(id: number | string, data: MusicTrackUpsertCommand): Promise<MusicTrack> {
+  return put(`/admin/music/tracks/${String(id)}`, data)
+}
+
+export function updateMusicTrackStatus(id: number | string, status: MusicTrackStatus): Promise<MusicTrack> {
+  return patch(`/admin/music/tracks/${String(id)}/status`, undefined, { params: { status } })
+}
+
+export function deleteMusicTrack(id: number | string): Promise<void> {
+  return del(`/admin/music/tracks/${String(id)}`)
+}
+
+export function getAdminMusicPlaylists(): Promise<MusicPlaylist[]> {
+  return get('/admin/music/playlists')
+}
+
+export function createMusicPlaylist(data: MusicPlaylistUpsertCommand): Promise<MusicPlaylist> {
+  return post('/admin/music/playlists', data)
+}
+
+export function updateMusicPlaylist(id: number | string, data: MusicPlaylistUpsertCommand): Promise<MusicPlaylist> {
+  return put(`/admin/music/playlists/${String(id)}`, data)
+}
+
+export function saveMusicPlaylistTracks(
+  id: number | string,
+  data: MusicPlaylistTracksCommand,
+): Promise<MusicPlaylist> {
+  return put(`/admin/music/playlists/${String(id)}/tracks`, data)
+}
+
+export function setDefaultMusicPlaylist(id: number | string): Promise<MusicPlaylist> {
+  return patch(`/admin/music/playlists/${String(id)}/default`)
+}

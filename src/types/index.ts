@@ -260,6 +260,86 @@ export interface CreateTravelMemoryCommand {
 
 export interface UpdateTravelMemoryCommand extends CreateTravelMemoryCommand {}
 
+// ==================== 音乐电台相关类型 ====================
+
+export type MusicTrackStatus = 'draft' | 'published' | 'archived';
+export type MusicLyricType = 'plain' | 'lrc';
+
+export interface MusicTrack {
+  id: number;
+  title: string;
+  artist: string;
+  album?: string;
+  releaseYear?: number;
+  language?: string;
+  genre?: string;
+  tags: string[];
+  audioFileId?: number;
+  audioUrl: string;
+  coverFileId?: number;
+  coverUrl?: string;
+  lyricType: MusicLyricType;
+  lyrics?: string;
+  lyricSource?: string;
+  recommendation?: string;
+  moodText?: string;
+  status: MusicTrackStatus;
+  sortOrder?: number;
+  createTime?: string;
+  updateTime?: string;
+}
+
+export interface MusicPlaylist {
+  id?: number;
+  name: string;
+  description?: string;
+  coverFileId?: number;
+  coverUrl?: string;
+  openingText?: string;
+  defaultPlaylist?: boolean;
+  publicPlaylist?: boolean;
+  sortOrder?: number;
+  createTime?: string;
+  updateTime?: string;
+  tracks: MusicTrack[];
+}
+
+export interface MusicTrackUpsertCommand {
+  title: string;
+  artist: string;
+  album?: string;
+  releaseYear?: number;
+  language?: string;
+  genre?: string;
+  tags: string[];
+  audioFileId?: number;
+  audioUrl: string;
+  coverFileId?: number;
+  coverUrl?: string;
+  lyricType: MusicLyricType;
+  lyrics?: string;
+  lyricSource?: string;
+  recommendation?: string;
+  moodText?: string;
+  status?: MusicTrackStatus;
+  sortOrder?: number;
+}
+
+export interface MusicPlaylistUpsertCommand {
+  name: string;
+  description?: string;
+  coverFileId?: number;
+  coverUrl?: string;
+  openingText?: string;
+  defaultPlaylist?: boolean;
+  publicPlaylist?: boolean;
+  sortOrder?: number;
+}
+
+export interface MusicPlaylistTracksCommand {
+  trackIds: number[];
+}
+
 // ==================== 文章相关类型 ====================
 
 export interface ArticleAuthorSummary {

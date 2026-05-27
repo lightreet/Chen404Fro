@@ -219,6 +219,11 @@ export function put<T>(url: string, data?: object, config?: RequestConfig): Prom
   return request.put(url, data, config) as Promise<T>;
 }
 
+// 封装 PATCH 请求
+export function patch<T>(url: string, data?: object, config?: RequestConfig): Promise<T> {
+  return request.patch(url, data, config) as Promise<T>;
+}
+
 // 封装 DELETE 请求
 export function del<T>(url: string, config?: RequestConfig): Promise<T> {
   return request.delete(url, config) as Promise<T>;

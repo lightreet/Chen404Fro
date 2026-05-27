@@ -196,6 +196,7 @@ import {
   Setting,
   Place,
   Postcard,
+  Headset,
 } from '@element-plus/icons-vue';
 import { useUserStore } from '@/stores/user';
 import { storeToRefs } from 'pinia';
@@ -242,6 +243,7 @@ const navItems = computed<NavItem[]>(() => [
   { key: 'category', name: '分类', path: '/category', to: '/category', icon: List },
   { key: 'archive', name: '时光轴', path: '/archive', to: '/archive', icon: Folder },
   { key: 'memory-map', name: '旅行地图', path: '/memory-map', to: '/memory-map', icon: Place },
+  { key: 'music', name: '音乐馆', path: '/music', to: '/music', icon: Headset },
   {
     key: 'trust-request',
     name: '受信申请',
@@ -392,10 +394,12 @@ const handleLogout = async () => {
   justify-content: space-between;
   gap: 16px;
   min-height: 64px;
+  min-width: 0;
 }
 
 // Logo
 .logo {
+  flex: 0 0 auto;
   display: flex;
   align-items: center;
   text-decoration: none;
@@ -414,9 +418,14 @@ const handleLogout = async () => {
 
 // 导航菜单
 .nav-menu {
+  flex: 1 1 auto;
   display: flex;
   align-items: center;
   gap: 8px;
+  min-width: 0;
+  max-width: max-content;
+  overflow-x: auto;
+  overflow-y: hidden;
   min-height: 54px;
   padding: 8px 14px;
   border-radius: 999px;
@@ -426,9 +435,15 @@ const handleLogout = async () => {
     0 14px 30px rgba(120, 88, 104, 0.1),
     inset 0 1px 0 rgba(255, 255, 255, 0.54);
   backdrop-filter: blur(20px) saturate(1.12);
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
 }
 
 .nav-item {
+  flex: 0 0 auto;
   display: flex;
   align-items: center;
   gap: 6px;
@@ -439,10 +454,17 @@ const handleLogout = async () => {
   font-size: 14px;
   font-weight: 500;
   line-height: 1;
+  white-space: nowrap;
   transition: all 0.28s ease;
 
   .nav-icon {
+    flex: 0 0 auto;
     font-size: 16px;
+  }
+
+  span {
+    white-space: nowrap;
+    word-break: keep-all;
   }
 
   &:hover {
@@ -462,6 +484,7 @@ const handleLogout = async () => {
 
 // 操作按钮
 .header-actions {
+  flex: 0 0 auto;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -753,6 +776,22 @@ const handleLogout = async () => {
   background: rgba(255, 255, 255, 0.06);
   color: rgba(248, 239, 244, 0.84);
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+}
+
+@media (max-width: 1280px) {
+  .header-content {
+    gap: 10px;
+  }
+
+  .nav-menu {
+    gap: 4px;
+    padding-inline: 10px;
+  }
+
+  .nav-item {
+    gap: 5px;
+    padding-inline: 11px;
+  }
 }
 
 @media (max-width: 768px) {
