@@ -118,27 +118,53 @@
               :transform="`translate(${point.x}, ${point.y})`"
               @click.stop="handleMarkerClick(point.id)"
             >
+              <line
+                v-if="point.label.connectorVisible"
+                class="travel-map-marker__connector"
+                :x1="point.label.connectorStartX"
+                :y1="point.label.connectorStartY"
+                :x2="point.label.connectorEndX"
+                :y2="point.label.connectorEndY"
+              />
+              <g
+                class="travel-map-marker__label-bubble"
+                :class="{
+                  'is-active': point.id === activeId,
+                  'is-left': point.label.side === 'left',
+                }"
+                :transform="`translate(${point.label.left}, ${point.label.top})`"
+              >
+                <rect
+                  class="travel-map-marker__label-bg"
+                  x="0"
+                  y="0"
+                  :width="point.label.width"
+                  :height="point.label.height"
+                  rx="11"
+                  ry="11"
+                />
+                <text
+                  class="travel-map-marker__label"
+                  :x="point.label.textX"
+                  :y="point.label.textY"
+                  :text-anchor="point.label.textAnchor"
+                >
+                  {{ point.labelText }}
+                </text>
+              </g>
               <circle
                 v-if="point.id === activeId"
                 class="travel-map-marker__ripple"
                 cx="0"
-                cy="0"
-                r="30"
+                cy="-13.5"
+                r="15"
                 filter="url(#markerGlow)"
               />
               <path
                 class="travel-map-marker__pin"
                 :d="point.id === activeId ? ACTIVE_PIN_PATH : PIN_PATH"
               />
-              <circle class="travel-map-marker__core" :cy="point.id === activeId ? -7 : -6" :r="point.id === activeId ? 5.4 : 4.2" />
-              <text
-                class="travel-map-marker__label"
-                :class="{ 'travel-map-marker__label--left': getMarkerLabelOffset(point).align === 'left' }"
-                :x="getMarkerLabelOffset(point).x"
-                :y="getMarkerLabelOffset(point).y"
-              >
-                {{ point.city || point.province || point.title }}
-              </text>
+              <circle class="travel-map-marker__core" :cy="point.id === activeId ? -16.8 : -14.8" :r="point.id === activeId ? 3.8 : 3" />
             </g>
           </svg>
 
@@ -214,6 +240,27 @@ type ProjectedPoint = TravelMemoryLocationListItem & {
   y: number
 }
 
+type LabelPlacement = {
+  left: number
+  top: number
+  width: number
+  height: number
+  textX: number
+  textY: number
+  textAnchor: 'start' | 'middle'
+  side: 'left' | 'right' | 'top'
+  connectorStartX: number
+  connectorStartY: number
+  connectorEndX: number
+  connectorEndY: number
+  connectorVisible: boolean
+}
+
+type MarkerDisplayPoint = ProjectedPoint & {
+  label: LabelPlacement
+  labelText: string
+}
+
 type DecorativeCity = {
   name: string
   longitude: number
@@ -236,6 +283,13 @@ type SvgProvinceSource = {
   path: string
 }
 
+type LayoutRect = {
+  left: number
+  top: number
+  right: number
+  bottom: number
+}
+
 const MAP_BOUNDS = {
   minLng: 73,
   maxLng: 135,
@@ -253,8 +307,15 @@ const ZOOM_STEP = 0.14
 const DRAG_THRESHOLD = 4
 const DRAG_SUPPRESS_DURATION = 180
 const CITY_MAP_PADDING = 38
-const PIN_PATH = 'M0 -18 C9 -18 16 -11 16 -2 C16 7 8 16 0 27 C-8 16 -16 7 -16 -2 C-16 -11 -9 -18 0 -18 Z'
-const ACTIVE_PIN_PATH = 'M0 -22 C11 -22 19 -14 19 -3 C19 9 10 19 0 33 C-10 19 -19 9 -19 -3 C-19 -14 -11 -22 0 -22 Z'
+const MARKER_OVERLAP_RADIUS = 26
+const MARKER_SPREAD_BASE = 7
+const MARKER_SPREAD_STEP = 3
+const LABEL_BOX_HEIGHT = 22
+const LABEL_BOX_PADDING_X = 8
+const LABEL_GAP = 10
+const LABEL_SAFE_MARGIN = 10
+const PIN_PATH = 'M0 0 C-5.4 -6.8 -10.4 -12.6 -10.4 -19.8 C-10.4 -26.2 -5.8 -31 0 -31 C5.8 -31 10.4 -26.2 10.4 -19.8 C10.4 -12.6 5.4 -6.8 0 0 Z'
+const ACTIVE_PIN_PATH = 'M0 0 C-6.2 -7.8 -12 -14.2 -12 -22.2 C-12 -29.3 -6.7 -34.8 0 -34.8 C6.7 -34.8 12 -29.3 12 -22.2 C12 -14.2 6.2 -7.8 0 0 Z'
 
 const props = withDefaults(defineProps<Props>(), {
   locations: () => [],
@@ -379,7 +440,7 @@ const mapBoardStyle = computed(() => ({
   transform: `translate3d(${mapPan.value.x}px, ${mapPan.value.y}px, 0) scale(${displayScale.value})`,
 }))
 
-const displayPoints = computed<ProjectedPoint[]>(() =>
+const baseProjectedPoints = computed<ProjectedPoint[]>(() =>
   props.locations
     .filter((item) => isValidCoordinate(item.latitude, item.longitude))
     .map((item) => {
@@ -390,6 +451,10 @@ const displayPoints = computed<ProjectedPoint[]>(() =>
         y,
       }
     }),
+)
+
+const displayPoints = computed<MarkerDisplayPoint[]>(() =>
+  layoutMarkerPoints(spreadOverlappingPoints(baseProjectedPoints.value, props.activeId), props.activeId),
 )
 
 const decorativeCities = computed<DecorativeCity[]>(() =>
@@ -422,7 +487,9 @@ const boundaryChoiceLocations = computed(() =>
     ? (boundaryLocationsMap.value.get(boundaryChoiceId.value) ?? [])
     : [],
 )
-const routePath = computed(() => (displayPoints.value.length >= 2 ? buildSmoothRoute(displayPoints.value) : ''))
+const routePath = computed(() =>
+  baseProjectedPoints.value.length >= 2 ? buildSmoothRoute(baseProjectedPoints.value) : '',
+)
 function projectPoint(longitude: number, latitude: number) {
   const projectedPoint = cityProjection.value?.([longitude, latitude])
   if (projectedPoint) {
@@ -480,27 +547,393 @@ function buildSmoothRoute(points: Array<{ x: number; y: number; visitedAt?: stri
   return path
 }
 
-function getMarkerLabelOffset(point: ProjectedPoint) {
-  const active = point.id === props.activeId
-  if (point.x > 560) {
+function spreadOverlappingPoints(points: ProjectedPoint[], activeId: number | null) {
+  if (points.length < 2) return points
+
+  const groups = collectNearbyPointGroups(points)
+  if (!groups.length) return points
+
+  const adjustedPoints = points.map((point) => ({ ...point }))
+
+  groups.forEach((group) => {
+    const radius = MARKER_SPREAD_BASE + Math.max(0, group.length - 2) * MARKER_SPREAD_STEP
+    const centerX = group.reduce((sum, point) => sum + point.x, 0) / group.length
+    const centerY = group.reduce((sum, point) => sum + point.y, 0) / group.length
+
+    group.forEach((point, index) => {
+      const vector = getSpreadVectorForPoint(group, point, index, centerX, centerY)
+      const distance = point.id === activeId ? radius + 2 : radius
+      const targetIndex = adjustedPoints.findIndex((item) => item.id === point.id)
+      if (targetIndex === -1) return
+      adjustedPoints[targetIndex] = {
+        ...adjustedPoints[targetIndex],
+        x: adjustedPoints[targetIndex].x + vector.x * distance,
+        y: adjustedPoints[targetIndex].y + vector.y * distance,
+      }
+    })
+  })
+
+  return adjustedPoints
+}
+
+function layoutMarkerPoints(points: ProjectedPoint[], activeId: number | null) {
+  const markerRects = points.map((point) => ({
+    id: point.id,
+    rect: getMarkerRect(point, point.id === activeId),
+  }))
+  const placedRects: LayoutRect[] = []
+  const labels = new Map<number, { text: string; placement: LabelPlacement }>()
+
+  const orderedPoints = [...points].sort((left, right) => {
+    if (left.id === activeId) return -1
+    if (right.id === activeId) return 1
+    const densityDiff = getPointDensity(right, points) - getPointDensity(left, points)
+    if (densityDiff !== 0) return densityDiff
+    if (right.y !== left.y) return right.y - left.y
+    return right.x - left.x
+  })
+
+  orderedPoints.forEach((point) => {
+    const labelText = getMarkerLabelText(point)
+    const placement = chooseLabelPlacement(
+      point,
+      labelText,
+      point.id === activeId,
+      placedRects,
+      markerRects,
+    )
+    labels.set(point.id, { text: labelText, placement })
+    placedRects.push(toGlobalLabelRect(point, placement))
+  })
+
+  return points.map((point) => {
+    const labelInfo = labels.get(point.id)
     return {
-      x: active ? -18 : -14,
-      y: active ? 5 : 4,
-      align: 'left' as const,
+      ...point,
+      label: labelInfo?.placement ?? buildFallbackLabelPlacement(getMarkerLabelText(point), point.id === activeId),
+      labelText: labelInfo?.text ?? getMarkerLabelText(point),
     }
-  }
-  if (point.y > 410) {
-    return {
-      x: active ? 0 : 0,
-      y: active ? 28 : 24,
-      align: 'center' as const,
+  })
+}
+
+function chooseLabelPlacement(
+  point: ProjectedPoint,
+  labelText: string,
+  active: boolean,
+  placedRects: LayoutRect[],
+  markerRects: Array<{ id: number; rect: LayoutRect }>,
+) {
+  const fallbackPlacement = buildFallbackLabelPlacement(labelText, active)
+  const labelWidth = estimateLabelWidth(labelText, active)
+  const labelHeight = active ? LABEL_BOX_HEIGHT + 2 : LABEL_BOX_HEIGHT
+  const candidates = getLabelCandidates(point, labelWidth, labelHeight)
+
+  let bestPlacement = fallbackPlacement
+  let bestScore = Number.POSITIVE_INFINITY
+
+  candidates.forEach((candidate, index) => {
+    const placement = buildLabelPlacement(candidate, labelWidth, labelHeight)
+    const labelRect = toGlobalLabelRect(point, placement)
+    let score = index * 18
+
+    score += getViewportPenalty(labelRect)
+
+    placedRects.forEach((rect) => {
+      if (intersectsRect(labelRect, rect)) {
+        score += 2400
+      }
+    })
+
+    markerRects.forEach((marker) => {
+      if (marker.id === point.id) return
+      if (intersectsRect(labelRect, expandRect(marker.rect, 6))) {
+        score += 1700
+      }
+    })
+
+    if (point.x > SVG_VIEWBOX.width * 0.66 && placement.side === 'right') {
+      score += 180
     }
+    if (point.x < SVG_VIEWBOX.width * 0.24 && placement.side === 'left') {
+      score += 180
+    }
+    if (point.y > SVG_VIEWBOX.height * 0.72 && placement.top > -28) {
+      score += 220
+    }
+    if (point.y < SVG_VIEWBOX.height * 0.24 && placement.side === 'top') {
+      score += 120
+    }
+
+    if (score < bestScore) {
+      bestScore = score
+      bestPlacement = placement
+    }
+  })
+
+  return bestPlacement
+}
+
+function getLabelCandidates(point: ProjectedPoint, labelWidth: number, labelHeight: number) {
+  const candidates = {
+    right: { left: LABEL_GAP, top: -31, side: 'right' as const, textAnchor: 'start' as const },
+    left: { left: -(labelWidth + LABEL_GAP), top: -31, side: 'left' as const, textAnchor: 'start' as const },
+    top: { left: -labelWidth / 2, top: -(labelHeight + 18), side: 'top' as const, textAnchor: 'middle' as const },
+    topRight: { left: 8, top: -(labelHeight + 20), side: 'right' as const, textAnchor: 'start' as const },
+    topLeft: { left: -(labelWidth + 8), top: -(labelHeight + 20), side: 'left' as const, textAnchor: 'start' as const },
+    bottomRight: { left: 8, top: -15, side: 'right' as const, textAnchor: 'start' as const },
+    bottomLeft: { left: -(labelWidth + 8), top: -15, side: 'left' as const, textAnchor: 'start' as const },
   }
+
+  if (point.x > SVG_VIEWBOX.width * 0.66 && point.y > SVG_VIEWBOX.height * 0.68) {
+    return [candidates.topLeft, candidates.left, candidates.top, candidates.topRight, candidates.right]
+  }
+  if (point.x > SVG_VIEWBOX.width * 0.66) {
+    return [candidates.left, candidates.topLeft, candidates.top, candidates.topRight, candidates.right, candidates.bottomLeft]
+  }
+  if (point.y > SVG_VIEWBOX.height * 0.72) {
+    return [candidates.topRight, candidates.topLeft, candidates.right, candidates.left, candidates.top]
+  }
+  if (point.x < SVG_VIEWBOX.width * 0.24) {
+    return [candidates.right, candidates.topRight, candidates.top, candidates.topLeft, candidates.left]
+  }
+
+  return [candidates.right, candidates.topRight, candidates.top, candidates.left, candidates.topLeft, candidates.bottomRight]
+}
+
+function buildLabelPlacement(
+  candidate: { left: number; top: number; side: 'left' | 'right' | 'top'; textAnchor: 'start' | 'middle' },
+  width: number,
+  height: number,
+): LabelPlacement {
+  const connectorStartX = 0
+  const connectorStartY = -16
+  const localRect = {
+    left: candidate.left,
+    top: candidate.top,
+    right: candidate.left + width,
+    bottom: candidate.top + height,
+  }
+  const connectorEnd = getNearestPointOnRect(localRect, connectorStartX, connectorStartY)
+
   return {
-    x: active ? 18 : 14,
-    y: active ? 5 : 4,
-    align: 'right' as const,
+    left: candidate.left,
+    top: candidate.top,
+    width,
+    height,
+    textX: candidate.textAnchor === 'middle' ? width / 2 : LABEL_BOX_PADDING_X,
+    textY: height / 2 + 0.5,
+    textAnchor: candidate.textAnchor,
+    side: candidate.side,
+    connectorStartX,
+    connectorStartY,
+    connectorEndX: connectorEnd.x,
+    connectorEndY: connectorEnd.y,
+    connectorVisible: Math.hypot(connectorEnd.x - connectorStartX, connectorEnd.y - connectorStartY) > 6,
   }
+}
+
+function buildFallbackLabelPlacement(labelText: string, active: boolean) {
+  return buildLabelPlacement(
+    {
+      left: LABEL_GAP,
+      top: -31,
+      side: 'right',
+      textAnchor: 'start',
+    },
+    estimateLabelWidth(labelText, active),
+    active ? LABEL_BOX_HEIGHT + 2 : LABEL_BOX_HEIGHT,
+  )
+}
+
+function getMarkerLabelText(point: ProjectedPoint) {
+  return point.city || point.province || point.title
+}
+
+function estimateLabelWidth(text: string, active: boolean) {
+  const textWidth = Array.from(text).reduce((sum, character) => {
+    if (/[A-Za-z0-9]/.test(character)) return sum + 6.6
+    return sum + 10.4
+  }, 0)
+  return Math.max(44, Math.round(textWidth + LABEL_BOX_PADDING_X * 2 + (active ? 2 : 0)))
+}
+
+function getPointDensity(point: ProjectedPoint, points: ProjectedPoint[]) {
+  return points.filter((candidate) => candidate.id !== point.id && getProjectedDistance(point, candidate) < 44).length
+}
+
+function getMarkerRect(point: ProjectedPoint, active: boolean): LayoutRect {
+  return {
+    left: point.x - (active ? 13 : 11.5),
+    top: point.y - (active ? 36 : 32),
+    right: point.x + (active ? 13 : 11.5),
+    bottom: point.y + 2,
+  }
+}
+
+function toGlobalLabelRect(point: ProjectedPoint, placement: LabelPlacement): LayoutRect {
+  return {
+    left: point.x + placement.left,
+    top: point.y + placement.top,
+    right: point.x + placement.left + placement.width,
+    bottom: point.y + placement.top + placement.height,
+  }
+}
+
+function getViewportPenalty(rect: LayoutRect) {
+  const overflowLeft = Math.max(0, LABEL_SAFE_MARGIN - rect.left)
+  const overflowTop = Math.max(0, LABEL_SAFE_MARGIN - rect.top)
+  const overflowRight = Math.max(0, rect.right - (SVG_VIEWBOX.width - LABEL_SAFE_MARGIN))
+  const overflowBottom = Math.max(0, rect.bottom - (SVG_VIEWBOX.height - LABEL_SAFE_MARGIN))
+  return (overflowLeft + overflowTop + overflowRight + overflowBottom) * 24
+}
+
+function expandRect(rect: LayoutRect, amount: number): LayoutRect {
+  return {
+    left: rect.left - amount,
+    top: rect.top - amount,
+    right: rect.right + amount,
+    bottom: rect.bottom + amount,
+  }
+}
+
+function intersectsRect(left: LayoutRect, right: LayoutRect) {
+  return !(
+    left.right <= right.left ||
+    left.left >= right.right ||
+    left.bottom <= right.top ||
+    left.top >= right.bottom
+  )
+}
+
+function getNearestPointOnRect(rect: LayoutRect, x: number, y: number) {
+  return {
+    x: clamp(x, rect.left, rect.right),
+    y: clamp(y, rect.top, rect.bottom),
+  }
+}
+
+function clamp(value: number, min: number, max: number) {
+  return Math.min(max, Math.max(min, value))
+}
+
+function getSpreadVectorForPoint(
+  group: ProjectedPoint[],
+  point: ProjectedPoint,
+  index: number,
+  centerX: number,
+  centerY: number,
+) {
+  if (group.length === 2) {
+    return getPairSpreadVector(group, point, centerX, centerY)
+  }
+
+  const fallbackAngle = -Math.PI / 2 + (Math.PI * 2 * index) / group.length
+  const deltaX = point.x - centerX
+  const deltaY = point.y - centerY
+  const angle =
+    Math.abs(deltaX) < 0.001 && Math.abs(deltaY) < 0.001
+      ? fallbackAngle
+      : Math.atan2(deltaY, deltaX)
+
+  return normalizeSpreadVector(Math.cos(angle), Math.sin(angle), point)
+}
+
+function getPairSpreadVector(
+  group: ProjectedPoint[],
+  point: ProjectedPoint,
+  centerX: number,
+  centerY: number,
+) {
+  const ordered = [...group].sort((left, right) => {
+    if (Math.abs(left.x - right.x) > 1) return left.x - right.x
+    return left.y - right.y
+  })
+  const pointOrderIndex = ordered.findIndex((item) => item.id === point.id)
+
+  if (centerY > SVG_VIEWBOX.height * 0.72) {
+    return pointOrderIndex === 0
+      ? normalizeSpreadVector(-0.9, -0.42, point)
+      : normalizeSpreadVector(0.78, -0.5, point)
+  }
+
+  if (centerX > SVG_VIEWBOX.width * 0.68) {
+    return pointOrderIndex === 0
+      ? normalizeSpreadVector(-0.92, -0.24, point)
+      : normalizeSpreadVector(-0.86, 0.2, point)
+  }
+
+  const otherPoint = group.find((item) => item.id !== point.id)
+  if (!otherPoint) {
+    return normalizeSpreadVector(point.x - centerX, point.y - centerY, point)
+  }
+
+  const deltaX = otherPoint.x - point.x
+  const deltaY = otherPoint.y - point.y
+  const perpendicularX = -deltaY
+  const perpendicularY = deltaX
+
+  return pointOrderIndex === 0
+    ? normalizeSpreadVector(-perpendicularX, -perpendicularY, point)
+    : normalizeSpreadVector(perpendicularX, perpendicularY, point)
+}
+
+function normalizeSpreadVector(deltaX: number, deltaY: number, point: ProjectedPoint) {
+  let vectorX = deltaX
+  let vectorY = deltaY
+
+  if (point.y > SVG_VIEWBOX.height * 0.72 && vectorY > 0) {
+    vectorY *= -0.45
+  }
+  if (point.x > SVG_VIEWBOX.width * 0.66 && vectorX > 0) {
+    vectorX *= -0.5
+  }
+  if (point.x < SVG_VIEWBOX.width * 0.22 && vectorX < 0) {
+    vectorX *= -0.5
+  }
+
+  const length = Math.hypot(vectorX, vectorY) || 1
+  return {
+    x: vectorX / length,
+    y: vectorY / length,
+  }
+}
+
+function collectNearbyPointGroups(points: ProjectedPoint[]) {
+  const visited = new Set<number>()
+  const groups: ProjectedPoint[][] = []
+
+  for (let startIndex = 0; startIndex < points.length; startIndex += 1) {
+    if (visited.has(startIndex)) continue
+
+    const queue = [startIndex]
+    const groupIndexes: number[] = []
+    visited.add(startIndex)
+
+    while (queue.length) {
+      const currentIndex = queue.shift()
+      if (currentIndex == null) continue
+      groupIndexes.push(currentIndex)
+
+      for (let nextIndex = 0; nextIndex < points.length; nextIndex += 1) {
+        if (visited.has(nextIndex)) continue
+        if (getProjectedDistance(points[currentIndex], points[nextIndex]) > MARKER_OVERLAP_RADIUS) continue
+        visited.add(nextIndex)
+        queue.push(nextIndex)
+      }
+    }
+
+    if (groupIndexes.length > 1) {
+      groups.push(groupIndexes.map((index) => points[index]))
+    }
+  }
+
+  return groups
+}
+
+function getProjectedDistance(left: { x: number; y: number }, right: { x: number; y: number }) {
+  const deltaX = left.x - right.x
+  const deltaY = left.y - right.y
+  return Math.hypot(deltaX, deltaY)
 }
 
 function getBoundaryStateClass(id: string) {
@@ -1185,14 +1618,36 @@ defineExpose({
 }
 
 .travel-map-marker__ripple {
-  fill: rgba(255, 167, 196, 0.2);
+  fill: rgba(255, 167, 196, 0.12);
+}
+
+.travel-map-marker__connector {
+  stroke: rgba(206, 145, 168, 0.72);
+  stroke-width: 1.4;
+  stroke-linecap: round;
+}
+
+.travel-map-marker__label-bubble {
+  pointer-events: none;
+}
+
+.travel-map-marker__label-bg {
+  fill: rgba(255, 252, 254, 0.96);
+  stroke: rgba(239, 199, 214, 0.96);
+  stroke-width: 1;
+  filter: drop-shadow(0 5px 10px rgba(207, 156, 176, 0.14));
+}
+
+.travel-map-marker__label-bubble.is-active .travel-map-marker__label-bg {
+  fill: rgba(255, 250, 252, 0.98);
+  stroke: rgba(242, 173, 199, 0.98);
 }
 
 .travel-map-marker__pin {
   fill: rgba(255, 133, 175, 0.96);
   stroke: rgba(255, 255, 255, 0.96);
-  stroke-width: 2.2;
-  filter: drop-shadow(0 10px 18px rgba(246, 136, 173, 0.24));
+  stroke-width: 1.8;
+  filter: drop-shadow(0 6px 12px rgba(246, 136, 173, 0.16));
 }
 
 .travel-map-marker__core {
@@ -1201,7 +1656,7 @@ defineExpose({
 
 .travel-map-marker__label {
   fill: #6b4f59;
-  font-size: 12.5px;
+  font-size: 10.5px;
   font-family:
     'Microsoft YaHei UI',
     'PingFang SC',
@@ -1209,20 +1664,13 @@ defineExpose({
     'Noto Sans CJK SC',
     sans-serif;
   font-weight: 600;
-  paint-order: stroke;
-  stroke: rgba(255, 255, 255, 0.92);
-  stroke-width: 6;
-  stroke-linejoin: round;
-}
-
-.travel-map-marker__label--left {
-  text-anchor: end;
+  dominant-baseline: middle;
 }
 
 .travel-map-marker.is-active .travel-map-marker__pin {
   fill: rgba(255, 104, 156, 0.98);
   stroke: rgba(255, 248, 251, 0.98);
-  filter: drop-shadow(0 14px 24px rgba(246, 112, 158, 0.36));
+  filter: drop-shadow(0 8px 14px rgba(246, 112, 158, 0.22));
 }
 
 .travel-map-controls {

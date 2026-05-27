@@ -9,7 +9,6 @@
         :bg-image="heroBgImage"
         :bg-position="heroBgPosition"
         min-height="88vh"
-        :overlay-opacity="0.34"
         :wave-height="156"
         :wave-intensity="1.04"
         scroll-target="#discovery"

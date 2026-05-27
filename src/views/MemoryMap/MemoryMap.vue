@@ -8,7 +8,6 @@
         :bg-image="heroBgImage"
         :bg-position="heroBgPosition"
         min-height="70vh"
-        :overlay-opacity="0.5"
         compact
       />
     </template>
@@ -221,18 +220,42 @@
             </article>
           </div>
           <div v-else class="gallery-grid">
-            <button
+            <article
               v-for="location in visibleGalleryLocations"
               :key="location.id"
-              type="button"
               class="gallery-card"
               :class="{ 'is-active': activeId === location.id }"
+              role="button"
+              tabindex="0"
               :ref="(element) => setGalleryCardRef(location.id, element)"
               @click="openGalleryLocationDetail(location.id)"
+              @keydown.enter.prevent="openGalleryLocationDetail(location.id)"
+              @keydown.space.prevent="openGalleryLocationDetail(location.id)"
             >
               <div class="gallery-card__cover">
                 <img v-if="location.coverImage" :src="location.coverImage" :alt="location.title" />
                 <div v-else class="gallery-card__cover-empty">TRAVEL</div>
+                <div v-if="canManage" class="gallery-card__admin" @click.stop>
+                  <button
+                    type="button"
+                    class="gallery-card__admin-trigger"
+                    :aria-expanded="activeGalleryActionId === location.id"
+                    aria-label="打开管理操作"
+                    @click="toggleGalleryActions(location.id)"
+                  >
+                    <el-icon><MoreFilled /></el-icon>
+                  </button>
+                  <div v-if="activeGalleryActionId === location.id" class="gallery-card__admin-menu">
+                    <button type="button" @click="editGalleryLocation(location.id)">
+                      <el-icon><EditPen /></el-icon>
+                      <span>编辑</span>
+                    </button>
+                    <button type="button" class="is-danger" @click="deleteGalleryLocation(location)">
+                      <el-icon><Delete /></el-icon>
+                      <span>删除</span>
+                    </button>
+                  </div>
+                </div>
               </div>
               <div class="gallery-card__body">
                 <h3>{{ location.title }}</h3>
@@ -249,7 +272,7 @@
                   <strong>{{ location.entryCount || 0 }} 张照片</strong>
                 </div>
               </div>
-            </button>
+            </article>
           </div>
 
           <div v-if="canLoadMoreGallery" class="gallery-load-more">
@@ -270,7 +293,7 @@ import { useRouter } from 'vue-router'
 import dayjs from 'dayjs'
 import { storeToRefs } from 'pinia'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Calendar, Delete, EditPen, Location } from '@element-plus/icons-vue'
+import { Calendar, Delete, EditPen, Location, MoreFilled } from '@element-plus/icons-vue'
 import DefaultLayout from '@/layouts/DefaultLayout.vue'
 import PageHero from '@/components/PageHero/PageHero.vue'
 import FeatureAccessCover from '@/components/FeatureAccessCover.vue'
@@ -301,6 +324,7 @@ const visibleGalleryCount = ref(INITIAL_GALLERY_VISIBLE_COUNT)
 const activeId = ref<number | null>(null)
 const activeDetail = ref<TravelMemoryLocationDetail | null>(null)
 const detailCache = ref<Record<number, TravelMemoryLocationDetail>>({})
+const activeGalleryActionId = ref<number | null>(null)
 const galleryCardRefs = new Map<number, HTMLElement>()
 const canManage = computed(() => isAdminUser(user.value))
 const canViewContent = computed(() => isAdminUser(user.value) || isFriendUser(user.value))
@@ -423,6 +447,7 @@ async function loadMemories(preferredId?: number | null) {
 }
 
 async function handleSelectLocation(id: number, options: { syncGallery?: boolean } = {}) {
+  activeGalleryActionId.value = null
   activeId.value = id
   ensureGalleryLocationVisible(id)
   await nextTick()
@@ -458,6 +483,39 @@ function openCurrentEditDialog() {
 
 function openCreateDialog() {
   router.push({ name: 'TravelMemoryCreate' })
+}
+
+function toggleGalleryActions(id: number) {
+  activeGalleryActionId.value = activeGalleryActionId.value === id ? null : id
+}
+
+function editGalleryLocation(id: number) {
+  activeGalleryActionId.value = null
+  router.push({ name: 'TravelMemoryEdit', params: { id } })
+}
+
+async function deleteGalleryLocation(location: TravelMemoryLocationListItem) {
+  activeGalleryActionId.value = null
+  try {
+    await ElMessageBox.confirm(
+      `确定要删除“${location.title}”吗？删除后将无法恢复。`,
+      '删除旅行地点',
+      {
+        confirmButtonText: '删除',
+        cancelButtonText: '取消',
+        type: 'warning',
+      },
+    )
+    await deleteTravelMemory(location.id)
+    ElMessage.success('地点已删除')
+    detailCache.value = {}
+    await loadMemories()
+  } catch (error) {
+    if (error === 'cancel' || error === 'close') {
+      return
+    }
+    ElMessage.error('删除地点失败')
+  }
 }
 
 async function deleteCurrentLocation() {
@@ -549,6 +607,7 @@ function scrollGalleryCardIntoView(id: number) {
 }
 
 function openGalleryLocationDetail(id: number) {
+  activeGalleryActionId.value = null
   router.push({ name: 'TravelMemoryDetail', params: { id } })
 }
 
@@ -1412,6 +1471,7 @@ onMounted(async () => {
 }
 
 .gallery-card__cover {
+  position: relative;
   height: clamp(148px, 15vw, 168px);
   background: linear-gradient(135deg, #fff0f5, #f5f8ff);
 }
@@ -1432,6 +1492,89 @@ onMounted(async () => {
   color: #c18ca3;
   letter-spacing: 0.18em;
   font-size: 12px;
+}
+
+.gallery-card__admin {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 3;
+}
+
+.gallery-card__admin-trigger {
+  width: 34px;
+  height: 34px;
+  display: inline-grid;
+  place-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.82);
+  border-radius: 999px;
+  color: #7e5364;
+  background: rgba(255, 255, 255, 0.82);
+  box-shadow: 0 10px 24px rgba(93, 52, 68, 0.16);
+  backdrop-filter: blur(12px);
+  cursor: pointer;
+  transition:
+    transform 0.18s ease,
+    background 0.18s ease,
+    box-shadow 0.18s ease;
+}
+
+.gallery-card__admin-trigger:hover,
+.gallery-card__admin-trigger:focus-visible {
+  transform: translateY(-1px);
+  background: rgba(255, 246, 250, 0.96);
+  box-shadow: 0 14px 30px rgba(93, 52, 68, 0.2);
+  outline: none;
+}
+
+.gallery-card__admin-menu {
+  position: absolute;
+  top: 40px;
+  right: 0;
+  min-width: 116px;
+  display: grid;
+  gap: 6px;
+  padding: 8px;
+  border: 1px solid rgba(243, 207, 221, 0.92);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 18px 34px rgba(108, 63, 82, 0.18);
+  backdrop-filter: blur(16px);
+}
+
+.gallery-card__admin-menu button {
+  min-height: 34px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 11px;
+  color: #6a4a58;
+  background: transparent;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    color 0.18s ease,
+    background 0.18s ease;
+}
+
+.gallery-card__admin-menu button:hover,
+.gallery-card__admin-menu button:focus-visible {
+  color: #d84f82;
+  background: rgba(255, 236, 244, 0.88);
+  outline: none;
+}
+
+.gallery-card__admin-menu button.is-danger {
+  color: #b94a5c;
+}
+
+.gallery-card__admin-menu button.is-danger:hover,
+.gallery-card__admin-menu button.is-danger:focus-visible {
+  color: #d93652;
+  background: rgba(255, 235, 238, 0.94);
 }
 
 .gallery-card__body {

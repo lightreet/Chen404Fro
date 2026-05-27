@@ -10,8 +10,6 @@
     data-hero
   >
     <div class="page-hero__bg" />
-    <div class="page-hero__overlay" />
-    <div class="page-hero__fade" aria-hidden="true" />
 
     <div class="page-hero__content">
       <p v-if="eyebrow" class="page-hero__eyebrow">{{ eyebrow }}</p>
@@ -43,6 +41,7 @@
     </div>
 
     <div v-if="showWave" class="page-hero__transition" aria-hidden="true">
+      <div class="page-hero__blend"></div>
       <div class="page-hero__fog"></div>
       <div class="page-hero__wave">
         <HeroWave color="white" :height="waveHeight" :intensity="waveIntensity" />
@@ -72,7 +71,6 @@ interface Props {
   bgPosition?: string;
   bgSize?: string;
   minHeight?: string;
-  overlayOpacity?: number;
   align?: 'left' | 'center';
   compact?: boolean;
   showWave?: boolean;
@@ -90,7 +88,6 @@ const props = withDefaults(defineProps<Props>(), {
   bgPosition: 'center',
   bgSize: 'cover',
   minHeight: '70vh',
-  overlayOpacity: 0.52,
   align: 'center',
   compact: false,
   showWave: true,
@@ -120,7 +117,6 @@ const heroVars = computed(() => ({
   '--page-hero-bg-position': props.bgPosition,
   '--page-hero-bg-size': props.bgSize,
   '--page-hero-min-height': normalizeMinHeight(props.minHeight),
-  '--page-hero-overlay-opacity': String(props.overlayOpacity),
   '--page-hero-wave-height': `${props.waveHeight}px`,
 }));
 
@@ -161,16 +157,13 @@ function normalizeMinHeight(value: string) {
   overflow: hidden;
   padding: calc(64px + 2.2rem) 1.5rem 4.1rem;
   color: #fff;
-  --page-hero-fade-glow-main: rgba(255, 255, 255, 0.96);
-  --page-hero-fade-glow-secondary: rgba(255, 255, 255, 0.84);
-  --page-hero-fade-glow-soft: rgba(255, 255, 255, 0.38);
-  --page-hero-fade-side-main: rgba(255, 255, 255, 0.56);
-  --page-hero-fade-side-soft: rgba(255, 255, 255, 0.18);
   --page-hero-wave-back: #ffffff;
   --page-hero-wave-mid: #fff8fa;
   --page-hero-wave-front: #fdf3f6;
   --page-hero-wave-mist: rgba(255, 249, 252, 0.9);
   --page-hero-wave-shadow: rgba(255, 231, 239, 0.72);
+  --page-hero-blend-soft: rgba(255, 248, 251, 0.68);
+  --page-hero-blend-mid: rgba(255, 244, 248, 0.9);
 }
 
 .page-hero--sakura-diary {
@@ -184,19 +177,12 @@ function normalizeMinHeight(value: string) {
   --page-hero-wave-front: #fdf0f4;
   --page-hero-wave-mist: rgba(255, 246, 250, 0.9);
   --page-hero-wave-shadow: rgba(255, 226, 236, 0.68);
+  --page-hero-blend-soft: rgba(255, 246, 250, 0.68);
+  --page-hero-blend-mid: rgba(255, 241, 247, 0.9);
 
   .page-hero__bg {
     filter: saturate(0.94) brightness(1.02) blur(0.45px);
     transform: scale(1);
-  }
-
-  .page-hero__overlay {
-    background: linear-gradient(
-      to bottom,
-      rgba(82, 61, 76, calc(var(--page-hero-overlay-opacity) * 0.05)) 0%,
-      rgba(82, 61, 76, calc(var(--page-hero-overlay-opacity) * 0.09)) 38%,
-      rgba(82, 61, 76, calc(var(--page-hero-overlay-opacity) * 0.15)) 100%
-    );
   }
 
   .page-hero__content {
@@ -206,6 +192,10 @@ function normalizeMinHeight(value: string) {
 
 .page-hero--compact {
   padding-bottom: 3.75rem;
+}
+
+.page-hero--with-wave {
+  margin-bottom: -28px;
 }
 
 .page-hero--left {
@@ -227,9 +217,7 @@ function normalizeMinHeight(value: string) {
   }
 }
 
-.page-hero__bg,
-.page-hero__overlay,
-.page-hero__fade {
+.page-hero__bg {
   position: absolute;
   inset: 0;
 }
@@ -248,37 +236,6 @@ function normalizeMinHeight(value: string) {
   background-image: radial-gradient(rgba(255, 255, 255, 0.06) 1px, transparent 1px);
   background-size: 20px 20px;
   pointer-events: none;
-}
-
-.page-hero__overlay {
-  background: linear-gradient(
-    to bottom,
-    rgba(8, 15, 31, calc(var(--page-hero-overlay-opacity) * 0.72)) 0%,
-    rgba(8, 15, 31, var(--page-hero-overlay-opacity)) 60%,
-    rgba(8, 15, 31, calc(var(--page-hero-overlay-opacity) + 0.12)) 100%
-  );
-}
-
-.page-hero__fade {
-  top: auto;
-  height: 208px;
-  z-index: 1;
-  pointer-events: none;
-  background:
-    radial-gradient(
-      72% 128% at 50% 100%,
-      var(--page-hero-wave-shadow) 0%,
-      rgba(255, 255, 255, 0.22) 34%,
-      rgba(255, 255, 255, 0) 68%
-    ),
-    linear-gradient(
-      to bottom,
-      rgba(255, 248, 250, 0) 0%,
-      rgba(255, 248, 250, 0.18) 36%,
-      rgba(255, 248, 250, 0.62) 74%,
-      var(--hero-fade-base) 100%
-    );
-  backdrop-filter: blur(3px);
 }
 
 .page-hero__content {
@@ -452,11 +409,26 @@ function normalizeMinHeight(value: string) {
   pointer-events: none;
 }
 
+.page-hero__blend,
 .page-hero__fog,
 .page-hero__wave {
   position: absolute;
   left: 0;
   right: 0;
+}
+
+.page-hero__blend {
+  bottom: -42px;
+  height: 128px;
+  z-index: 1;
+  background: linear-gradient(
+    to bottom,
+    rgba(255, 248, 251, 0) 0%,
+    rgba(255, 248, 251, 0.2) 22%,
+    var(--page-hero-blend-soft) 48%,
+    var(--page-hero-blend-mid) 70%,
+    var(--hero-fade-base) 100%
+  );
 }
 
 .page-hero__fog {
@@ -474,10 +446,11 @@ function normalizeMinHeight(value: string) {
 }
 
 .page-hero__wave {
-  bottom: 0;
+  bottom: -2px;
   height: var(--page-hero-wave-height);
   line-height: 0;
   filter: drop-shadow(0 -8px 24px rgba(255, 231, 239, 0.38));
+  z-index: 2;
 }
 
 .page-hero__mist {
@@ -526,32 +499,8 @@ function normalizeMinHeight(value: string) {
   --page-hero-wave-front: #241f2b;
   --page-hero-wave-mist: rgba(100, 80, 103, 0.64);
   --page-hero-wave-shadow: rgba(97, 74, 101, 0.32);
-
-  .page-hero__overlay {
-    background: linear-gradient(
-      to bottom,
-      rgba(24, 18, 30, calc(var(--page-hero-overlay-opacity) * 0.24)) 0%,
-      rgba(28, 21, 34, calc(var(--page-hero-overlay-opacity) * 0.38)) 40%,
-      rgba(34, 26, 40, calc(var(--page-hero-overlay-opacity) * 0.72)) 100%
-    );
-  }
-
-  .page-hero__fade {
-    background:
-      radial-gradient(
-        72% 128% at 50% 100%,
-        rgba(108, 82, 111, 0.4) 0%,
-        rgba(76, 59, 85, 0.18) 36%,
-        rgba(255, 255, 255, 0) 68%
-      ),
-      linear-gradient(
-        to bottom,
-        rgba(255, 255, 255, 0) 0%,
-        rgba(48, 38, 58, 0.08) 42%,
-        rgba(42, 33, 50, 0.54) 74%,
-        var(--hero-fade-base) 100%
-      );
-  }
+  --page-hero-blend-soft: rgba(55, 44, 62, 0.68);
+  --page-hero-blend-mid: rgba(42, 34, 49, 0.9);
 
   .page-hero__fog {
     background: linear-gradient(
@@ -600,6 +549,10 @@ function normalizeMinHeight(value: string) {
     padding-bottom: 1.8rem;
   }
 
+  .page-hero--with-wave {
+    margin-bottom: -20px;
+  }
+
   .page-hero--left .page-hero__content {
     padding-inline: 0;
   }
@@ -628,12 +581,13 @@ function normalizeMinHeight(value: string) {
     margin-top: 0.9rem;
   }
 
-  .page-hero__fade {
-    height: 142px;
-  }
-
   .page-hero__transition {
     height: calc(var(--page-hero-wave-height) + 42px);
+  }
+
+  .page-hero__blend {
+    bottom: -32px;
+    height: 104px;
   }
 
   .page-hero__fog {

@@ -2,7 +2,7 @@
   <div class="hero-wave" :style="{ height: `${height}px` }" aria-hidden="true">
     <svg
       class="hero-wave-svg"
-      viewBox="0 0 2880 180"
+      viewBox="0 0 1440 180"
       preserveAspectRatio="none"
       xmlns="http://www.w3.org/2000/svg"
     >
@@ -25,14 +25,27 @@
         </filter>
       </defs>
 
-      <path class="hero-wave__back" :d="backWavePath" :fill="`url(#${ids.backGradient})`" />
+      <g class="hero-wave-track hero-wave-track--back">
+        <g>
+          <path class="hero-wave__back" :d="backWavePath" :fill="`url(#${ids.backGradient})`" />
+          <path
+            class="hero-wave__mist"
+            :d="mistPath"
+            :fill="`url(#${ids.mistGradient})`"
+            :filter="`url(#${ids.mistBlur})`"
+          />
+        </g>
+        <g :transform="`translate(${SVG_WIDTH} 0)`">
+          <path class="hero-wave__back" :d="backWavePath" :fill="`url(#${ids.backGradient})`" />
+          <path
+            class="hero-wave__mist"
+            :d="mistPath"
+            :fill="`url(#${ids.mistGradient})`"
+            :filter="`url(#${ids.mistBlur})`"
+          />
+        </g>
+      </g>
       <path class="hero-wave__front" :d="frontWavePath" :fill="`url(#${ids.frontGradient})`" />
-      <path
-        class="hero-wave__mist"
-        :d="mistPath"
-        :fill="`url(#${ids.mistGradient})`"
-        :filter="`url(#${ids.mistBlur})`"
-      />
     </svg>
   </div>
 </template>
@@ -44,8 +57,8 @@ type WaveColor = 'pink' | 'white';
 type WavePoint = { x: number; y: number };
 
 const SVG_WIDTH = 1440;
-const SVG_TOTAL_WIDTH = SVG_WIDTH * 2;
 const SVG_HEIGHT = 180;
+const SVG_FILL_BOTTOM = SVG_HEIGHT + 32;
 const BASE_CYCLES = 4;
 
 const props = withDefaults(
@@ -86,33 +99,33 @@ const waveMist = computed(() =>
 
 const backWavePath = computed(() =>
   buildWaveAreaPath({
-    width: SVG_TOTAL_WIDTH,
+    width: SVG_WIDTH,
     baseY: 121,
     amplitude: 11.5 * normalizedIntensity.value,
     phase: Math.PI * 0.2,
-    cycles: BASE_CYCLES * 2,
+    cycles: BASE_CYCLES,
     samples: 144,
   })
 );
 
 const frontWavePath = computed(() =>
   buildWaveAreaPath({
-    width: SVG_TOTAL_WIDTH,
+    width: SVG_WIDTH,
     baseY: 108,
     amplitude: 17 * normalizedIntensity.value,
     phase: Math.PI * 0.56,
-    cycles: BASE_CYCLES * 2,
+    cycles: BASE_CYCLES,
     samples: 176,
   })
 );
 
 const mistPath = computed(() =>
   buildWaveRibbonPath({
-    width: SVG_TOTAL_WIDTH,
+    width: SVG_WIDTH,
     baseY: 90,
     amplitude: 6.5 * normalizedIntensity.value,
     phase: Math.PI * 0.56,
-    cycles: BASE_CYCLES * 2,
+    cycles: BASE_CYCLES,
     samples: 144,
     thickness: 22,
   })
@@ -127,7 +140,18 @@ function buildWaveAreaPath(config: {
   samples: number;
 }) {
   const topLine = buildWavePoints(config);
-  return [`M0,${SVG_HEIGHT}`, `L0,${round(topLine[0].y)}`, pointsToBezierPath(topLine), `L${config.width},${SVG_HEIGHT}`, `Z`].join(' ');
+  const first = topLine[0];
+  const last = topLine[topLine.length - 1];
+  const curve = pointsToBezierPath(topLine).replace(/^M[-\d.]+,[-\d.]+/, '').trim();
+  return [
+    `M-2,${SVG_FILL_BOTTOM}`,
+    `L-2,${round(first.y)}`,
+    `L0,${round(first.y)}`,
+    curve,
+    `L${config.width + 2},${round(last.y)}`,
+    `L${config.width + 2},${SVG_FILL_BOTTOM}`,
+    'Z',
+  ].join(' ');
 }
 
 function buildWaveRibbonPath(config: {
@@ -197,12 +221,16 @@ function round(value: number) {
 }
 
 .hero-wave-svg {
-  width: 200%;
+  width: 100%;
   height: 100%;
   display: block;
-  overflow: visible;
+  overflow: hidden;
   shape-rendering: geometricPrecision;
-  will-change: transform;
+}
+
+.hero-wave-track--back {
+  transform-box: fill-box;
+  transform-origin: 0 0;
   animation: hero-wave-horizontal-flow 38s linear infinite;
 }
 
@@ -213,17 +241,16 @@ function round(value: number) {
 
 @keyframes hero-wave-horizontal-flow {
   0% {
-    transform: translate3d(-50%, 0, 0);
+    transform: translateX(0);
   }
   100% {
-    transform: translate3d(0, 0, 0);
+    transform: translateX(-50%);
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .hero-wave-svg {
+  .hero-wave-track--back {
     animation: none;
-    transform: none;
   }
 }
 </style>

@@ -8,7 +8,6 @@
         :bg-image="heroBgImage"
         :bg-position="heroBgPosition"
         min-height="72vh"
-        :overlay-opacity="0.42"
         :wave-height="132"
         compact
       />

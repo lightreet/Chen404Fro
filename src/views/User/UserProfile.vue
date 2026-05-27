@@ -8,7 +8,6 @@
         :bg-image="heroBgImage"
         :bg-position="heroBgPosition"
         min-height="56vh"
-        :overlay-opacity="0.42"
         compact
       />
     </template>

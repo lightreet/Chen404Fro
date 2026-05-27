@@ -1,6 +1,5 @@
 <template>
-  <DefaultLayout wide-content>
-    <div class="track-edit-page">
+  <div class="track-edit-page">
       <div class="track-edit-topbar">
         <el-button text class="topbar-back" @click="goBack">
           <el-icon><ArrowLeft /></el-icon>
@@ -28,7 +27,17 @@
               </div>
               <div class="form-grid">
                 <el-form-item label="歌名">
-                  <el-input v-model="form.title" maxlength="120" placeholder="例如：夜に駆ける" />
+                  <div class="title-field">
+                    <el-input v-model="form.title" maxlength="120" placeholder="例如：夜に駆ける" />
+                    <el-button
+                      class="ai-suggest-button"
+                      :loading="suggestingTrack"
+                      :disabled="!form.title.trim() || suggestingTrack"
+                      @click="suggestTrackInfo"
+                    >
+                      AI 补全
+                    </el-button>
+                  </div>
                 </el-form-item>
                 <el-form-item label="歌手">
                   <el-input v-model="form.artist" maxlength="120" placeholder="例如：YOASOBI" />
@@ -37,7 +46,14 @@
                   <el-input v-model="form.album" maxlength="120" placeholder="可选" />
                 </el-form-item>
                 <el-form-item label="发行年份">
-                  <el-input-number v-model="form.releaseYear" :min="1900" :max="2100" controls-position="right" />
+                  <el-date-picker
+                    v-model="releaseYearPicker"
+                    type="year"
+                    value-format="YYYY"
+                    placeholder="选择发行年份"
+                    :disabled-date="disabledReleaseYear"
+                    clearable
+                  />
                 </el-form-item>
                 <el-form-item label="语言">
                   <el-input v-model="form.language" maxlength="40" placeholder="日语 / 中文 / English" />
@@ -185,8 +201,7 @@
           </div>
         </div>
       </div>
-    </div>
-  </DefaultLayout>
+  </div>
 </template>
 
 <script setup lang="ts">
@@ -194,10 +209,9 @@ import { computed, reactive, ref, watch } from 'vue'
 import { ElMessage, type UploadRequestOptions } from 'element-plus'
 import { ArrowLeft, Plus } from '@element-plus/icons-vue'
 import { useRoute, useRouter } from 'vue-router'
-import DefaultLayout from '@/layouts/DefaultLayout.vue'
-import { createMusicTrack, getAdminMusicTrack, updateMusicTrack } from '@/api/music'
+import { createMusicTrack, getAdminMusicTrack, suggestMusicTrack, updateMusicTrack } from '@/api/music'
 import { uploadMusicAudio, uploadMusicCover, type UploadResult } from '@/api/upload'
-import type { MusicTrack, MusicTrackUpsertCommand } from '@/types'
+import type { MusicTrack, MusicTrackAiSuggestResponse, MusicTrackUpsertCommand } from '@/types'
 
 const route = useRoute()
 const router = useRouter()
@@ -205,9 +219,11 @@ type UploadError = Parameters<UploadRequestOptions['onError']>[0]
 
 const loading = ref(false)
 const saving = ref(false)
+const suggestingTrack = ref(false)
 const uploadingAudio = ref(false)
 const uploadingCover = ref(false)
 const tagDraft = ref('')
+const releaseYearPicker = ref<string>()
 const audioUploadName = ref('')
 const coverUploadName = ref('')
 const uploadedAudioUrl = ref('')
@@ -251,6 +267,23 @@ const lyricTypeOptions = [
 ]
 
 const form = reactive<MusicTrackUpsertCommand>(createEmptyTrackForm())
+
+watch(
+  releaseYearPicker,
+  (value) => {
+    form.releaseYear = value ? Number(value) : undefined
+  },
+)
+
+watch(
+  () => form.releaseYear,
+  (value) => {
+    const nextValue = value ? String(value) : undefined
+    if (releaseYearPicker.value !== nextValue) {
+      releaseYearPicker.value = nextValue
+    }
+  },
+)
 
 watch(
   editingId,
@@ -344,6 +377,60 @@ async function saveTrack() {
   }
 }
 
+async function suggestTrackInfo() {
+  const title = form.title.trim()
+  if (!title) {
+    ElMessage.warning('先输入歌名，Lyra 才能帮你补全信息')
+    return
+  }
+
+  suggestingTrack.value = true
+  try {
+    const suggestion = await suggestMusicTrack({
+      title,
+      artist: form.artist.trim() || undefined,
+    })
+    const appliedCount = applyTrackSuggestion(suggestion)
+    if (appliedCount > 0) {
+      ElMessage.success(`AI 已补全 ${appliedCount} 项信息`)
+    } else {
+      ElMessage.info('AI 找到的建议和当前内容差不多，暂时没有覆盖')
+    }
+  } finally {
+    suggestingTrack.value = false
+  }
+}
+
+function applyTrackSuggestion(suggestion: MusicTrackAiSuggestResponse) {
+  let appliedCount = 0
+  const applyText = (field: keyof MusicTrackUpsertCommand, value?: string) => {
+    if (!value?.trim() || String(form[field] || '').trim()) return
+    ;(form[field] as string | undefined) = value.trim()
+    appliedCount += 1
+  }
+
+  applyText('artist', suggestion.artist)
+  applyText('album', suggestion.album)
+  applyText('language', suggestion.language)
+  applyText('genre', suggestion.genre)
+  applyText('recommendation', suggestion.recommendation)
+  applyText('moodText', suggestion.moodText)
+  applyText('lyricSource', suggestion.lyricSource)
+
+  if (!form.releaseYear && suggestion.releaseYear) {
+    form.releaseYear = suggestion.releaseYear
+    releaseYearPicker.value = String(suggestion.releaseYear)
+    appliedCount += 1
+  }
+
+  if (!tagDraft.value.trim() && suggestion.tags?.length) {
+    tagDraft.value = suggestion.tags.filter(Boolean).join(', ')
+    appliedCount += 1
+  }
+
+  return appliedCount
+}
+
 async function handleAudioUpload(options: UploadRequestOptions) {
   uploadingAudio.value = true
   try {
@@ -404,6 +491,11 @@ function parseTags(input: string) {
   return input.split(/[,，]/).map((tag) => tag.trim()).filter(Boolean)
 }
 
+function disabledReleaseYear(date: Date) {
+  const year = date.getFullYear()
+  return year < 1900 || year > new Date().getFullYear()
+}
+
 function toUploadAjaxError(error: unknown): UploadError {
   if (error instanceof Error) return error as UploadError
   return new Error(String(error || '上传失败')) as UploadError
@@ -438,16 +530,19 @@ function createEmptyTrackForm(): MusicTrackUpsertCommand {
 <style scoped lang="scss">
 .track-edit-page {
   width: min(1320px, calc(100vw - 48px));
-  min-height: calc(100vh - 96px);
+  min-height: 100vh;
   margin: 0 auto;
-  padding: 18px 0 calc(88px + env(safe-area-inset-bottom, 0));
+  padding: calc(74px + env(safe-area-inset-top, 0)) 0 calc(88px + env(safe-area-inset-bottom, 0));
   color: #443840;
 }
 
 .track-edit-topbar {
-  position: sticky;
-  top: 76px;
-  z-index: 20;
+  position: fixed;
+  top: calc(14px + env(safe-area-inset-top, 0));
+  left: 50%;
+  z-index: 285;
+  width: min(1320px, calc(100vw - 48px));
+  transform: translateX(-50%);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -582,6 +677,24 @@ function createEmptyTrackForm(): MusicTrackUpsertCommand {
   gap: 14px;
 }
 
+.title-field {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+}
+
+.ai-suggest-button {
+  min-width: 92px;
+  border: 0;
+  border-radius: 999px;
+  color: #fff;
+  font-weight: 800;
+  background:
+    linear-gradient(135deg, rgba(255, 105, 156, 0.96), rgba(255, 159, 188, 0.96)),
+    radial-gradient(circle at 20% 20%, rgba(255, 255, 255, 0.34), transparent 34%);
+  box-shadow: 0 10px 22px rgba(255, 111, 160, 0.22);
+}
+
 .upload-field,
 .cover-upload-row {
   width: 100%;
@@ -651,7 +764,7 @@ function createEmptyTrackForm(): MusicTrackUpsertCommand {
 
 .track-preview-panel {
   position: sticky;
-  top: 138px;
+  top: calc(88px + env(safe-area-inset-top, 0));
   display: grid;
   gap: 16px;
   padding: 20px;
@@ -805,7 +918,8 @@ function createEmptyTrackForm(): MusicTrackUpsertCommand {
 
 :deep(.el-input__wrapper),
 :deep(.el-textarea__inner),
-:deep(.el-input-number) {
+:deep(.el-input-number),
+:deep(.el-date-editor.el-input) {
   width: 100%;
   border-radius: 9px;
 }
@@ -845,6 +959,15 @@ function createEmptyTrackForm(): MusicTrackUpsertCommand {
     width: min(100vw - 18px, 100%);
   }
 
+  .track-edit-page {
+    padding-top: calc(104px + env(safe-area-inset-top, 0));
+  }
+
+  .track-edit-topbar {
+    top: calc(10px + env(safe-area-inset-top, 0));
+    width: min(100vw - 18px, 100%);
+  }
+
   .track-edit-topbar,
   .footer-inner {
     display: grid;
@@ -853,6 +976,7 @@ function createEmptyTrackForm(): MusicTrackUpsertCommand {
   .form-grid,
   .media-grid,
   .lyrics-row,
+  .title-field,
   .upload-field,
   .cover-upload-row {
     grid-template-columns: 1fr;

@@ -4,6 +4,8 @@ import type {
   MusicPlaylistTracksCommand,
   MusicPlaylistUpsertCommand,
   MusicTrack,
+  MusicTrackAiSuggestRequest,
+  MusicTrackAiSuggestResponse,
   MusicTrackStatus,
   MusicTrackUpsertCommand,
 } from '@/types'
@@ -46,6 +48,10 @@ export function updateMusicTrackStatus(id: number | string, status: MusicTrackSt
 
 export function deleteMusicTrack(id: number | string): Promise<void> {
   return del(`/admin/music/tracks/${String(id)}`)
+}
+
+export function suggestMusicTrack(data: MusicTrackAiSuggestRequest): Promise<MusicTrackAiSuggestResponse> {
+  return post('/admin/music/tracks/ai/suggest', data)
 }
 
 export function getAdminMusicPlaylists(): Promise<MusicPlaylist[]> {
