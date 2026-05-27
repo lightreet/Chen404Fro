@@ -320,6 +320,8 @@ const refTypeOptions = [
   { label: '用户头像', value: 'AVATAR' },
   { label: '受信申请附件', value: 'TRUST_REQUEST_ATTACHMENT' },
   { label: '旅行记忆图片', value: 'TRAVEL_MEMORY_IMAGE' },
+  { label: '音乐音频', value: 'MUSIC_AUDIO' },
+  { label: '音乐封面', value: 'MUSIC_COVER' },
   { label: '其他', value: 'OTHER' },
 ]
 

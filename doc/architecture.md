@@ -1,6 +1,6 @@
 # Chen404 前端架构设计
 
-本文档描述当前前端代码实现，而不是历史规划。最后同步时间：2026-05-25。
+本文档描述当前前端代码实现，而不是历史规划。最后同步时间：2026-05-28。
 
 ## 1. 架构概览
 
@@ -23,7 +23,7 @@ Views
 - `modules`：较完整的业务模块，例如 `article-edit`、`feature-access`。
 - `api`：手写 API 封装。
 - `sdk/generated`：OpenAPI 生成代码，目前作为补充。
-- `stores`：Pinia 状态，当前以用户状态为主。
+- `stores`：Pinia 状态，承载用户状态、轻量应用状态和 Sakura Radio 播放器状态。
 
 ## 2. 技术栈
 
@@ -58,6 +58,7 @@ src/
 │  ├─ Footer/
 │  ├─ Header/
 │  ├─ Live2D/
+│  ├─ HeroWave/
 │  ├─ PageHero/
 │  ├─ SakuraOverlay/
 │  ├─ TravelMemoryMap/
@@ -103,6 +104,9 @@ src/
 /memory-map/detail/:id    旅行地点详情，管理员/知友
 /memory-map/create        创建旅行地点，管理员
 /memory-map/edit/:id      编辑旅行地点，管理员
+/music                    Sakura Radio 音乐馆
+/music/tracks/new         创建音乐曲目，管理员
+/music/tracks/:id/edit    编辑音乐曲目，管理员
 /category                 分类总览
 /category/:id             分类详情
 /tag                      标签总览
@@ -132,6 +136,7 @@ src/
 | `emoji.ts` | 表情包公开与后台接口 |
 | `admin-file.ts` | 后台文件管理 |
 | `travel-memory.ts` | 旅行纪念地图 |
+| `music.ts` | Sakura Radio 公开播放、音乐管理、歌单管理、AI 曲目信息补全 |
 | `trust-request.ts` | 受信申请 |
 | `ai.ts` | Lyra 聊天、SSE、会话恢复 |
 | `ai-admin.ts` | AI 后台配置 |
@@ -152,6 +157,7 @@ src/
 - [`src/stores/user.ts`](../src/stores/user.ts)：用户、token、登录态同步、登录/登出、本地持久化。
 - [`src/stores/app.ts`](../src/stores/app.ts)：轻量应用状态。
 - [`src/stores/article.ts`](../src/stores/article.ts)：文章相关状态保留。
+- [`src/stores/music-player.ts`](../src/stores/music-player.ts)：Sakura Radio 播放队列、当前歌曲、播放模式、音量、进度和默认电台加载。
 
 绝大多数业务数据仍采用“页面内请求 + 局部状态”模式，并没有全部集中到 Pinia。
 
@@ -169,8 +175,12 @@ src/
 - 变量定义：`src/assets/styles/variables.scss`
 - 全局样式：`src/assets/styles/global.scss`
 - 默认布局：`src/layouts/DefaultLayout.vue`
+- 功能页封面：`src/components/PageHero/PageHero.vue`
+- 柔波过渡：`src/components/HeroWave/HeroWave.vue`
 - 樱花动效：`SakuraOverlay`
 - Live2D：`Live2D.vue`
+
+PageHero 当前采用“背景图 + 轻雾渐变 + 内容层 + HeroWave 过渡”的统一结构。封面底部的波浪以静态前景波形兜底，动画只作用在更低透明度的背层，避免 SVG transform 位移时露出底色缝隙；内容区顶部再叠一层浅色渐变，让封面和正文过渡更自然。
 
 ## 8. 文章编辑模块
 
@@ -193,7 +203,36 @@ src/
 - 图片插入与预览调整。
 - AI 摘要与标签生成。
 
-## 9. Live2D 与 Lyra 聊天
+## 9. Sakura Radio 音乐馆
+
+主要文件：
+
+- `src/views/Music/Music.vue`
+- `src/views/Music/MusicTrackEdit.vue`
+- `src/components/Live2D/Live2DMusicPanel.vue`
+- `src/stores/music-player.ts`
+- `src/api/music.ts`
+- `src/api/upload.ts`
+
+当前能力：
+
+- `/music` 公开展示音乐馆、默认电台、公开歌单、唱片架、推荐语和歌词。
+- 管理员在 `/music` 看到新增歌曲、编辑歌曲、删除未被歌单引用歌曲、管理歌单、设置默认电台等入口。
+- `/music/tracks/new` 与 `/music/tracks/:id/edit` 是独立工作台页面，不再套用顶部全站导航，交互形态与文章编写页一致。
+- 支持音乐音频和封面上传，保存曲目时后端会转为永久文件。
+- 支持纯文本歌词和基础 LRC 时间轴歌词，播放时可高亮当前歌词。
+- `music-player` store 统一驱动 `/music` 页面和 Live2D 随身播放器。
+- 音量和播放模式持久化到 `localStorage`。
+- 管理员可调用 `/admin/music/tracks/ai/suggest` 补全歌手、专辑、年份、语言、风格、标签、推荐语和心情短句。
+
+当前边界：
+
+- 歌单新增、编辑、排序、默认电台已完成，但歌单删除接口与前端操作尚未实现。
+- 播放统计、收藏/点赞、评论、第三方平台同步、Media Session 系统级控制尚未实现。
+- 浏览器自动播放仍受用户手势限制，Live2D 音乐按钮会在用户点击后加载并播放默认电台。
+- 当前播放器只持久化音量和播放模式，不跨会话恢复播放进度。
+
+## 10. Live2D 与 Lyra 聊天
 
 主要文件：
 
@@ -219,7 +258,7 @@ src/
 - 小气泡优先使用 `bubbleText`。
 - `replyText` 作为旧字段兼容。
 
-## 10. 后台管理
+## 11. 后台管理
 
 后台入口：
 
@@ -240,8 +279,9 @@ src/
 - 后台容器覆盖全局 `1200px` 限制。
 - 中等宽度下收缩侧边菜单与内容网格。
 - AI 配置页卡片和表单使用响应式布局，避免右侧内容被裁。
+- 文件管理已支持文件统计、引用状态筛选、详情抽屉、音乐音频/封面的归属类型筛选。
 
-## 11. 旅行纪念地图
+## 12. 旅行纪念地图
 
 主要文件：
 
@@ -258,8 +298,9 @@ src/
 - 管理员可创建、编辑、删除旅行地点。
 - 支持地点图片、游记条目、坐标、访问时间范围。
 - 上传旅行图片时后端可解析 EXIF。
+- 前端加载 `public/maps/china-city.geojson` 和 `china-province.geojson`，加载失败时回退基础地图。
 
-## 12. 受信申请与访问控制
+## 13. 受信申请与访问控制
 
 主要文件：
 
@@ -276,7 +317,7 @@ src/
 - 部分页面如旅行地图要求管理员或知友身份。
 - 前端守卫只做体验层保护，最终权限以后端为准。
 
-## 13. 表情系统
+## 14. 表情系统
 
 主要文件：
 
@@ -293,7 +334,7 @@ src/
 - 后台可维护表情包并导入 ZIP。
 - 前端负责表情 token 解析和渲染。
 
-## 14. OpenAPI SDK
+## 15. OpenAPI SDK
 
 后端 OpenAPI：
 
@@ -315,7 +356,7 @@ src/sdk/generated
 
 当前业务代码仍主要使用手写 `src/api/*.ts`，生成 SDK 用于类型参考、后续迁移和接口对齐。
 
-## 15. 构建与分包
+## 16. 构建与分包
 
 `vite.config.ts` 当前配置：
 
@@ -336,7 +377,20 @@ src/sdk/generated
 - 减少首页弱网下动态 import 并发过多导致白屏的风险。
 - 避免将 Vue 运行时错误卷入某个业务页 chunk。
 
-## 16. 文档维护规则
+## 17. 当前不足与优化方向
+
+当前已识别的前端优化方向：
+
+- OpenAPI SDK 已生成，但业务层仍以手写 API 为主；后续应逐步把类型和接口口径收敛到同一来源。
+- `webSearchEnabled` 只是后台配置与前端开关，尚未接真实联网搜索。
+- Sakura Radio 仍缺歌单删除、播放统计、用户互动、Media Session、断点恢复和异常音频全队列失败保护。
+- 后台文件管理暂未提供批量清理、批量转永久、手动触发引用重建等完整操作闭环。
+- 旅行地图的城市 GeoJSON 已本地化，但生产体积、许可证说明、加载失败观测和移动端性能还值得持续验收。
+- PageHero 已统一柔波与渐变过渡，后续新增封面页面需要继续做跨桌面/移动截图回归，避免底部缝隙和正文首屏错位。
+- 站点配置里仍有少量运行时字段是“后台可配、前台部分接入”的状态，需要随每个页面迭代逐项关闭差距。
+- 当前前端自动化测试很轻，主要依赖类型检查和构建；播放器、权限守卫、AI SSE、旅行地图交互可补 Vitest 或 Playwright 覆盖。
+
+## 18. 文档维护规则
 
 前端文档维护时优先同步：
 

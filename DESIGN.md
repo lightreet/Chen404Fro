@@ -227,6 +227,20 @@ Components should preserve the same world while adjusting intensity by surface t
 - **Role:** every major public route may open with a cinematic hero. This is where the handwritten voice, sakura wave transitions, and emotional subtitle rhythm live.
 - **Image treatment:** backgrounds are softened and lightly desaturated so text remains calm and readable.
 - **Motion:** the hero may hint downward movement and pulse subtitle text, but the motion must feel like invitation, not spectacle.
+- **Transition:** hero bottoms use the shared PageHero + HeroWave system. The foreground wave must remain visually attached to the content area; any animated wave layer sits behind it with low opacity, so SVG transform movement cannot expose a visible seam.
+- **Gradient handoff:** every cover-to-content boundary needs a subtle warm-white fade below the image. Do not rely on a single SVG edge to do all of the transition work.
+
+### Sakura Radio
+- **Role:** `/music` is a public listening room, not a dark media player and not a backend table. It should feel like a small personal radio station inside the same sakura journal world.
+- **Surface:** keep the player, playlist chips, record shelf, and Live2D mini-player warm, airy, and tactile. Use record motion and lyric focus as state expression, not as visual noise.
+- **Admin editing:** music creation and editing use standalone workbench pages, matching the article editor's focus model. The global top menu should not crowd these task pages.
+- **Boundaries:** avoid nightclub black, neon equalizers, dense dashboards, and giant decorative controls. Music controls must stay compact, legible, and familiar.
+
+### Standalone Workbench Pages
+- **Examples:** article editor, travel memory editor, and music track editor.
+- **Navigation:** use a page-local floating action bar with back/action buttons instead of the full public top navigation.
+- **Focus:** keep the shell calm and task-shaped. Decorative petals and soft panels may remain, but the user should feel they are in a tool surface.
+- **Footer actions:** destructive, cancel, and save actions should be stable and easy to reach; avoid moving primary save actions into scrolling content.
 
 ### Journal / Memory Components
 - **Style:** scrapbook and travel-memory components are allowed to be more tactile than the rest of the app. Tape corners, stamps, flower marks, and layered paper fields are legitimate here.
@@ -235,6 +249,7 @@ Components should preserve the same world while adjusting intensity by surface t
 ### Admin Workspace
 - **Style:** admin panels should inherit the color system and rounding, but they must reduce decorative noise. Fewer gradients, less blur, flatter structure.
 - **Constraint:** task flow outranks atmosphere. Admin is still part of the brand universe, but it is not a mood board.
+- **Data views:** file management, AI settings, and request review screens should prioritize scanning, filters, and clear status labels over large decorative cards.
 
 ## 6. Do's and Don'ts
 

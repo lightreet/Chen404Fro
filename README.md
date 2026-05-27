@@ -1,6 +1,6 @@
 # Chen404 博客系统 - 前端
 
-基于 Vue 3.5 + Vite 8 + TypeScript 5 的博客前端。当前版本已经接入真实后端链路：首页文章流、文章详情与编辑、分类/标签详情、归档、留言板/评论、个人中心、基础后台管理、上传与文件管理、表情包、受信申请、旅行纪念地图、Live2D + Lyra AI 聊天、AI 后台配置。
+基于 Vue 3.5 + Vite 8 + TypeScript 5 的博客前端。当前版本已经接入真实后端链路：首页文章流、文章详情与编辑、分类/标签详情、归档、留言板/评论、个人中心、基础后台管理、上传与文件管理、表情包、受信申请、旅行纪念地图、Sakura Radio 音乐馆、Live2D + Lyra AI 聊天、AI 后台配置。
 
 ## 技术栈
 
@@ -90,6 +90,9 @@ VITE_API_BASE_URL=https://api.example.com/api
 | `/memory-map/detail/:id` | 旅行地点详情 | 管理员/知友 | 地点详情与游记条目 |
 | `/memory-map/create` | 新增旅行地点 | 管理员 | 后台创建入口 |
 | `/memory-map/edit/:id` | 编辑旅行地点 | 管理员 | 后台编辑入口 |
+| `/music` | 音乐馆 | 公开 | Sakura Radio、公开歌单、歌词、共享播放器；管理员可维护歌曲和歌单 |
+| `/music/tracks/new` | 新增歌曲 | 管理员 | 独立音乐工作台，音频/封面上传、歌词、AI 补全 |
+| `/music/tracks/:id/edit` | 编辑歌曲 | 管理员 | 独立音乐工作台，编辑已有歌曲 |
 | `/category` | 分类页 | 公开 | 分类总览 |
 | `/category/:id` | 分类详情 | 公开 | 分类下文章列表 |
 | `/tag` | 标签页 | 公开 | 标签总览 |
@@ -117,6 +120,8 @@ VITE_API_BASE_URL=https://api.example.com/api
 
 后台布局已针对中等分辨率做自适应：后台页使用宽内容容器，AI 配置页的卡片和表单在较窄窗口下自动收缩。
 
+音乐馆管理没有放入传统 `/admin` tab，而是在 `/music` 页面暴露管理员入口：新增/编辑歌曲使用与编写文章一致的独立工作台页面，歌单维护使用页面内抽屉。
+
 ## 与后端对接状态
 
 ### 已接入真实后端的模块
@@ -127,13 +132,14 @@ VITE_API_BASE_URL=https://api.example.com/api
 - 分类：列表、详情、创建、更新、删除、后台分页。
 - 标签：列表、详情、标签文章流。
 - 评论/留言板：评论列表、留言板列表、最新评论、发表评论、删除、点赞、审核。
-- 上传：文章图片、封面、站点资源、头像、受信附件、旅行图片、文件删除。
+- 上传：文章图片、封面、站点资源、头像、受信附件、旅行图片、音乐音频、音乐封面、文件删除。
 - 首页：聚合数据、Banner、站点配置、站点统计。
 - 站点配置：公开配置读取、管理员更新。
 - 表情包：公开下发、后台维护、ZIP 导入。
 - 文件管理：后台列表、详情、引用关系重建。
 - 受信申请：提交、最新申请、后台审批。
 - 旅行纪念地图：公开受限查询、后台 CRUD。
+- Sakura Radio：公开歌曲/歌单、默认电台、管理员歌曲与歌单维护、音乐曲目信息 AI 补全。
 - Live2D / Lyra：同步聊天、SSE 流式聊天、会话恢复、引用、相关推荐、快捷建议。
 - AI 后台配置：读取、保存、测试连接、API Key 脱敏。
 
@@ -143,6 +149,8 @@ VITE_API_BASE_URL=https://api.example.com/api
 - 旅行纪念地图访问面向管理员和知友，不是完全公开页面。
 - OpenAPI SDK 已生成在 `src/sdk/generated`，但业务代码仍主要使用手写 `src/api/*.ts` 封装。
 - 留言板与评论区共用后端评论体系，但前端展示场景不同。
+- Sakura Radio 已完成公开播放、歌词、歌单和管理员维护；尚未实现歌单删除、播放统计、用户收藏/点赞、Media Session 系统级控制。
+- 文件管理已能展示音乐音频/封面类型；文件清理、批量处理和引用重建触发仍主要依赖后端能力，前端未提供完整操作流。
 
 ## 关键目录结构
 
@@ -153,6 +161,8 @@ Chen404Fro/
 │  ├─ assets/                    # 静态资源、样式、地图贴纸
 │  ├─ components/                # 公共组件
 │  │  ├─ Live2D/                 # Lyra 入口与聊天面板
+│  │  ├─ HeroWave/               # 页面 Hero 底部柔波过渡
+│  │  ├─ PageHero/               # 各功能页统一封面
 │  │  ├─ TravelMemoryMap/        # 旅行地图渲染
 │  │  └─ ...
 │  ├─ composables/               # useSiteConfig、useLayoutMobile、文章编辑逻辑
@@ -167,6 +177,7 @@ Chen404Fro/
 │     ├─ Admin/
 │     ├─ Article/
 │     ├─ MemoryMap/
+│     ├─ Music/
 │     └─ ...
 ├─ doc/architecture.md
 └─ package.json
@@ -196,11 +207,14 @@ OPENAPI_INPUT=http://localhost:10404/api/v3/api-docs npm run gen:sdk
 - 聊天面板完整回答与人物小气泡短句分层。
 - 管理员后台配置站点、AI、文件、表情包、受信申请。
 - 旅行纪念地图与地点游记。
+- Sakura Radio 音乐馆、Live2D 随身播放器、独立歌曲编辑工作台。
+- 统一 PageHero 封面与 HeroWave 柔波过渡，功能页和内容区之间带渐变衔接。
 - `modules/article-edit` 承接文章编辑页接口与提交模型。
 - `emoji` 模块承接表情解析、渲染与场景策略。
 
 ## 文档
 
 - [前端架构设计](doc/architecture.md)
+- [前端功能审查与优化清单](doc/feature-audit-2026-05-28.md)
 - [表情模块说明](src/emoji/README.md)
 - [SDK 说明](src/sdk/README.md)

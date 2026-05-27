@@ -12,6 +12,14 @@ Readers who browse a personal blog with a strong owner voice, trusted friends wh
 
 Chen404 is a personal blog frontend that combines public reading, private memory-keeping, light community interaction, and owner-side content operations. It must feel personal and memorable on the public side, while still being practical and efficient when the owner is writing articles, managing files, tuning AI settings, or handling requests.
 
+## Current Product Surface
+
+- Public reading: home, article detail, archive, category, tag, guestbook, about, public user page.
+- Trust layer: trust request flow, friend-only memory map access, profile-side request status.
+- Owner workbench: article editor, travel memory editor, music track editor, admin tabs for categories, site config, AI assistant, emojis, files, and trust requests.
+- Companion layer: Live2D Lyra chat, SSE answers, article citations, related article suggestions, Sakura Radio mini-player.
+- Sakura Radio: public music room, playlists, lyrics, shared player state, admin song and playlist maintenance, AI song metadata suggestions.
+
 ## Brand Personality
 
 Warm, personal, softly crafted. The product should feel like a real person made it with taste and care, not like a generic template blog or a cloned SaaS dashboard. It should be expressive without becoming noisy, and gentle without becoming childish.
@@ -33,6 +41,15 @@ Three-word personality: **warm, dreamy, precise**.
 3. **Soft, not vague.** Rounded, warm, and airy does not mean weak hierarchy or muddy interfaces.
 4. **Personal over platform-like.** The site should feel authored, remembered, and owned.
 5. **Consistency through materials.** Color, softness, radius, text rhythm, and motion should unify the experience more than repeated layouts do.
+
+## Current Gaps
+
+- Search is still local/page-level; the AI `webSearchEnabled` switch is a reserved option, not real web search.
+- Sakura Radio has the core listening and admin workflow, but not playlist deletion, listening history, favorites, comments, play counts, or system media controls.
+- File management surfaces expose statistics and references, but cleanup policies and batch maintenance are not yet a full product workflow.
+- Generated OpenAPI SDK exists, while business pages still use hand-written API modules.
+- The visual cover system is now unified, but every new hero background still needs screenshot checks on desktop and mobile so the wave transition remains attached.
+- Automated frontend testing is still thin compared with the number of interactive surfaces.
 
 ## Accessibility & Inclusion
 
