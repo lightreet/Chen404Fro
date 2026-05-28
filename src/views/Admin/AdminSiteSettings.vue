@@ -291,7 +291,7 @@ import { useSiteConfig } from '@/composables/useSiteConfig';
 import type { SiteConfig } from '@/types';
 import { DEFAULT_IMAGE_MAX_MB, validateImageFile } from '@/utils/validation';
 
-type HeroKey = 'home' | 'archive' | 'memory-map' | 'trust-request' | 'category' | 'tag' | 'about' | 'guestbook';
+type HeroKey = 'home' | 'archive' | 'memory-map' | 'trust-request' | 'music' | 'category' | 'about' | 'guestbook';
 type AssetKey = 'siteLogo' | 'siteFavicon';
 type UploadingKey = HeroKey | AssetKey | '';
 
@@ -300,8 +300,8 @@ const heroPages: Array<{ key: HeroKey; label: string; desc: string }> = [
   { key: 'home', label: '首页', desc: '首页主视觉封面' },
   { key: 'archive', label: '时光轴', desc: '时光轴页面顶部封面' },
   { key: 'memory-map', label: '旅行地图', desc: '旅行纪念地图页面顶部封面' },
+  { key: 'music', label: '音乐馆', desc: '音乐馆页面顶部封面' },
   { key: 'category', label: '分类页', desc: '分类列表顶部封面' },
-  { key: 'tag', label: '标签页', desc: '标签云顶部封面（当前无主导航入口）' },
   { key: 'about', label: '关于页', desc: '关于页面顶部封面' },
   { key: 'guestbook', label: '留言板', desc: '留言板顶部封面' },
 ];
@@ -310,8 +310,8 @@ const HERO_DEFAULT_POSITIONS: Record<HeroKey, string> = {
   archive: '50% 44%',
   'memory-map': '50% 48%',
   'trust-request': '50% 48%',
+  music: '50% 52%',
   category: '50% 40%',
-  tag: '50% 38%',
   about: '50% 42%',
   guestbook: '50% 40%',
 };
@@ -345,8 +345,8 @@ const heroImages = reactive<Record<HeroKey, string>>({
   archive: '',
   'memory-map': '',
   'trust-request': '',
+  music: '',
   category: '',
-  tag: '',
   about: '',
   guestbook: '',
 });
@@ -355,8 +355,8 @@ const heroImagePositions = reactive<Record<HeroKey, string>>({
   archive: HERO_DEFAULT_POSITIONS.archive,
   'memory-map': HERO_DEFAULT_POSITIONS['memory-map'],
   'trust-request': HERO_DEFAULT_POSITIONS['trust-request'],
+  music: HERO_DEFAULT_POSITIONS.music,
   category: HERO_DEFAULT_POSITIONS.category,
-  tag: HERO_DEFAULT_POSITIONS.tag,
   about: HERO_DEFAULT_POSITIONS.about,
   guestbook: HERO_DEFAULT_POSITIONS.guestbook,
 });
@@ -380,8 +380,8 @@ function applyConfig(config: SiteConfig) {
   heroImages.archive = config.heroImages?.archive ?? '';
   heroImages['memory-map'] = config.heroImages?.['memory-map'] ?? '';
   heroImages['trust-request'] = config.heroImages?.['trust-request'] ?? '';
+  heroImages.music = config.heroImages?.music ?? '';
   heroImages.category = config.heroImages?.category ?? '';
-  heroImages.tag = config.heroImages?.tag ?? '';
   heroImages.about = config.heroImages?.about ?? '';
   heroImages.guestbook = config.heroImages?.guestbook ?? '';
 
@@ -391,8 +391,8 @@ function applyConfig(config: SiteConfig) {
     config.heroImagePositions?.['memory-map'] ?? HERO_DEFAULT_POSITIONS['memory-map'];
   heroImagePositions['trust-request'] =
     config.heroImagePositions?.['trust-request'] ?? HERO_DEFAULT_POSITIONS['trust-request'];
+  heroImagePositions.music = config.heroImagePositions?.music ?? HERO_DEFAULT_POSITIONS.music;
   heroImagePositions.category = config.heroImagePositions?.category ?? HERO_DEFAULT_POSITIONS.category;
-  heroImagePositions.tag = config.heroImagePositions?.tag ?? HERO_DEFAULT_POSITIONS.tag;
   heroImagePositions.about = config.heroImagePositions?.about ?? HERO_DEFAULT_POSITIONS.about;
   heroImagePositions.guestbook = config.heroImagePositions?.guestbook ?? HERO_DEFAULT_POSITIONS.guestbook;
 }
@@ -417,8 +417,8 @@ function toPayload(): SiteConfig {
       archive: heroImages.archive.trim(),
       'memory-map': heroImages['memory-map'].trim(),
       'trust-request': heroImages['trust-request'].trim(),
+      music: heroImages.music.trim(),
       category: heroImages.category.trim(),
-      tag: heroImages.tag.trim(),
       about: heroImages.about.trim(),
       guestbook: heroImages.guestbook.trim(),
     },
@@ -427,8 +427,8 @@ function toPayload(): SiteConfig {
       archive: heroImagePositions.archive.trim(),
       'memory-map': heroImagePositions['memory-map'].trim(),
       'trust-request': heroImagePositions['trust-request'].trim(),
+      music: heroImagePositions.music.trim(),
       category: heroImagePositions.category.trim(),
-      tag: heroImagePositions.tag.trim(),
       about: heroImagePositions.about.trim(),
       guestbook: heroImagePositions.guestbook.trim(),
     },

@@ -250,16 +250,13 @@
                   <el-form-item label="歌单名称">
                     <el-input v-model="playlistForm.name" maxlength="120" placeholder="今日电台 / 夜读 / 写代码" />
                   </el-form-item>
-                  <el-form-item label="排序">
-                    <el-input-number v-model="playlistForm.sortOrder" :min="0" :max="9999" controls-position="right" />
+                  <el-form-item label="封面地址">
+                    <el-input v-model="playlistForm.coverUrl" clearable placeholder="可选，填写图片 URL" />
                   </el-form-item>
                 </div>
                 <div class="playlist-form-grid playlist-form-grid--wide">
                   <el-form-item label="描述">
                     <el-input v-model="playlistForm.description" maxlength="500" placeholder="这张歌单适合怎样的夜晚？" />
-                  </el-form-item>
-                  <el-form-item label="封面地址">
-                    <el-input v-model="playlistForm.coverUrl" clearable placeholder="可选，填写图片 URL" />
                   </el-form-item>
                 </div>
                 <el-form-item label="开场文案">
@@ -634,7 +631,6 @@ function editPlaylist(playlist: MusicPlaylist) {
     openingText: playlist.openingText || '',
     defaultPlaylist: Boolean(playlist.defaultPlaylist),
     publicPlaylist: playlist.publicPlaylist !== false,
-    sortOrder: playlist.sortOrder ?? 0,
   })
   selectedPlaylistIds.value = (playlist.tracks ?? []).map((track) => track.id)
 }
@@ -763,7 +759,6 @@ function createEmptyPlaylistForm(): MusicPlaylistUpsertCommand {
     openingText: '',
     defaultPlaylist: false,
     publicPlaylist: true,
-    sortOrder: 0,
   }
 }
 </script>

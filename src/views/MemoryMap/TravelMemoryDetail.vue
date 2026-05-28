@@ -1,19 +1,18 @@
 <template>
-  <DefaultLayout :wide-content="true" :show-live2-d="false">
+  <DefaultLayout :wide-content="true" :show-live2-d="false" :show-header="false">
     <div class="travel-memory-detail-page">
+      <div v-if="detail" class="travel-memory-detail__toolbar">
+        <div class="travel-memory-detail__toolbar-inner">
+          <button type="button" class="travel-memory-detail__back" @click="goBack">
+            <el-icon><ArrowLeft /></el-icon>
+            <span>返回</span>
+          </button>
+        </div>
+      </div>
+
       <el-skeleton v-if="loading" :rows="12" animated />
 
       <section v-else-if="detail" class="travel-memory-detail-sheet">
-        <div class="travel-memory-detail__toolbar">
-          <el-button text class="travel-memory-detail__back" @click="goBack">
-            <el-icon><ArrowLeft /></el-icon>
-            返回
-          </el-button>
-          <el-button text class="travel-memory-detail__map-link" @click="router.push('/memory-map')">
-            回到旅行地图
-          </el-button>
-        </div>
-
         <article class="travel-memory-polaroid-hero">
           <div class="travel-memory-polaroid-hero__gallery" aria-label="旅行照片相册">
             <div v-if="photoSlides.length" class="travel-memory-polaroid-stage">
@@ -580,6 +579,7 @@ onMounted(() => {
 .travel-memory-detail-page {
   width: min(1180px, calc(100vw - 72px));
   margin: clamp(18px, 2.4vw, 34px) auto 64px;
+  padding-top: 98px;
 }
 
 .travel-memory-detail-sheet {
@@ -609,10 +609,61 @@ onMounted(() => {
   background-size: 34px 34px;
 }
 
-.travel-memory-detail__toolbar,
 .travel-memory-story {
   position: relative;
   z-index: 1;
+}
+
+.travel-memory-detail__toolbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 285;
+  padding:
+    calc(11px + env(safe-area-inset-top, 0))
+    calc(36px + env(safe-area-inset-right, 0))
+    11px
+    calc(36px + env(safe-area-inset-left, 0));
+  border-bottom: 1px solid rgba(239, 211, 220, 0.9);
+  background: rgba(255, 250, 253, 0.76);
+  box-shadow: 0 8px 30px rgba(164, 96, 124, 0.1);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+.travel-memory-detail__toolbar-inner {
+  width: min(1180px, calc(100vw - 72px));
+  min-height: 54px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 16px;
+}
+
+.travel-memory-detail__back,
+.travel-memory-detail__map-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #8f6b78;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 700;
+  transition:
+    color 0.2s ease,
+    transform 0.2s ease;
+}
+
+.travel-memory-detail__back:hover,
+.travel-memory-detail__map-link:hover {
+  color: #ff5e99;
+  transform: translateY(-1px);
 }
 
 .travel-memory-story {
@@ -1261,11 +1312,25 @@ onMounted(() => {
 @media (max-width: 640px) {
   .travel-memory-detail-page {
     width: min(1120px, calc(100vw - 20px));
+    padding-top: 82px;
   }
 
   .travel-memory-detail-sheet {
     padding: 14px;
     border-radius: 24px;
+  }
+
+  .travel-memory-detail__toolbar {
+    padding:
+      calc(9px + env(safe-area-inset-top, 0))
+      calc(10px + env(safe-area-inset-right, 0))
+      9px
+      calc(10px + env(safe-area-inset-left, 0));
+  }
+
+  .travel-memory-detail__toolbar-inner {
+    width: min(100vw - 20px, 100%);
+    min-height: 42px;
   }
 
   .travel-memory-polaroid-hero {

@@ -2,10 +2,10 @@
   <div class="default-layout">
     <SakuraOverlay />
     <!-- 顶部导航 -->
-    <Header />
+    <Header v-if="showHeader" />
 
     <!-- 主内容区 -->
-    <main class="main-content">
+    <main class="main-content" :class="{ 'has-no-site-header': !showHeader }">
       <!-- 可选：全宽 Hero 插槽（用于首页等） -->
       <slot name="hero" />
       <div class="container">
@@ -48,12 +48,14 @@ interface Props {
   showRightSidebar?: boolean;
   wideContent?: boolean;
   showLive2D?: boolean;
+  showHeader?: boolean;
 }
 
 withDefaults(defineProps<Props>(), {
   showRightSidebar: false,
   wideContent: false,
   showLive2D: true,
+  showHeader: true,
 });
 
 const { isMobile } = useLayoutMobile();
@@ -72,6 +74,10 @@ const { isMobile } = useLayoutMobile();
   padding-top: calc(64px + 24px);
   padding-bottom: 24px;
   overflow: clip;
+}
+
+.main-content.has-no-site-header {
+  padding-top: 0;
 }
 
 .main-content:has([data-hero]) {
