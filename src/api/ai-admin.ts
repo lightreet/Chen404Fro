@@ -1,4 +1,4 @@
-import { get, post, put } from './request';
+import { AI_REQUEST_TIMEOUT_MESSAGE, AI_REQUEST_TIMEOUT_MS, get, post, put } from './request';
 import type { AiAdminConfig, AiConfigTestRequest, AiConfigTestResponse } from '@/types';
 
 const AI_CONFIG_PATH = '/admin/ai/config';
@@ -12,5 +12,8 @@ export function updateAiAdminConfig(data: AiAdminConfig): Promise<AiAdminConfig>
 }
 
 export function testAiAdminConfig(data: AiConfigTestRequest): Promise<AiConfigTestResponse> {
-  return post(`${AI_CONFIG_PATH}/test-connection`, data);
+  return post(`${AI_CONFIG_PATH}/test-connection`, data, {
+    timeout: AI_REQUEST_TIMEOUT_MS,
+    timeoutErrorMessage: AI_REQUEST_TIMEOUT_MESSAGE,
+  });
 }

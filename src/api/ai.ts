@@ -1,4 +1,4 @@
-import { get, post } from './request';
+import { AI_REQUEST_TIMEOUT_MESSAGE, AI_REQUEST_TIMEOUT_MS, get, post } from './request';
 import type {
   AiArticleAssistRequest,
   AiArticleAssistResponse,
@@ -20,11 +20,17 @@ export type AiChatStreamEvent =
   | { event: 'error'; data: { message: string } };
 
 export function generateArticleAiAssist(data: AiArticleAssistRequest): Promise<AiArticleAssistResponse> {
-  return post('/articles/ai/assist', data);
+  return post('/articles/ai/assist', data, {
+    timeout: AI_REQUEST_TIMEOUT_MS,
+    timeoutErrorMessage: AI_REQUEST_TIMEOUT_MESSAGE,
+  });
 }
 
 export function sendMaidChat(data: AiChatRequest): Promise<AiChatResponse> {
-  return post('/ai/chat', data);
+  return post('/ai/chat', data, {
+    timeout: AI_REQUEST_TIMEOUT_MS,
+    timeoutErrorMessage: AI_REQUEST_TIMEOUT_MESSAGE,
+  });
 }
 
 export function getMaidChatSessionDetail(sessionId: string, visitorId?: string): Promise<AiChatSessionDetailResponse> {

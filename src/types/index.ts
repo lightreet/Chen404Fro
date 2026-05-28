@@ -328,9 +328,14 @@ export interface MusicTrackUpsertCommand {
 export interface MusicTrackAiSuggestRequest {
   title: string;
   artist?: string;
+  album?: string;
+  releaseYear?: number;
+  language?: string;
+  genre?: string;
+  limit?: number;
 }
 
-export interface MusicTrackAiSuggestResponse {
+export interface MusicTrackAiCandidate {
   title?: string;
   artist?: string;
   album?: string;
@@ -341,6 +346,12 @@ export interface MusicTrackAiSuggestResponse {
   recommendation?: string;
   moodText?: string;
   lyricSource?: string;
+  confidence?: 'high' | 'medium' | 'low' | string;
+  matchReason?: string;
+}
+
+export interface MusicTrackAiSuggestResponse {
+  candidates: MusicTrackAiCandidate[];
 }
 
 export interface MusicPlaylistUpsertCommand {

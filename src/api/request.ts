@@ -6,6 +6,7 @@ import { ElMessage } from 'element-plus';
 export interface RequestConfig extends AxiosRequestConfig {
   suppressErrorMessage?: boolean;
   skipAuthRedirect?: boolean;
+  timeoutErrorMessage?: string;
 }
 
 // 创建 axios 实例
@@ -16,6 +17,9 @@ const request: AxiosInstance = axios.create({
     'Content-Type': 'application/json',
   },
 });
+
+export const AI_REQUEST_TIMEOUT_MS = 60000;
+export const AI_REQUEST_TIMEOUT_MESSAGE = 'AI 生成耗时较久已超时，请稍后重试，或补充更多条件后再试。';
 
 let isRefreshing = false;
 let refreshWaiters: Array<(token: string) => void> = [];
@@ -41,6 +45,16 @@ function shouldSuppressError(config?: AxiosRequestConfig) {
 
 function shouldSkipAuthRedirect(config?: AxiosRequestConfig) {
   return Boolean((config as RequestConfig | undefined)?.skipAuthRedirect);
+}
+
+function isTimeoutError(error: unknown) {
+  const candidate = error as { code?: string; message?: string } | undefined;
+  return candidate?.code === 'ECONNABORTED'
+    || String(candidate?.message || '').toLowerCase().includes('timeout');
+}
+
+function resolveTimeoutErrorMessage(config?: AxiosRequestConfig) {
+  return (config as RequestConfig | undefined)?.timeoutErrorMessage || '请求超时，请稍后重试';
 }
 
 export function performTokenRefreshRequest(refreshToken: string): Promise<TokenRefreshResult> {
@@ -85,6 +99,12 @@ function installRequestInterceptors(client: AxiosInstance, options: InterceptorI
     },
     (error) => {
       const { response } = error;
+      if (isTimeoutError(error)) {
+        if (!shouldSuppressError(error.config)) {
+          ElMessage.warning(resolveTimeoutErrorMessage(error.config));
+        }
+        return Promise.reject(error);
+      }
 
       if (response) {
         const { status, data } = response;

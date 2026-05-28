@@ -35,7 +35,7 @@
                       :disabled="!form.title.trim() || suggestingTrack"
                       @click="suggestTrackInfo"
                     >
-                      AI 补全
+                      AI 匹配
                     </el-button>
                   </div>
                 </el-form-item>
@@ -72,6 +72,46 @@
                     @update:model-value="form.status = $event ? 'published' : 'draft'"
                   />
                 </el-form-item>
+              </div>
+              <div v-if="aiSearchTouched || aiCandidates.length" class="ai-candidate-panel">
+                <div class="ai-candidate-head">
+                  <div>
+                    <strong>AI 候选结果</strong>
+                    <p>{{ aiCandidateSummary }}</p>
+                  </div>
+                  <el-switch v-model="overwriteExistingFields" active-text="覆盖已有内容" inactive-text="只填空字段" />
+                </div>
+                <div v-if="aiCandidates.length" class="ai-candidate-list">
+                  <article
+                    v-for="(candidate, index) in aiCandidates"
+                    :key="`${candidate.title || form.title}-${candidate.artist || 'unknown'}-${index}`"
+                    class="ai-candidate-item"
+                  >
+                    <div class="candidate-rank">{{ index + 1 }}</div>
+                    <div class="candidate-main">
+                      <div class="candidate-title-line">
+                        <strong>{{ candidate.title || form.title }}</strong>
+                        <span v-if="candidate.artist">{{ candidate.artist }}</span>
+                        <em :class="`confidence-${normalizeConfidence(candidate.confidence)}`">
+                          {{ confidenceLabel(candidate.confidence) }}
+                        </em>
+                      </div>
+                      <p>{{ candidateMeta(candidate) }}</p>
+                      <div class="candidate-tags">
+                        <span v-for="tag in candidate.tags || []" :key="tag">{{ tag }}</span>
+                      </div>
+                      <small v-if="candidate.matchReason">{{ candidate.matchReason }}</small>
+                    </div>
+                    <el-button class="candidate-apply-button" @click="applyTrackCandidate(candidate)">
+                      应用
+                    </el-button>
+                  </article>
+                </div>
+                <el-empty
+                  v-else
+                  :image-size="72"
+                  description="还没有找到合适版本，补充歌手、专辑或年份后再试一次。"
+                />
               </div>
               <el-form-item label="标签">
                 <el-input v-model="tagDraft" placeholder="用逗号分隔，如 夜读, 日系, 温柔" />
@@ -211,7 +251,7 @@ import { ArrowLeft, Plus } from '@element-plus/icons-vue'
 import { useRoute, useRouter } from 'vue-router'
 import { createMusicTrack, getAdminMusicTrack, suggestMusicTrack, updateMusicTrack } from '@/api/music'
 import { uploadMusicAudio, uploadMusicCover, type UploadResult } from '@/api/upload'
-import type { MusicTrack, MusicTrackAiSuggestResponse, MusicTrackUpsertCommand } from '@/types'
+import type { MusicTrack, MusicTrackAiCandidate, MusicTrackUpsertCommand } from '@/types'
 
 const route = useRoute()
 const router = useRouter()
@@ -222,6 +262,10 @@ const saving = ref(false)
 const suggestingTrack = ref(false)
 const uploadingAudio = ref(false)
 const uploadingCover = ref(false)
+const aiCandidates = ref<MusicTrackAiCandidate[]>([])
+const aiSearchTouched = ref(false)
+const lastAiQuerySummary = ref('')
+const overwriteExistingFields = ref(false)
 const tagDraft = ref('')
 const releaseYearPicker = ref<string>()
 const audioUploadName = ref('')
@@ -246,6 +290,13 @@ const canSaveTrack = computed(() => {
     && Boolean(form.audioUrl.trim())
 })
 const previewTags = computed(() => parseTags(tagDraft.value))
+const aiCandidateSummary = computed(() => {
+  if (suggestingTrack.value) return '正在根据当前表单条件筛选版本。'
+  if (aiCandidates.value.length) {
+    return `${lastAiQuerySummary.value}，找到 ${aiCandidates.value.length} 个候选。`
+  }
+  return lastAiQuerySummary.value || '补充歌手、专辑、年份等信息后可以重新匹配。'
+})
 
 const audioUploadHint = computed(() => {
   if (uploadingAudio.value) return '音频正在上传，完成后再保存'
@@ -347,6 +398,10 @@ function resetForm() {
   uploadingAudio.value = false
   uploadingCover.value = false
   saving.value = false
+  aiCandidates.value = []
+  aiSearchTouched.value = false
+  lastAiQuerySummary.value = ''
+  overwriteExistingFields.value = false
 }
 
 async function saveTrack() {
@@ -385,30 +440,48 @@ async function suggestTrackInfo() {
   }
 
   suggestingTrack.value = true
+  aiSearchTouched.value = true
+  lastAiQuerySummary.value = buildAiQuerySummary()
   try {
-    const suggestion = await suggestMusicTrack({
+    const response = await suggestMusicTrack({
       title,
       artist: form.artist.trim() || undefined,
+      album: form.album?.trim() || undefined,
+      releaseYear: form.releaseYear,
+      language: form.language?.trim() || undefined,
+      genre: form.genre?.trim() || undefined,
+      limit: 5,
     })
-    const appliedCount = applyTrackSuggestion(suggestion)
-    if (appliedCount > 0) {
-      ElMessage.success(`AI 已补全 ${appliedCount} 项信息`)
+    aiCandidates.value = (response.candidates || []).slice(0, 5)
+    if (aiCandidates.value.length > 0) {
+      ElMessage.success(`AI 找到 ${aiCandidates.value.length} 个候选版本`)
     } else {
-      ElMessage.info('AI 找到的建议和当前内容差不多，暂时没有覆盖')
+      ElMessage.info('暂时没有找到合适版本，可以补充歌手或专辑后再匹配')
     }
   } finally {
     suggestingTrack.value = false
   }
 }
 
-function applyTrackSuggestion(suggestion: MusicTrackAiSuggestResponse) {
+function applyTrackCandidate(candidate: MusicTrackAiCandidate) {
+  const appliedCount = applyTrackSuggestion(candidate, overwriteExistingFields.value)
+  if (appliedCount > 0) {
+    ElMessage.success(`已应用 ${appliedCount} 项候选信息`)
+  } else {
+    ElMessage.info('这个候选和当前表单内容差不多')
+  }
+}
+
+function applyTrackSuggestion(suggestion: MusicTrackAiCandidate, overwrite = false) {
   let appliedCount = 0
   const applyText = (field: keyof MusicTrackUpsertCommand, value?: string) => {
-    if (!value?.trim() || String(form[field] || '').trim()) return
+    if (!value?.trim()) return
+    if (!overwrite && String(form[field] || '').trim()) return
     ;(form[field] as string | undefined) = value.trim()
     appliedCount += 1
   }
 
+  applyText('title', suggestion.title)
   applyText('artist', suggestion.artist)
   applyText('album', suggestion.album)
   applyText('language', suggestion.language)
@@ -417,18 +490,54 @@ function applyTrackSuggestion(suggestion: MusicTrackAiSuggestResponse) {
   applyText('moodText', suggestion.moodText)
   applyText('lyricSource', suggestion.lyricSource)
 
-  if (!form.releaseYear && suggestion.releaseYear) {
+  if ((overwrite || !form.releaseYear) && suggestion.releaseYear) {
     form.releaseYear = suggestion.releaseYear
     releaseYearPicker.value = String(suggestion.releaseYear)
     appliedCount += 1
   }
 
-  if (!tagDraft.value.trim() && suggestion.tags?.length) {
+  if ((overwrite || !tagDraft.value.trim()) && suggestion.tags?.length) {
     tagDraft.value = suggestion.tags.filter(Boolean).join(', ')
     appliedCount += 1
   }
 
   return appliedCount
+}
+
+function buildAiQuerySummary() {
+  const pairs = [
+    ['歌名', form.title.trim()],
+    ['歌手', form.artist.trim()],
+    ['专辑', form.album?.trim()],
+    ['年份', form.releaseYear ? String(form.releaseYear) : ''],
+    ['语言', form.language?.trim()],
+    ['风格', form.genre?.trim()],
+  ].filter(([, value]) => Boolean(value))
+  return `基于：${pairs.map(([label, value]) => `${label}=${value}`).join('，')}`
+}
+
+function candidateMeta(candidate: MusicTrackAiCandidate) {
+  const parts = [
+    candidate.album,
+    candidate.releaseYear ? String(candidate.releaseYear) : '',
+    candidate.language,
+    candidate.genre,
+  ].filter(Boolean)
+  return parts.length ? parts.join(' / ') : '暂无更多元信息'
+}
+
+function normalizeConfidence(confidence?: string) {
+  const normalized = String(confidence || '').toLowerCase()
+  return ['high', 'medium', 'low'].includes(normalized) ? normalized : 'low'
+}
+
+function confidenceLabel(confidence?: string) {
+  const labelMap: Record<string, string> = {
+    high: '匹配度高',
+    medium: '匹配度中',
+    low: '待确认',
+  }
+  return labelMap[normalizeConfidence(confidence)]
 }
 
 async function handleAudioUpload(options: UploadRequestOptions) {
@@ -693,6 +802,138 @@ function createEmptyTrackForm(): MusicTrackUpsertCommand {
     linear-gradient(135deg, rgba(255, 105, 156, 0.96), rgba(255, 159, 188, 0.96)),
     radial-gradient(circle at 20% 20%, rgba(255, 255, 255, 0.34), transparent 34%);
   box-shadow: 0 10px 22px rgba(255, 111, 160, 0.22);
+}
+
+.ai-candidate-panel {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid rgba(239, 220, 232, 0.95);
+  border-radius: 14px;
+  background: rgba(255, 252, 254, 0.76);
+}
+
+.ai-candidate-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.ai-candidate-head strong {
+  color: #3d333b;
+  font-size: 14px;
+}
+
+.ai-candidate-head p {
+  margin-top: 3px;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.ai-candidate-list {
+  display: grid;
+  gap: 8px;
+}
+
+.ai-candidate-item {
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  padding: 11px;
+  border: 1px solid rgba(238, 226, 235, 0.92);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.74);
+}
+
+.candidate-rank {
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  color: #d96290;
+  font-size: 13px;
+  font-weight: 800;
+  background: rgba(255, 238, 246, 0.96);
+}
+
+.candidate-main {
+  min-width: 0;
+  display: grid;
+  gap: 5px;
+}
+
+.candidate-title-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex-wrap: wrap;
+}
+
+.candidate-title-line strong {
+  color: #352b33;
+  font-size: 14px;
+}
+
+.candidate-title-line span,
+.candidate-main p,
+.candidate-main small {
+  color: #897b86;
+}
+
+.candidate-title-line span,
+.candidate-main p {
+  font-size: 12px;
+}
+
+.candidate-title-line em {
+  padding: 4px 7px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 800;
+}
+
+.confidence-high {
+  color: #d45f8b;
+  background: rgba(255, 237, 246, 0.96);
+}
+
+.confidence-medium {
+  color: #9b6f2c;
+  background: rgba(255, 247, 225, 0.96);
+}
+
+.confidence-low {
+  color: #7d7480;
+  background: rgba(245, 242, 246, 0.96);
+}
+
+.candidate-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.candidate-tags span {
+  padding: 3px 7px;
+  border-radius: 999px;
+  color: #d56f95;
+  font-size: 11px;
+  background: rgba(255, 243, 248, 0.9);
+}
+
+.candidate-main small {
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.candidate-apply-button {
+  border-radius: 999px;
+  font-weight: 800;
 }
 
 .upload-field,
@@ -980,6 +1221,21 @@ function createEmptyTrackForm(): MusicTrackUpsertCommand {
   .upload-field,
   .cover-upload-row {
     grid-template-columns: 1fr;
+  }
+
+  .ai-candidate-head,
+  .ai-candidate-item {
+    align-items: stretch;
+    grid-template-columns: 1fr;
+  }
+
+  .ai-candidate-head {
+    display: grid;
+  }
+
+  .candidate-rank {
+    width: 26px;
+    height: 26px;
   }
 
   .footer-inner > div {

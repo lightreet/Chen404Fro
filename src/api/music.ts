@@ -1,4 +1,4 @@
-import { del, get, patch, post, put } from './request'
+import { AI_REQUEST_TIMEOUT_MESSAGE, AI_REQUEST_TIMEOUT_MS, del, get, patch, post, put } from './request'
 import type {
   MusicPlaylist,
   MusicPlaylistTracksCommand,
@@ -51,7 +51,10 @@ export function deleteMusicTrack(id: number | string): Promise<void> {
 }
 
 export function suggestMusicTrack(data: MusicTrackAiSuggestRequest): Promise<MusicTrackAiSuggestResponse> {
-  return post('/admin/music/tracks/ai/suggest', data)
+  return post('/admin/music/tracks/ai/suggest', data, {
+    timeout: AI_REQUEST_TIMEOUT_MS,
+    timeoutErrorMessage: AI_REQUEST_TIMEOUT_MESSAGE,
+  })
 }
 
 export function getAdminMusicPlaylists(): Promise<MusicPlaylist[]> {
