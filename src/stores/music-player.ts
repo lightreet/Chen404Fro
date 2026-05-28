@@ -17,6 +17,8 @@ export const useMusicPlayerStore = defineStore('music-player', () => {
   const loading = ref(false)
   const duration = ref(0)
   const currentTime = ref(0)
+  const isSeeking = ref(false)
+  const seekPreviewTime = ref(0)
   const volume = ref(Number(window.localStorage.getItem(STORAGE_VOLUME_KEY) ?? '0.72'))
   const mode = ref<MusicPlayMode>((window.localStorage.getItem(STORAGE_MODE_KEY) as MusicPlayMode) || 'sequence')
   const audio = new Audio()
@@ -28,8 +30,10 @@ export const useMusicPlayerStore = defineStore('music-player', () => {
   })
 
   const hasQueue = computed(() => queue.value.length > 0)
+  const playbackTime = computed(() => (isSeeking.value ? seekPreviewTime.value : currentTime.value))
 
   audio.addEventListener('timeupdate', () => {
+    if (isSeeking.value) return
     currentTime.value = audio.currentTime || 0
   })
 
@@ -95,6 +99,7 @@ export const useMusicPlayerStore = defineStore('music-player', () => {
       audio.src = track.audioUrl
       currentTime.value = 0
       duration.value = 0
+      resetSeekState()
     }
     await audio.play()
     playing.value = true
@@ -109,6 +114,7 @@ export const useMusicPlayerStore = defineStore('music-player', () => {
     audio.pause()
     playing.value = false
     currentTime.value = 0
+    resetSeekState()
   }
 
   async function toggle() {
@@ -148,8 +154,32 @@ export const useMusicPlayerStore = defineStore('music-player', () => {
   }
 
   function seek(value: number) {
-    audio.currentTime = value
-    currentTime.value = value
+    const nextValue = clampSeekValue(value)
+    audio.currentTime = nextValue
+    currentTime.value = nextValue
+    seekPreviewTime.value = nextValue
+    isSeeking.value = false
+  }
+
+  function previewSeek(value: number) {
+    isSeeking.value = true
+    seekPreviewTime.value = clampSeekValue(value)
+  }
+
+  function cancelSeek() {
+    resetSeekState()
+  }
+
+  function resetSeekState() {
+    isSeeking.value = false
+    seekPreviewTime.value = currentTime.value
+  }
+
+  function clampSeekValue(value: number) {
+    if (!Number.isFinite(value)) {
+      return 0
+    }
+    return Math.min(Math.max(0, value), Math.max(duration.value, 0))
   }
 
   function setVolume(value: number) {
@@ -172,6 +202,8 @@ export const useMusicPlayerStore = defineStore('music-player', () => {
     loading,
     duration,
     currentTime,
+    playbackTime,
+    isSeeking,
     volume,
     mode,
     hasQueue,
@@ -183,7 +215,9 @@ export const useMusicPlayerStore = defineStore('music-player', () => {
     toggle,
     next,
     previous,
+    previewSeek,
     seek,
+    cancelSeek,
     setVolume,
     setMode,
   }

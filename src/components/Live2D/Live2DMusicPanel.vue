@@ -37,12 +37,13 @@
     </div>
 
     <div class="music-panel__progress">
-      <span>{{ formatTime(player.currentTime) }}</span>
+      <span>{{ formatTime(player.playbackTime) }}</span>
       <el-slider
-        :model-value="player.currentTime"
+        :model-value="player.playbackTime"
         :max="Math.max(player.duration, 1)"
         :show-tooltip="false"
         size="small"
+        @input="handleSeekPreview"
         @change="handleSeek"
       />
       <span>{{ formatTime(player.duration) }}</span>
@@ -68,6 +69,10 @@ async function togglePlay() {
 
 function handleSeek(value: number | number[]) {
   player.seek(Array.isArray(value) ? value[0] : value)
+}
+
+function handleSeekPreview(value: number | number[]) {
+  player.previewSeek(Array.isArray(value) ? value[0] : value)
 }
 
 function formatTime(value: number) {
