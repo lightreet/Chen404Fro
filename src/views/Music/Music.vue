@@ -32,10 +32,6 @@
         <div class="radio-panel__body">
           <div class="radio-panel__topline">
             <span class="eyebrow">Now Playing</span>
-            <div v-if="canManage" class="radio-panel__admin-actions">
-              <el-button type="primary" plain :icon="Plus" @click="openCreateTrack">新增歌曲</el-button>
-              <el-button plain @click="openPlaylistManager">管理歌单</el-button>
-            </div>
           </div>
 
           <div class="radio-panel__title-row">
@@ -106,27 +102,31 @@
         </div>
       </section>
 
-      <section class="playlist-strip">
-        <button
-          v-for="playlist in playlists"
-          :key="playlist.id || playlist.name"
-          type="button"
-          class="playlist-chip"
-          :class="{ 'is-active': player.currentPlaylist?.id === playlist.id }"
-          @click="selectPlaylist(playlist)"
-        >
-          <strong>{{ playlist.name }}</strong>
-          <span>{{ getPlaylistTrackCount(playlist) }} 首</span>
-        </button>
-      </section>
-
       <section class="music-shelf">
         <div class="shelf-heading">
           <div>
             <span class="eyebrow">Record Shelf</span>
-            <h2>当前音乐</h2>
+            <h2>音乐列表</h2>
           </div>
-          <el-button v-if="canManage" :icon="Refresh" plain @click="loadMusic">重新加载</el-button>
+          <div v-if="canManage" class="shelf-heading__actions">
+            <el-button type="primary" plain :icon="Plus" @click="openCreateTrack">新增歌曲</el-button>
+            <el-button plain @click="openPlaylistManager">管理歌单</el-button>
+            <el-button :icon="Refresh" plain @click="loadMusic">重新加载</el-button>
+          </div>
+        </div>
+
+        <div class="playlist-strip">
+          <button
+            v-for="playlist in playlists"
+            :key="playlist.id || playlist.name"
+            type="button"
+            class="playlist-chip"
+            :class="{ 'is-active': player.currentPlaylist?.id === playlist.id }"
+            @click="selectPlaylist(playlist)"
+          >
+            <strong>{{ playlist.name }}</strong>
+            <span>{{ getPlaylistTrackCount(playlist) }} 首</span>
+          </button>
         </div>
 
         <div v-if="loading" class="music-state">Sakura Radio 正在调频...</div>
@@ -168,43 +168,94 @@
 
             <transition name="track-detail-fade">
               <div v-if="expandedTrackId === track.id" class="track-detail">
-                <button type="button" class="track-detail__play" @click="playTrack(track)">
-                  <span>{{ activeTrack?.id === track.id ? '当前歌曲' : '播放这首' }}</span>
-                </button>
+                <el-dropdown
+                  v-if="canManage"
+                  class="track-detail__menu"
+                  trigger="click"
+                  popper-class="track-detail-dropdown"
+                  @command="(command) => handleTrackDetailCommand(command, track)"
+                >
+                  <button type="button" class="track-detail__menu-trigger" title="更多操作" @click.stop>
+                    <el-icon><MoreFilled /></el-icon>
+                  </button>
+                  <template #dropdown>
+                    <el-dropdown-menu>
+                      <el-dropdown-item command="edit">编辑歌曲</el-dropdown-item>
+                      <el-dropdown-item command="delete" divided>删除歌曲</el-dropdown-item>
+                    </el-dropdown-menu>
+                  </template>
+                </el-dropdown>
+
                 <div class="track-detail__main">
-                  <div class="track-detail__cover">
-                    <img v-if="track.coverUrl" :src="track.coverUrl" :alt="track.title" />
-                    <span v-else>RADIO</span>
-                  </div>
-                  <div class="track-detail__content">
+                  <section class="track-detail__identity">
                     <div class="track-detail__title">
                       <div>
                         <strong>{{ track.title }}</strong>
                         <p>{{ track.artist }}{{ track.album ? ` · ${track.album}` : '' }}</p>
                       </div>
-                      <div v-if="canManage" class="track-detail__actions">
-                        <button type="button" class="track-detail__icon" title="编辑" @click.stop="openEditTrack(track)">
-                          <el-icon><EditPen /></el-icon>
-                        </button>
-                        <button type="button" class="track-detail__icon track-detail__icon--danger" title="删除" @click.stop="removeTrack(track)">
-                          <el-icon><Delete /></el-icon>
-                        </button>
-                      </div>
                     </div>
+
+                    <button
+                      type="button"
+                      class="track-detail__cover"
+                      :title="activeTrack?.id === track.id ? '正在播放这首歌' : '播放这首歌'"
+                      @click="playTrack(track)"
+                    >
+                      <span class="track-detail__record" aria-hidden="true"></span>
+                      <span class="track-detail__cover-frame">
+                        <img v-if="track.coverUrl" :src="track.coverUrl" :alt="track.title" />
+                        <span v-else>RADIO</span>
+                      </span>
+                    </button>
+                  </section>
+
+                  <section class="track-detail__content">
+                    <span v-if="track.moodText" class="track-detail__mood">{{ track.moodText }}</span>
+
+                    <p class="track-detail__note">{{ track.recommendation || 'Lyra 还在等这首歌的推荐语。' }}</p>
 
                     <div class="track-detail__tags">
                       <span v-if="canManage" class="track-detail__status">{{ statusLabel(track.status) }}</span>
                       <span v-for="tag in track.tags.slice(0, 5)" :key="tag">{{ tag }}</span>
                     </div>
 
-                    <p class="track-detail__note">{{ track.recommendation || track.moodText || 'Lyra 还在等这首歌的推荐语。' }}</p>
                     <div class="track-detail__info">
-                      <span v-if="track.genre">风格：{{ track.genre }}</span>
-                      <span v-if="track.language">语言：{{ track.language }}</span>
-                      <span v-if="track.releaseYear">年份：{{ track.releaseYear }}</span>
-                      <span>时长：{{ formatTrackDuration(track) }}</span>
+                      <span v-if="track.genre">
+                        <small>STYLE</small>
+                        <strong>{{ track.genre }}</strong>
+                      </span>
+                      <span v-if="track.language">
+                        <small>LANG</small>
+                        <strong>{{ track.language }}</strong>
+                      </span>
+                      <span v-if="track.releaseYear">
+                        <small>YEAR</small>
+                        <strong>{{ track.releaseYear }}</strong>
+                      </span>
+                      <span>
+                        <small>LENGTH</small>
+                        <strong>{{ formatTrackDuration(track) }}</strong>
+                      </span>
                     </div>
-                  </div>
+                  </section>
+
+                  <aside class="track-detail__lyrics">
+                    <div class="track-detail__lyrics-head">
+                      <strong>歌词预览</strong>
+                      <span>{{ track.lyricType === 'lrc' ? 'LRC' : '歌词' }}</span>
+                    </div>
+                    <div class="track-detail__lyrics-lines">
+                      <p v-if="getTrackLyricPreview(track).length === 0" class="is-empty">这首歌还没有写下歌词。</p>
+                      <p
+                        v-for="line in getTrackLyricPreview(track)"
+                        :key="line.key"
+                        :class="{ 'is-current': line.current }"
+                      >
+                        {{ line.text }}
+                      </p>
+                    </div>
+                    <p v-if="track.lyricSource" class="track-detail__lyric-source">歌词来源：{{ track.lyricSource }}</p>
+                  </aside>
                 </div>
               </div>
             </transition>
@@ -409,7 +460,7 @@
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Back, Delete, EditPen, Plus, Refresh, Right, VideoPause, VideoPlay } from '@element-plus/icons-vue'
+import { Back, MoreFilled, Plus, Refresh, Right, VideoPause, VideoPlay } from '@element-plus/icons-vue'
 import { useRouter } from 'vue-router'
 import DefaultLayout from '@/layouts/DefaultLayout.vue'
 import PageHero from '@/components/PageHero/PageHero.vue'
@@ -523,6 +574,41 @@ const activeLyricLines = computed<LyricLine[]>(() => {
     current: Math.max(0, currentIndex - 1) + offset === currentIndex,
   }))
 })
+
+function getTrackLyricPreview(track: MusicTrack): LyricLine[] {
+  const lyrics = track.lyrics?.trim()
+  if (!lyrics) return []
+
+  if (track.lyricType !== 'lrc') {
+    return lyrics.split('\n').filter(Boolean).map((text, index) => ({
+      key: `${track.id}-plain-${index}`,
+      text,
+      current: activeTrack.value?.id === track.id && index === 0,
+    }))
+  }
+
+  const lines = parseLrc(lyrics)
+  if (!lines.length) return []
+
+  if (activeTrack.value?.id !== track.id) {
+    return lines.map((line) => ({
+      ...line,
+      key: `${track.id}-${line.key}`,
+      current: false,
+    }))
+  }
+
+  let currentIndex = 0
+  for (let i = 0; i < lines.length; i++) {
+    if ((lines[i].time ?? 0) <= player.playbackTime) currentIndex = i
+  }
+
+  return lines.map((line, index) => ({
+    ...line,
+    key: `${track.id}-${line.key}`,
+    current: index === currentIndex,
+  }))
+}
 
 watch(
   activeTrack,
@@ -658,6 +744,16 @@ function openCreateTrack() {
 
 function openEditTrack(track: MusicTrack) {
   void router.push(`/music/tracks/${track.id}/edit`)
+}
+
+function handleTrackDetailCommand(command: string | number | object, track: MusicTrack) {
+  if (command === 'edit') {
+    openEditTrack(track)
+    return
+  }
+  if (command === 'delete') {
+    void removeTrack(track)
+  }
 }
 
 async function removeTrack(track: MusicTrack) {
@@ -1001,7 +1097,7 @@ function createEmptyPlaylistForm(): MusicPlaylistUpsertCommand {
 }
 
 .radio-panel__meta,
-.radio-panel__admin-actions,
+.shelf-heading__actions,
 .track-card__actions,
 .playlist-switches,
 .playlist-editor__title,
@@ -1043,7 +1139,7 @@ function createEmptyPlaylistForm(): MusicPlaylistUpsertCommand {
   gap: 16px;
 }
 
-.radio-panel__admin-actions {
+.shelf-heading__actions {
   gap: 8px;
   flex-wrap: wrap;
   justify-content: flex-end;
@@ -1351,52 +1447,128 @@ function createEmptyPlaylistForm(): MusicPlaylistUpsertCommand {
 }
 
 .track-detail {
+  position: relative;
+  padding: 18px;
   border-top: 1px solid rgba(241, 223, 231, 0.92);
-  background:
-    linear-gradient(180deg, rgba(255, 250, 252, 0.98), rgba(255, 247, 251, 0.9)),
-    radial-gradient(circle at 92% 8%, rgba(255, 204, 223, 0.18), transparent 28%);
+  background: linear-gradient(180deg, rgba(255, 254, 254, 0.98), rgba(255, 252, 253, 0.94));
 }
 
-.track-detail__play {
-  width: 100%;
-  display: flex;
-  justify-content: flex-start;
-  padding: 12px 14px 0;
+.track-detail__menu {
+  position: absolute;
+  z-index: 4;
+  top: 22px;
+  right: 22px;
+}
+
+.track-detail__menu-trigger {
+  width: 38px;
+  height: 38px;
   border: 0;
-  background: transparent;
-  color: #d46d96;
-  font-weight: 800;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  color: #b2778d;
+  background: rgba(255, 254, 254, 0.92);
+  box-shadow: 0 12px 24px rgba(167, 133, 148, 0.12);
   cursor: pointer;
+  transition: transform 0.2s ease, color 0.2s ease, background 0.2s ease;
+}
+
+.track-detail__menu-trigger:hover {
+  color: #d56f95;
+  background: rgba(255, 249, 252, 0.98);
+  transform: translateY(-1px);
 }
 
 .track-detail__main {
   display: grid;
-  grid-template-columns: 180px minmax(0, 1fr);
-  gap: 14px;
-  padding: 14px;
+  grid-template-columns: 220px minmax(0, 1fr) minmax(260px, 300px);
+  gap: 22px;
+  align-items: start;
+  min-width: 0;
+}
+
+.track-detail__identity {
+  display: grid;
+  gap: 18px;
+  min-width: 0;
+}
+
+.track-detail__title {
+  min-width: 0;
+  padding-right: 42px;
+  padding-left: clamp(18px, 1.5vw, 28px);
+}
+
+.track-detail__title strong {
+  display: block;
+  overflow: hidden;
+  color: #4f3c46;
+  font-size: 26px;
+  line-height: 1.24;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.track-detail__title p {
+  margin: 5px 0 0;
+  overflow: hidden;
+  color: #8d7b84;
+  font-size: 16px;
+  line-height: 1.45;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .track-detail__cover {
+  position: relative;
   width: 100%;
-  min-height: 180px;
+  aspect-ratio: 1;
+  padding: 0;
   border: 0;
-  border-radius: 18px;
-  overflow: hidden;
   display: grid;
   place-items: center;
   color: #cf7b99;
-  background: linear-gradient(135deg, #fff0f6, #f7f9ff);
+  background: transparent;
   cursor: pointer;
 }
 
-.track-detail__cover img {
+.track-detail__record {
+  position: absolute;
+  right: -16px;
+  width: 78%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle, rgba(255, 240, 247, 0.92) 0 9%, rgba(220, 127, 166, 0.7) 10% 13%, transparent 14%),
+    repeating-radial-gradient(circle, rgba(91, 70, 83, 0.62) 0 2px, rgba(72, 56, 68, 0.58) 2px 4px);
+  box-shadow: 0 16px 34px rgba(89, 58, 75, 0.13);
+}
+
+.track-detail__cover-frame {
+  position: relative;
+  z-index: 1;
+  width: calc(100% - 18px);
+  aspect-ratio: 1;
+  overflow: hidden;
+  border: 7px solid rgba(255, 251, 253, 0.92);
+  border-radius: 24px;
+  display: grid;
+  place-items: center;
+  background:
+    radial-gradient(circle at 50% 44%, rgba(255, 255, 255, 0.22), transparent 14%),
+    linear-gradient(135deg, #fff0f6, #f7f1fb);
+  box-shadow: 0 18px 38px rgba(214, 128, 162, 0.18);
+}
+
+.track-detail__cover-frame img {
   width: 100%;
   height: 100%;
   object-fit: cover;
 }
 
-.track-detail__cover span {
-  letter-spacing: 0.12em;
+.track-detail__cover-frame > span {
+  letter-spacing: 0.14em;
   font-size: 12px;
   font-weight: 900;
 }
@@ -1404,49 +1576,43 @@ function createEmptyPlaylistForm(): MusicPlaylistUpsertCommand {
 .track-detail__content {
   min-width: 0;
   display: grid;
-  gap: 10px;
+  gap: 14px;
   align-content: start;
+  margin-top: 82px;
 }
 
-.track-detail__title {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.track-detail__title strong {
-  color: #4f3c46;
-  font-size: 18px;
-}
-
-.track-detail__title p,
-.track-detail__note {
-  margin: 0;
-  color: #8d7b84;
-  line-height: 1.65;
-}
-
-.track-detail__actions {
-  display: flex;
-  gap: 8px;
-  flex: 0 0 auto;
-}
-
-.track-detail__icon {
-  width: 30px;
-  height: 30px;
-  border: 0;
+.track-detail__mood {
+  width: fit-content;
+  max-width: 100%;
+  padding: 8px 14px;
   border-radius: 999px;
-  display: grid;
-  place-items: center;
-  color: #d56f95;
-  background: rgba(255, 242, 247, 0.92);
-  cursor: pointer;
+  color: #a86880;
+  background: rgba(255, 247, 250, 0.9);
+  font-size: 13px;
+  font-weight: 800;
 }
 
-.track-detail__icon--danger {
-  color: #bd5f69;
-  background: rgba(255, 239, 240, 0.94);
+.track-detail__note {
+  position: relative;
+  margin: 0;
+  padding: 18px 20px 18px 44px;
+  border: 1px solid rgba(242, 222, 230, 0.92);
+  border-radius: 22px;
+  color: #74606b;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(255, 252, 253, 0.92));
+  line-height: 1.8;
+}
+
+.track-detail__note::before {
+  content: "“";
+  position: absolute;
+  top: 4px;
+  left: 16px;
+  color: rgba(219, 135, 166, 0.36);
+  font-family: Georgia, serif;
+  font-size: 42px;
+  line-height: 1;
 }
 
 .track-detail__tags {
@@ -1458,8 +1624,8 @@ function createEmptyPlaylistForm(): MusicPlaylistUpsertCommand {
 .track-detail__tags span {
   padding: 5px 8px;
   border-radius: 999px;
-  color: #d56f95;
-  background: rgba(255, 243, 248, 0.96);
+  color: #c87291;
+  background: rgba(255, 248, 251, 0.94);
   font-size: 11px;
 }
 
@@ -1469,11 +1635,126 @@ function createEmptyPlaylistForm(): MusicPlaylistUpsertCommand {
 }
 
 .track-detail__info {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(84px, 1fr));
+  gap: 10px;
+}
+
+.track-detail__info span {
+  min-width: 0;
+  padding: 10px 12px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.68);
+}
+
+.track-detail__info small {
+  display: block;
+  margin-bottom: 4px;
+  color: #b79aa8;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+}
+
+.track-detail__info strong {
+  display: block;
+  overflow: hidden;
+  color: #5c4853;
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.track-detail__lyrics {
+  min-width: 0;
+  margin-top: 82px;
+  padding: 16px;
+  border: 1px solid rgba(242, 224, 232, 0.78);
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.track-detail__lyrics-head {
   display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 14px;
+}
+
+.track-detail__lyrics-head strong {
+  color: #5a4651;
+  font-size: 15px;
+}
+
+.track-detail__lyrics-head span {
+  padding: 5px 9px;
+  border-radius: 999px;
+  color: #c87291;
+  background: rgba(255, 248, 251, 0.94);
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.track-detail__lyrics-lines {
+  max-height: clamp(170px, 18vw, 240px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-right: 6px;
+  display: grid;
+  gap: 10px;
   color: #9b8792;
+  font-size: 13px;
+  line-height: 1.72;
+  scrollbar-color: rgba(216, 138, 168, 0.34) rgba(248, 242, 245, 0.72);
+  scrollbar-width: thin;
+}
+
+.track-detail__lyrics-lines::-webkit-scrollbar {
+  width: 6px;
+}
+
+.track-detail__lyrics-lines::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: rgba(216, 138, 168, 0.32);
+}
+
+.track-detail__lyrics-lines::-webkit-scrollbar-track {
+  border-radius: 999px;
+  background: rgba(248, 242, 245, 0.72);
+}
+
+.track-detail__lyrics-lines p {
+  margin: 0;
+}
+
+.track-detail__lyrics-lines p.is-current {
+  padding: 9px 12px;
+  border-radius: 14px;
+  color: #d56f95;
+  background: rgba(255, 247, 250, 0.9);
+  font-weight: 900;
+}
+
+.track-detail__lyrics-lines p.is-empty,
+.track-detail__lyric-source {
+  color: #b29ca7;
+}
+
+.track-detail__lyric-source {
+  margin: 14px 0 0;
   font-size: 12px;
+  line-height: 1.6;
+}
+
+:global(.track-detail-dropdown .el-dropdown-menu__item) {
+  color: #735c68;
+  font-weight: 700;
+}
+
+:global(.track-detail-dropdown .el-dropdown-menu__item:hover) {
+  color: #d56f95;
+  background: rgba(255, 241, 247, 0.92);
 }
 
 .track-detail-fade-enter-active,
@@ -1931,6 +2212,10 @@ function createEmptyPlaylistForm(): MusicPlaylistUpsertCommand {
     grid-template-columns: 1fr;
   }
 
+  .track-detail__main {
+    gap: 18px;
+  }
+
   .track-row__main {
     gap: 10px;
   }
@@ -1944,11 +2229,23 @@ function createEmptyPlaylistForm(): MusicPlaylistUpsertCommand {
   }
 
   .track-detail__cover {
-    min-height: 220px;
+    width: min(100%, 260px);
+    min-height: 0;
+    justify-self: center;
   }
 
   .track-detail__title {
-    flex-direction: column;
+    padding-right: 48px;
+    padding-left: 0;
+  }
+
+  .track-detail__content,
+  .track-detail__lyrics {
+    margin-top: 0;
+  }
+
+  .track-detail__info {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 </style>
