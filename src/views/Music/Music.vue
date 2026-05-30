@@ -2,9 +2,9 @@
   <DefaultLayout wide-content>
     <template #hero>
       <PageHero
-        title="Sakura Radio"
-        eyebrow="Music Room"
-        subtitle="今晚，Lyra 为你调好一首歌。"
+        title="音乐馆"
+        eyebrow="Music Hall"
+        subtitle="按分类整理每一首值得回放的歌。"
         :bg-image="heroBgImage"
         :bg-position="heroBgPosition"
         min-height="72vh"
@@ -20,7 +20,7 @@
             <div class="record-disc">
               <div class="record-disc__rings"></div>
               <img v-if="activeTrack?.coverUrl" :src="activeTrack.coverUrl" :alt="activeTrack.title" />
-              <div v-else class="radio-panel__cover-empty">Sakura<br />Radio</div>
+              <div v-else class="radio-panel__cover-empty">Music<br />Hall</div>
             </div>
           </div>
           <div class="tone-arm" :class="{ 'is-playing': player.playing }">
@@ -36,20 +36,20 @@
 
           <div class="radio-panel__title-row">
             <div>
-              <h2>{{ activeTrack?.title || 'Sakura Radio' }}</h2>
-              <p>{{ activeTrack ? `${activeTrack.artist}${activeTrack.album ? ` · ${activeTrack.album}` : ''}` : '等待第一首歌被放进电台。' }}</p>
+              <h2>{{ activeTrack?.title || '音乐馆' }}</h2>
+              <p>{{ activeTrack ? `${activeTrack.artist}${activeTrack.album ? ` · ${activeTrack.album}` : ''}` : '等待第一首歌开始播放。' }}</p>
             </div>
             <span v-if="player.currentPlaylist?.name" class="playlist-badge">{{ player.currentPlaylist.name }}</span>
           </div>
 
           <div class="radio-panel__meta">
-            <span>{{ activeTrack?.genre || 'Sakura FM' }}</span>
+            <span>{{ activeTrack?.genre || '音乐馆' }}</span>
             <span>{{ activeTrack?.language || 'Lyra Select' }}</span>
             <span>{{ player.queue.length }} 首在队列</span>
           </div>
 
           <p class="radio-panel__recommendation">
-            {{ activeTrack?.recommendation || player.currentPlaylist?.openingText || '点一张唱片，Lyra 会把它轻轻放进今晚的播放队列。' }}
+            {{ activeTrack?.recommendation || player.currentPlaylist?.openingText || '点一首歌，Lyra 会把它轻轻放进今晚的播放队列。' }}
           </p>
 
           <div class="player-controls">
@@ -106,361 +106,202 @@
         <div class="shelf-heading">
           <div>
             <span class="eyebrow">Record Shelf</span>
-            <h2>音乐列表</h2>
+            <h2>分类歌曲</h2>
           </div>
-          <div v-if="canManage" class="shelf-heading__actions">
+          <div class="shelf-heading__actions">
+            <el-input
+              v-model="playlistSearch"
+              class="playlist-manager__search"
+              clearable
+              placeholder="搜索歌曲、歌手、专辑或标签"
+            />
+            <el-segmented v-model="playlistStatusFilter" :options="playlistStatusOptions" />
             <el-button type="primary" plain :icon="Plus" @click="openCreateTrack">新增歌曲</el-button>
-            <el-button plain @click="openPlaylistManager">管理歌单</el-button>
-            <el-button :icon="Refresh" plain @click="loadMusic">重新加载</el-button>
+            <el-button :icon="Refresh" plain @click="loadMusic">刷新</el-button>
           </div>
         </div>
 
-        <div class="playlist-strip">
-          <button
-            v-for="playlist in playlists"
-            :key="playlist.id || playlist.name"
-            type="button"
-            class="playlist-chip"
-            :class="{ 'is-active': player.currentPlaylist?.id === playlist.id }"
-            @click="selectPlaylist(playlist)"
-          >
-            <strong>{{ playlist.name }}</strong>
-            <span>{{ getPlaylistTrackCount(playlist) }} 首</span>
-          </button>
-        </div>
-
-        <div v-if="loading" class="music-state">Sakura Radio 正在调频...</div>
+        <div v-if="loading" class="music-state">音乐列表加载中...</div>
         <div v-else-if="tracks.length === 0" class="music-state">
           这里还没有公开歌曲。
           <el-button v-if="canManage" type="primary" link @click="openCreateTrack">现在新增</el-button>
         </div>
-        <div v-else class="track-list-shell">
-          <article
-            v-for="(track, index) in tracks"
-            :key="track.id"
-            class="track-row"
-            :class="{
-              'is-active': activeTrack?.id === track.id,
-              'is-expanded': expandedTrackId === track.id,
-            }"
-          >
-            <button type="button" class="track-row__main" @click="toggleTrackExpanded(track.id)">
-              <span class="track-row__index">{{ String(index + 1).padStart(2, '0') }}</span>
-              <span class="track-row__cover">
-                <img v-if="track.coverUrl" :src="track.coverUrl" :alt="track.title" />
-                <span v-else>RADIO</span>
+        <div v-else class="music-category-workbench">
+          <aside class="playlist-categories">
+            <div class="playlist-categories__top">
+              <strong>分类</strong>
+              <span>{{ categoryPlaylists.length }} 个自定义分类</span>
+            </div>
+
+            <button
+              type="button"
+              class="playlist-category-card"
+              :class="{ 'is-editing': selectedCategoryId == null }"
+              @click="selectCategory(null)"
+            >
+              <span class="playlist-category-card__copy">
+                <strong>全部分类</strong>
+                <small>{{ tracks.length }} 首歌曲</small>
               </span>
-              <span class="track-row__meta">
-                <strong>{{ track.title }}</strong>
-                <span>{{ track.artist }}{{ track.album ? ` · ${track.album}` : '' }}</span>
-                <small>
-                  {{ track.genre || '音乐' }}
-                  <template v-if="track.language"> · {{ track.language }}</template>
-                  <template v-if="track.tags.length"> · {{ track.tags.slice(0, 3).join(' / ') }}</template>
-                </small>
-              </span>
-              <span class="track-row__state">
-                <span v-if="activeTrack?.id === track.id" class="track-row__playing">{{ formatPlaybackSummary(track) }}</span>
-                <span v-else class="track-row__duration">{{ formatTrackDuration(track) }}</span>
-              </span>
-              <span class="track-row__chevron" :class="{ 'is-expanded': expandedTrackId === track.id }">▾</span>
             </button>
 
-            <transition name="track-detail-fade">
-              <div v-if="expandedTrackId === track.id" class="track-detail">
-                <el-dropdown
-                  v-if="canManage"
-                  class="track-detail__menu"
-                  trigger="click"
-                  popper-class="track-detail-dropdown"
-                  @command="(command) => handleTrackDetailCommand(command, track)"
+            <button
+              v-for="playlist in categoryPlaylists"
+              :key="playlist.id || playlist.name"
+              type="button"
+              class="playlist-category-card"
+              :class="{ 'is-editing': selectedCategoryId === playlist.id }"
+              @click="selectCategory(playlist.id ?? null)"
+            >
+              <span class="playlist-category-card__copy">
+                <strong>{{ playlist.name }}</strong>
+                <small>{{ playlist.tracks?.length || 0 }} 首 · {{ playlist.publicPlaylist ? '公开' : '私密' }}</small>
+              </span>
+            </button>
+
+            <div v-if="canManage" class="playlist-categories__create">
+              <template v-if="creatingCategory">
+                <el-input v-model="categoryDraft" maxlength="120" placeholder="分类名称，例如 夜读" @keyup.enter="saveCategory" />
+                <div class="playlist-categories__create-actions">
+                  <el-button text @click="cancelCreateCategory">取消</el-button>
+                  <el-button type="primary" :loading="playlistSaving" :disabled="!categoryDraft.trim()" @click="saveCategory">
+                    保存
+                  </el-button>
+                </div>
+              </template>
+              <button v-else type="button" class="playlist-categories__new" @click="startCreateCategory">
+                <el-icon><Plus /></el-icon>
+                新增分类
+              </button>
+            </div>
+          </aside>
+
+          <main class="playlist-workspace">
+            <section class="category-track-board">
+              <div class="category-track-board__head">
+                <div>
+                  <strong>{{ selectedCategoryName }}</strong>
+                  <span>{{ filteredCategoryTracks.length }} 首歌曲</span>
+                </div>
+              </div>
+
+              <div v-if="filteredCategoryTracks.length === 0" class="playlist-library__empty">
+                当前分类下没有匹配歌曲。可以切到“全部分类”，展开歌曲后点分类按钮加入。
+              </div>
+              <div v-else class="category-track-table">
+                <div class="category-track-table__header">
+                  <span>#</span>
+                  <span>标题</span>
+                  <span>专辑</span>
+                  <span>分类</span>
+                  <span>时长</span>
+                </div>
+
+                <article
+                  v-for="(track, index) in filteredCategoryTracks"
+                  :key="track.id"
+                  class="category-track-row"
+                  :class="{ 'is-expanded': expandedManagedTrackId === track.id }"
                 >
-                  <button type="button" class="track-detail__menu-trigger" title="更多操作" @click.stop>
-                    <el-icon><MoreFilled /></el-icon>
-                  </button>
-                  <template #dropdown>
-                    <el-dropdown-menu>
-                      <el-dropdown-item command="edit">编辑歌曲</el-dropdown-item>
-                      <el-dropdown-item command="delete" divided>删除歌曲</el-dropdown-item>
-                    </el-dropdown-menu>
-                  </template>
-                </el-dropdown>
-
-                <div class="track-detail__main">
-                  <section class="track-detail__identity">
-                    <div class="track-detail__title">
-                      <div>
-                        <strong>{{ track.title }}</strong>
-                        <p>{{ track.artist }}{{ track.album ? ` · ${track.album}` : '' }}</p>
-                      </div>
-                    </div>
-
-                    <button
-                      type="button"
-                      class="track-detail__cover"
-                      :title="activeTrack?.id === track.id ? '正在播放这首歌' : '播放这首歌'"
-                      @click="playTrack(track)"
-                    >
-                      <span class="track-detail__record" aria-hidden="true"></span>
-                      <span class="track-detail__cover-frame">
+                  <button type="button" class="category-track-row__main" @click="toggleManagedTrackExpanded(track.id)">
+                    <span class="category-track-row__index">{{ String(index + 1).padStart(2, '0') }}</span>
+                    <span class="category-track-row__title">
+                      <span class="category-track-row__cover">
                         <img v-if="track.coverUrl" :src="track.coverUrl" :alt="track.title" />
-                        <span v-else>RADIO</span>
-                      </span>
-                    </button>
-                  </section>
-
-                  <section class="track-detail__content">
-                    <span v-if="track.moodText" class="track-detail__mood">{{ track.moodText }}</span>
-
-                    <p class="track-detail__note">{{ track.recommendation || 'Lyra 还在等这首歌的推荐语。' }}</p>
-
-                    <div class="track-detail__tags">
-                      <span v-if="canManage" class="track-detail__status">{{ statusLabel(track.status) }}</span>
-                      <span v-for="tag in track.tags.slice(0, 5)" :key="tag">{{ tag }}</span>
-                    </div>
-
-                    <div class="track-detail__info">
-                      <span v-if="track.genre">
-                        <small>STYLE</small>
-                        <strong>{{ track.genre }}</strong>
-                      </span>
-                      <span v-if="track.language">
-                        <small>LANG</small>
-                        <strong>{{ track.language }}</strong>
-                      </span>
-                      <span v-if="track.releaseYear">
-                        <small>YEAR</small>
-                        <strong>{{ track.releaseYear }}</strong>
+                        <span v-else>♪</span>
                       </span>
                       <span>
-                        <small>LENGTH</small>
-                        <strong>{{ formatTrackDuration(track) }}</strong>
+                        <strong>{{ track.title }}</strong>
+                        <small>{{ track.artist }}</small>
                       </span>
-                    </div>
-                  </section>
+                    </span>
+                    <span class="category-track-row__album">{{ track.album || '未填写专辑' }}</span>
+                    <span class="category-track-row__categories">
+                      {{ getTrackCategoryNames(track).join(' / ') || '无分类' }}
+                    </span>
+                    <span class="category-track-row__duration">{{ formatTrackDuration(track) }}</span>
+                    <span class="category-track-row__expand">展开</span>
+                  </button>
 
-                  <aside class="track-detail__lyrics">
-                    <div class="track-detail__lyrics-head">
-                      <strong>歌词预览</strong>
-                      <span>{{ track.lyricType === 'lrc' ? 'LRC' : '歌词' }}</span>
+                  <transition name="track-detail-fade">
+                    <div v-if="expandedManagedTrackId === track.id" class="category-track-detail">
+                      <div class="category-track-detail__cover">
+                        <img v-if="track.coverUrl" :src="track.coverUrl" :alt="track.title" />
+                        <span v-else>Music</span>
+                      </div>
+                      <div class="category-track-detail__body">
+                        <div class="category-track-detail__title">
+                          <div>
+                            <strong>{{ track.title }}</strong>
+                            <p>{{ track.artist }}{{ track.album ? ` · ${track.album}` : '' }}</p>
+                          </div>
+                          <span>{{ statusLabel(track.status) }}</span>
+                        </div>
+                        <p class="category-track-detail__note">{{ track.recommendation || track.moodText || '这首歌还没有推荐语。' }}</p>
+                        <div class="category-track-detail__chips">
+                          <span v-if="track.genre">风格：{{ track.genre }}</span>
+                          <span v-if="track.language">语言：{{ track.language }}</span>
+                          <span v-if="track.releaseYear">年份：{{ track.releaseYear }}</span>
+                          <span>歌词：{{ track.lyricType === 'lrc' ? 'LRC 时间轴' : '普通歌词' }}</span>
+                        </div>
+                        <div class="category-track-detail__chips">
+                          <template v-if="canManage">
+                            <button
+                              v-for="playlist in categoryPlaylists"
+                              :key="playlist.id || playlist.name"
+                              type="button"
+                              :class="{ 'is-active': isTrackInCategory(track.id, playlist) }"
+                              @click.stop="toggleTrackCategory(track.id, playlist)"
+                            >
+                              {{ playlist.name }}
+                            </button>
+                            <span v-if="categoryPlaylists.length === 0">先在左侧新增分类</span>
+                          </template>
+                          <template v-else>
+                            <span v-for="name in getTrackCategoryNames(track)" :key="name">{{ name }}</span>
+                            <span v-if="getTrackCategoryNames(track).length === 0">无分类</span>
+                          </template>
+                        </div>
+                        <div class="category-track-detail__actions">
+                          <el-button type="primary" plain @click="playTrack(track)">播放</el-button>
+                          <el-button v-if="canManage" plain @click="openEditTrack(track)">编辑歌曲</el-button>
+                          <el-button v-if="canManage" plain type="danger" @click="removeTrack(track)">删除歌曲</el-button>
+                          <el-button
+                            v-if="canManage && selectedCategory && !isTrackInSelectedCategory(track.id)"
+                            plain
+                            :loading="playlistSaving"
+                            @click="addTrackToSelectedCategory(track.id)"
+                          >
+                            加入当前分类
+                          </el-button>
+                          <el-button
+                            v-if="canManage && selectedCategory && isTrackInSelectedCategory(track.id)"
+                            plain
+                            type="danger"
+                            :loading="playlistSaving"
+                            @click="removeTrackFromSelectedCategory(track.id)"
+                          >
+                            移出当前分类
+                          </el-button>
+                        </div>
+                      </div>
                     </div>
-                    <div class="track-detail__lyrics-lines">
-                      <p v-if="getTrackLyricPreview(track).length === 0" class="is-empty">这首歌还没有写下歌词。</p>
-                      <p
-                        v-for="line in getTrackLyricPreview(track)"
-                        :key="line.key"
-                        :class="{ 'is-current': line.current }"
-                      >
-                        {{ line.text }}
-                      </p>
-                    </div>
-                    <p v-if="track.lyricSource" class="track-detail__lyric-source">歌词来源：{{ track.lyricSource }}</p>
-                  </aside>
-                </div>
+                  </transition>
+                </article>
               </div>
-            </transition>
-          </article>
+            </section>
+          </main>
         </div>
       </section>
-
-      <el-drawer
-        v-model="playlistDrawerVisible"
-        class="music-playlist-drawer"
-        size="min(96vw, 1080px)"
-        append-to-body
-        :with-header="false"
-      >
-        <section class="playlist-manager">
-          <header class="playlist-manager__header">
-            <div>
-              <span class="eyebrow">Playlist Desk</span>
-              <h2>整理音乐分类</h2>
-              <p>先选择或新建歌单分类，再从所有歌曲里把合适的曲目放进去。</p>
-            </div>
-            <div class="playlist-manager__summary">
-              <span>{{ adminPlaylists.length }} 个歌单</span>
-              <span>{{ tracks.length }} 首歌曲</span>
-              <span>{{ selectedPlaylistIds.length }} 已选</span>
-              <el-button text @click="playlistDrawerVisible = false">关闭</el-button>
-            </div>
-          </header>
-
-          <div class="playlist-workbench">
-            <aside class="playlist-categories" v-loading="playlistLoading">
-              <div class="playlist-categories__top">
-                <div>
-                  <strong>歌单分类</strong>
-                  <span>像整理唱片夹一样管理分类。</span>
-                </div>
-                <el-button class="playlist-categories__new" type="primary" plain :icon="Plus" @click="resetPlaylistForm">
-                  新建
-                </el-button>
-              </div>
-
-              <button
-                v-for="playlist in adminPlaylists"
-                :key="playlist.id || playlist.name"
-                type="button"
-                class="playlist-category-card"
-                :class="{ 'is-editing': playlistEditingId === playlist.id }"
-                @click="editPlaylist(playlist)"
-              >
-                <span class="playlist-category-card__cover">
-                  <img v-if="playlist.coverUrl" :src="playlist.coverUrl" :alt="playlist.name" />
-                  <span v-else>{{ playlist.name.slice(0, 2) }}</span>
-                </span>
-                <span class="playlist-category-card__copy">
-                  <strong>{{ playlist.name }}</strong>
-                  <small>
-                    {{ playlist.tracks?.length || 0 }} 首 · {{ playlist.publicPlaylist ? '公开' : '私密' }}
-                    {{ playlist.defaultPlaylist ? ' · 默认' : '' }}
-                  </small>
-                </span>
-              </button>
-
-              <div v-if="!playlistLoading && adminPlaylists.length === 0" class="playlist-categories__empty">
-                还没有歌单分类，先新建一个“今日电台”吧。
-              </div>
-            </aside>
-
-            <main class="playlist-workspace">
-              <section class="playlist-editor">
-                <div class="playlist-editor__title">
-                  <div>
-                    <strong>{{ playlistEditingId == null ? '新建歌单分类' : '编辑歌单分类' }}</strong>
-                    <span>{{ playlistEditingId == null ? '保存后会出现在公开音乐馆的歌单区。' : '修改基础信息，并继续整理歌曲顺序。' }}</span>
-                  </div>
-                  <div class="playlist-editor__tools">
-                    <el-button
-                      v-if="playlistEditingId != null && !playlistForm.defaultPlaylist"
-                      text
-                      @click="markEditingPlaylistDefault"
-                    >
-                      设为默认
-                    </el-button>
-                    <el-button text @click="resetPlaylistForm">清空</el-button>
-                  </div>
-                </div>
-
-                <div class="playlist-form-grid">
-                  <el-form-item label="歌单名称">
-                    <el-input v-model="playlistForm.name" maxlength="120" placeholder="今日电台 / 夜读 / 写代码" />
-                  </el-form-item>
-                  <el-form-item label="封面地址">
-                    <el-input v-model="playlistForm.coverUrl" clearable placeholder="可选，填写图片 URL" />
-                  </el-form-item>
-                </div>
-                <div class="playlist-form-grid playlist-form-grid--wide">
-                  <el-form-item label="描述">
-                    <el-input v-model="playlistForm.description" maxlength="500" placeholder="这张歌单适合怎样的夜晚？" />
-                  </el-form-item>
-                </div>
-                <el-form-item label="开场文案">
-                  <el-input v-model="playlistForm.openingText" type="textarea" :rows="2" maxlength="255" />
-                </el-form-item>
-
-                <div class="playlist-switches">
-                  <el-switch v-model="playlistForm.publicPlaylist" active-text="公开歌单" inactive-text="私密维护" />
-                  <el-switch v-model="playlistForm.defaultPlaylist" active-text="默认电台" inactive-text="普通歌单" />
-                </div>
-              </section>
-
-              <div class="playlist-track-workspace">
-                <section class="playlist-library">
-                  <div class="playlist-library__header">
-                    <div>
-                      <strong>所有歌曲</strong>
-                      <span>点击歌曲即可加入或移出当前歌单。</span>
-                    </div>
-                    <el-button :disabled="!filteredUnselectedTracks.length" @click="addVisibleTracksToPlaylist">
-                      加入当前筛选
-                    </el-button>
-                  </div>
-
-                  <div class="playlist-library__filters">
-                    <el-input v-model="playlistSearch" clearable placeholder="搜索歌名、歌手、专辑或标签" />
-                    <el-segmented v-model="playlistStatusFilter" :options="playlistStatusOptions" />
-                  </div>
-
-                  <div v-if="filteredLibraryTracks.length === 0" class="playlist-library__empty">
-                    没有匹配的歌曲。可以先去新增歌曲，或换个关键词试试。
-                  </div>
-                  <div v-else class="playlist-library__grid">
-                    <button
-                      v-for="track in filteredLibraryTracks"
-                      :key="track.id"
-                      type="button"
-                      class="playlist-library-track"
-                      :class="{ 'is-selected': selectedPlaylistIdSet.has(track.id) }"
-                      @click="togglePlaylistTrack(track.id)"
-                    >
-                      <span class="playlist-library-track__cover">
-                        <img v-if="track.coverUrl" :src="track.coverUrl" :alt="track.title" />
-                        <span v-else>RADIO</span>
-                      </span>
-                      <span class="playlist-library-track__body">
-                        <strong>{{ track.title }}</strong>
-                        <small>{{ track.artist }}{{ track.album ? ` · ${track.album}` : '' }}</small>
-                        <span>
-                          {{ statusLabel(track.status) }}
-                          <template v-if="track.genre"> · {{ track.genre }}</template>
-                        </span>
-                      </span>
-                      <span class="playlist-library-track__state">
-                        {{ selectedPlaylistIdSet.has(track.id) ? '已加入' : '加入' }}
-                      </span>
-                    </button>
-                  </div>
-                </section>
-
-                <section class="playlist-selected">
-                  <div class="playlist-selected__header">
-                    <div>
-                      <strong>当前歌单曲目</strong>
-                      <span>{{ selectedPlaylistIds.length }} 首歌，保存后按这里的顺序播放。</span>
-                    </div>
-                    <el-button text :disabled="selectedPlaylistIds.length === 0" @click="clearSelectedPlaylistTracks">清空歌曲</el-button>
-                  </div>
-
-                  <div v-if="selectedPlaylistIds.length === 0" class="playlist-track-empty">
-                    还没有加入歌曲。从左侧“所有歌曲”里点几首，歌单就有骨架了。
-                  </div>
-                  <div v-else class="playlist-track-list">
-                    <article v-for="(trackId, index) in selectedPlaylistIds" :key="trackId" class="playlist-track-row">
-                      <span class="playlist-track-row__index">{{ index + 1 }}</span>
-                      <div>
-                        <strong>{{ findTrack(trackId)?.title || `歌曲 ${trackId}` }}</strong>
-                        <small>{{ findTrack(trackId)?.artist || '未知歌手' }} · {{ statusLabel(findTrack(trackId)?.status || 'draft') }}</small>
-                      </div>
-                      <div class="playlist-track-row__actions">
-                        <button type="button" :disabled="index === 0" @click="movePlaylistTrack(index, -1)">上移</button>
-                        <button type="button" :disabled="index === selectedPlaylistIds.length - 1" @click="movePlaylistTrack(index, 1)">下移</button>
-                        <button type="button" @click="removeTrackFromPlaylist(trackId)">移除</button>
-                      </div>
-                    </article>
-                  </div>
-                </section>
-              </div>
-
-              <footer class="playlist-editor__footer">
-                <span>{{ playlistForm.name.trim() || '未命名歌单' }} · {{ selectedPlaylistIds.length }} 首歌已选</span>
-                <el-button type="primary" :loading="playlistSaving" :disabled="!canSavePlaylist" @click="savePlaylist">
-                  保存歌单
-                </el-button>
-              </footer>
-            </main>
-          </div>
-        </section>
-      </el-drawer>
     </div>
   </DefaultLayout>
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { storeToRefs } from 'pinia'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Back, MoreFilled, Plus, Refresh, Right, VideoPause, VideoPlay } from '@element-plus/icons-vue'
+import { Back, Plus, Refresh, Right, VideoPause, VideoPlay } from '@element-plus/icons-vue'
 import { useRouter } from 'vue-router'
 import DefaultLayout from '@/layouts/DefaultLayout.vue'
 import PageHero from '@/components/PageHero/PageHero.vue'
@@ -469,13 +310,10 @@ import {
   deleteMusicTrack,
   getAdminMusicPlaylists,
   getAdminMusicTracks,
-  getDefaultRadio,
   getPublicMusicPlaylist,
   getPublicMusicPlaylists,
   getPublicMusicTracks,
   saveMusicPlaylistTracks,
-  setDefaultMusicPlaylist,
-  updateMusicPlaylist,
 } from '@/api/music'
 import { useMusicPlayerStore } from '@/stores/music-player'
 import { useSiteConfig } from '@/composables/useSiteConfig'
@@ -495,17 +333,15 @@ const defaultHero = resolveFeatureHero(null, 'music')
 const heroBgImage = ref(defaultHero.bgImage)
 const heroBgPosition = ref(defaultHero.bgPosition)
 const tracks = ref<MusicTrack[]>([])
-const playlists = ref<MusicPlaylist[]>([])
 const adminPlaylists = ref<MusicPlaylist[]>([])
 const loading = ref(false)
-const playlistDrawerVisible = ref(false)
-const playlistLoading = ref(false)
 const playlistSaving = ref(false)
-const playlistEditingId = ref<number | null>(null)
-const selectedPlaylistIds = ref<number[]>([])
+const selectedCategoryId = ref<number | null>(null)
+const expandedManagedTrackId = ref<number | null>(null)
+const creatingCategory = ref(false)
+const categoryDraft = ref('')
 const playlistSearch = ref('')
 const playlistStatusFilter = ref<'all' | MusicTrackStatus>('all')
-const expandedTrackId = ref<number | null>(null)
 const player = useMusicPlayerStore()
 const userStore = useUserStore()
 const router = useRouter()
@@ -513,15 +349,12 @@ const { user } = storeToRefs(userStore)
 const { loadSiteConfig } = useSiteConfig()
 const canManage = computed(() => isAdminUser(user.value))
 const activeTrack = computed(() => player.currentTrack)
-const playlistForm = reactive<MusicPlaylistUpsertCommand>(createEmptyPlaylistForm())
 
 const modeLabel = computed(() => {
   if (player.mode === 'single') return '单曲'
   if (player.mode === 'shuffle') return '随机'
   return '顺序'
 })
-
-const canSavePlaylist = computed(() => Boolean(playlistForm.name.trim()) && !playlistSaving.value)
 
 const playlistStatusOptions = [
   { label: '全部', value: 'all' },
@@ -530,26 +363,31 @@ const playlistStatusOptions = [
   { label: '归档', value: 'archived' },
 ]
 
-const selectedPlaylistIdSet = computed(() => new Set(selectedPlaylistIds.value))
+const trackMap = computed(() => new Map(tracks.value.map((track) => [track.id, track])))
+const categoryPlaylists = computed(() => adminPlaylists.value)
 
-const filteredLibraryTracks = computed(() => {
-  const keyword = playlistSearch.value.trim().toLowerCase()
-  return tracks.value.filter((track) => {
-    if (playlistStatusFilter.value !== 'all' && track.status !== playlistStatusFilter.value) return false
-    if (!keyword) return true
-    return [
-      track.title,
-      track.artist,
-      track.album,
-      track.genre,
-      track.language,
-      ...(track.tags || []),
-    ].some((text) => (text || '').toLowerCase().includes(keyword))
-  })
+const selectedCategory = computed(() => {
+  if (selectedCategoryId.value == null) return null
+  return adminPlaylists.value.find((playlist) => playlist.id === selectedCategoryId.value) ?? null
 })
 
-const filteredUnselectedTracks = computed(() => {
-  return filteredLibraryTracks.value.filter((track) => !selectedPlaylistIdSet.value.has(track.id))
+const selectedCategoryName = computed(() => selectedCategory.value?.name || '全部分类')
+
+const categoryBaseTracks = computed(() => {
+  const category = selectedCategory.value
+  if (!category) return tracks.value
+  return (category.tracks ?? [])
+    .map((track) => trackMap.value.get(track.id))
+    .filter(Boolean) as MusicTrack[]
+})
+
+const filteredCategoryTracks = computed(() => {
+  const keyword = playlistSearch.value.trim().toLowerCase()
+  return categoryBaseTracks.value.filter((track) => {
+    if (playlistStatusFilter.value !== 'all' && track.status !== playlistStatusFilter.value) return false
+    if (!keyword) return true
+    return matchesTrackKeyword(track, keyword)
+  })
 })
 
 const activeLyricLines = computed<LyricLine[]>(() => {
@@ -575,51 +413,6 @@ const activeLyricLines = computed<LyricLine[]>(() => {
   }))
 })
 
-function getTrackLyricPreview(track: MusicTrack): LyricLine[] {
-  const lyrics = track.lyrics?.trim()
-  if (!lyrics) return []
-
-  if (track.lyricType !== 'lrc') {
-    return lyrics.split('\n').filter(Boolean).map((text, index) => ({
-      key: `${track.id}-plain-${index}`,
-      text,
-      current: activeTrack.value?.id === track.id && index === 0,
-    }))
-  }
-
-  const lines = parseLrc(lyrics)
-  if (!lines.length) return []
-
-  if (activeTrack.value?.id !== track.id) {
-    return lines.map((line) => ({
-      ...line,
-      key: `${track.id}-${line.key}`,
-      current: false,
-    }))
-  }
-
-  let currentIndex = 0
-  for (let i = 0; i < lines.length; i++) {
-    if ((lines[i].time ?? 0) <= player.playbackTime) currentIndex = i
-  }
-
-  return lines.map((line, index) => ({
-    ...line,
-    key: `${track.id}-${line.key}`,
-    current: index === currentIndex,
-  }))
-}
-
-watch(
-  activeTrack,
-  (track) => {
-    if (track?.id) {
-      expandedTrackId.value = track.id
-    }
-  },
-  { immediate: true },
-)
-
 onMounted(() => {
   void userStore.syncAuthState().finally(loadMusic)
   void loadSiteConfig(true).then((config) => {
@@ -632,36 +425,35 @@ onMounted(() => {
 async function loadMusic() {
   loading.value = true
   try {
-    const [trackRows, publicPlaylistRows, radio, adminPlaylistRows] = await Promise.all([
+    const [trackRows, categoryRows] = await Promise.all([
       canManage.value ? getAdminMusicTracks() : getPublicMusicTracks(),
-      getPublicMusicPlaylists(),
-      getDefaultRadio(),
-      canManage.value ? getAdminMusicPlaylists() : Promise.resolve([]),
+      canManage.value ? getAdminMusicPlaylists() : getPublicMusicPlaylists(),
     ])
     tracks.value = trackRows
-    adminPlaylists.value = adminPlaylistRows
-    playlists.value = await hydratePublicPlaylists(publicPlaylistRows, radio)
-    if (!player.hasQueue && radio.tracks?.length) {
-      player.setQueue(radio.tracks, radio)
+    adminPlaylists.value = canManage.value ? categoryRows : await hydratePublicCategories(categoryRows)
+    ensureSelectedCategoryExists()
+    if (!player.hasQueue) {
+      const publishedTracks = trackRows.filter((track) => track.status === 'published')
+      player.setQueue(publishedTracks.length ? publishedTracks : trackRows, null)
     }
   } finally {
     loading.value = false
   }
 }
 
-async function hydratePublicPlaylists(rows: MusicPlaylist[], radio: MusicPlaylist) {
-  const details = await Promise.all(rows.map(async (playlist) => {
-    if (!playlist.id) return playlist
+async function hydratePublicCategories(rows: MusicPlaylist[]) {
+  const details = await Promise.all(rows.map(async (category) => {
+    if (!category.id) return category
     try {
-      return await getPublicMusicPlaylist(playlist.id)
+      return await getPublicMusicPlaylist(category.id)
     } catch {
-      return playlist
+      return category
     }
   }))
-  return mergePlaylists(radio.id ? [radio, ...details] : details)
+  return mergeCategories(details)
 }
 
-function mergePlaylists(rows: MusicPlaylist[]) {
+function mergeCategories(rows: MusicPlaylist[]) {
   const map = new Map<string, MusicPlaylist>()
   for (const row of rows) {
     const key = row.id == null ? `name:${row.name}` : `id:${row.id}`
@@ -680,31 +472,16 @@ function mergePlaylists(rows: MusicPlaylist[]) {
   return Array.from(map.values())
 }
 
-async function selectPlaylist(playlist: MusicPlaylist) {
-  const detail = playlist.id ? await getPublicMusicPlaylist(playlist.id) : playlist
-  updateCachedPlaylist(detail)
-  if (!detail.tracks?.length) {
-    ElMessage.info('这个歌单还没有公开歌曲')
-    return
-  }
-  player.setQueue(detail.tracks, detail)
-  await player.playTrack(detail.tracks[0], detail.tracks, detail)
-}
-
-function updateCachedPlaylist(detail: MusicPlaylist) {
-  const index = playlists.value.findIndex((playlist) => playlist.id === detail.id)
-  if (index >= 0) {
-    playlists.value.splice(index, 1, detail)
-  }
+function ensureSelectedCategoryExists() {
+  if (selectedCategoryId.value == null) return
+  if (adminPlaylists.value.some((category) => category.id === selectedCategoryId.value)) return
+  selectedCategoryId.value = null
 }
 
 async function playTrack(track: MusicTrack) {
-  expandedTrackId.value = track.id
-  await player.playTrack(track, tracks.value, player.currentPlaylist)
-}
-
-function toggleTrackExpanded(trackId: number) {
-  expandedTrackId.value = expandedTrackId.value === trackId ? null : trackId
+  expandedManagedTrackId.value = track.id
+  const queue = filteredCategoryTracks.value.length ? filteredCategoryTracks.value : tracks.value
+  await player.playTrack(track, queue, selectedCategory.value)
 }
 
 function cycleMode() {
@@ -734,10 +511,6 @@ function formatTrackDuration(track: MusicTrack) {
   return track.lyricType === 'lrc' ? 'LRC' : '歌词'
 }
 
-function formatPlaybackSummary(track: MusicTrack) {
-  return `${formatTime(player.playbackTime)} / ${formatTrackDuration(track)}`
-}
-
 function openCreateTrack() {
   void router.push('/music/tracks/new')
 }
@@ -746,19 +519,9 @@ function openEditTrack(track: MusicTrack) {
   void router.push(`/music/tracks/${track.id}/edit`)
 }
 
-function handleTrackDetailCommand(command: string | number | object, track: MusicTrack) {
-  if (command === 'edit') {
-    openEditTrack(track)
-    return
-  }
-  if (command === 'delete') {
-    void removeTrack(track)
-  }
-}
-
 async function removeTrack(track: MusicTrack) {
   try {
-    await ElMessageBox.confirm(`确定删除《${track.title}》吗？如果它还在歌单里，后端会拒绝删除。`, '删除歌曲', {
+    await ElMessageBox.confirm(`确定删除《${track.title}》吗？如果它还在分类里，后端会拒绝删除。`, '删除歌曲', {
       confirmButtonText: '删除',
       cancelButtonText: '取消',
       type: 'warning',
@@ -778,124 +541,116 @@ async function removeTrack(track: MusicTrack) {
   }
 }
 
-function openPlaylistManager() {
-  playlistDrawerVisible.value = true
-  resetPlaylistForm()
-  void refreshAdminPlaylists()
+function selectCategory(categoryId: number | null) {
+  selectedCategoryId.value = categoryId
+  expandedManagedTrackId.value = null
 }
 
-async function refreshAdminPlaylists() {
-  if (!canManage.value) return
-  playlistLoading.value = true
-  try {
-    adminPlaylists.value = await getAdminMusicPlaylists()
-  } finally {
-    playlistLoading.value = false
-  }
+function startCreateCategory() {
+  creatingCategory.value = true
+  categoryDraft.value = ''
 }
 
-function editPlaylist(playlist: MusicPlaylist) {
-  playlistEditingId.value = playlist.id ?? null
-  Object.assign(playlistForm, {
-    name: playlist.name || '',
-    description: playlist.description || '',
-    coverFileId: playlist.coverFileId,
-    coverUrl: playlist.coverUrl || '',
-    openingText: playlist.openingText || '',
-    defaultPlaylist: Boolean(playlist.defaultPlaylist),
-    publicPlaylist: playlist.publicPlaylist !== false,
-  })
-  selectedPlaylistIds.value = (playlist.tracks ?? []).map((track) => track.id)
+function cancelCreateCategory() {
+  creatingCategory.value = false
+  categoryDraft.value = ''
 }
 
-function resetPlaylistForm() {
-  playlistEditingId.value = null
-  Object.assign(playlistForm, createEmptyPlaylistForm())
-  selectedPlaylistIds.value = []
-}
-
-async function savePlaylist() {
-  if (!canSavePlaylist.value) return
+async function saveCategory() {
+  const name = categoryDraft.value.trim()
+  if (!name || playlistSaving.value) return
   playlistSaving.value = true
   try {
     const payload: MusicPlaylistUpsertCommand = {
-      ...playlistForm,
-      name: playlistForm.name.trim(),
-      publicPlaylist: playlistForm.defaultPlaylist ? true : playlistForm.publicPlaylist,
+      name,
+      description: '',
+      coverUrl: '',
+      openingText: '',
+      defaultPlaylist: false,
+      publicPlaylist: true,
     }
-    const saved = playlistEditingId.value == null
-      ? await createMusicPlaylist(payload)
-      : await updateMusicPlaylist(playlistEditingId.value, payload)
-    if (saved.id) {
-      await saveMusicPlaylistTracks(saved.id, { trackIds: selectedPlaylistIds.value })
-    }
-    ElMessage.success('歌单已保存')
-    resetPlaylistForm()
+    const saved = await createMusicPlaylist(payload)
+    if (saved.id) selectedCategoryId.value = saved.id
+    ElMessage.success('分类已新增')
+    cancelCreateCategory()
     await loadMusic()
-    await refreshAdminPlaylists()
   } finally {
     playlistSaving.value = false
   }
 }
 
-async function markDefaultPlaylist(playlist: MusicPlaylist) {
-  if (!playlist.id) return
-  await setDefaultMusicPlaylist(playlist.id)
-  ElMessage.success('默认电台已更新')
-  await loadMusic()
-  await refreshAdminPlaylists()
+function toggleManagedTrackExpanded(trackId: number) {
+  expandedManagedTrackId.value = expandedManagedTrackId.value === trackId ? null : trackId
 }
 
-async function markEditingPlaylistDefault() {
-  if (playlistEditingId.value == null) return
-  await markDefaultPlaylist({ ...playlistForm, id: playlistEditingId.value, tracks: [] })
-  playlistForm.defaultPlaylist = true
-  playlistForm.publicPlaylist = true
+function matchesTrackKeyword(track: MusicTrack, keyword: string) {
+  return [
+    track.title,
+    track.artist,
+    track.album,
+    track.genre,
+    track.language,
+    ...(track.tags || []),
+  ].some((text) => (text || '').toLowerCase().includes(keyword))
 }
 
-function togglePlaylistTrack(trackId: number) {
-  if (selectedPlaylistIdSet.value.has(trackId)) {
-    removeTrackFromPlaylist(trackId)
+function getTrackCategoryNames(track: MusicTrack) {
+  return adminPlaylists.value
+    .filter((playlist) => playlist.tracks?.some((item) => item.id === track.id))
+    .map((playlist) => playlist.name)
+}
+
+function isTrackInCategory(trackId: number, category: MusicPlaylist | null) {
+  return Boolean(category?.tracks?.some((track) => track.id === trackId))
+}
+
+function isTrackInSelectedCategory(trackId: number) {
+  return isTrackInCategory(trackId, selectedCategory.value)
+}
+
+async function toggleTrackCategory(trackId: number, category: MusicPlaylist) {
+  if (!category.id) return
+  const trackIds = (category.tracks ?? []).map((track) => track.id)
+  const hasTrack = trackIds.includes(trackId)
+  const nextTrackIds = hasTrack ? trackIds.filter((id) => id !== trackId) : [...trackIds, trackId]
+  await persistCategoryTracks(category, nextTrackIds, hasTrack ? '已移出分类' : '已加入分类')
+}
+
+async function addTrackToSelectedCategory(trackId: number) {
+  const category = selectedCategory.value
+  if (!category) return
+  const trackIds = (category.tracks ?? []).map((track) => track.id)
+  if (trackIds.includes(trackId)) return
+  await persistCategoryTracks(category, [...trackIds, trackId], '已加入当前分类')
+}
+
+async function removeTrackFromSelectedCategory(trackId: number) {
+  const category = selectedCategory.value
+  if (!category) return
+  const trackIds = (category.tracks ?? []).map((track) => track.id).filter((id) => id !== trackId)
+  await persistCategoryTracks(category, trackIds, '已移出当前分类')
+}
+
+async function persistCategoryTracks(category: MusicPlaylist, trackIds: number[], successMessage: string) {
+  if (!category.id || playlistSaving.value) return
+  playlistSaving.value = true
+  try {
+    const saved = await saveMusicPlaylistTracks(category.id, { trackIds })
+    replaceAdminPlaylist(saved)
+    ElMessage.success(successMessage)
+    await loadMusic()
+  } finally {
+    playlistSaving.value = false
+  }
+}
+
+function replaceAdminPlaylist(saved: MusicPlaylist) {
+  const index = adminPlaylists.value.findIndex((playlist) => playlist.id === saved.id)
+  if (index >= 0) {
+    adminPlaylists.value.splice(index, 1, saved)
     return
   }
-  selectedPlaylistIds.value = [...selectedPlaylistIds.value, trackId]
-}
-
-function addVisibleTracksToPlaylist() {
-  const selected = selectedPlaylistIdSet.value
-  const nextTrackIds = filteredLibraryTracks.value
-    .filter((track) => !selected.has(track.id))
-    .map((track) => track.id)
-  if (!nextTrackIds.length) return
-  selectedPlaylistIds.value = [...selectedPlaylistIds.value, ...nextTrackIds]
-}
-
-function clearSelectedPlaylistTracks() {
-  selectedPlaylistIds.value = []
-}
-
-function movePlaylistTrack(index: number, direction: -1 | 1) {
-  const nextIndex = index + direction
-  if (nextIndex < 0 || nextIndex >= selectedPlaylistIds.value.length) return
-  const rows = [...selectedPlaylistIds.value]
-  const current = rows[index]
-  rows[index] = rows[nextIndex]
-  rows[nextIndex] = current
-  selectedPlaylistIds.value = rows
-}
-
-function removeTrackFromPlaylist(trackId: number) {
-  selectedPlaylistIds.value = selectedPlaylistIds.value.filter((id) => id !== trackId)
-}
-
-function findTrack(trackId: number) {
-  return tracks.value.find((track) => track.id === trackId)
-}
-
-function getPlaylistTrackCount(playlist: MusicPlaylist) {
-  if (playlist.tracks?.length) return playlist.tracks.length
-  if (player.currentPlaylist?.id === playlist.id) return player.queue.length
-  return 0
+  adminPlaylists.value.push(saved)
 }
 
 function statusLabel(status: MusicTrackStatus) {
@@ -924,16 +679,6 @@ function formatTime(value: number) {
   return `${String(minute).padStart(2, '0')}:${String(second).padStart(2, '0')}`
 }
 
-function createEmptyPlaylistForm(): MusicPlaylistUpsertCommand {
-  return {
-    name: '',
-    description: '',
-    coverUrl: '',
-    openingText: '',
-    defaultPlaylist: false,
-    publicPlaylist: true,
-  }
-}
 </script>
 
 <style scoped lang="scss">
@@ -1804,6 +1549,7 @@ function createEmptyPlaylistForm(): MusicPlaylistUpsertCommand {
   line-height: 32px;
 }
 
+.music-category-workbench,
 .playlist-workbench {
   display: grid;
   grid-template-columns: minmax(230px, 280px) minmax(0, 1fr);
@@ -1825,7 +1571,8 @@ function createEmptyPlaylistForm(): MusicPlaylistUpsertCommand {
 .playlist-categories {
   position: sticky;
   top: 18px;
-  display: grid;
+  display: flex;
+  flex-direction: column;
   gap: 10px;
   max-height: calc(100vh - 74px);
   overflow: auto;
@@ -2159,6 +1906,287 @@ function createEmptyPlaylistForm(): MusicPlaylistUpsertCommand {
   font-weight: 800;
 }
 
+.playlist-manager__header {
+  position: sticky;
+  top: 0;
+  z-index: 4;
+  padding: 12px 0 18px;
+  border-bottom: 1px solid rgba(238, 218, 226, 0.78);
+  background: linear-gradient(180deg, rgba(255, 250, 253, 0.96), rgba(255, 250, 253, 0.82));
+}
+
+.playlist-manager__header > strong {
+  flex: 0 0 auto;
+  color: #4f3c46;
+  font-size: 20px;
+}
+
+.playlist-manager__search {
+  flex: 1 1 320px;
+  min-width: 240px;
+}
+
+.playlist-categories {
+  min-height: calc(100vh - 132px);
+}
+
+.playlist-categories__top {
+  display: grid;
+}
+
+.playlist-categories__create {
+  margin-top: auto;
+  display: grid;
+  gap: 10px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(238, 218, 226, 0.72);
+}
+
+.playlist-categories__create-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.playlist-categories__new {
+  width: 100%;
+  min-height: 42px;
+  border: 1px dashed rgba(218, 148, 175, 0.58);
+  border-radius: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  color: #d46d96;
+  background: rgba(255, 247, 251, 0.76);
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.category-track-board {
+  min-height: calc(100vh - 132px);
+  border: 1px solid rgba(238, 218, 226, 0.84);
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 18px 34px rgba(217, 174, 190, 0.11);
+  overflow: hidden;
+}
+
+.category-track-board__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 18px 20px 14px;
+  border-bottom: 1px solid rgba(238, 218, 226, 0.72);
+}
+
+.category-track-board__head div {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.category-track-board__head strong {
+  color: #4f3c46;
+  font-size: 18px;
+}
+
+.category-track-board__head span {
+  color: #9b8792;
+  font-size: 12px;
+}
+
+.category-track-table {
+  display: grid;
+}
+
+.category-track-table__header,
+.category-track-row__main {
+  display: grid;
+  grid-template-columns: 46px minmax(240px, 1.35fr) minmax(140px, 0.75fr) minmax(170px, 0.9fr) 72px 64px;
+  gap: 12px;
+  align-items: center;
+}
+
+.category-track-table__header {
+  padding: 11px 20px;
+  color: #9b8792;
+  background: rgba(250, 246, 249, 0.86);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.category-track-row {
+  border-top: 1px solid rgba(242, 226, 233, 0.72);
+}
+
+.category-track-row__main {
+  width: 100%;
+  min-width: 0;
+  padding: 11px 20px;
+  border: 0;
+  color: inherit;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.18s ease;
+}
+
+.category-track-row__main:hover,
+.category-track-row.is-expanded .category-track-row__main {
+  background: rgba(255, 246, 250, 0.88);
+}
+
+.category-track-row__index,
+.category-track-row__album,
+.category-track-row__categories,
+.category-track-row__duration,
+.category-track-row__expand {
+  overflow: hidden;
+  color: #8d7b84;
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.category-track-row__title {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr);
+  gap: 12px;
+  align-items: center;
+}
+
+.category-track-row__cover {
+  width: 44px;
+  height: 44px;
+  overflow: hidden;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  color: #d46d96;
+  background: linear-gradient(135deg, #fff0f6, #f7f9ff);
+  font-weight: 900;
+}
+
+.category-track-row__cover img,
+.category-track-detail__cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.category-track-row__title strong,
+.category-track-row__title small {
+  overflow: hidden;
+  display: block;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.category-track-row__title strong {
+  color: #4f3c46;
+  font-size: 15px;
+}
+
+.category-track-row__title small {
+  margin-top: 3px;
+  color: #9b8792;
+  font-size: 12px;
+}
+
+.category-track-row__expand {
+  justify-self: end;
+  color: #d46d96;
+  font-weight: 800;
+}
+
+.category-track-detail {
+  display: grid;
+  grid-template-columns: 128px minmax(0, 1fr);
+  gap: 16px;
+  padding: 16px 20px 20px 78px;
+  background: linear-gradient(180deg, rgba(255, 250, 253, 0.92), rgba(255, 247, 251, 0.72));
+}
+
+.category-track-detail__cover {
+  min-height: 128px;
+  overflow: hidden;
+  border-radius: 16px;
+  display: grid;
+  place-items: center;
+  color: #d46d96;
+  background: linear-gradient(135deg, #fff0f6, #f7f9ff);
+  font-weight: 900;
+}
+
+.category-track-detail__body {
+  min-width: 0;
+  display: grid;
+  gap: 10px;
+  align-content: start;
+}
+
+.category-track-detail__title {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.category-track-detail__title strong {
+  color: #4f3c46;
+  font-size: 18px;
+}
+
+.category-track-detail__title p,
+.category-track-detail__note {
+  margin: 0;
+  color: #8d7b84;
+  line-height: 1.6;
+}
+
+.category-track-detail__title > span {
+  flex: 0 0 auto;
+  padding: 5px 9px;
+  border-radius: 999px;
+  color: #d46d96;
+  background: rgba(255, 242, 247, 0.94);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.category-track-detail__chips,
+.category-track-detail__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.category-track-detail__chips span,
+.category-track-detail__chips button {
+  min-height: 28px;
+  padding: 0 10px;
+  border: 1px solid rgba(238, 218, 226, 0.9);
+  border-radius: 999px;
+  color: #9a6b7e;
+  background: rgba(255, 255, 255, 0.82);
+  font-size: 12px;
+  line-height: 26px;
+}
+
+.category-track-detail__chips button {
+  cursor: pointer;
+}
+
+.category-track-detail__chips button.is-active {
+  border-color: rgba(251, 114, 153, 0.58);
+  color: #d46d96;
+  background: rgba(255, 242, 247, 0.96);
+  font-weight: 800;
+}
+
 @keyframes record-spin {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
@@ -2197,6 +2225,7 @@ function createEmptyPlaylistForm(): MusicPlaylistUpsertCommand {
   .playlist-form-grid,
   .playlist-form-grid--wide,
   .playlist-library__filters,
+  .music-category-workbench,
   .playlist-workbench,
   .playlist-track-workspace {
     grid-template-columns: 1fr;
@@ -2246,6 +2275,58 @@ function createEmptyPlaylistForm(): MusicPlaylistUpsertCommand {
 
   .track-detail__info {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .playlist-manager__header {
+    position: static;
+    align-items: stretch;
+  }
+
+  .playlist-manager__search {
+    min-width: 0;
+  }
+
+  .playlist-categories,
+  .category-track-board {
+    min-height: auto;
+  }
+
+  .category-track-table__header {
+    display: none;
+  }
+
+  .category-track-row__main {
+    grid-template-columns: 36px minmax(0, 1fr) auto;
+    gap: 10px;
+    padding: 12px;
+  }
+
+  .category-track-row__album,
+  .category-track-row__categories {
+    display: none;
+  }
+
+  .category-track-row__duration {
+    justify-self: end;
+  }
+
+  .category-track-row__expand {
+    grid-column: 2 / -1;
+    justify-self: start;
+  }
+
+  .category-track-detail {
+    grid-template-columns: 1fr;
+    padding: 14px;
+  }
+
+  .category-track-detail__cover {
+    width: min(100%, 220px);
+    min-height: 220px;
+  }
+
+  .category-track-detail__title {
+    flex-direction: column;
   }
 }
 </style>

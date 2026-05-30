@@ -51,9 +51,9 @@ export const useMusicPlayerStore = defineStore('music-player', () => {
     void next()
   })
 
-  function setQueue(tracks: MusicTrack[], playlist?: MusicPlaylist | null) {
+  function setQueue(tracks: MusicTrack[], playlist: MusicPlaylist | null = null) {
     queue.value = tracks.filter((track) => Boolean(track.audioUrl))
-    currentPlaylist.value = playlist ?? currentPlaylist.value
+    currentPlaylist.value = playlist
     if (!queue.value.length) {
       currentIndex.value = -1
       stop()
@@ -92,7 +92,7 @@ export const useMusicPlayerStore = defineStore('music-player', () => {
   async function playCurrent() {
     const track = currentTrack.value
     if (!track?.audioUrl) {
-      ElMessage.info('Sakura Radio 还没有可以播放的歌曲')
+      ElMessage.info('音乐馆还没有可以播放的歌曲')
       return
     }
     if (audio.src !== track.audioUrl) {
