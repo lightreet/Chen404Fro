@@ -9,11 +9,13 @@ import router, { CHUNK_RELOAD_KEY } from './router'
 import { loadEmojiRegistry } from '@/emoji/provider'
 import { useUserStore } from './stores/user'
 import { registerMdiSubset } from '@/iconify/registerMdiSubset'
+import { installMessageDefaults } from '@/utils/message'
 
 // 全局样式
 import './assets/styles/global.scss'
 
 registerMdiSubset()
+installMessageDefaults()
 
 const app = createApp(App)
 const pinia = createPinia()

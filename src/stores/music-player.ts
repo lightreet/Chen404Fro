@@ -9,6 +9,19 @@ export type MusicPlayMode = 'sequence' | 'shuffle' | 'single'
 const STORAGE_VOLUME_KEY = 'chen404.music.volume'
 const STORAGE_MODE_KEY = 'chen404.music.mode'
 
+interface MusicAudioRuntime {
+  audio: HTMLAudioElement
+  cleanup?: () => void
+}
+
+declare global {
+  interface Window {
+    __chen404MusicAudioRuntime?: MusicAudioRuntime
+  }
+}
+
+const sharedAudioRuntime = getMusicAudioRuntime()
+
 export const useMusicPlayerStore = defineStore('music-player', () => {
   const queue = ref<MusicTrack[]>([])
   const currentIndex = ref(-1)
@@ -21,7 +34,8 @@ export const useMusicPlayerStore = defineStore('music-player', () => {
   const seekPreviewTime = ref(0)
   const volume = ref(Number(window.localStorage.getItem(STORAGE_VOLUME_KEY) ?? '0.72'))
   const mode = ref<MusicPlayMode>((window.localStorage.getItem(STORAGE_MODE_KEY) as MusicPlayMode) || 'sequence')
-  const audio = new Audio()
+  const audioRuntime = sharedAudioRuntime
+  const audio = audioRuntime.audio
   audio.volume = Math.min(1, Math.max(0, volume.value))
 
   const currentTrack = computed(() => {
@@ -32,24 +46,37 @@ export const useMusicPlayerStore = defineStore('music-player', () => {
   const hasQueue = computed(() => queue.value.length > 0)
   const playbackTime = computed(() => (isSeeking.value ? seekPreviewTime.value : currentTime.value))
 
-  audio.addEventListener('timeupdate', () => {
+  audioRuntime.cleanup?.()
+
+  const handleTimeUpdate = () => {
     if (isSeeking.value) return
     currentTime.value = audio.currentTime || 0
-  })
+  }
 
-  audio.addEventListener('loadedmetadata', () => {
+  const handleLoadedMetadata = () => {
     duration.value = Number.isFinite(audio.duration) ? audio.duration : 0
-  })
+  }
 
-  audio.addEventListener('ended', () => {
+  const handleEnded = () => {
     void next()
-  })
+  }
 
-  audio.addEventListener('error', () => {
+  const handleError = () => {
     if (!currentTrack.value) return
     ElMessage.warning('这首歌暂时播放不了，Lyra 帮你切到下一首')
     void next()
-  })
+  }
+
+  audio.addEventListener('timeupdate', handleTimeUpdate)
+  audio.addEventListener('loadedmetadata', handleLoadedMetadata)
+  audio.addEventListener('ended', handleEnded)
+  audio.addEventListener('error', handleError)
+  audioRuntime.cleanup = () => {
+    audio.removeEventListener('timeupdate', handleTimeUpdate)
+    audio.removeEventListener('loadedmetadata', handleLoadedMetadata)
+    audio.removeEventListener('ended', handleEnded)
+    audio.removeEventListener('error', handleError)
+  }
 
   function setQueue(tracks: MusicTrack[], playlist: MusicPlaylist | null = null) {
     queue.value = tracks.filter((track) => Boolean(track.audioUrl))
@@ -76,6 +103,8 @@ export const useMusicPlayerStore = defineStore('music-player', () => {
   }
 
   async function playTrack(track: MusicTrack, tracks?: MusicTrack[], playlist?: MusicPlaylist | null) {
+    if (currentTrack.value?.id === track.id && playing.value) return
+
     if (tracks?.length) {
       setQueue(tracks, playlist)
       const nextIndex = queue.value.findIndex((item) => item.id === track.id)
@@ -95,12 +124,17 @@ export const useMusicPlayerStore = defineStore('music-player', () => {
       ElMessage.info('音乐馆还没有可以播放的歌曲')
       return
     }
-    if (audio.src !== track.audioUrl) {
-      audio.src = track.audioUrl
+    const nextAudioSrc = resolveAudioSrc(track.audioUrl)
+    if (audio.src !== nextAudioSrc) {
+      audio.pause()
+      audio.src = nextAudioSrc
       currentTime.value = 0
       duration.value = 0
+      playing.value = false
       resetSeekState()
     }
+    if (playing.value && !audio.paused) return
+
     await audio.play()
     playing.value = true
   }
@@ -193,6 +227,14 @@ export const useMusicPlayerStore = defineStore('music-player', () => {
     window.localStorage.setItem(STORAGE_MODE_KEY, value)
   }
 
+  function resolveAudioSrc(url: string) {
+    try {
+      return new URL(url, window.location.href).href
+    } catch {
+      return url
+    }
+  }
+
   return {
     queue,
     currentIndex,
@@ -222,3 +264,12 @@ export const useMusicPlayerStore = defineStore('music-player', () => {
     setMode,
   }
 })
+
+function getMusicAudioRuntime() {
+  if (!window.__chen404MusicAudioRuntime) {
+    window.__chen404MusicAudioRuntime = {
+      audio: new Audio(),
+    }
+  }
+  return window.__chen404MusicAudioRuntime
+}

@@ -7,7 +7,7 @@
         subtitle="按分类整理每一首值得回放的歌。"
         :bg-image="heroBgImage"
         :bg-position="heroBgPosition"
-        min-height="72vh"
+        min-height="56vh"
         :wave-height="132"
         compact
       />
@@ -104,20 +104,34 @@
 
       <section class="music-shelf">
         <div class="shelf-heading">
-          <div>
+          <div class="shelf-heading__copy">
             <span class="eyebrow">Record Shelf</span>
-            <h2>分类歌曲</h2>
+            <h2>歌单</h2>
           </div>
           <div class="shelf-heading__actions">
             <el-input
               v-model="playlistSearch"
               class="playlist-manager__search"
               clearable
+              :suffix-icon="Search"
               placeholder="搜索歌曲、歌手、专辑或标签"
             />
-            <el-segmented v-model="playlistStatusFilter" :options="playlistStatusOptions" />
-            <el-button type="primary" plain :icon="Plus" @click="openCreateTrack">新增歌曲</el-button>
-            <el-button :icon="Refresh" plain @click="loadMusic">刷新</el-button>
+            <div v-if="canManage" class="playlist-status-filter" aria-label="歌曲状态筛选">
+              <button
+                v-for="option in playlistStatusOptions"
+                :key="option.value"
+                type="button"
+                class="playlist-status-filter__option"
+                :class="{ 'is-active': playlistStatusFilter === option.value }"
+                @click="playlistStatusFilter = option.value"
+              >
+                {{ option.label }}
+              </button>
+            </div>
+            <div v-if="canManage" class="shelf-heading__buttons">
+              <el-button class="shelf-heading__add" type="primary" :icon="Plus" @click="openCreateTrack">新增歌曲</el-button>
+              <el-button class="shelf-heading__refresh" :icon="Refresh" @click="loadMusic">刷新</el-button>
+            </div>
           </div>
         </div>
 
@@ -128,23 +142,19 @@
         </div>
         <div v-else class="music-category-workbench">
           <aside class="playlist-categories">
-            <div class="playlist-categories__top">
-              <strong>分类</strong>
-              <span>{{ categoryPlaylists.length }} 个自定义分类</span>
-            </div>
-
             <button
               type="button"
               class="playlist-category-card"
               :class="{ 'is-editing': selectedCategoryId == null }"
               @click="selectCategory(null)"
             >
-              <span class="playlist-category-card__marker">All</span>
+              <span class="playlist-category-card__marker">
+                <el-icon><Folder /></el-icon>
+              </span>
               <span class="playlist-category-card__copy">
                 <strong>全部分类</strong>
-                <small>{{ tracks.length }} 首歌曲</small>
+                <small>{{ tracks.length }} 首</small>
               </span>
-              <span class="playlist-category-card__count">{{ tracks.length }}</span>
             </button>
 
             <button
@@ -155,12 +165,13 @@
               :class="{ 'is-editing': selectedCategoryId === playlist.id }"
               @click="selectCategory(playlist.id ?? null)"
             >
-              <span class="playlist-category-card__marker">{{ playlist.name.slice(0, 1) }}</span>
+              <span class="playlist-category-card__marker">
+                <el-icon><Folder /></el-icon>
+              </span>
               <span class="playlist-category-card__copy">
                 <strong>{{ playlist.name }}</strong>
-                <small>{{ playlist.tracks?.length || 0 }} 首 · {{ playlist.publicPlaylist ? '公开' : '私密' }}</small>
+                <small>{{ playlist.tracks?.length ?? 0 }} 首</small>
               </span>
-              <span class="playlist-category-card__count">{{ playlist.tracks?.length || 0 }}</span>
             </button>
 
             <div v-if="canManage" class="playlist-categories__create">
@@ -187,10 +198,105 @@
                   <strong>{{ selectedCategoryName }}</strong>
                   <span>{{ filteredCategoryTracks.length }} 首歌曲</span>
                 </div>
+                <div class="music-view-toggle" aria-label="歌曲展示方式">
+                  <button
+                    type="button"
+                    :class="{ 'is-active': musicDisplayMode === 'cards' }"
+                    title="卡片展示"
+                    @click="setMusicDisplayMode('cards')"
+                  >
+                    <el-icon><Grid /></el-icon>
+                    卡片
+                  </button>
+                  <button
+                    type="button"
+                    :class="{ 'is-active': musicDisplayMode === 'rows' }"
+                    title="列表展示"
+                    @click="setMusicDisplayMode('rows')"
+                  >
+                    <el-icon><List /></el-icon>
+                    列表
+                  </button>
+                </div>
               </div>
 
               <div v-if="filteredCategoryTracks.length === 0" class="playlist-library__empty">
-                当前分类下没有匹配歌曲。可以切到“全部分类”，展开歌曲后点分类按钮加入。
+                当前分类下没有歌单哦~
+              </div>
+              <div v-else-if="musicDisplayMode === 'cards'" class="music-card-grid">
+                <article
+                  v-for="track in filteredCategoryTracks"
+                  :key="track.id"
+                  class="music-track-card"
+                >
+                  <div class="music-track-card__cover">
+                    <img v-if="track.coverUrl" :src="track.coverUrl" :alt="track.title" />
+                    <span v-else class="music-track-card__fallback">Music</span>
+                    <span class="music-track-card__duration">{{ formatTrackDuration(track) }}</span>
+                    <span v-if="canManage" class="music-track-card__status">{{ statusLabel(track.status) }}</span>
+                    <button type="button" class="music-track-card__play" title="播放" @click="playTrack(track)">
+                      <el-icon><VideoPlay /></el-icon>
+                    </button>
+                  </div>
+
+                  <div class="music-track-card__body">
+                    <div class="music-track-card__titleline">
+                      <strong>{{ track.title }}</strong>
+                      <span class="music-track-card__meter" aria-hidden="true">
+                        <i></i>
+                        <i></i>
+                        <i></i>
+                        <i></i>
+                      </span>
+                    </div>
+                    <span class="music-track-card__artist">{{ track.artist }}</span>
+                    <p class="music-track-card__quote">{{ track.moodText || track.recommendation || track.album || '还没有写下推荐语。' }}</p>
+                  </div>
+
+                  <div class="music-track-card__meta">
+                    <span>{{ track.album || '未填写专辑' }}</span>
+                    <span>{{ getTrackCategoryNames(track).join(' / ') || '无分类' }}</span>
+                  </div>
+
+                  <div class="music-track-card__footer">
+                    <span>{{ track.releaseYear || '年份未知' }}</span>
+                    <div class="music-track-card__actions">
+                      <button type="button" title="播放" @click="playTrack(track)">
+                        <el-icon><VideoPlay /></el-icon>
+                      </button>
+                      <button v-if="canManage" type="button" title="编辑歌曲" @click="openEditTrack(track)">
+                        <el-icon><Edit /></el-icon>
+                      </button>
+                      <button
+                        v-if="canManage && selectedCategory && !isTrackInSelectedCategory(track.id)"
+                        type="button"
+                        title="加入当前分类"
+                        :disabled="playlistSaving"
+                        @click="addTrackToSelectedCategory(track.id)"
+                      >
+                        <el-icon><Plus /></el-icon>
+                      </button>
+                      <button
+                        v-if="canManage && selectedCategory && isTrackInSelectedCategory(track.id)"
+                        type="button"
+                        title="移出当前分类"
+                        :disabled="playlistSaving"
+                        @click="removeTrackFromSelectedCategory(track.id)"
+                      >
+                        <el-icon><Close /></el-icon>
+                      </button>
+                      <button
+                        v-if="canManage"
+                        type="button"
+                        class="is-danger"
+                        title="删除歌曲"
+                        @click="removeTrack(track)"
+                      >
+                        <el-icon><Delete /></el-icon>
+                      </button>
+                    </div>
+                  </div>
+                </article>
               </div>
               <div v-else class="category-track-table">
                 <div class="category-track-table__header">
@@ -199,6 +305,8 @@
                   <span>专辑</span>
                   <span>分类</span>
                   <span>时长</span>
+                  <span>播放</span>
+                  <span>详情</span>
                 </div>
 
                 <article
@@ -207,7 +315,14 @@
                   class="category-track-row"
                   :class="{ 'is-expanded': expandedManagedTrackId === track.id }"
                 >
-                  <button type="button" class="category-track-row__main" @click="toggleManagedTrackExpanded(track.id)">
+                  <div
+                    class="category-track-row__main"
+                    role="button"
+                    tabindex="0"
+                    @click="toggleManagedTrackExpanded(track.id)"
+                    @keyup.enter="toggleManagedTrackExpanded(track.id)"
+                    @keyup.space.prevent="toggleManagedTrackExpanded(track.id)"
+                  >
                     <span class="category-track-row__index">{{ String(index + 1).padStart(2, '0') }}</span>
                     <span class="category-track-row__title">
                       <span class="category-track-row__cover">
@@ -224,15 +339,35 @@
                       {{ getTrackCategoryNames(track).join(' / ') || '无分类' }}
                     </span>
                     <span class="category-track-row__duration">{{ formatTrackDuration(track) }}</span>
-                    <span class="category-track-row__expand">展开</span>
-                  </button>
+                    <span class="category-track-row__controls">
+                      <button
+                        type="button"
+                        class="category-track-row__play"
+                        :class="{ 'is-active': activeTrack?.id === track.id && player.playing }"
+                        title="播放"
+                        @click.stop="playTrack(track, false)"
+                      >
+                        <el-icon><VideoPlay /></el-icon>
+                      </button>
+                      <button
+                        type="button"
+                        class="category-track-row__play category-track-row__play--pause"
+                        :class="{ 'is-active': activeTrack?.id === track.id && !player.playing }"
+                        :disabled="activeTrack?.id !== track.id"
+                        title="暂停"
+                        @click.stop="pauseTrack(track)"
+                      >
+                        <el-icon><VideoPause /></el-icon>
+                      </button>
+                    </span>
+                    <span class="category-track-row__expand">
+                      {{ expandedManagedTrackId === track.id ? '收起' : '展开' }}
+                    </span>
+                  </div>
 
                   <transition name="track-detail-fade">
                     <div v-if="expandedManagedTrackId === track.id" class="track-detail category-track-detail-card">
                       <div class="track-detail__action-bar">
-                        <button type="button" class="track-detail__icon-btn" title="播放" @click="playTrack(track)">
-                          <el-icon><VideoPlay /></el-icon>
-                        </button>
                         <button v-if="canManage" type="button" class="track-detail__icon-btn" title="编辑歌曲" @click="openEditTrack(track)">
                           <el-icon><Edit /></el-icon>
                         </button>
@@ -374,7 +509,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { storeToRefs } from 'pinia'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Back, Close, Delete, Edit, Plus, Refresh, Right, VideoPause, VideoPlay } from '@element-plus/icons-vue'
+import { Back, Close, Delete, Edit, Folder, Grid, List, Plus, Refresh, Right, Search, VideoPause, VideoPlay } from '@element-plus/icons-vue'
 import { useRouter } from 'vue-router'
 import DefaultLayout from '@/layouts/DefaultLayout.vue'
 import PageHero from '@/components/PageHero/PageHero.vue'
@@ -414,7 +549,10 @@ const expandedManagedTrackId = ref<number | null>(null)
 const creatingCategory = ref(false)
 const categoryDraft = ref('')
 const playlistSearch = ref('')
-const playlistStatusFilter = ref<'all' | MusicTrackStatus>('all')
+type PlaylistStatusFilter = 'all' | MusicTrackStatus
+
+const playlistStatusFilter = ref<PlaylistStatusFilter>('all')
+const musicDisplayMode = ref<'cards' | 'rows'>('cards')
 const player = useMusicPlayerStore()
 const userStore = useUserStore()
 const router = useRouter()
@@ -429,11 +567,11 @@ const modeLabel = computed(() => {
   return '顺序'
 })
 
-const playlistStatusOptions = [
+const playlistStatusOptions: Array<{ label: string; value: PlaylistStatusFilter }> = [
   { label: '全部', value: 'all' },
-  { label: '公开', value: 'published' },
+  { label: '已发布', value: 'published' },
   { label: '草稿', value: 'draft' },
-  { label: '归档', value: 'archived' },
+  { label: '已归档', value: 'archived' },
 ]
 
 const trackMap = computed(() => new Map(tracks.value.map((track) => [track.id, track])))
@@ -457,7 +595,9 @@ const categoryBaseTracks = computed(() => {
 const filteredCategoryTracks = computed(() => {
   const keyword = playlistSearch.value.trim().toLowerCase()
   return categoryBaseTracks.value.filter((track) => {
-    if (playlistStatusFilter.value !== 'all' && track.status !== playlistStatusFilter.value) return false
+    if (playlistStatusFilter.value !== 'all' && track.status !== playlistStatusFilter.value) {
+      return false
+    }
     if (!keyword) return true
     return matchesTrackKeyword(track, keyword)
   })
@@ -586,10 +726,22 @@ function ensureSelectedCategoryExists() {
   selectedCategoryId.value = null
 }
 
-async function playTrack(track: MusicTrack) {
-  expandedManagedTrackId.value = track.id
+async function playTrack(track: MusicTrack, expandRow = true) {
+  if (musicDisplayMode.value === 'rows' && expandRow) {
+    expandedManagedTrackId.value = track.id
+  }
   const queue = filteredCategoryTracks.value.length ? filteredCategoryTracks.value : tracks.value
   await player.playTrack(track, queue, selectedCategory.value)
+}
+
+function pauseTrack(track: MusicTrack) {
+  if (activeTrack.value?.id !== track.id) return
+  player.pause()
+}
+
+function setMusicDisplayMode(mode: 'cards' | 'rows') {
+  musicDisplayMode.value = mode
+  expandedManagedTrackId.value = null
 }
 
 function cycleMode() {
@@ -791,9 +943,9 @@ function formatTime(value: number) {
 
 <style scoped lang="scss">
 .music-page {
-  width: min(1180px, calc(100vw - 40px));
+  width: min(1360px, calc(100vw - 40px));
   margin: 0 auto;
-  padding: 28px 0 44px;
+  padding: 18px 0 44px;
   display: grid;
   gap: 22px;
 }
@@ -957,7 +1109,6 @@ function formatTime(value: number) {
 .playlist-editor__footer,
 .playlist-editor__tools,
 .playlist-manager__summary,
-.playlist-categories__top,
 .playlist-category-card,
 .playlist-library__header,
 .playlist-selected__header,
@@ -988,14 +1139,30 @@ function formatTime(value: number) {
 .playlist-manager__header {
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
+  align-items: center;
   gap: 16px;
 }
 
 .shelf-heading__actions {
-  gap: 8px;
-  flex-wrap: wrap;
-  justify-content: flex-end;
+  flex: 1 1 auto;
+  min-width: 0;
+  gap: 18px;
+  flex-wrap: nowrap;
+  justify-content: space-between;
+}
+
+.shelf-heading__copy {
+  flex: 0 0 auto;
+  min-width: 78px;
+  display: grid;
+  gap: 4px;
+}
+
+.shelf-heading__buttons {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 
 .eyebrow {
@@ -1157,18 +1324,38 @@ function formatTime(value: number) {
 }
 
 .music-shelf {
-  padding: clamp(18px, 2vw, 24px);
-  border-radius: 26px;
-  border: 1px solid rgba(238, 218, 226, 0.72);
-  background: rgba(255, 255, 255, 0.74);
+  padding: clamp(20px, 2vw, 28px);
+  border-radius: 18px;
+  border: 1px solid rgba(238, 218, 226, 0.76);
+  background:
+    linear-gradient(180deg, rgba(255, 253, 254, 0.96), rgba(255, 247, 251, 0.88)),
+    linear-gradient(90deg, rgba(251, 114, 153, 0.06), transparent 34%);
+  box-shadow:
+    0 22px 46px rgba(167, 126, 145, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
 }
 
 .shelf-heading {
   margin-bottom: 18px;
+  padding: 14px 16px;
+  border: 1px solid rgba(239, 221, 229, 0.9);
+  border-radius: 18px;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.92), rgba(255, 249, 252, 0.78));
+  box-shadow:
+    0 16px 34px rgba(169, 129, 148, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(12px);
 }
 
 .shelf-heading h2 {
-  font-size: 28px;
+  margin: 0;
+  color: #5f4c56;
+  font-size: 22px;
+}
+
+.shelf-heading .eyebrow {
+  display: none;
 }
 
 .music-state {
@@ -1704,8 +1891,8 @@ function formatTime(value: number) {
 .music-category-workbench,
 .playlist-workbench {
   display: grid;
-  grid-template-columns: minmax(184px, 214px) minmax(0, 1fr);
-  gap: 20px;
+  grid-template-columns: minmax(176px, 206px) minmax(0, 1fr);
+  gap: 22px;
   align-items: start;
 }
 
@@ -1725,22 +1912,15 @@ function formatTime(value: number) {
   top: 18px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 11px;
   max-height: calc(100vh - 74px);
   overflow: auto;
-  padding: 16px 12px;
+  padding: 18px 14px;
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(255, 250, 253, 0.78)),
-    repeating-linear-gradient(90deg, rgba(251, 114, 153, 0.03) 0 1px, transparent 1px 11px);
+    linear-gradient(180deg, rgba(255, 252, 254, 0.96), rgba(255, 243, 249, 0.82)),
+    linear-gradient(90deg, rgba(251, 114, 153, 0.06), transparent 72%);
 }
 
-.playlist-categories__top {
-  justify-content: space-between;
-  gap: 10px;
-  padding: 2px 2px 8px;
-}
-
-.playlist-categories__top div,
 .playlist-editor__title div,
 .playlist-library__header div,
 .playlist-selected__header div {
@@ -1749,7 +1929,6 @@ function formatTime(value: number) {
   gap: 4px;
 }
 
-.playlist-categories__top strong,
 .playlist-editor__title strong,
 .playlist-library__header strong,
 .playlist-selected__header strong {
@@ -1757,7 +1936,6 @@ function formatTime(value: number) {
   font-size: 16px;
 }
 
-.playlist-categories__top span,
 .playlist-editor__title span,
 .playlist-library__header span,
 .playlist-selected__header span {
@@ -1773,14 +1951,14 @@ function formatTime(value: number) {
 .playlist-category-card {
   position: relative;
   width: 100%;
-  min-height: 60px;
+  min-height: 54px;
   display: grid;
-  grid-template-columns: 34px minmax(0, 1fr) auto;
-  gap: 9px;
+  grid-template-columns: 34px minmax(0, 1fr);
+  gap: 10px;
   align-items: center;
-  padding: 10px 9px;
+  padding: 9px 10px;
   border: 1px solid transparent;
-  border-radius: 16px;
+  border-radius: 10px;
   text-align: left;
   color: inherit;
   background: rgba(255, 255, 255, 0.7);
@@ -1815,29 +1993,13 @@ function formatTime(value: number) {
 .playlist-category-card__marker {
   width: 34px;
   height: 34px;
-  border-radius: 12px;
+  border-radius: 9px;
   display: grid;
   place-items: center;
-  color: #d46d96;
-  background:
-    linear-gradient(135deg, rgba(255, 240, 247, 0.96), rgba(255, 255, 255, 0.76));
-  box-shadow: inset 0 0 0 1px rgba(238, 218, 226, 0.88);
-  font-size: 11px;
-  font-weight: 900;
-  text-transform: uppercase;
-}
-
-.playlist-category-card__count {
-  min-width: 26px;
-  height: 26px;
-  padding: 0 8px;
-  border-radius: 999px;
-  display: grid;
-  place-items: center;
-  color: #b87b93;
-  background: rgba(255, 255, 255, 0.82);
-  font-size: 12px;
-  font-weight: 900;
+  color: #c86a8e;
+  background: rgba(255, 246, 250, 0.78);
+  box-shadow: inset 0 0 0 1px rgba(238, 218, 226, 0.72);
+  font-size: 17px;
 }
 
 .playlist-category-card__cover {
@@ -1864,7 +2026,7 @@ function formatTime(value: number) {
 .playlist-category-card__copy {
   min-width: 0;
   display: grid;
-  gap: 4px;
+  gap: 3px;
 }
 
 .playlist-category-card__copy strong,
@@ -1875,7 +2037,15 @@ function formatTime(value: number) {
   white-space: nowrap;
 }
 
-.playlist-category-card__copy small,
+.playlist-category-card__copy small {
+  overflow: hidden;
+  color: #b0929f;
+  font-size: 12px;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .playlist-library-track__body small,
 .playlist-library-track__body > span,
 .playlist-track-row small {
@@ -2127,16 +2297,129 @@ function formatTime(value: number) {
 }
 
 .playlist-manager__search {
-  flex: 1 1 320px;
-  min-width: 240px;
+  flex: 1 1 360px;
+  min-width: 0;
+  max-width: 460px;
+}
+
+.playlist-status-filter {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px 4px;
+  border: 0;
+  border-radius: 999px;
+  background: linear-gradient(90deg, rgba(255, 246, 250, 0.72), rgba(255, 251, 253, 0.58));
+}
+
+.playlist-status-filter__option {
+  position: relative;
+  min-width: 72px;
+  height: 34px;
+  border: 0;
+  border-radius: 11px;
+  color: #5f4f58;
+  background: transparent;
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: color 0.18s ease, background 0.18s ease;
+}
+
+.playlist-status-filter__option:hover {
+  color: #e4779d;
+  background: rgba(255, 255, 255, 0.34);
+}
+
+.playlist-status-filter__option.is-active {
+  color: #ef6f9f;
+  background: rgba(255, 238, 246, 0.45);
+}
+
+.playlist-status-filter__option.is-active::after {
+  content: '';
+  position: absolute;
+  right: 18px;
+  bottom: 5px;
+  left: 18px;
+  height: 2px;
+  border-radius: 999px;
+  background: rgba(251, 114, 153, 0.5);
+}
+
+.shelf-heading__add,
+.shelf-heading__refresh {
+  min-width: 92px;
+  min-height: 38px;
+  border-radius: 10px;
+  font-weight: 800;
+}
+
+.shelf-heading__add.el-button {
+  border: 0;
+  color: #fff;
+  background: linear-gradient(135deg, #ff8db9, #fb7299);
+  box-shadow: 0 12px 24px rgba(251, 114, 153, 0.2);
+}
+
+.shelf-heading__add.el-button:hover,
+.shelf-heading__add.el-button:focus {
+  border: 0;
+  color: #fff;
+  background: linear-gradient(135deg, #ff9cc3, #fb7da2);
+}
+
+.shelf-heading__refresh.el-button {
+  border: 1px solid rgba(235, 219, 227, 0.92);
+  color: #5f4f58;
+  background: rgba(255, 255, 255, 0.76);
+  box-shadow: 0 10px 20px rgba(191, 151, 168, 0.08);
+}
+
+.shelf-heading__refresh.el-button:hover,
+.shelf-heading__refresh.el-button:focus {
+  border-color: rgba(251, 114, 153, 0.34);
+  color: #e4779d;
+  background: rgba(255, 249, 252, 0.9);
 }
 
 .playlist-categories {
   min-height: calc(100vh - 132px);
 }
 
-.playlist-categories__top {
-  display: grid;
+:deep(.playlist-manager__search .el-input__wrapper) {
+  min-height: 38px;
+  padding-right: 12px;
+  padding-left: 14px;
+  border-radius: 11px;
+  background: rgba(255, 255, 255, 0.78);
+  box-shadow:
+    inset 0 0 0 1px rgba(226, 213, 222, 0.92),
+    0 10px 22px rgba(172, 139, 154, 0.06);
+  transition: box-shadow 0.18s ease, background 0.18s ease;
+}
+
+:deep(.playlist-manager__search .el-input__wrapper.is-focus) {
+  background: rgba(255, 255, 255, 0.95);
+  box-shadow:
+    inset 0 0 0 1px rgba(251, 114, 153, 0.38),
+    0 12px 24px rgba(251, 114, 153, 0.1);
+}
+
+:deep(.playlist-manager__search .el-input__inner) {
+  color: #5f4f58;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+:deep(.playlist-manager__search .el-input__inner::placeholder) {
+  color: #b1a2aa;
+  font-weight: 600;
+}
+
+:deep(.playlist-manager__search .el-input__suffix) {
+  color: #615162;
 }
 
 .playlist-categories__create {
@@ -2171,9 +2454,10 @@ function formatTime(value: number) {
 .category-track-board {
   min-height: calc(100vh - 132px);
   border: 1px solid rgba(238, 218, 226, 0.84);
-  border-radius: 22px;
-  background: rgba(255, 255, 255, 0.9);
-  box-shadow: 0 18px 34px rgba(217, 174, 190, 0.11);
+  border-radius: 14px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(255, 250, 253, 0.9));
+  box-shadow: 0 20px 36px rgba(180, 139, 158, 0.1);
   overflow: hidden;
 }
 
@@ -2182,11 +2466,11 @@ function formatTime(value: number) {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 18px 20px 14px;
+  padding: 18px 20px 16px;
   border-bottom: 1px solid rgba(238, 218, 226, 0.72);
 }
 
-.category-track-board__head div {
+.category-track-board__head > div:first-child {
   min-width: 0;
   display: grid;
   gap: 4px;
@@ -2202,6 +2486,339 @@ function formatTime(value: number) {
   font-size: 12px;
 }
 
+.music-view-toggle {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid rgba(238, 218, 226, 0.82);
+  border-radius: 12px;
+  background: rgba(255, 250, 253, 0.88);
+}
+
+.music-view-toggle button {
+  min-height: 34px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 9px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #8c7782;
+  background: transparent;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: color 0.18s ease, background 0.18s ease, box-shadow 0.18s ease;
+}
+
+.music-view-toggle button.is-active {
+  color: #d56f95;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 8px 18px rgba(207, 129, 160, 0.15);
+}
+
+.music-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(214px, 1fr));
+  gap: 18px;
+  padding: 20px;
+}
+
+.music-track-card {
+  overflow: hidden;
+  min-width: 0;
+  border: 1px solid rgba(238, 218, 226, 0.82);
+  border-radius: 12px;
+  display: grid;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 16px 30px rgba(164, 126, 148, 0.12);
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.music-track-card:hover {
+  transform: translateY(-3px);
+  border-color: rgba(251, 114, 153, 0.4);
+  box-shadow: 0 24px 38px rgba(164, 126, 148, 0.16);
+}
+
+.music-track-card__cover {
+  position: relative;
+  aspect-ratio: 1.42;
+  overflow: hidden;
+  background:
+    linear-gradient(135deg, rgba(255, 226, 238, 0.9), rgba(235, 241, 255, 0.88));
+}
+
+.music-track-card__cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.28s ease;
+}
+
+.music-track-card:hover .music-track-card__cover img {
+  transform: scale(1.04);
+}
+
+.music-track-card__fallback {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
+  color: #d56f95;
+  font-size: 18px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+}
+
+.music-track-card__duration,
+.music-track-card__status {
+  position: absolute;
+  min-height: 26px;
+  padding: 0 8px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  color: #fff;
+  background: rgba(82, 58, 71, 0.56);
+  font-size: 11px;
+  font-weight: 800;
+  backdrop-filter: blur(10px);
+}
+
+.music-track-card__duration {
+  left: 10px;
+  bottom: 10px;
+}
+
+.music-track-card__status {
+  top: 10px;
+  left: 10px;
+  color: #d56f95;
+  background: rgba(255, 255, 255, 0.86);
+}
+
+.music-track-card__play {
+  position: absolute;
+  right: 12px;
+  bottom: 10px;
+  width: 42px;
+  height: 42px;
+  border: 0;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  background: linear-gradient(135deg, #fb7299, #ffa3c0);
+  box-shadow: 0 14px 24px rgba(251, 114, 153, 0.32);
+  cursor: pointer;
+}
+
+.music-track-card__body {
+  min-width: 0;
+  display: grid;
+  gap: 9px;
+  padding: 13px 14px 10px;
+}
+
+.music-track-card__titleline {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.music-track-card__body strong {
+  overflow: hidden;
+  flex: 0 1 auto;
+  min-width: 0;
+  color: #6a5a63;
+  font-size: 16px;
+  font-weight: 900;
+  letter-spacing: 0.01em;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.music-track-card__body p,
+.music-track-card__meta,
+.music-track-card__footer {
+  color: #8d7b84;
+  font-size: 12px;
+}
+
+.music-track-card__meter {
+  flex: 0 0 auto;
+  height: 18px;
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 3px;
+}
+
+.music-track-card__meter i {
+  width: 4px;
+  border-radius: 999px 999px 3px 3px;
+  background: linear-gradient(180deg, #ffc0dd, #ff92bb);
+  box-shadow: 0 4px 9px rgba(251, 114, 153, 0.12);
+}
+
+.music-track-card__meter i:nth-child(1) {
+  height: 8px;
+  opacity: 0.72;
+}
+
+.music-track-card__meter i:nth-child(2) {
+  height: 12px;
+  opacity: 0.82;
+}
+
+.music-track-card__meter i:nth-child(3) {
+  height: 16px;
+}
+
+.music-track-card__meter i:nth-child(4) {
+  height: 18px;
+  opacity: 0.9;
+}
+
+.music-track-card__artist {
+  min-width: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  overflow: hidden;
+  padding-left: 2px;
+  color: #9b8a92;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.3;
+  text-indent: 0;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.music-track-card__artist::before {
+  content: '';
+  flex: 0 0 auto;
+  width: 6px;
+  height: 6px;
+  border: 1.5px solid rgba(251, 114, 153, 0.56);
+  border-radius: 2px;
+  transform: rotate(45deg);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.78);
+}
+
+.music-track-card__body p {
+  position: relative;
+  min-height: 42px;
+  margin: 1px 0 0;
+  padding: 0 20px;
+  display: -webkit-box;
+  overflow: hidden;
+  color: #9a8890;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.5;
+  text-align: center;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.music-track-card__quote::before,
+.music-track-card__quote::after {
+  position: absolute;
+  color: #ffb1d1;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 24px;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.music-track-card__quote::before {
+  content: '“';
+  left: 0;
+  top: -4px;
+}
+
+.music-track-card__quote::after {
+  content: '”';
+  right: 2px;
+  bottom: -8px;
+}
+
+.music-track-card__meta {
+  min-width: 0;
+  display: flex;
+  gap: 9px;
+  padding: 0 14px 11px;
+}
+
+.music-track-card__meta span {
+  overflow: hidden;
+  max-width: 50%;
+  padding: 6px 10px;
+  border-radius: 999px;
+  color: #ab9aa2;
+  background: rgba(246, 242, 245, 0.86);
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.music-track-card__meta span:first-child {
+  color: #f07da8;
+  background: rgba(255, 238, 246, 0.88);
+}
+
+.music-track-card__footer {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 12px;
+  border-top: 1px solid rgba(238, 218, 226, 0.68);
+  background: rgba(255, 250, 253, 0.72);
+}
+
+.music-track-card__actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.music-track-card__actions button {
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  color: #8d7b84;
+  background: rgba(255, 255, 255, 0.82);
+  cursor: pointer;
+  box-shadow: inset 0 0 0 1px rgba(238, 218, 226, 0.78);
+}
+
+.music-track-card__actions button:hover {
+  color: #d56f95;
+  background: rgba(255, 242, 247, 0.98);
+}
+
+.music-track-card__actions button.is-danger:hover {
+  color: #fb5f8e;
+}
+
+.music-track-card__actions button:disabled {
+  opacity: 0.42;
+  cursor: not-allowed;
+}
+
 .category-track-table {
   display: grid;
 }
@@ -2209,7 +2826,7 @@ function formatTime(value: number) {
 .category-track-table__header,
 .category-track-row__main {
   display: grid;
-  grid-template-columns: 46px minmax(240px, 1.35fr) minmax(140px, 0.75fr) minmax(170px, 0.9fr) 72px 64px;
+  grid-template-columns: 40px minmax(136px, 0.56fr) minmax(90px, 0.34fr) minmax(78px, 0.28fr) 70px 112px 72px;
   gap: 12px;
   align-items: center;
 }
@@ -2235,18 +2852,25 @@ function formatTime(value: number) {
   background: transparent;
   text-align: left;
   cursor: pointer;
+  outline: none;
   transition: background 0.18s ease;
 }
 
 .category-track-row__main:hover,
+.category-track-row__main:focus-visible,
 .category-track-row.is-expanded .category-track-row__main {
   background: rgba(255, 246, 250, 0.88);
+}
+
+.category-track-row__main:focus-visible {
+  box-shadow: inset 0 0 0 2px rgba(251, 114, 153, 0.28);
 }
 
 .category-track-row__index,
 .category-track-row__album,
 .category-track-row__categories,
 .category-track-row__duration,
+.category-track-row__controls,
 .category-track-row__expand {
   overflow: hidden;
   color: #8d7b84;
@@ -2301,10 +2925,69 @@ function formatTime(value: number) {
   font-size: 12px;
 }
 
+.category-track-row__duration {
+  justify-self: start;
+}
+
+.category-track-row__controls {
+  justify-self: start;
+  display: inline-flex;
+  gap: 8px;
+}
+
+.category-track-row__controls,
+.category-track-row__controls button {
+  overflow: visible;
+}
+
 .category-track-row__expand {
-  justify-self: end;
+  justify-self: start;
   color: #d46d96;
   font-weight: 800;
+}
+
+.category-track-row__play {
+  width: 32px;
+  height: 32px;
+  border: 1px solid rgba(237, 211, 222, 0.92);
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  color: #d46d96;
+  background:
+    radial-gradient(circle at 30% 22%, rgba(255, 255, 255, 0.9), transparent 32%),
+    rgba(255, 250, 252, 0.92);
+  box-shadow: 0 10px 20px rgba(218, 148, 174, 0.12);
+  cursor: pointer;
+  transition: transform 0.18s ease, color 0.18s ease, border-color 0.18s ease, background 0.18s ease, opacity 0.18s ease;
+}
+
+.category-track-row__play:hover,
+.category-track-row__play.is-active {
+  transform: translateY(-1px);
+  border-color: rgba(251, 114, 153, 0.58);
+  color: #fff;
+  background: linear-gradient(135deg, #fb7299, #ff95b7);
+  box-shadow: 0 13px 24px rgba(251, 114, 153, 0.24);
+}
+
+.category-track-row__play--pause {
+  color: #9d7688;
+}
+
+.category-track-row__play:disabled {
+  opacity: 0.38;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.category-track-row__play:disabled:hover {
+  border-color: rgba(237, 211, 222, 0.92);
+  color: #9d7688;
+  background:
+    radial-gradient(circle at 30% 22%, rgba(255, 255, 255, 0.9), transparent 32%),
+    rgba(255, 250, 252, 0.92);
 }
 
 .category-track-detail-card {
@@ -2537,8 +3220,31 @@ function formatTime(value: number) {
     align-items: stretch;
   }
 
+  .shelf-heading__actions {
+    width: 100%;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+  }
+
+  .shelf-heading__buttons {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
   .playlist-manager__search {
+    flex-basis: 100%;
     min-width: 0;
+    max-width: none;
+  }
+
+  .playlist-status-filter {
+    width: 100%;
+    overflow-x: auto;
+    justify-content: flex-start;
+  }
+
+  .playlist-status-filter__option {
+    flex: 0 0 auto;
   }
 
   .playlist-categories,
@@ -2546,12 +3252,31 @@ function formatTime(value: number) {
     min-height: auto;
   }
 
+  .category-track-board__head {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .music-view-toggle {
+    width: fit-content;
+  }
+
+  .music-card-grid {
+    grid-template-columns: repeat(auto-fill, minmax(178px, 1fr));
+    gap: 14px;
+    padding: 14px;
+  }
+
+  .music-track-card__meta {
+    flex-wrap: wrap;
+  }
+
   .category-track-table__header {
     display: none;
   }
 
   .category-track-row__main {
-    grid-template-columns: 36px minmax(0, 1fr) auto;
+    grid-template-columns: 36px minmax(0, 1fr) 52px 76px auto;
     gap: 10px;
     padding: 12px;
   }
@@ -2566,8 +3291,17 @@ function formatTime(value: number) {
   }
 
   .category-track-row__expand {
-    grid-column: 2 / -1;
-    justify-self: start;
+    grid-column: auto;
+    justify-self: end;
+  }
+
+  .category-track-row__controls {
+    gap: 6px;
+  }
+
+  .category-track-row__play {
+    width: 30px;
+    height: 30px;
   }
 
   .category-track-detail {
