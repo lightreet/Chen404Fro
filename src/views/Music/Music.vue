@@ -103,10 +103,6 @@
 
       <section class="music-shelf">
         <div class="shelf-heading">
-          <div class="shelf-heading__copy">
-            <span class="eyebrow">Record Shelf</span>
-            <h2>分类</h2>
-          </div>
           <div class="shelf-heading__actions">
             <div class="shelf-search-shell">
               <el-input
@@ -1349,25 +1345,26 @@ function handlePlaylistSearchSubmit() {
   flex: 1 1 auto;
   min-width: 0;
   align-items: center;
-  gap: clamp(18px, 2.8vw, 56px);
+  gap: clamp(20px, 3vw, 60px);
   flex-wrap: wrap;
-  justify-content: flex-end;
+  justify-content: flex-start;
 }
 
 .shelf-search-shell {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 0;
   min-width: 0;
   width: min(100%, 420px);
-  min-height: 52px;
-  padding: 4px;
+  height: 46px;
+  padding: 0;
   border-radius: 999px;
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(255, 249, 252, 0.92));
   border: 1px solid rgba(243, 211, 224, 0.9);
   box-shadow:
     0 14px 28px rgba(245, 155, 188, 0.08),
     inset 0 1px 0 rgba(255, 255, 255, 0.88);
+  overflow: hidden;
 }
 
 .shelf-heading__copy {
@@ -1562,7 +1559,7 @@ function handlePlaylistSearchSubmit() {
   position: relative;
   z-index: 1;
   margin-bottom: 18px;
-  padding: 4px 8px 24px;
+  padding: 0 8px 24px;
   align-items: center;
 }
 
@@ -2639,8 +2636,8 @@ function handlePlaylistSearchSubmit() {
 
 :deep(.playlist-manager__search .el-input__wrapper) {
   min-height: 44px;
-  padding-left: 16px;
-  padding-right: 2px;
+  padding-left: 18px;
+  padding-right: 10px;
   border-radius: 999px;
   box-shadow: none;
   background: transparent;
@@ -2683,11 +2680,13 @@ function handlePlaylistSearchSubmit() {
 }
 
 .shelf-search-button {
-  min-width: 88px;
-  height: 44px;
-  padding: 0 16px;
+  align-self: stretch;
+  min-width: 94px;
+  height: 100%;
+  margin: 0;
+  padding: 0 18px;
   border: none;
-  border-radius: 999px;
+  border-radius: 999px 0 0 999px;
   background: linear-gradient(135deg, #ff8db9, #fb7299);
   color: #fff;
   font-size: 13px;
