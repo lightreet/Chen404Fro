@@ -318,7 +318,7 @@ const refTypeOptions = [
   { label: '站点资源', value: 'SITE_ASSET' },
   { label: '站点 Hero', value: 'SITE_HERO' },
   { label: '用户头像', value: 'AVATAR' },
-  { label: '受信申请附件', value: 'TRUST_REQUEST_ATTACHMENT' },
+  { label: '好友申请附件', value: 'TRUST_REQUEST_ATTACHMENT' },
   { label: '旅行记忆图片', value: 'TRAVEL_MEMORY_IMAGE' },
   { label: '音乐音频', value: 'MUSIC_AUDIO' },
   { label: '音乐封面', value: 'MUSIC_COVER' },
@@ -546,7 +546,9 @@ function moduleLabel(value?: string) {
     case 'TRAVEL_MEMORY_ENTRY':
       return '旅行记忆条目'
     case 'TRUST_REQUEST':
-      return '受信申请'
+      return '好友申请'
+    case 'MUSIC_TRACK':
+      return '音乐曲目'
     default:
       return value || '未知模块'
   }

@@ -363,8 +363,8 @@ export class Service {
         });
     }
     /**
-     * 上传受信申请附件
-     * 用于受信任用户申请的附件上传
+     * 上传好友申请附件
+     * 用于好友申请的附件上传
      * @returns ResultUploadFileVO OK
      * @throws ApiError
      */

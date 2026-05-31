@@ -277,7 +277,7 @@
                   <div class="music-track-card__cover">
                     <img v-if="track.coverUrl" :src="track.coverUrl" :alt="track.title" />
                     <span v-else class="music-track-card__fallback">Music</span>
-                    <span class="music-track-card__duration">{{ formatTrackDuration(track) }}</span>
+                    <span class="music-track-card__duration">{{ getTrackDurationLabel(track) }}</span>
                     <span v-if="canManage" class="music-track-card__status">{{ statusLabel(track.status) }}</span>
                     <button type="button" class="music-track-card__play" title="播放" @click="playTrack(track)">
                       <el-icon><VideoPlay /></el-icon>
@@ -383,7 +383,7 @@
                     <span class="category-track-row__categories">
                       {{ getTrackCategoryNames(track).join(' / ') || '无分类' }}
                     </span>
-                    <span class="category-track-row__duration">{{ formatTrackDuration(track) }}</span>
+                    <span class="category-track-row__duration">{{ getTrackDurationLabel(track) }}</span>
                     <span class="category-track-row__controls">
                       <button
                         type="button"
@@ -511,7 +511,7 @@
                             </span>
                             <span>
                               <small>时长</small>
-                              <strong>{{ formatTrackDuration(track) }}</strong>
+                              <strong>{{ getTrackDurationLabel(track) }}</strong>
                             </span>
                             <span>
                               <small>歌词</small>
@@ -551,7 +551,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Back, Close, Delete, Edit, Folder, Grid, List, Plus, Refresh, Right, Search, Sort, VideoPause, VideoPlay } from '@element-plus/icons-vue'
@@ -592,6 +592,7 @@ const tracks = ref<MusicTrack[]>([])
 const adminPlaylists = ref<MusicPlaylist[]>([])
 const loading = ref(false)
 const loadError = ref('')
+const trackDurationMap = ref<Record<number, number>>({})
 const playlistSaving = ref(false)
 const selectedCategoryId = ref<number | null>(null)
 const expandedManagedTrackId = ref<number | null>(null)
@@ -605,6 +606,7 @@ const musicDisplayMode = ref<'cards' | 'rows'>('cards')
 const player = useMusicPlayerStore()
 const userStore = useUserStore()
 const router = useRouter()
+const resolvingTrackDurationIds = new Set<number>()
 const { user } = storeToRefs(userStore)
 const { loadSiteConfig } = useSiteConfig()
 const canManage = computed(() => isAdminUser(user.value))
@@ -713,6 +715,18 @@ onMounted(() => {
   })
 })
 
+watch(
+  () => [activeTrack.value?.id, player.duration] as const,
+  ([trackId, duration]) => {
+    if (trackId == null || !Number.isFinite(duration) || duration <= 0) return
+    trackDurationMap.value = {
+      ...trackDurationMap.value,
+      [trackId]: duration,
+    }
+  },
+  { immediate: true },
+)
+
 async function loadMusic() {
   loading.value = true
   loadError.value = ''
@@ -721,8 +735,10 @@ async function loadMusic() {
       canManage.value ? getAdminMusicTracks() : getPublicMusicTracks(),
       canManage.value ? getAdminMusicPlaylists() : getPublicMusicPlaylists(),
     ])
+    syncTrackDurations(trackRows)
     tracks.value = trackRows
     adminPlaylists.value = canManage.value ? categoryRows : await hydratePublicCategories(categoryRows)
+    void primeTrackDurations(trackRows)
     ensureSelectedCategoryExists()
     if (!player.hasQueue) {
       const publishedTracks = trackRows.filter((track) => track.status === 'published')
@@ -733,6 +749,77 @@ async function loadMusic() {
   } finally {
     loading.value = false
   }
+}
+
+function syncTrackDurations(trackRows: MusicTrack[]) {
+  const nextDurationMap: Record<number, number> = {}
+  trackRows.forEach((track) => {
+    const knownDuration = resolveKnownTrackDuration(track)
+    if (knownDuration != null) {
+      nextDurationMap[track.id] = knownDuration
+    }
+  })
+  trackDurationMap.value = nextDurationMap
+}
+
+function resolveKnownTrackDuration(track: MusicTrack) {
+  if (Number.isFinite(track.duration) && (track.duration || 0) > 0) {
+    return track.duration as number
+  }
+  const cachedDuration = trackDurationMap.value[track.id]
+  if (Number.isFinite(cachedDuration) && cachedDuration > 0) {
+    return cachedDuration
+  }
+  if (activeTrack.value?.id === track.id && Number.isFinite(player.duration) && player.duration > 0) {
+    return player.duration
+  }
+  return null
+}
+
+async function primeTrackDurations(trackRows: MusicTrack[]) {
+  await Promise.all(trackRows.map((track) => ensureTrackDuration(track)))
+}
+
+async function ensureTrackDuration(track: MusicTrack) {
+  if (!track?.id || !track.audioUrl?.trim()) return
+  if (resolveKnownTrackDuration(track) != null || resolvingTrackDurationIds.has(track.id)) return
+
+  resolvingTrackDurationIds.add(track.id)
+  try {
+    const duration = await readAudioDuration(track.audioUrl)
+    if (duration == null) return
+    trackDurationMap.value = {
+      ...trackDurationMap.value,
+      [track.id]: duration,
+    }
+  } finally {
+    resolvingTrackDurationIds.delete(track.id)
+  }
+}
+
+function readAudioDuration(audioUrl: string): Promise<number | null> {
+  return new Promise((resolve) => {
+    const audio = document.createElement('audio')
+    const timeoutId = window.setTimeout(() => finalize(null), 12000)
+
+    function finalize(duration: number | null) {
+      window.clearTimeout(timeoutId)
+      audio.onloadedmetadata = null
+      audio.onerror = null
+      audio.src = ''
+      resolve(duration)
+    }
+
+    audio.preload = 'metadata'
+    audio.onloadedmetadata = () => {
+      const duration = Number.isFinite(audio.duration) && audio.duration > 0
+        ? audio.duration
+        : null
+      finalize(duration)
+    }
+    audio.onerror = () => finalize(null)
+    audio.src = audioUrl
+  })
 }
 
 async function hydratePublicCategories(rows: MusicPlaylist[]) {
@@ -807,12 +894,12 @@ function handleVolumeChange(value: number | number[]) {
   player.setVolume(nextValue / 100)
 }
 
-function formatTrackDuration(track: MusicTrack) {
-  const rawDuration = (track as MusicTrack & { duration?: number }).duration
-  if (Number.isFinite(rawDuration) && (rawDuration || 0) > 0) {
-    return formatTime(rawDuration as number)
+function getTrackDurationLabel(track: MusicTrack) {
+  const knownDuration = resolveKnownTrackDuration(track)
+  if (knownDuration != null) {
+    return formatTime(knownDuration)
   }
-  return track.lyricType === 'lrc' ? 'LRC' : '歌词'
+  return '--:--'
 }
 
 function openCreateTrack() {
@@ -1261,23 +1348,25 @@ function handlePlaylistSearchSubmit() {
 .shelf-heading__actions {
   flex: 1 1 auto;
   min-width: 0;
-  gap: 18px;
-  flex-wrap: nowrap;
-  justify-content: space-between;
+  align-items: center;
+  gap: clamp(18px, 2.8vw, 56px);
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
 .shelf-search-shell {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   min-width: 0;
-  width: min(100%, 312px);
-  padding: 0;
+  width: min(100%, 420px);
+  min-height: 52px;
+  padding: 4px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.94);
-  border: 1px solid rgba(245, 155, 188, 0.12);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(255, 249, 252, 0.92));
+  border: 1px solid rgba(243, 211, 224, 0.9);
   box-shadow:
-    0 8px 18px rgba(245, 155, 188, 0.05),
+    0 14px 28px rgba(245, 155, 188, 0.08),
     inset 0 1px 0 rgba(255, 255, 255, 0.88);
 }
 
@@ -1285,7 +1374,7 @@ function handlePlaylistSearchSubmit() {
   flex: 0 0 auto;
   min-width: 78px;
   display: grid;
-  gap: 4px;
+  gap: 6px;
 }
 
 .shelf-heading__buttons {
@@ -1293,6 +1382,7 @@ function handlePlaylistSearchSubmit() {
   display: flex;
   align-items: center;
   gap: 12px;
+  margin-left: auto;
 }
 
 .eyebrow {
@@ -1444,21 +1534,46 @@ function handlePlaylistSearchSubmit() {
 }
 
 .music-shelf {
+  position: relative;
   padding: clamp(20px, 2vw, 28px);
-  border-radius: 18px;
+  border-radius: 28px;
   border: 1px solid rgba(238, 218, 226, 0.76);
   background:
+    radial-gradient(circle at top left, rgba(255, 214, 231, 0.28), transparent 30%),
     linear-gradient(180deg, rgba(255, 253, 254, 0.96), rgba(255, 247, 251, 0.88)),
     linear-gradient(90deg, rgba(251, 114, 153, 0.06), transparent 34%);
   box-shadow:
     0 22px 46px rgba(167, 126, 145, 0.12),
     inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  overflow: hidden;
+}
+
+.music-shelf::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 100% 0, rgba(255, 225, 236, 0.34), transparent 22%),
+    radial-gradient(circle at 0 100%, rgba(247, 233, 244, 0.3), transparent 18%);
+  pointer-events: none;
 }
 
 .shelf-heading {
-  margin-bottom: 0;
-  padding: 10px 6px 18px;
-  border-bottom: 1px solid rgba(239, 221, 229, 0.88);
+  position: relative;
+  z-index: 1;
+  margin-bottom: 18px;
+  padding: 4px 8px 24px;
+  align-items: center;
+}
+
+.shelf-heading::after {
+  content: '';
+  position: absolute;
+  right: 8px;
+  bottom: 0;
+  left: 8px;
+  height: 1px;
+  background: linear-gradient(90deg, rgba(239, 221, 229, 0), rgba(239, 221, 229, 0.92) 12%, rgba(239, 221, 229, 0.92) 88%, rgba(239, 221, 229, 0));
 }
 
 .shelf-heading h2 {
@@ -2080,17 +2195,17 @@ function handlePlaylistSearchSubmit() {
 .playlist-category-card {
   position: relative;
   width: 100%;
-  min-height: 54px;
+  min-height: 72px;
   display: grid;
-  grid-template-columns: 34px minmax(0, 1fr);
-  gap: 10px;
+  grid-template-columns: 42px minmax(0, 1fr);
+  gap: 12px;
   align-items: center;
-  padding: 9px 10px;
-  border: 1px solid transparent;
-  border-radius: 10px;
+  padding: 12px 12px;
+  border: 1px solid rgba(244, 231, 237, 0.82);
+  border-radius: 18px;
   text-align: left;
   color: inherit;
-  background: rgba(255, 255, 255, 0.7);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.9), rgba(255, 248, 251, 0.78));
   cursor: pointer;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.72);
   transition: transform 0.2s ease, border-color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
@@ -2099,8 +2214,8 @@ function handlePlaylistSearchSubmit() {
 .playlist-category-card::before {
   content: '';
   position: absolute;
-  inset: 11px auto 11px 0;
-  width: 3px;
+  inset: 14px auto 14px 0;
+  width: 4px;
   border-radius: 999px;
   background: transparent;
   transition: background 0.2s ease, box-shadow 0.2s ease;
@@ -2108,10 +2223,10 @@ function handlePlaylistSearchSubmit() {
 
 .playlist-category-card:hover,
 .playlist-category-card.is-editing {
-  transform: translateX(3px);
+  transform: translateX(4px);
   border-color: rgba(251, 114, 153, 0.42);
-  background: rgba(255, 241, 247, 0.94);
-  box-shadow: 0 14px 28px rgba(215, 143, 170, 0.13);
+  background: linear-gradient(180deg, rgba(255, 244, 248, 0.98), rgba(255, 237, 244, 0.92));
+  box-shadow: 0 18px 30px rgba(215, 143, 170, 0.14);
 }
 
 .playlist-category-card.is-editing::before {
@@ -2120,13 +2235,13 @@ function handlePlaylistSearchSubmit() {
 }
 
 .playlist-category-card__marker {
-  width: 34px;
-  height: 34px;
-  border-radius: 9px;
+  width: 42px;
+  height: 42px;
+  border-radius: 14px;
   display: grid;
   place-items: center;
   color: #c86a8e;
-  background: rgba(255, 246, 250, 0.78);
+  background: linear-gradient(135deg, rgba(255, 245, 249, 0.96), rgba(248, 241, 247, 0.9));
   box-shadow: inset 0 0 0 1px rgba(238, 218, 226, 0.72);
   font-size: 17px;
 }
@@ -2432,56 +2547,61 @@ function handlePlaylistSearchSubmit() {
 }
 
 .playlist-status-filter {
-  flex: 0 0 auto;
+  flex: 0 1 auto;
   display: inline-flex;
   align-items: center;
-  gap: 2px;
-  padding: 3px 4px;
+  justify-content: center;
+  gap: clamp(28px, 3.2vw, 56px);
+  min-width: 292px;
+  padding: 0;
   border: 0;
-  border-radius: 999px;
-  background: linear-gradient(90deg, rgba(255, 246, 250, 0.72), rgba(255, 251, 253, 0.58));
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
 }
 
 .playlist-status-filter__option {
   position: relative;
-  min-width: 72px;
-  height: 34px;
+  flex: 0 0 auto;
+  min-width: 48px;
+  height: 38px;
+  padding: 0 2px;
   border: 0;
-  border-radius: 11px;
-  color: #5f4f58;
+  border-radius: 0;
+  color: #4f4650;
   background: transparent;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 800;
   cursor: pointer;
-  transition: color 0.18s ease, background 0.18s ease;
+  transition: color 0.18s ease;
 }
 
 .playlist-status-filter__option:hover {
-  color: #e4779d;
-  background: rgba(255, 255, 255, 0.34);
+  color: #ef6f9f;
 }
 
 .playlist-status-filter__option.is-active {
   color: #ef6f9f;
-  background: rgba(255, 238, 246, 0.45);
+  background: transparent;
+  box-shadow: none;
 }
 
 .playlist-status-filter__option.is-active::after {
   content: '';
   position: absolute;
-  right: 18px;
-  bottom: 5px;
-  left: 18px;
-  height: 2px;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 3px;
   border-radius: 999px;
-  background: rgba(251, 114, 153, 0.5);
+  background: #fb7299;
 }
 
 .shelf-heading__add,
 .shelf-heading__refresh {
   min-width: 92px;
-  min-height: 38px;
-  border-radius: 10px;
+  min-height: 42px;
+  border-radius: 999px;
   font-weight: 800;
 }
 
@@ -2502,7 +2622,7 @@ function handlePlaylistSearchSubmit() {
 .shelf-heading__refresh.el-button {
   border: 1px solid rgba(235, 219, 227, 0.92);
   color: #5f4f58;
-  background: rgba(255, 255, 255, 0.76);
+  background: rgba(255, 255, 255, 0.88);
   box-shadow: 0 10px 20px rgba(191, 151, 168, 0.08);
 }
 
@@ -2518,8 +2638,8 @@ function handlePlaylistSearchSubmit() {
 }
 
 :deep(.playlist-manager__search .el-input__wrapper) {
-  min-height: 38px;
-  padding-left: 12px;
+  min-height: 44px;
+  padding-left: 16px;
   padding-right: 2px;
   border-radius: 999px;
   box-shadow: none;
@@ -2546,7 +2666,7 @@ function handlePlaylistSearchSubmit() {
   align-items: center;
   justify-content: center;
   height: 100%;
-  color: #9a99aa;
+  color: #b2a0ad;
 }
 
 :deep(.playlist-manager__search .el-input__inner) {
@@ -2554,24 +2674,24 @@ function handlePlaylistSearchSubmit() {
   color: #5f4f58;
   font-size: 13px;
   font-weight: 700;
-  line-height: 36px;
+  line-height: 44px;
 }
 
 :deep(.playlist-manager__search .el-input__inner::placeholder) {
-  color: #a3a6bb;
+  color: #baa8b5;
   font-weight: 600;
 }
 
 .shelf-search-button {
-  min-width: 76px;
-  height: 36px;
-  padding: 0 12px;
+  min-width: 88px;
+  height: 44px;
+  padding: 0 16px;
   border: none;
   border-radius: 999px;
-  background: linear-gradient(135deg, rgba(245, 155, 188, 0.96), rgba(255, 198, 220, 0.96));
+  background: linear-gradient(135deg, #ff8db9, #fb7299);
   color: #fff;
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 800;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -2596,7 +2716,7 @@ function handlePlaylistSearchSubmit() {
   margin-top: auto;
   display: grid;
   gap: 10px;
-  padding-top: 12px;
+  padding-top: 16px;
   border-top: 1px solid rgba(238, 218, 226, 0.72);
 }
 
@@ -2622,22 +2742,35 @@ function handlePlaylistSearchSubmit() {
 }
 
 .category-track-board {
+  position: relative;
   min-height: calc(100vh - 132px);
   border: 1px solid rgba(238, 218, 226, 0.84);
-  border-radius: 14px;
+  border-radius: 28px;
   background:
+    radial-gradient(circle at top right, rgba(255, 226, 238, 0.22), transparent 22%),
     linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(255, 250, 253, 0.9));
-  box-shadow: 0 20px 36px rgba(180, 139, 158, 0.1);
+  box-shadow: 0 24px 44px rgba(180, 139, 158, 0.12);
   overflow: hidden;
 }
 
 .category-track-board__head {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 18px 20px 16px;
-  border-bottom: 1px solid rgba(238, 218, 226, 0.72);
+  padding: 18px 22px 22px;
+  background: linear-gradient(180deg, rgba(255, 252, 253, 0.96), rgba(255, 248, 251, 0.9));
+}
+
+.category-track-board__head::after {
+  content: '';
+  position: absolute;
+  right: 22px;
+  bottom: 0;
+  left: 22px;
+  height: 1px;
+  background: linear-gradient(90deg, rgba(238, 218, 226, 0), rgba(238, 218, 226, 0.9) 16%, rgba(238, 218, 226, 0.9) 84%, rgba(238, 218, 226, 0));
 }
 
 .category-track-board__head > div:first-child {
@@ -2661,11 +2794,11 @@ function handlePlaylistSearchSubmit() {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 4px 6px;
+  padding: 6px 8px;
   border: 1px solid rgba(238, 218, 226, 0.82);
-  border-radius: 16px;
-  background: rgba(255, 250, 253, 0.88);
-  box-shadow: 0 10px 18px rgba(201, 155, 173, 0.08);
+  border-radius: 18px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(255, 247, 251, 0.92));
+  box-shadow: 0 14px 24px rgba(201, 155, 173, 0.1);
 }
 
 .play-mode-toggle {
@@ -2683,7 +2816,7 @@ function handlePlaylistSearchSubmit() {
   right: 0;
   width: 1px;
   height: 28px;
-  background: rgba(231, 210, 220, 0.92);
+  background: linear-gradient(180deg, rgba(231, 210, 220, 0), rgba(231, 210, 220, 0.92) 18%, rgba(231, 210, 220, 0.92) 82%, rgba(231, 210, 220, 0));
 }
 
 .play-mode-toggle button {
@@ -2783,25 +2916,25 @@ function handlePlaylistSearchSubmit() {
 .music-card-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(214px, 1fr));
-  gap: 18px;
-  padding: 20px;
+  gap: 20px;
+  padding: 8px 20px 20px;
 }
 
 .music-track-card {
   overflow: hidden;
   min-width: 0;
   border: 1px solid rgba(238, 218, 226, 0.82);
-  border-radius: 12px;
+  border-radius: 24px;
   display: grid;
-  background: rgba(255, 255, 255, 0.92);
-  box-shadow: 0 16px 30px rgba(164, 126, 148, 0.12);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(255, 249, 252, 0.94));
+  box-shadow: 0 18px 34px rgba(164, 126, 148, 0.12);
   transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .music-track-card:hover {
-  transform: translateY(-3px);
+  transform: translateY(-5px);
   border-color: rgba(251, 114, 153, 0.4);
-  box-shadow: 0 24px 38px rgba(164, 126, 148, 0.16);
+  box-shadow: 0 28px 42px rgba(164, 126, 148, 0.18);
 }
 
 .music-track-card__cover {
@@ -2810,6 +2943,16 @@ function handlePlaylistSearchSubmit() {
   overflow: hidden;
   background:
     linear-gradient(135deg, rgba(255, 226, 238, 0.9), rgba(235, 241, 255, 0.88));
+}
+
+.music-track-card__cover::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(74, 37, 57, 0.12)),
+    radial-gradient(circle at top left, rgba(255, 255, 255, 0.22), transparent 24%);
+  pointer-events: none;
 }
 
 .music-track-card__cover img {
@@ -2880,8 +3023,8 @@ function handlePlaylistSearchSubmit() {
 .music-track-card__body {
   min-width: 0;
   display: grid;
-  gap: 9px;
-  padding: 13px 14px 10px;
+  gap: 11px;
+  padding: 16px 18px 12px;
 }
 
 .music-track-card__titleline {
@@ -2895,8 +3038,8 @@ function handlePlaylistSearchSubmit() {
   overflow: hidden;
   flex: 0 1 auto;
   min-width: 0;
-  color: #6a5a63;
-  font-size: 16px;
+  color: #594650;
+  font-size: 17px;
   font-weight: 900;
   letter-spacing: 0.01em;
   line-height: 1.2;
@@ -2974,15 +3117,15 @@ function handlePlaylistSearchSubmit() {
 
 .music-track-card__body p {
   position: relative;
-  min-height: 42px;
-  margin: 1px 0 0;
-  padding: 0 20px;
+  min-height: 46px;
+  margin: 2px 0 0;
+  padding: 0 22px;
   display: -webkit-box;
   overflow: hidden;
-  color: #9a8890;
+  color: #938089;
   font-size: 13px;
   font-weight: 700;
-  line-height: 1.5;
+  line-height: 1.6;
   text-align: center;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
@@ -3014,7 +3157,7 @@ function handlePlaylistSearchSubmit() {
   min-width: 0;
   display: flex;
   gap: 9px;
-  padding: 0 14px 11px;
+  padding: 0 18px 14px;
 }
 
 .music-track-card__meta span {
@@ -3037,14 +3180,14 @@ function handlePlaylistSearchSubmit() {
 }
 
 .music-track-card__footer {
-  min-height: 44px;
+  min-height: 52px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  padding: 8px 12px;
+  padding: 10px 16px;
   border-top: 1px solid rgba(238, 218, 226, 0.68);
-  background: rgba(255, 250, 253, 0.72);
+  background: linear-gradient(180deg, rgba(255, 252, 253, 0.92), rgba(255, 247, 251, 0.84));
 }
 
 .music-track-card__actions {
@@ -3485,10 +3628,12 @@ function handlePlaylistSearchSubmit() {
     width: 100%;
     flex-wrap: wrap;
     justify-content: flex-start;
+    gap: 16px 22px;
   }
 
   .shelf-heading__buttons {
     width: 100%;
+    margin-left: 0;
     justify-content: flex-start;
   }
 
@@ -3504,6 +3649,7 @@ function handlePlaylistSearchSubmit() {
 
   .playlist-status-filter {
     width: 100%;
+    min-width: 0;
     overflow-x: auto;
     justify-content: flex-start;
   }

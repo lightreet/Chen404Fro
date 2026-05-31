@@ -270,6 +270,7 @@ export interface MusicTrack {
   title: string;
   artist: string;
   album?: string;
+  duration?: number;
   releaseYear?: number;
   language?: string;
   genre?: string;
@@ -718,7 +719,7 @@ export interface CreateCommentParams {
   authorWebsite?: string;
 }
 
-// ==================== 受信申请相关类型 ====================
+// ==================== 好友申请相关类型 ====================
 
 export enum TrustRequestStatus {
   PENDING = 0,

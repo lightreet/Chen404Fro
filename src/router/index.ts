@@ -193,7 +193,7 @@ const routes: RouteRecordRaw[] = [
     name: 'TrustRequest',
     component: () => import('@/views/TrustRequest/TrustRequest.vue'),
     meta: {
-      title: '受信申请',
+      title: '好友申请',
     },
   },
   {

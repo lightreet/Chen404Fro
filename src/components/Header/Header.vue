@@ -246,7 +246,7 @@ const navItems = computed<NavItem[]>(() => [
   { key: 'music', name: '音乐馆', path: '/music', to: '/music', icon: Headset },
   {
     key: 'trust-request',
-    name: '受信申请',
+    name: '好友申请',
     path: '/trust-request',
     to: '/trust-request',
     icon: Postcard,

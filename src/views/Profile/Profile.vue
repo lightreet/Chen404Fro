@@ -304,7 +304,7 @@ const panelTitle = computed(() => {
   if (activeMenu.value === 'articles') return '我的文章'
   if (activeMenu.value === 'likes') return '我的点赞'
   if (activeMenu.value === 'favorites') return '我的收藏'
-  if (activeMenu.value === 'trust') return '受信申请'
+  if (activeMenu.value === 'trust') return '好友申请'
   return '个人中心'
 })
 
@@ -312,6 +312,7 @@ const panelSubtitle = computed(() => {
   if (activeMenu.value === 'articles') return '记录你的创作与成长轨迹，管理已发布与草稿内容。'
   if (activeMenu.value === 'likes') return '把喜欢过的内容安静收好，随时回来继续阅读。'
   if (activeMenu.value === 'favorites') return '整理值得反复回看的文章，保留你的专属灵感清单。'
+  if (activeMenu.value === 'trust') return '在这里提交好友申请，并查看申请状态、附件与审核反馈。'
   return '在这里更新头像、昵称与个人简介，让你的角色名片更完整。'
 })
 
@@ -321,7 +322,7 @@ const panelBadge = computed(() => {
   if (activeMenu.value === 'articles') return `共 ${articleTotal.value} 篇`
   if (activeMenu.value === 'likes') return `共 ${likedTotal.value} 篇`
   if (activeMenu.value === 'favorites') return `共 ${favTotal.value} 篇`
-  if (activeMenu.value === 'trust') return '权限申请'
+  if (activeMenu.value === 'trust') return '好友申请'
   return trustLevelText.value
 })
 

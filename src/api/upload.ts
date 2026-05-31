@@ -5,6 +5,7 @@
 
 import { Service } from '@/sdk/generated'
 import { unwrapResult, type ResultEnvelope } from '@/sdk/runtime'
+import type { RequestConfig } from './request'
 import { post } from './request'
 
 export interface UploadResult {
@@ -26,6 +27,9 @@ type UploadPayload = {
   longitude?: number
   shotAt?: string
 }
+
+const MUSIC_UPLOAD_TIMEOUT_MS = 3 * 60 * 1000
+const MUSIC_UPLOAD_TIMEOUT_MESSAGE = '音频文件较大，上传超时，请检查网络后重试。'
 
 async function uploadSingleFile(
   file: File,
@@ -82,10 +86,10 @@ export function uploadTrustAttachment(file: File): Promise<UploadResult> {
   return uploadSingleFile(file, Service.uploadTrustAttachment)
 }
 
-async function uploadFileByEndpoint(file: File, endpoint: string): Promise<UploadResult> {
+async function uploadFileByEndpoint(file: File, endpoint: string, config?: RequestConfig): Promise<UploadResult> {
   const formData = new FormData()
   formData.append('file', file)
-  const payload = await post<UploadPayload>(endpoint, formData as any)
+  const payload = await post<UploadPayload>(endpoint, formData as any, config)
 
   return {
     id: payload.id,
@@ -99,7 +103,10 @@ async function uploadFileByEndpoint(file: File, endpoint: string): Promise<Uploa
 }
 
 export function uploadMusicAudio(file: File): Promise<UploadResult> {
-  return uploadFileByEndpoint(file, '/upload/music-audio')
+  return uploadFileByEndpoint(file, '/upload/music-audio', {
+    timeout: MUSIC_UPLOAD_TIMEOUT_MS,
+    timeoutErrorMessage: MUSIC_UPLOAD_TIMEOUT_MESSAGE,
+  })
 }
 
 export function uploadMusicCover(file: File): Promise<UploadResult> {

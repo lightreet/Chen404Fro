@@ -296,7 +296,7 @@ type AssetKey = 'siteLogo' | 'siteFavicon';
 type UploadingKey = HeroKey | AssetKey | '';
 
 const heroPages: Array<{ key: HeroKey; label: string; desc: string }> = [
-  { key: 'trust-request', label: '受信申请', desc: '受信申请页面顶部封面' },
+  { key: 'trust-request', label: '好友申请', desc: '好友申请页面顶部封面' },
   { key: 'home', label: '首页', desc: '首页主视觉封面' },
   { key: 'archive', label: '时光轴', desc: '时光轴页面顶部封面' },
   { key: 'memory-map', label: '旅行地图', desc: '旅行纪念地图页面顶部封面' },

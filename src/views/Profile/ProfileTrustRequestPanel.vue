@@ -2,7 +2,7 @@
   <div class="trust-panel" v-loading="loading">
     <section class="trust-hero">
       <div>
-        <h3>受信任用户申请</h3>
+        <h3>好友申请</h3>
         <p>用于申请查看“知友可见”的内容，不包含文章发布权限。</p>
       </div>
       <el-tag :type="statusTagType">{{ statusLabel }}</el-tag>
@@ -10,7 +10,7 @@
 
     <section v-if="isAdmin" class="trust-state trust-state--done">
       <h4>当前账号是管理员</h4>
-      <p>管理员默认拥有全部访问权限，不需要再发起受信任用户申请。</p>
+      <p>管理员默认拥有全部访问权限，不需要再发起好友申请。</p>
     </section>
 
     <section v-else-if="isFriend" class="trust-state trust-state--done">
@@ -52,7 +52,7 @@
               maxlength="1000"
               show-word-limit
               resize="none"
-              placeholder="简单说明你为什么希望成为知友，以及希望管理员了解的背景信息。"
+              placeholder="简单说明你为什么希望申请知友权限，以及希望管理员了解的背景信息。"
             />
           </el-form-item>
 

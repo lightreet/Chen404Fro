@@ -33,7 +33,7 @@
               </el-menu-item>
               <el-menu-item index="trust-requests">
                 <el-icon><Postcard /></el-icon>
-                <span>受信申请</span>
+                <span>好友申请</span>
               </el-menu-item>
             </el-menu>
           </aside>

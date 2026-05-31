@@ -5,7 +5,7 @@
         <div class="header-row">
           <span class="card-title">
             <el-icon class="card-icon"><Postcard /></el-icon>
-            受信申请
+            好友申请
           </span>
           <div class="header-actions">
             <el-select v-model="statusFilter" clearable placeholder="全部状态" style="width: 160px" @change="loadRequests(1)">
@@ -86,7 +86,7 @@
       </div>
     </el-card>
 
-    <el-dialog v-model="dialogVisible" title="受信申请详情" width="720px">
+    <el-dialog v-model="dialogVisible" title="好友申请详情" width="720px">
       <template v-if="activeRequest">
         <div class="detail-grid">
           <div class="detail-item">
@@ -224,7 +224,7 @@ const loadRequests = async (nextPage = page.value) => {
   } catch {
     requests.value = []
     total.value = 0
-    ElMessage.error('受信申请列表加载失败')
+    ElMessage.error('好友申请列表加载失败')
   } finally {
     loading.value = false
   }

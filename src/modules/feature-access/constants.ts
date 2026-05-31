@@ -62,10 +62,10 @@ export function buildMemoryMapCoverConfig(isLoggedIn: boolean): FeatureAccessCov
   return {
     eyebrow: 'Memory Map',
     title: '登录后解锁这张旅行地图',
-    description: '这张地图目前只对知友开放。完成受信申请后，就能回来继续翻阅这些旅途记录。',
+    description: '这张地图目前只对知友开放。完成好友申请后，就能回来继续翻阅这些旅途记录。',
     noticeTitle: '当前仅对知友开放',
-    noticeText: '如果你希望查看这部分旅行内容，可以先前往受信申请页提交理由，审核通过后就能访问。',
-    primaryText: '去申请受信权限',
+    noticeText: '如果你希望查看这部分旅行内容，可以先前往好友申请页提交理由，审核通过后就能访问。',
+    primaryText: '去提交好友申请',
     primaryTo: '/trust-request',
     secondaryText: '返回首页',
     secondaryTo: '/',
@@ -74,8 +74,8 @@ export function buildMemoryMapCoverConfig(isLoggedIn: boolean): FeatureAccessCov
 
 export const TRUST_REQUEST_LOGIN_COVER: FeatureAccessCoverConfig = {
   eyebrow: 'Members Only',
-  title: '登录后可查看受信申请内容',
-  description: '这里会展示你的申请状态、申请表单和审核反馈。先登录账号，再决定是否申请成为知友。',
+  title: '登录后可查看好友申请内容',
+  description: '这里会展示你的申请状态、申请表单和审核反馈。先登录账号，再决定是否提交好友申请。',
   noticeTitle: '当前仅展示说明封面',
   noticeText: '登录后你可以提交申请理由、上传附件，并在这里查看审核进度。',
   primaryText: '前往登录',
