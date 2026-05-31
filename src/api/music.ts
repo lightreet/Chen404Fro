@@ -22,10 +22,6 @@ export function getPublicMusicPlaylist(id: number | string): Promise<MusicPlayli
   return get(`/music/playlists/${String(id)}`)
 }
 
-export function getDefaultRadio(): Promise<MusicPlaylist> {
-  return get('/music/radio/default')
-}
-
 export function getAdminMusicTracks(): Promise<MusicTrack[]> {
   return get('/admin/music/tracks')
 }
@@ -69,13 +65,13 @@ export function updateMusicPlaylist(id: number | string, data: MusicPlaylistUpse
   return put(`/admin/music/playlists/${String(id)}`, data)
 }
 
+export function deleteMusicPlaylist(id: number | string): Promise<void> {
+  return del(`/admin/music/playlists/${String(id)}`)
+}
+
 export function saveMusicPlaylistTracks(
   id: number | string,
   data: MusicPlaylistTracksCommand,
 ): Promise<MusicPlaylist> {
   return put(`/admin/music/playlists/${String(id)}/tracks`, data)
-}
-
-export function setDefaultMusicPlaylist(id: number | string): Promise<MusicPlaylist> {
-  return patch(`/admin/music/playlists/${String(id)}/default`)
 }

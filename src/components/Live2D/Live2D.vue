@@ -632,15 +632,12 @@ const handleMusic = async () => {
   musicPanelVisible.value = true;
   try {
     if (!musicPlayer.hasQueue) {
-      await musicPlayer.loadDefaultRadio();
+      await musicPlayer.loadPublicQueue();
     }
-    if (!musicPlayer.playing) {
-      await musicPlayer.playCurrent();
-    }
-    speechText.value = 'Sakura Radio 已经调好频啦。';
+    speechText.value = musicPlayer.playing ? '音乐馆已经打开啦。' : '音乐馆已经准备好啦，点播放按钮就能开始。';
     setTimeout(clearSpeech, 2200);
   } catch {
-    speechText.value = '这次电台没有接稳，等一下再试试。';
+    speechText.value = '这次音乐没有接上，等一下再试试。';
     setTimeout(clearSpeech, 2200);
   }
 };

@@ -3,6 +3,7 @@ import { addIcon } from '@iconify/vue'
 import heartOutline from '@iconify/icons-mdi/heart-outline'
 import folder from '@iconify/icons-mdi/folder'
 import folderOpen from '@iconify/icons-mdi/folder-open'
+import shuffle from '@iconify/icons-mdi/shuffle'
 import mdiVuejs from '@iconify/icons-mdi/vuejs'
 import mdiServer from '@iconify/icons-mdi/server'
 import mdiDatabase from '@iconify/icons-mdi/database'
@@ -25,6 +26,7 @@ export function registerMdiSubset() {
   addIcon('mdi:heart-outline', asIcon(heartOutline))
   addIcon('mdi:folder', asIcon(folder))
   addIcon('mdi:folder-open', asIcon(folderOpen))
+  addIcon('mdi:shuffle', asIcon(shuffle))
   addIcon('mdi:vuejs', asIcon(mdiVuejs))
   addIcon('mdi:server', asIcon(mdiServer))
   addIcon('mdi:database', asIcon(mdiDatabase))

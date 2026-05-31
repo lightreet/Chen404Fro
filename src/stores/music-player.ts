@@ -1,7 +1,7 @@
 import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
 import { ElMessage } from 'element-plus'
-import { getDefaultRadio } from '@/api/music'
+import { getPublicMusicTracks } from '@/api/music'
 import type { MusicPlaylist, MusicTrack } from '@/types'
 
 export type MusicPlayMode = 'sequence' | 'shuffle' | 'single'
@@ -91,12 +91,13 @@ export const useMusicPlayerStore = defineStore('music-player', () => {
     }
   }
 
-  async function loadDefaultRadio() {
+  async function loadPublicQueue() {
     loading.value = true
     try {
-      const radio = await getDefaultRadio()
-      setQueue(radio.tracks ?? [], radio)
-      return radio
+      const tracks = await getPublicMusicTracks()
+      const publishedTracks = tracks.filter((track) => track.status === 'published' && track.audioUrl)
+      setQueue(publishedTracks, null)
+      return publishedTracks
     } finally {
       loading.value = false
     }
@@ -157,7 +158,7 @@ export const useMusicPlayerStore = defineStore('music-player', () => {
       return
     }
     if (!hasQueue.value) {
-      await loadDefaultRadio()
+      await loadPublicQueue()
     }
     await playCurrent()
   }
@@ -250,7 +251,7 @@ export const useMusicPlayerStore = defineStore('music-player', () => {
     mode,
     hasQueue,
     setQueue,
-    loadDefaultRadio,
+    loadPublicQueue,
     playTrack,
     playCurrent,
     pause,

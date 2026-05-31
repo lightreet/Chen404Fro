@@ -17,6 +17,11 @@ lerna-debug.log*
 tmp-vite-live2d.log
 vite-*.log
 
+# Local temporary debug artifacts
+.tmp-*/
+music-sidebar-check.png
+music-sidebar-check-workbench.png
+
 # Editor
 .vscode/*
 !.vscode/extensions.json

@@ -49,7 +49,7 @@
           </div>
 
           <p class="radio-panel__recommendation">
-            {{ activeTrack?.recommendation || player.currentPlaylist?.openingText || '点一首歌，Lyra 会把它轻轻放进今晚的播放队列。' }}
+            {{ activeTrack?.recommendation || player.currentPlaylist?.description || '点一首歌，让今晚从这一段旋律开始。' }}
           </p>
 
           <div class="player-controls">
@@ -65,7 +65,6 @@
             <button type="button" class="control-btn" title="下一首" @click="player.next">
               <el-icon><Right /></el-icon>
             </button>
-            <button type="button" class="mode-btn" @click="cycleMode">{{ modeLabel }}</button>
           </div>
 
           <div class="progress-row">
@@ -106,16 +105,23 @@
         <div class="shelf-heading">
           <div class="shelf-heading__copy">
             <span class="eyebrow">Record Shelf</span>
-            <h2>歌单</h2>
+            <h2>分类</h2>
           </div>
           <div class="shelf-heading__actions">
-            <el-input
-              v-model="playlistSearch"
-              class="playlist-manager__search"
-              clearable
-              :suffix-icon="Search"
-              placeholder="搜索歌曲、歌手、专辑或标签"
-            />
+            <div class="shelf-search-shell">
+              <el-input
+                v-model="playlistSearch"
+                class="playlist-manager__search"
+                clearable
+                placeholder="搜索歌曲、歌手、专辑或标签"
+                @keyup.enter="handlePlaylistSearchSubmit"
+              >
+                <template #prefix>
+                  <el-icon><Search /></el-icon>
+                </template>
+              </el-input>
+              <el-button class="shelf-search-button" @click="handlePlaylistSearchSubmit">搜索</el-button>
+            </div>
             <div v-if="canManage" class="playlist-status-filter" aria-label="歌曲状态筛选">
               <button
                 v-for="option in playlistStatusOptions"
@@ -136,6 +142,11 @@
         </div>
 
         <div v-if="loading" class="music-state">音乐列表加载中...</div>
+        <div v-else-if="loadError" class="music-state music-state--error">
+          <strong>音乐内容加载失败</strong>
+          <span>{{ loadError }}</span>
+          <el-button class="shelf-heading__refresh" :icon="Refresh" @click="loadMusic">重新加载</el-button>
+        </div>
         <div v-else-if="tracks.length === 0" class="music-state">
           这里还没有公开歌曲。
           <el-button v-if="canManage" type="primary" link @click="openCreateTrack">现在新增</el-button>
@@ -198,30 +209,64 @@
                   <strong>{{ selectedCategoryName }}</strong>
                   <span>{{ filteredCategoryTracks.length }} 首歌曲</span>
                 </div>
-                <div class="music-view-toggle" aria-label="歌曲展示方式">
-                  <button
-                    type="button"
-                    :class="{ 'is-active': musicDisplayMode === 'cards' }"
-                    title="卡片展示"
-                    @click="setMusicDisplayMode('cards')"
+                <div class="category-track-board__toolbar">
+                  <div class="play-mode-toggle" aria-label="播放模式">
+                    <button
+                      type="button"
+                      :class="{ 'is-active': player.mode === 'sequence' || player.mode === 'single' }"
+                      :title="player.mode === 'single' ? '当前为单曲循环，点击切回顺序播放' : '顺序播放'"
+                      @click="setPlayMode('sequence')"
+                    >
+                      <el-icon><Sort /></el-icon>
+                    </button>
+                    <button
+                      type="button"
+                      :class="{ 'is-active': player.mode === 'shuffle' }"
+                      title="随机播放"
+                      @click="setPlayMode('shuffle')"
+                    >
+                      <Icon icon="mdi:shuffle" class="play-mode-icon" aria-hidden="true" />
+                    </button>
+                  </div>
+                  <div
+                    v-if="canManage && selectedCategory"
+                    class="category-track-board__actions"
+                    aria-label="分类管理"
                   >
-                    <el-icon><Grid /></el-icon>
-                    卡片
-                  </button>
-                  <button
-                    type="button"
-                    :class="{ 'is-active': musicDisplayMode === 'rows' }"
-                    title="列表展示"
-                    @click="setMusicDisplayMode('rows')"
-                  >
-                    <el-icon><List /></el-icon>
-                    列表
-                  </button>
+                    <button type="button" @click="renameCategory">
+                      <el-icon><Edit /></el-icon>
+                      编辑分类
+                    </button>
+                    <button type="button" class="is-danger" @click="removeCategory">
+                      <el-icon><Delete /></el-icon>
+                      删除分类
+                    </button>
+                  </div>
+                  <div class="music-view-toggle" aria-label="歌曲展示方式">
+                    <button
+                      type="button"
+                      :class="{ 'is-active': musicDisplayMode === 'cards' }"
+                      title="卡片展示"
+                      @click="setMusicDisplayMode('cards')"
+                    >
+                      <el-icon><Grid /></el-icon>
+                      卡片
+                    </button>
+                    <button
+                      type="button"
+                      :class="{ 'is-active': musicDisplayMode === 'rows' }"
+                      title="列表展示"
+                      @click="setMusicDisplayMode('rows')"
+                    >
+                      <el-icon><List /></el-icon>
+                      列表
+                    </button>
+                  </div>
                 </div>
               </div>
 
               <div v-if="filteredCategoryTracks.length === 0" class="playlist-library__empty">
-                当前分类下没有歌单哦~
+                当前分类下还没有歌曲。
               </div>
               <div v-else-if="musicDisplayMode === 'cards'" class="music-card-grid">
                 <article
@@ -509,12 +554,14 @@
 import { computed, onMounted, ref } from 'vue'
 import { storeToRefs } from 'pinia'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Back, Close, Delete, Edit, Folder, Grid, List, Plus, Refresh, Right, Search, VideoPause, VideoPlay } from '@element-plus/icons-vue'
+import { Back, Close, Delete, Edit, Folder, Grid, List, Plus, Refresh, Right, Search, Sort, VideoPause, VideoPlay } from '@element-plus/icons-vue'
+import { Icon } from '@iconify/vue'
 import { useRouter } from 'vue-router'
 import DefaultLayout from '@/layouts/DefaultLayout.vue'
 import PageHero from '@/components/PageHero/PageHero.vue'
 import {
   createMusicPlaylist,
+  deleteMusicPlaylist,
   deleteMusicTrack,
   getAdminMusicPlaylists,
   getAdminMusicTracks,
@@ -522,6 +569,7 @@ import {
   getPublicMusicPlaylists,
   getPublicMusicTracks,
   saveMusicPlaylistTracks,
+  updateMusicPlaylist,
 } from '@/api/music'
 import { useMusicPlayerStore } from '@/stores/music-player'
 import { useSiteConfig } from '@/composables/useSiteConfig'
@@ -543,6 +591,7 @@ const heroBgPosition = ref(defaultHero.bgPosition)
 const tracks = ref<MusicTrack[]>([])
 const adminPlaylists = ref<MusicPlaylist[]>([])
 const loading = ref(false)
+const loadError = ref('')
 const playlistSaving = ref(false)
 const selectedCategoryId = ref<number | null>(null)
 const expandedManagedTrackId = ref<number | null>(null)
@@ -560,12 +609,6 @@ const { user } = storeToRefs(userStore)
 const { loadSiteConfig } = useSiteConfig()
 const canManage = computed(() => isAdminUser(user.value))
 const activeTrack = computed(() => player.currentTrack)
-
-const modeLabel = computed(() => {
-  if (player.mode === 'single') return '单曲'
-  if (player.mode === 'shuffle') return '随机'
-  return '顺序'
-})
 
 const playlistStatusOptions: Array<{ label: string; value: PlaylistStatusFilter }> = [
   { label: '全部', value: 'all' },
@@ -672,6 +715,7 @@ onMounted(() => {
 
 async function loadMusic() {
   loading.value = true
+  loadError.value = ''
   try {
     const [trackRows, categoryRows] = await Promise.all([
       canManage.value ? getAdminMusicTracks() : getPublicMusicTracks(),
@@ -684,6 +728,8 @@ async function loadMusic() {
       const publishedTracks = trackRows.filter((track) => track.status === 'published')
       player.setQueue(publishedTracks.length ? publishedTracks : trackRows, null)
     }
+  } catch (error) {
+    loadError.value = error instanceof Error ? error.message : '网络有点不稳定，稍后再试试。'
   } finally {
     loading.value = false
   }
@@ -744,10 +790,8 @@ function setMusicDisplayMode(mode: 'cards' | 'rows') {
   expandedManagedTrackId.value = null
 }
 
-function cycleMode() {
-  if (player.mode === 'sequence') player.setMode('shuffle')
-  else if (player.mode === 'shuffle') player.setMode('single')
-  else player.setMode('sequence')
+function setPlayMode(mode: 'sequence' | 'shuffle') {
+  player.setMode(mode)
 }
 
 function handleSeek(value: number | number[]) {
@@ -821,19 +865,73 @@ async function saveCategory() {
   if (!name || playlistSaving.value) return
   playlistSaving.value = true
   try {
-    const payload: MusicPlaylistUpsertCommand = {
-      name,
-      description: '',
-      coverUrl: '',
-      openingText: '',
-      defaultPlaylist: false,
-      publicPlaylist: true,
-    }
-    const saved = await createMusicPlaylist(payload)
+    const saved = await createMusicPlaylist({ name })
     if (saved.id) selectedCategoryId.value = saved.id
     ElMessage.success('分类已新增')
     cancelCreateCategory()
     await loadMusic()
+  } finally {
+    playlistSaving.value = false
+  }
+}
+
+async function renameCategory() {
+  const category = selectedCategory.value
+  if (!category?.id || playlistSaving.value) return
+
+  try {
+    const { value } = await ElMessageBox.prompt('修改当前分类名称，歌曲归属不会受影响。', '编辑分类', {
+      confirmButtonText: '保存',
+      cancelButtonText: '取消',
+      inputValue: category.name,
+      inputPlaceholder: '分类名称，例如 夜读',
+      inputValidator: (input) => Boolean(input.trim()) || '分类名称不能为空',
+    })
+
+    const name = value.trim()
+    if (!name || name === category.name.trim()) return
+
+    playlistSaving.value = true
+    const saved = await updateMusicPlaylist(category.id, buildCategoryPayload(category, name))
+    if (player.currentPlaylist?.id === saved.id) {
+      player.setQueue(player.queue, saved)
+    }
+    ElMessage.success('分类已更新')
+    await loadMusic()
+  } catch (error) {
+    if (error === 'cancel' || error === 'close') return
+    ElMessage.error(error instanceof Error ? error.message : '分类更新失败')
+  } finally {
+    playlistSaving.value = false
+  }
+}
+
+async function removeCategory() {
+  const category = selectedCategory.value
+  if (!category?.id || playlistSaving.value) return
+
+  try {
+    await ElMessageBox.confirm(
+      `确定删除分类“${category.name}”吗？这只会移除分类和歌曲归属，不会删除歌曲本身。`,
+      '删除分类',
+      {
+        confirmButtonText: '删除',
+        cancelButtonText: '取消',
+        type: 'warning',
+      },
+    )
+
+    playlistSaving.value = true
+    await deleteMusicPlaylist(category.id)
+    if (player.currentPlaylist?.id === category.id) {
+      player.setQueue(player.queue, null)
+    }
+    selectedCategoryId.value = null
+    ElMessage.success('分类已删除')
+    await loadMusic()
+  } catch (error) {
+    if (error === 'cancel' || error === 'close') return
+    ElMessage.error(error instanceof Error ? error.message : '分类删除失败')
   } finally {
     playlistSaving.value = false
   }
@@ -919,6 +1017,19 @@ function statusLabel(status: MusicTrackStatus) {
   return '草稿'
 }
 
+function buildCategoryPayload(category: MusicPlaylist, name = category.name): MusicPlaylistUpsertCommand {
+  return {
+    name,
+    description: category.description,
+    coverFileId: category.coverFileId,
+    coverUrl: category.coverUrl,
+    openingText: category.openingText,
+    defaultPlaylist: category.defaultPlaylist,
+    publicPlaylist: category.publicPlaylist,
+    sortOrder: category.sortOrder,
+  }
+}
+
 function parseLrc(input: string): LyricLine[] {
   return input.split('\n').map((raw, index) => {
     const match = raw.match(/^\[(\d{1,2}):(\d{2})(?:\.(\d{1,3}))?](.*)$/)
@@ -937,6 +1048,10 @@ function formatTime(value: number) {
   const minute = Math.floor(value / 60)
   const second = Math.floor(value % 60)
   return `${String(minute).padStart(2, '0')}:${String(second).padStart(2, '0')}`
+}
+
+function handlePlaylistSearchSubmit() {
+  playlistSearch.value = playlistSearch.value.trim()
 }
 
 </script>
@@ -1151,6 +1266,21 @@ function formatTime(value: number) {
   justify-content: space-between;
 }
 
+.shelf-search-shell {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  width: min(100%, 312px);
+  padding: 0;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.94);
+  border: 1px solid rgba(245, 155, 188, 0.12);
+  box-shadow:
+    0 8px 18px rgba(245, 155, 188, 0.05),
+    inset 0 1px 0 rgba(255, 255, 255, 0.88);
+}
+
 .shelf-heading__copy {
   flex: 0 0 auto;
   min-width: 78px;
@@ -1234,16 +1364,6 @@ function formatTime(value: number) {
   color: #fff;
   background: linear-gradient(135deg, #fb7299, #ff95b7);
   box-shadow: 0 14px 26px rgba(251, 114, 153, 0.28);
-}
-
-.mode-btn {
-  min-height: 36px;
-  padding: 0 13px;
-  border: 1px solid rgba(238, 218, 226, 0.86);
-  border-radius: 999px;
-  color: #a16d82;
-  background: rgba(255, 252, 253, 0.9);
-  cursor: pointer;
 }
 
 .progress-row {
@@ -1336,16 +1456,9 @@ function formatTime(value: number) {
 }
 
 .shelf-heading {
-  margin-bottom: 18px;
-  padding: 14px 16px;
-  border: 1px solid rgba(239, 221, 229, 0.9);
-  border-radius: 18px;
-  background:
-    linear-gradient(135deg, rgba(255, 255, 255, 0.92), rgba(255, 249, 252, 0.78));
-  box-shadow:
-    0 16px 34px rgba(169, 129, 148, 0.08),
-    inset 0 1px 0 rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(12px);
+  margin-bottom: 0;
+  padding: 10px 6px 18px;
+  border-bottom: 1px solid rgba(239, 221, 229, 0.88);
 }
 
 .shelf-heading h2 {
@@ -1362,6 +1475,22 @@ function formatTime(value: number) {
   padding: 42px 18px;
   text-align: center;
   color: #8d7b84;
+}
+
+.music-state--error {
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+}
+
+.music-state--error strong {
+  color: #7a5364;
+  font-size: 18px;
+}
+
+.music-state--error span {
+  color: #9d7f8d;
+  font-size: 13px;
 }
 
 .track-list-shell {
@@ -2297,9 +2426,9 @@ function formatTime(value: number) {
 }
 
 .playlist-manager__search {
-  flex: 1 1 360px;
+  flex: 1 1 auto;
   min-width: 0;
-  max-width: 460px;
+  max-width: none;
 }
 
 .playlist-status-filter {
@@ -2390,36 +2519,77 @@ function formatTime(value: number) {
 
 :deep(.playlist-manager__search .el-input__wrapper) {
   min-height: 38px;
-  padding-right: 12px;
-  padding-left: 14px;
-  border-radius: 11px;
-  background: rgba(255, 255, 255, 0.78);
-  box-shadow:
-    inset 0 0 0 1px rgba(226, 213, 222, 0.92),
-    0 10px 22px rgba(172, 139, 154, 0.06);
-  transition: box-shadow 0.18s ease, background 0.18s ease;
+  padding-left: 12px;
+  padding-right: 2px;
+  border-radius: 999px;
+  box-shadow: none;
+  background: transparent;
+  display: flex;
+  align-items: center;
+  transition: background 0.18s ease;
 }
 
 :deep(.playlist-manager__search .el-input__wrapper.is-focus) {
-  background: rgba(255, 255, 255, 0.95);
-  box-shadow:
-    inset 0 0 0 1px rgba(251, 114, 153, 0.38),
-    0 12px 24px rgba(251, 114, 153, 0.1);
+  background: transparent;
+  box-shadow: none;
+}
+
+:deep(.playlist-manager__search .el-input__prefix) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+}
+
+:deep(.playlist-manager__search .el-input__prefix-inner) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: #9a99aa;
 }
 
 :deep(.playlist-manager__search .el-input__inner) {
+  height: 100%;
   color: #5f4f58;
   font-size: 13px;
   font-weight: 700;
+  line-height: 36px;
 }
 
 :deep(.playlist-manager__search .el-input__inner::placeholder) {
-  color: #b1a2aa;
+  color: #a3a6bb;
   font-weight: 600;
 }
 
-:deep(.playlist-manager__search .el-input__suffix) {
-  color: #615162;
+.shelf-search-button {
+  min-width: 76px;
+  height: 36px;
+  padding: 0 12px;
+  border: none;
+  border-radius: 999px;
+  background: linear-gradient(135deg, rgba(245, 155, 188, 0.96), rgba(255, 198, 220, 0.96));
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  box-shadow: 0 10px 22px rgba(245, 155, 188, 0.18);
+  transition:
+    transform 0.22s ease,
+    box-shadow 0.22s ease,
+    filter 0.22s ease;
+}
+
+.shelf-search-button.el-button:hover,
+.shelf-search-button.el-button:focus {
+  color: #fff;
+  border: none;
+  transform: translateY(-1px);
+  box-shadow: 0 12px 24px rgba(245, 155, 188, 0.22);
+  filter: brightness(1.02);
 }
 
 .playlist-categories__create {
@@ -2486,15 +2656,106 @@ function formatTime(value: number) {
   font-size: 12px;
 }
 
+.category-track-board__toolbar {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 4px 6px;
+  border: 1px solid rgba(238, 218, 226, 0.82);
+  border-radius: 16px;
+  background: rgba(255, 250, 253, 0.88);
+  box-shadow: 0 10px 18px rgba(201, 155, 173, 0.08);
+}
+
+.play-mode-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  position: relative;
+  padding-right: 14px;
+}
+
+.play-mode-toggle::after {
+  content: '';
+  position: absolute;
+  top: 6px;
+  right: 0;
+  width: 1px;
+  height: 28px;
+  background: rgba(231, 210, 220, 0.92);
+}
+
+.play-mode-toggle button {
+  width: 38px;
+  height: 38px;
+  border: 0;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  color: #8c7782;
+  background: transparent;
+  cursor: pointer;
+  transition: color 0.18s ease, background 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
+}
+
+.play-mode-toggle button:hover {
+  transform: translateY(-1px);
+  color: #d56f95;
+}
+
+.play-mode-toggle button.is-active {
+  color: #d56f95;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 8px 18px rgba(207, 129, 160, 0.15);
+}
+
+.play-mode-icon {
+  width: 18px;
+  height: 18px;
+  display: block;
+}
+
+.category-track-board__actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.category-track-board__actions button {
+  min-height: 34px;
+  padding: 0 12px;
+  border: 1px solid rgba(238, 218, 226, 0.82);
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #8c7782;
+  background: rgba(255, 252, 253, 0.9);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.18s ease, color 0.18s ease, border-color 0.18s ease, background 0.18s ease;
+}
+
+.category-track-board__actions button:hover {
+  transform: translateY(-1px);
+  color: #d56f95;
+  border-color: rgba(230, 186, 202, 0.92);
+  background: rgba(255, 255, 255, 0.96);
+}
+
+.category-track-board__actions button.is-danger:hover {
+  color: #db5c7f;
+  border-color: rgba(232, 168, 188, 0.92);
+}
+
 .music-view-toggle {
   flex: 0 0 auto;
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  padding: 4px;
-  border: 1px solid rgba(238, 218, 226, 0.82);
-  border-radius: 12px;
-  background: rgba(255, 250, 253, 0.88);
+  padding: 0;
 }
 
 .music-view-toggle button {
@@ -3237,6 +3498,10 @@ function formatTime(value: number) {
     max-width: none;
   }
 
+  .shelf-search-shell {
+    width: 100%;
+  }
+
   .playlist-status-filter {
     width: 100%;
     overflow-x: auto;
@@ -3255,6 +3520,20 @@ function formatTime(value: number) {
   .category-track-board__head {
     flex-direction: column;
     align-items: stretch;
+  }
+
+  .category-track-board__toolbar {
+    justify-content: space-between;
+    flex-wrap: wrap;
+  }
+
+  .play-mode-toggle {
+    order: 1;
+    padding-right: 0;
+  }
+
+  .play-mode-toggle::after {
+    display: none;
   }
 
   .music-view-toggle {

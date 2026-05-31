@@ -1,9 +1,9 @@
 <template>
-  <section class="music-panel" aria-label="Lyra Sakura Radio">
+  <section class="music-panel" aria-label="Lyra 音乐播放器">
     <header class="music-panel__header">
       <div>
-        <span>Lyra Radio</span>
-        <strong>{{ track?.title || 'Sakura Radio' }}</strong>
+        <span>Lyra Music</span>
+        <strong>{{ track?.title || '音乐馆' }}</strong>
       </div>
       <button type="button" class="icon-btn" aria-label="关闭音乐播放器" @click="$emit('close')">
         <el-icon><Close /></el-icon>
@@ -13,11 +13,11 @@
     <div class="music-panel__main">
       <div class="music-panel__cover" :class="{ 'is-playing': player.playing }">
         <img v-if="track?.coverUrl" :src="track.coverUrl" :alt="track.title" />
-        <span v-else>RADIO</span>
+        <span v-else>MUSIC</span>
       </div>
       <div class="music-panel__meta">
         <strong>{{ track?.artist || 'Lyra' }}</strong>
-        <p>{{ track?.recommendation || player.currentPlaylist?.openingText || '点击播放，让今天多一点旋律。' }}</p>
+        <p>{{ track?.recommendation || player.currentPlaylist?.description || '点击播放，让今天多一点旋律。' }}</p>
       </div>
     </div>
 
@@ -48,6 +48,24 @@
       />
       <span>{{ formatTime(player.duration) }}</span>
     </div>
+
+    <section class="music-panel__lyrics">
+      <div class="music-panel__lyrics-head">
+        <strong>当前歌词</strong>
+        <span>{{ track?.lyricType === 'lrc' ? 'LRC 时间轴' : '歌词预览' }}</span>
+      </div>
+      <div class="music-panel__lyrics-body">
+        <p v-if="currentLyricLines.length === 0" class="is-empty">这首歌还没有写下歌词。</p>
+        <p
+          v-for="line in currentLyricLines"
+          :key="line.key"
+          :class="{ 'is-current': line.current }"
+        >
+          {{ line.text }}
+        </p>
+      </div>
+      <p v-if="track?.lyricSource" class="music-panel__lyric-source">歌词来源：{{ track.lyricSource }}</p>
+    </section>
   </section>
 </template>
 
@@ -55,6 +73,7 @@
 import { computed } from 'vue'
 import { Back, Close, Right, VideoPause, VideoPlay } from '@element-plus/icons-vue'
 import { useMusicPlayerStore } from '@/stores/music-player'
+import type { MusicTrack } from '@/types'
 
 defineEmits<{
   close: []
@@ -62,6 +81,14 @@ defineEmits<{
 
 const player = useMusicPlayerStore()
 const track = computed(() => player.currentTrack)
+const currentLyricLines = computed<LyricLine[]>(() => getTrackLyricLines(track.value, player.playbackTime))
+
+interface LyricLine {
+  key: string
+  time?: number
+  text: string
+  current: boolean
+}
 
 async function togglePlay() {
   await player.toggle()
@@ -80,6 +107,55 @@ function formatTime(value: number) {
   const minute = Math.floor(value / 60)
   const second = Math.floor(value % 60)
   return `${String(minute).padStart(2, '0')}:${String(second).padStart(2, '0')}`
+}
+
+function getTrackLyricLines(track: MusicTrack | null, playbackTime: number): LyricLine[] {
+  const lyrics = track?.lyrics?.trim()
+  if (!track || !lyrics) return []
+  if (track.lyricType !== 'lrc') {
+    return splitMeaningfulLines(lyrics).slice(0, 6).map((text, index) => ({
+      key: `plain-${index}`,
+      text,
+      current: index === 0,
+    }))
+  }
+
+  const lines = parseLrc(lyrics)
+  if (!lines.length) return []
+
+  let currentIndex = 0
+  for (let i = 0; i < lines.length; i++) {
+    if ((lines[i].time ?? 0) <= playbackTime) {
+      currentIndex = i
+    }
+  }
+
+  return lines.slice(Math.max(0, currentIndex - 1), currentIndex + 4).map((line, offset) => ({
+    ...line,
+    current: Math.max(0, currentIndex - 1) + offset === currentIndex,
+  }))
+}
+
+function splitMeaningfulLines(input: string) {
+  return input.split('\n').map((line) => line.trim()).filter(Boolean)
+}
+
+function parseLrc(input: string): LyricLine[] {
+  return splitMeaningfulLines(input).map((raw, index) => {
+    const match = raw.match(/^\[(\d{1,2}):(\d{2})(?:\.(\d{1,3}))?](.*)$/)
+    if (!match) return null
+    const minute = Number(match[1])
+    const second = Number(match[2])
+    const ms = Number((match[3] || '0').padEnd(3, '0'))
+    const text = match[4].trim()
+    if (!text) return null
+    return {
+      key: `lrc-${index}`,
+      time: minute * 60 + second + ms / 1000,
+      text,
+      current: false,
+    }
+  }).filter(Boolean) as LyricLine[]
 }
 </script>
 
@@ -100,7 +176,8 @@ function formatTime(value: number) {
 .music-panel__header,
 .music-panel__main,
 .music-panel__controls,
-.music-panel__progress {
+.music-panel__progress,
+.music-panel__lyrics-head {
   display: flex;
   align-items: center;
 }
@@ -235,6 +312,69 @@ function formatTime(value: number) {
   margin-top: 10px;
   color: #a3919b;
   font-size: 11px;
+}
+
+.music-panel__lyrics {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(238, 218, 226, 0.8);
+}
+
+.music-panel__lyrics-head {
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.music-panel__lyrics-head strong {
+  color: #4f3c46;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.music-panel__lyrics-head span,
+.music-panel__lyric-source {
+  color: #a08b96;
+  font-size: 11px;
+}
+
+.music-panel__lyrics-body {
+  min-height: 132px;
+  max-height: 160px;
+  overflow: auto;
+  margin-top: 10px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  border: 1px solid rgba(240, 222, 230, 0.9);
+  background:
+    linear-gradient(180deg, rgba(255, 252, 253, 0.84), rgba(255, 248, 251, 0.78)),
+    repeating-linear-gradient(180deg, transparent 0 31px, rgba(226, 202, 214, 0.18) 32px 33px);
+}
+
+.music-panel__lyrics-body p {
+  margin: 0;
+  color: #8d7b84;
+  font-size: 12px;
+  line-height: 1.85;
+  transition: color 0.18s ease, transform 0.18s ease;
+}
+
+.music-panel__lyrics-body p + p {
+  margin-top: 2px;
+}
+
+.music-panel__lyrics-body p.is-current {
+  color: #e45c8c;
+  font-weight: 800;
+  transform: translateX(2px);
+}
+
+.music-panel__lyrics-body p.is-empty {
+  color: #ab98a2;
+}
+
+.music-panel__lyric-source {
+  margin: 10px 2px 0;
+  line-height: 1.5;
 }
 
 @keyframes cover-pulse {

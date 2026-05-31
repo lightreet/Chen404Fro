@@ -332,6 +332,7 @@ export interface MusicTrackAiSuggestRequest {
   releaseYear?: number;
   language?: string;
   genre?: string;
+  lyrics?: string;
   limit?: number;
 }
 

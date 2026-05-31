@@ -8,10 +8,10 @@
         </button>
         <div class="topbar-meta">
           <span class="draft-hint">
-            {{ form.status === 'published' ? '公开' : '草稿' }}
+            {{ statusLabel(form.status) }}
             · {{ form.title?.trim() ? form.title : pageTitle }}
           </span>
-          <span class="topbar-context">Sakura Radio</span>
+          <span class="topbar-context">音乐馆</span>
         </div>
       </div>
     </header>
@@ -67,12 +67,22 @@
                   <el-input v-model="form.genre" maxlength="80" placeholder="City Pop / Indie / J-pop" />
                 </el-form-item>
                 <el-form-item label="上架状态">
-                  <el-switch
-                    :model-value="form.status === 'published'"
-                    active-text="公开"
-                    inactive-text="草稿"
-                    @update:model-value="form.status = $event ? 'published' : 'draft'"
-                  />
+                  <div class="track-status-selector" role="radiogroup" aria-label="歌曲上架状态">
+                    <button
+                      v-for="option in trackStatusOptions"
+                      :key="option.value"
+                      type="button"
+                      class="track-status-selector__option"
+                      :class="[`is-${option.value}`, { 'is-active': form.status === option.value }]"
+                      :aria-checked="form.status === option.value"
+                      @click="form.status = option.value"
+                    >
+                      <span class="track-status-selector__dot"></span>
+                      <span class="track-status-selector__copy">
+                        <strong>{{ option.label }}</strong>
+                      </span>
+                    </button>
+                  </div>
                 </el-form-item>
               </div>
               <div v-if="aiSearchTouched || aiCandidates.length" class="ai-candidate-panel">
@@ -188,7 +198,11 @@
                 <el-input v-model="form.recommendation" type="textarea" :rows="3" maxlength="500" />
               </el-form-item>
               <el-form-item label="氛围短句">
-                <el-input v-model="form.moodText" maxlength="160" placeholder="当推荐语为空时，列表会展示这里。" />
+                <el-input
+                  v-model="form.moodText"
+                  maxlength="160"
+                  placeholder="AI 匹配后会优先摘取歌词里的记忆点句子，最多 3 句。"
+                />
               </el-form-item>
               <section class="lyrics-editor">
                 <div class="lyrics-editor-head">
@@ -246,7 +260,7 @@
         <aside class="track-preview-panel">
           <div class="preview-record" :class="{ 'has-cover': Boolean(form.coverUrl) }">
             <img v-if="form.coverUrl" :src="form.coverUrl" :alt="form.title || '歌曲封面预览'" />
-            <span v-else>Sakura<br />Radio</span>
+            <span v-else>音乐<br />馆</span>
           </div>
           <div class="preview-copy">
             <span class="panel-kicker">Preview</span>
@@ -257,7 +271,7 @@
             <span v-for="tag in previewTags" :key="tag">{{ tag }}</span>
             <span v-if="previewTags.length === 0">未设置标签</span>
           </div>
-          <p class="preview-note">{{ form.recommendation || form.moodText || '写一句推荐语，让这首歌被点开前就有一点温度。' }}</p>
+          <p class="preview-note">{{ form.moodText || form.recommendation || '写一句推荐语，让这首歌被点开前就有一点温度。' }}</p>
           <audio v-if="form.audioUrl" class="preview-audio" :src="form.audioUrl" controls />
           <section class="preview-lyrics">
             <div class="preview-lyrics-head">
@@ -311,7 +325,7 @@ import { ArrowLeft, Plus, Upload } from '@element-plus/icons-vue'
 import { useRoute, useRouter } from 'vue-router'
 import { createMusicTrack, getAdminMusicTrack, suggestMusicTrack, updateMusicTrack } from '@/api/music'
 import { uploadMusicAudio, uploadMusicCover, type UploadResult } from '@/api/upload'
-import type { MusicTrack, MusicTrackAiCandidate, MusicTrackUpsertCommand } from '@/types'
+import type { MusicTrack, MusicTrackAiCandidate, MusicTrackStatus, MusicTrackUpsertCommand } from '@/types'
 
 const route = useRoute()
 const router = useRouter()
@@ -390,9 +404,16 @@ const coverUploadHint = computed(() => {
 })
 
 const lyricTypeOptions = [
-  { label: '普通歌词', value: 'plain' },
   { label: 'LRC 时间轴', value: 'lrc' },
+  { label: '普通歌词', value: 'plain' },
 ]
+const trackStatusOptions: Array<{ label: string; value: MusicTrackStatus }> = [
+  { label: '已发布', value: 'published' },
+  { label: '草稿', value: 'draft' },
+  { label: '已归档', value: 'archived' },
+]
+const MAX_AI_SUGGEST_LYRIC_LINES = 40
+const MAX_AI_SUGGEST_LYRIC_LENGTH = 2200
 
 const form = reactive<MusicTrackUpsertCommand>(createEmptyTrackForm())
 const lrcExampleLines = [
@@ -518,7 +539,7 @@ function fillFormFromTrack(track: MusicTrack) {
     audioUrl: track.audioUrl || '',
     coverFileId: track.coverFileId,
     coverUrl: track.coverUrl || '',
-    lyricType: track.lyricType || 'plain',
+    lyricType: resolveLyricType(track.lyricType, track.lyrics),
     lyrics: track.lyrics || '',
     lyricSource: track.lyricSource || '',
     recommendation: track.recommendation || '',
@@ -594,6 +615,7 @@ async function suggestTrackInfo() {
       releaseYear: form.releaseYear,
       language: form.language?.trim() || undefined,
       genre: form.genre?.trim() || undefined,
+      lyrics: buildAiSuggestLyricsExcerpt(),
       limit: 5,
     })
     aiCandidates.value = (response.candidates || []).slice(0, 5)
@@ -779,6 +801,32 @@ function splitMeaningfulLines(input: string) {
   return input.split('\n').map((line) => line.trim()).filter(Boolean)
 }
 
+function statusLabel(status?: MusicTrackStatus) {
+  if (status === 'published') return '已发布'
+  if (status === 'archived') return '已归档'
+  return '草稿'
+}
+
+function buildAiSuggestLyricsExcerpt() {
+  const content = (form.lyrics || '').trim()
+  if (!content) return undefined
+  const normalizedLines = splitMeaningfulLines(content)
+    .map((line) => (form.lyricType === 'lrc' ? stripLrcTiming(line) : line.trim()))
+    .filter(Boolean)
+    .slice(0, MAX_AI_SUGGEST_LYRIC_LINES)
+
+  if (normalizedLines.length === 0) return undefined
+  const excerpt = normalizedLines.join('\n').slice(0, MAX_AI_SUGGEST_LYRIC_LENGTH).trim()
+  return excerpt || undefined
+}
+
+function stripLrcTiming(line: string) {
+  if (/^\[[a-zA-Z]+:.*]$/.test(line)) {
+    return ''
+  }
+  return line.replace(/(?:\[\d{1,2}:\d{2}(?:\.\d{1,3})?])+/g, '').trim()
+}
+
 function parseLrc(input: string): LrcParseResult {
   const result: LrcParseResult = {
     lines: [],
@@ -819,6 +867,20 @@ function disabledReleaseYear(date: Date) {
   return year < 1900 || year > new Date().getFullYear()
 }
 
+function resolveLyricType(lyricType?: MusicTrack['lyricType'], lyrics?: string) {
+  if (lyricType === 'lrc' || lyricType === 'plain') {
+    return lyricType
+  }
+  return looksLikeLrcLyrics(lyrics) ? 'lrc' : 'plain'
+}
+
+function looksLikeLrcLyrics(lyrics?: string) {
+  if (!lyrics?.trim()) {
+    return true
+  }
+  return splitMeaningfulLines(lyrics).some((line) => /^\[(\d{1,2}):(\d{2})(?:\.(\d{1,3}))?]/.test(line))
+}
+
 function toUploadAjaxError(error: unknown): UploadError {
   if (error instanceof Error) return error as UploadError
   return new Error(String(error || '上传失败')) as UploadError
@@ -839,7 +901,7 @@ function createEmptyTrackForm(): MusicTrackUpsertCommand {
     tags: [],
     audioUrl: '',
     coverUrl: '',
-    lyricType: 'plain',
+    lyricType: 'lrc',
     lyrics: '',
     lyricSource: '',
     recommendation: '',
@@ -1331,6 +1393,82 @@ function createEmptyTrackForm(): MusicTrackUpsertCommand {
   background: rgba(255, 255, 255, 0.68);
 }
 
+.track-status-selector {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.track-status-selector__option {
+  min-height: 54px;
+  padding: 12px 14px;
+  border: 1px solid rgba(232, 220, 229, 0.92);
+  border-radius: 16px;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  color: #7c6a74;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(255, 248, 252, 0.82));
+  box-shadow:
+    0 10px 24px rgba(183, 146, 164, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.95);
+  text-align: left;
+  cursor: pointer;
+  transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease, background 0.18s ease, color 0.18s ease;
+}
+
+.track-status-selector__option:hover {
+  transform: translateY(-1px);
+  border-color: rgba(243, 172, 202, 0.92);
+  box-shadow:
+    0 12px 28px rgba(220, 156, 183, 0.14),
+    inset 0 1px 0 rgba(255, 255, 255, 0.98);
+}
+
+.track-status-selector__option.is-active {
+  color: #4f3a44;
+  border-color: rgba(244, 146, 187, 0.9);
+  background:
+    linear-gradient(180deg, rgba(255, 247, 251, 0.98), rgba(255, 240, 247, 0.92));
+  box-shadow:
+    0 14px 30px rgba(244, 146, 187, 0.16),
+    inset 0 0 0 1px rgba(255, 214, 230, 0.84);
+}
+
+.track-status-selector__dot {
+  width: 11px;
+  height: 11px;
+  border-radius: 999px;
+  background: rgba(198, 170, 183, 0.78);
+  box-shadow: 0 0 0 4px rgba(244, 232, 238, 0.9);
+}
+
+.track-status-selector__option.is-published .track-status-selector__dot {
+  background: #fb7299;
+}
+
+.track-status-selector__option.is-draft .track-status-selector__dot {
+  background: #c09aa9;
+}
+
+.track-status-selector__option.is-archived .track-status-selector__dot {
+  background: #8f8a9c;
+}
+
+.track-status-selector__copy {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+}
+
+.track-status-selector__copy strong {
+  color: inherit;
+  font-size: 13px;
+  font-weight: 800;
+}
+
 .lyrics-status span {
   color: #8d8089;
   font-size: 12px;
@@ -1638,7 +1776,8 @@ function createEmptyTrackForm(): MusicTrackUpsertCommand {
   .title-field,
   .upload-field,
   .cover-upload-row,
-  .lyrics-editor-head {
+  .lyrics-editor-head,
+  .track-status-selector {
     grid-template-columns: 1fr;
   }
 
