@@ -142,7 +142,8 @@
                       <el-upload
                         :show-file-list="false"
                         :http-request="handleAudioUpload"
-                        accept=".mp3,.wav,.flac,.ogg,.aac,.m4a,audio/*"
+                        :before-upload="beforeAudioUpload"
+                        :accept="AUDIO_UPLOAD_ACCEPT"
                       >
                         <div class="media-upload-box" :class="{ 'is-uploading': uploadingAudio, 'has-value': Boolean(form.audioUrl) }">
                           <el-icon><Plus /></el-icon>
@@ -412,6 +413,10 @@ const trackStatusOptions: Array<{ label: string; value: MusicTrackStatus }> = [
   { label: '草稿', value: 'draft' },
   { label: '已归档', value: 'archived' },
 ]
+const MAX_AUDIO_UPLOAD_SIZE = 60 * 1024 * 1024
+const MAX_AUDIO_UPLOAD_SIZE_MB = MAX_AUDIO_UPLOAD_SIZE / 1024 / 1024
+const AUDIO_UPLOAD_ACCEPT = '.mp3,.wav,.flac,.ogg,.aac,.m4a'
+const ALLOWED_AUDIO_EXTENSIONS = new Set(AUDIO_UPLOAD_ACCEPT.split(',').map((item) => item.slice(1)))
 const MAX_AI_SUGGEST_LYRIC_LINES = 40
 const MAX_AI_SUGGEST_LYRIC_LENGTH = 2200
 
@@ -706,6 +711,19 @@ function confidenceLabel(confidence?: string) {
   return labelMap[normalizeConfidence(confidence)]
 }
 
+function beforeAudioUpload(file: File) {
+  const extension = getFileExtension(file.name)
+  if (!ALLOWED_AUDIO_EXTENSIONS.has(extension)) {
+    ElMessage.warning('请选择 MP3、WAV、FLAC、OGG、AAC 或 M4A 音频文件')
+    return false
+  }
+  if (file.size > MAX_AUDIO_UPLOAD_SIZE) {
+    ElMessage.warning(`音频文件不能超过 ${MAX_AUDIO_UPLOAD_SIZE_MB}MB`)
+    return false
+  }
+  return true
+}
+
 async function handleAudioUpload(options: UploadRequestOptions) {
   uploadingAudio.value = true
   try {
@@ -879,6 +897,11 @@ function looksLikeLrcLyrics(lyrics?: string) {
     return true
   }
   return splitMeaningfulLines(lyrics).some((line) => /^\[(\d{1,2}):(\d{2})(?:\.(\d{1,3}))?]/.test(line))
+}
+
+function getFileExtension(fileName: string) {
+  const index = fileName.lastIndexOf('.')
+  return index >= 0 ? fileName.slice(index + 1).toLowerCase() : ''
 }
 
 function toUploadAjaxError(error: unknown): UploadError {

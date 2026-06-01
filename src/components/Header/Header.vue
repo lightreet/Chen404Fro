@@ -31,7 +31,7 @@
             to="/article/edit"
             class="write-btn"
           >
-            <el-button type="primary" size="small" class="write-link rounded-full">
+            <el-button size="small" class="write-link rounded-full">
               <el-icon><EditPen /></el-icon>
               <span>编写</span>
             </el-button>
@@ -491,12 +491,12 @@ const handleLogout = async () => {
   min-height: 54px;
   padding: 8px 14px;
   border-radius: 999px;
-  background: rgba(255, 251, 253, 0.22);
+  background: rgba(255, 251, 253, 0.18);
   border: 1px solid rgba(255, 235, 242, 0.42);
   box-shadow:
-    0 14px 30px rgba(120, 88, 104, 0.1),
+    0 14px 30px rgba(120, 88, 104, 0.08),
     inset 0 1px 0 rgba(255, 255, 255, 0.54);
-  backdrop-filter: blur(20px) saturate(1.1);
+  backdrop-filter: blur(20px) saturate(1.12);
 }
 
 .action-btn {
@@ -527,30 +527,55 @@ const handleLogout = async () => {
 }
 
 .write-link {
-  display: flex;
+  display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 5px;
   border-radius: 999px;
-  background: linear-gradient(135deg, #ff7faa, #ff98b7);
+  color: #564f57;
+  background: transparent;
   border: none;
   padding: 0 16px;
   height: 36px;
-  box-shadow: 0 12px 20px rgba(255, 136, 177, 0.22);
+  line-height: 1;
+  box-shadow: none;
+  transition: all 0.28s ease;
+
+  :deep(span) {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    height: 100%;
+    line-height: 1;
+  }
 
   .el-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     font-size: 14px;
   }
 
-  span {
+  :deep(span > span) {
     font-size: 14px;
     font-weight: 500;
     line-height: 1;
   }
 
   &:hover {
-    opacity: 0.9;
+    color: #ff7faa;
+    background: rgba(255, 255, 255, 0.38);
+    box-shadow: inset 0 0 0 1px rgba(255, 224, 235, 0.34);
     transform: translateY(-1px);
   }
+}
+
+.write-link.el-button:hover,
+.write-link.el-button:focus {
+  border: none;
+  color: #ff7faa;
+  background: rgba(255, 255, 255, 0.38);
 }
 
 // 登录按钮

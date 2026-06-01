@@ -1345,7 +1345,7 @@ function handlePlaylistSearchSubmit() {
   flex: 1 1 auto;
   min-width: 0;
   align-items: center;
-  gap: clamp(20px, 3vw, 60px);
+  gap: clamp(18px, 3vw, 56px);
   flex-wrap: wrap;
   justify-content: flex-start;
 }
@@ -1356,14 +1356,12 @@ function handlePlaylistSearchSubmit() {
   gap: 0;
   min-width: 0;
   width: min(100%, 420px);
-  height: 46px;
+  height: 42px;
   padding: 0;
   border-radius: 999px;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(255, 249, 252, 0.92));
-  border: 1px solid rgba(243, 211, 224, 0.9);
-  box-shadow:
-    0 14px 28px rgba(245, 155, 188, 0.08),
-    inset 0 1px 0 rgba(255, 255, 255, 0.88);
+  background: rgba(255, 255, 255, 0.42);
+  border: 1px solid rgba(238, 211, 224, 0.62);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.58);
   overflow: hidden;
 }
 
@@ -1558,8 +1556,8 @@ function handlePlaylistSearchSubmit() {
 .shelf-heading {
   position: relative;
   z-index: 1;
-  margin-bottom: 18px;
-  padding: 0 8px 24px;
+  margin-bottom: 16px;
+  padding: 0 8px 20px;
   align-items: center;
 }
 
@@ -1570,7 +1568,7 @@ function handlePlaylistSearchSubmit() {
   bottom: 0;
   left: 8px;
   height: 1px;
-  background: linear-gradient(90deg, rgba(239, 221, 229, 0), rgba(239, 221, 229, 0.92) 12%, rgba(239, 221, 229, 0.92) 88%, rgba(239, 221, 229, 0));
+  background: linear-gradient(90deg, rgba(239, 221, 229, 0), rgba(239, 221, 229, 0.52) 14%, rgba(239, 221, 229, 0.52) 86%, rgba(239, 221, 229, 0));
 }
 
 .shelf-heading h2 {
@@ -2133,7 +2131,7 @@ function handlePlaylistSearchSubmit() {
 .playlist-workbench {
   display: grid;
   grid-template-columns: minmax(176px, 206px) minmax(0, 1fr);
-  gap: 22px;
+  gap: 18px;
   align-items: start;
 }
 
@@ -2153,13 +2151,15 @@ function handlePlaylistSearchSubmit() {
   top: 18px;
   display: flex;
   flex-direction: column;
-  gap: 11px;
+  gap: 8px;
   max-height: calc(100vh - 74px);
   overflow: auto;
-  padding: 18px 14px;
-  background:
-    linear-gradient(180deg, rgba(255, 252, 254, 0.96), rgba(255, 243, 249, 0.82)),
-    linear-gradient(90deg, rgba(251, 114, 153, 0.06), transparent 72%);
+  padding: 10px 14px 10px 0;
+  border: 0;
+  border-right: 1px solid rgba(235, 214, 224, 0.62);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
 }
 
 .playlist-editor__title div,
@@ -2192,55 +2192,70 @@ function handlePlaylistSearchSubmit() {
 .playlist-category-card {
   position: relative;
   width: 100%;
-  min-height: 72px;
+  min-height: 60px;
   display: grid;
-  grid-template-columns: 42px minmax(0, 1fr);
-  gap: 12px;
+  grid-template-columns: 36px minmax(0, 1fr);
+  gap: 10px;
   align-items: center;
-  padding: 12px 12px;
-  border: 1px solid rgba(244, 231, 237, 0.82);
-  border-radius: 18px;
+  padding: 10px 11px 10px 12px;
+  border: 0;
+  border-radius: 14px;
   text-align: left;
   color: inherit;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.9), rgba(255, 248, 251, 0.78));
+  background: transparent;
   cursor: pointer;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.72);
-  transition: transform 0.2s ease, border-color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
+  transition: background 0.2s ease, box-shadow 0.2s ease, color 0.2s ease, transform 0.2s ease;
 }
 
 .playlist-category-card::before {
   content: '';
   position: absolute;
-  inset: 14px auto 14px 0;
+  inset: 12px auto 12px 0;
   width: 4px;
   border-radius: 999px;
   background: transparent;
-  transition: background 0.2s ease, box-shadow 0.2s ease;
+  transition: background 0.2s ease, box-shadow 0.2s ease, width 0.2s ease;
 }
 
-.playlist-category-card:hover,
+.playlist-category-card:hover {
+  transform: translateX(2px);
+  background: rgba(245, 155, 188, 0.1);
+  box-shadow: none;
+}
+
 .playlist-category-card.is-editing {
-  transform: translateX(4px);
-  border-color: rgba(251, 114, 153, 0.42);
-  background: linear-gradient(180deg, rgba(255, 244, 248, 0.98), rgba(255, 237, 244, 0.92));
-  box-shadow: 0 18px 30px rgba(215, 143, 170, 0.14);
+  transform: scale(1.01);
+  background: linear-gradient(135deg, rgba(255, 241, 246, 0.94), rgba(255, 255, 255, 0.78));
+  box-shadow:
+    0 8px 20px rgba(245, 155, 188, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.82),
+    inset 0 -1px 0 rgba(251, 114, 153, 0.12),
+    inset 1px 0 0 rgba(251, 114, 153, 0.08);
 }
 
 .playlist-category-card.is-editing::before {
-  background: #fb7299;
-  box-shadow: 0 0 12px rgba(251, 114, 153, 0.42);
+  width: 0;
+  background: transparent;
+  box-shadow: none;
 }
 
 .playlist-category-card__marker {
-  width: 42px;
-  height: 42px;
-  border-radius: 14px;
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
   display: grid;
   place-items: center;
   color: #c86a8e;
-  background: linear-gradient(135deg, rgba(255, 245, 249, 0.96), rgba(248, 241, 247, 0.9));
-  box-shadow: inset 0 0 0 1px rgba(238, 218, 226, 0.72);
+  background: rgba(255, 247, 251, 0.72);
   font-size: 17px;
+}
+
+.playlist-category-card.is-editing .playlist-category-card__marker {
+  color: #fb7299;
+  background: rgba(255, 255, 255, 0.62);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.78),
+    inset 0 -1px 0 rgba(251, 114, 153, 0.1);
 }
 
 .playlist-category-card__cover {
@@ -2285,6 +2300,14 @@ function handlePlaylistSearchSubmit() {
   font-weight: 700;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.playlist-category-card.is-editing .playlist-category-card__copy strong {
+  color: #fb7299;
+}
+
+.playlist-category-card.is-editing .playlist-category-card__copy small {
+  color: #d98aa8;
 }
 
 .playlist-library-track__body small,
@@ -2561,7 +2584,7 @@ function handlePlaylistSearchSubmit() {
   position: relative;
   flex: 0 0 auto;
   min-width: 48px;
-  height: 38px;
+  height: 36px;
   padding: 0 2px;
   border: 0;
   border-radius: 0;
@@ -2589,7 +2612,7 @@ function handlePlaylistSearchSubmit() {
   right: 0;
   bottom: 0;
   left: 0;
-  height: 3px;
+  height: 2px;
   border-radius: 999px;
   background: #fb7299;
 }
@@ -2597,7 +2620,7 @@ function handlePlaylistSearchSubmit() {
 .shelf-heading__add,
 .shelf-heading__refresh {
   min-width: 92px;
-  min-height: 42px;
+  min-height: 38px;
   border-radius: 999px;
   font-weight: 800;
 }
@@ -2606,7 +2629,7 @@ function handlePlaylistSearchSubmit() {
   border: 0;
   color: #fff;
   background: linear-gradient(135deg, #ff8db9, #fb7299);
-  box-shadow: 0 12px 24px rgba(251, 114, 153, 0.2);
+  box-shadow: none;
 }
 
 .shelf-heading__add.el-button:hover,
@@ -2617,10 +2640,10 @@ function handlePlaylistSearchSubmit() {
 }
 
 .shelf-heading__refresh.el-button {
-  border: 1px solid rgba(235, 219, 227, 0.92);
+  border: 1px solid rgba(235, 219, 227, 0.7);
   color: #5f4f58;
-  background: rgba(255, 255, 255, 0.88);
-  box-shadow: 0 10px 20px rgba(191, 151, 168, 0.08);
+  background: rgba(255, 255, 255, 0.48);
+  box-shadow: none;
 }
 
 .shelf-heading__refresh.el-button:hover,
@@ -2635,7 +2658,7 @@ function handlePlaylistSearchSubmit() {
 }
 
 :deep(.playlist-manager__search .el-input__wrapper) {
-  min-height: 44px;
+  min-height: 40px;
   padding-left: 18px;
   padding-right: 10px;
   border-radius: 999px;
@@ -2671,7 +2694,7 @@ function handlePlaylistSearchSubmit() {
   color: #5f4f58;
   font-size: 13px;
   font-weight: 700;
-  line-height: 44px;
+  line-height: 40px;
 }
 
 :deep(.playlist-manager__search .el-input__inner::placeholder) {
@@ -2681,7 +2704,7 @@ function handlePlaylistSearchSubmit() {
 
 .shelf-search-button {
   align-self: stretch;
-  min-width: 94px;
+  min-width: 88px;
   height: 100%;
   margin: 0;
   padding: 0 18px;
@@ -2695,10 +2718,8 @@ function handlePlaylistSearchSubmit() {
   align-items: center;
   justify-content: center;
   line-height: 1;
-  box-shadow: 0 10px 22px rgba(245, 155, 188, 0.18);
+  box-shadow: none;
   transition:
-    transform 0.22s ease,
-    box-shadow 0.22s ease,
     filter 0.22s ease;
 }
 
@@ -2706,8 +2727,6 @@ function handlePlaylistSearchSubmit() {
 .shelf-search-button.el-button:focus {
   color: #fff;
   border: none;
-  transform: translateY(-1px);
-  box-shadow: 0 12px 24px rgba(245, 155, 188, 0.22);
   filter: brightness(1.02);
 }
 
@@ -2743,12 +2762,10 @@ function handlePlaylistSearchSubmit() {
 .category-track-board {
   position: relative;
   min-height: calc(100vh - 132px);
-  border: 1px solid rgba(238, 218, 226, 0.84);
-  border-radius: 28px;
-  background:
-    radial-gradient(circle at top right, rgba(255, 226, 238, 0.22), transparent 22%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(255, 250, 253, 0.9));
-  box-shadow: 0 24px 44px rgba(180, 139, 158, 0.12);
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
   overflow: hidden;
 }
 
@@ -2758,18 +2775,18 @@ function handlePlaylistSearchSubmit() {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 18px 22px 22px;
-  background: linear-gradient(180deg, rgba(255, 252, 253, 0.96), rgba(255, 248, 251, 0.9));
+  padding: 8px 4px 18px;
+  background: transparent;
 }
 
 .category-track-board__head::after {
   content: '';
   position: absolute;
-  right: 22px;
+  right: 0;
   bottom: 0;
-  left: 22px;
+  left: 0;
   height: 1px;
-  background: linear-gradient(90deg, rgba(238, 218, 226, 0), rgba(238, 218, 226, 0.9) 16%, rgba(238, 218, 226, 0.9) 84%, rgba(238, 218, 226, 0));
+  background: linear-gradient(90deg, rgba(238, 218, 226, 0.72), rgba(238, 218, 226, 0.18));
 }
 
 .category-track-board__head > div:first-child {
@@ -2793,11 +2810,11 @@ function handlePlaylistSearchSubmit() {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 6px 8px;
-  border: 1px solid rgba(238, 218, 226, 0.82);
-  border-radius: 18px;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(255, 247, 251, 0.92));
-  box-shadow: 0 14px 24px rgba(201, 155, 173, 0.1);
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
 }
 
 .play-mode-toggle {
@@ -2805,22 +2822,18 @@ function handlePlaylistSearchSubmit() {
   align-items: center;
   gap: 6px;
   position: relative;
-  padding-right: 14px;
+  padding: 3px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.24);
 }
 
 .play-mode-toggle::after {
-  content: '';
-  position: absolute;
-  top: 6px;
-  right: 0;
-  width: 1px;
-  height: 28px;
-  background: linear-gradient(180deg, rgba(231, 210, 220, 0), rgba(231, 210, 220, 0.92) 18%, rgba(231, 210, 220, 0.92) 82%, rgba(231, 210, 220, 0));
+  display: none;
 }
 
 .play-mode-toggle button {
-  width: 38px;
-  height: 38px;
+  width: 36px;
+  height: 36px;
   border: 0;
   border-radius: 10px;
   display: grid;
@@ -2828,18 +2841,17 @@ function handlePlaylistSearchSubmit() {
   color: #8c7782;
   background: transparent;
   cursor: pointer;
-  transition: color 0.18s ease, background 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
+  transition: color 0.18s ease, background 0.18s ease;
 }
 
 .play-mode-toggle button:hover {
-  transform: translateY(-1px);
   color: #d56f95;
 }
 
 .play-mode-toggle button.is-active {
   color: #d56f95;
-  background: rgba(255, 255, 255, 0.96);
-  box-shadow: 0 8px 18px rgba(207, 129, 160, 0.15);
+  background: rgba(255, 239, 246, 0.72);
+  box-shadow: none;
 }
 
 .play-mode-icon {
@@ -2857,29 +2869,26 @@ function handlePlaylistSearchSubmit() {
 .category-track-board__actions button {
   min-height: 34px;
   padding: 0 12px;
-  border: 1px solid rgba(238, 218, 226, 0.82);
+  border: 0;
   border-radius: 10px;
   display: inline-flex;
   align-items: center;
   gap: 6px;
   color: #8c7782;
-  background: rgba(255, 252, 253, 0.9);
+  background: rgba(255, 255, 255, 0.28);
   font-size: 12px;
   font-weight: 700;
   cursor: pointer;
-  transition: transform 0.18s ease, color 0.18s ease, border-color 0.18s ease, background 0.18s ease;
+  transition: color 0.18s ease, background 0.18s ease;
 }
 
 .category-track-board__actions button:hover {
-  transform: translateY(-1px);
   color: #d56f95;
-  border-color: rgba(230, 186, 202, 0.92);
-  background: rgba(255, 255, 255, 0.96);
+  background: rgba(255, 239, 246, 0.64);
 }
 
 .category-track-board__actions button.is-danger:hover {
   color: #db5c7f;
-  border-color: rgba(232, 168, 188, 0.92);
 }
 
 .music-view-toggle {
@@ -2887,12 +2896,14 @@ function handlePlaylistSearchSubmit() {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  padding: 0;
+  padding: 3px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.24);
 }
 
 .music-view-toggle button {
-  min-height: 34px;
-  padding: 0 12px;
+  min-height: 32px;
+  padding: 0 11px;
   border: 0;
   border-radius: 9px;
   display: inline-flex;
@@ -2903,37 +2914,37 @@ function handlePlaylistSearchSubmit() {
   font-size: 12px;
   font-weight: 800;
   cursor: pointer;
-  transition: color 0.18s ease, background 0.18s ease, box-shadow 0.18s ease;
+  transition: color 0.18s ease, background 0.18s ease;
 }
 
 .music-view-toggle button.is-active {
   color: #d56f95;
-  background: rgba(255, 255, 255, 0.96);
-  box-shadow: 0 8px 18px rgba(207, 129, 160, 0.15);
+  background: rgba(255, 239, 246, 0.72);
+  box-shadow: none;
 }
 
 .music-card-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(214px, 1fr));
-  gap: 20px;
-  padding: 8px 20px 20px;
+  gap: 16px;
+  padding: 18px 0 4px;
 }
 
 .music-track-card {
   overflow: hidden;
   min-width: 0;
-  border: 1px solid rgba(238, 218, 226, 0.82);
-  border-radius: 24px;
+  border: 0;
+  border-radius: 18px;
   display: grid;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(255, 249, 252, 0.94));
-  box-shadow: 0 18px 34px rgba(164, 126, 148, 0.12);
-  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+  background: rgba(255, 255, 255, 0.78);
+  box-shadow: 0 12px 24px rgba(164, 126, 148, 0.1);
+  transition: transform 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
 }
 
 .music-track-card:hover {
-  transform: translateY(-5px);
-  border-color: rgba(251, 114, 153, 0.4);
-  box-shadow: 0 28px 42px rgba(164, 126, 148, 0.18);
+  transform: translateY(-3px);
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 18px 32px rgba(164, 126, 148, 0.14);
 }
 
 .music-track-card__cover {
@@ -3185,8 +3196,30 @@ function handlePlaylistSearchSubmit() {
   justify-content: space-between;
   gap: 10px;
   padding: 10px 16px;
-  border-top: 1px solid rgba(238, 218, 226, 0.68);
-  background: linear-gradient(180deg, rgba(255, 252, 253, 0.92), rgba(255, 247, 251, 0.84));
+  border-top: 0;
+  background: rgba(255, 250, 252, 0.58);
+}
+
+.music-track-card__footer > span:first-child {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #a8959f;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.music-track-card__footer > span:first-child::before {
+  content: '';
+  flex: 0 0 auto;
+  width: 13px;
+  height: 13px;
+  border: 1.5px solid rgba(213, 111, 149, 0.48);
+  border-radius: 4px;
+  background:
+    linear-gradient(180deg, rgba(255, 185, 212, 0.72) 0 3px, transparent 3px),
+    rgba(255, 255, 255, 0.58);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.76);
 }
 
 .music-track-card__actions {
@@ -3203,9 +3236,9 @@ function handlePlaylistSearchSubmit() {
   display: grid;
   place-items: center;
   color: #8d7b84;
-  background: rgba(255, 255, 255, 0.82);
+  background: rgba(255, 255, 255, 0.62);
   cursor: pointer;
-  box-shadow: inset 0 0 0 1px rgba(238, 218, 226, 0.78);
+  box-shadow: none;
 }
 
 .music-track-card__actions button:hover {
@@ -3555,6 +3588,10 @@ function handlePlaylistSearchSubmit() {
   .playlist-categories {
     position: static;
     max-height: none;
+    padding: 0;
+    border-right: 0;
+    border-bottom: 1px solid rgba(235, 214, 224, 0.62);
+    padding-bottom: 12px;
   }
 
   .track-row__main,
@@ -3674,7 +3711,7 @@ function handlePlaylistSearchSubmit() {
 
   .play-mode-toggle {
     order: 1;
-    padding-right: 0;
+    padding: 4px;
   }
 
   .play-mode-toggle::after {
