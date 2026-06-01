@@ -264,12 +264,13 @@
               <div v-if="filteredCategoryTracks.length === 0" class="playlist-library__empty">
                 当前分类下还没有歌曲。
               </div>
-              <div v-else-if="musicDisplayMode === 'cards'" class="music-card-grid">
-                <article
-                  v-for="track in filteredCategoryTracks"
-                  :key="track.id"
-                  class="music-track-card"
-                >
+              <template v-else-if="musicDisplayMode === 'cards'">
+                <div class="music-card-grid">
+                  <article
+                    v-for="track in paginatedCategoryTracks"
+                    :key="track.id"
+                    class="music-track-card"
+                  >
                   <div class="music-track-card__cover">
                     <img v-if="track.coverUrl" :src="track.coverUrl" :alt="track.title" />
                     <span v-else class="music-track-card__fallback">Music</span>
@@ -300,7 +301,10 @@
                   </div>
 
                   <div class="music-track-card__footer">
-                    <span>{{ track.releaseYear || '年份未知' }}</span>
+                    <span class="music-track-card__year">
+                      <Icon icon="mdi:calendar-clock" class="music-track-card__year-icon" aria-hidden="true" />
+                      {{ track.releaseYear || '年份未知' }}
+                    </span>
                     <div class="music-track-card__actions">
                       <button type="button" title="播放" @click="playTrack(track)">
                         <el-icon><VideoPlay /></el-icon>
@@ -337,8 +341,19 @@
                       </button>
                     </div>
                   </div>
-                </article>
-              </div>
+                  </article>
+                </div>
+                <div v-if="filteredCategoryTracks.length > musicCardPageSize" class="music-card-pagination">
+                  <el-pagination
+                    v-model:current-page="musicCardPage"
+                    :page-size="musicCardPageSize"
+                    :total="filteredCategoryTracks.length"
+                    background
+                    layout="prev, pager, next"
+                    @current-change="handleMusicCardPageChange"
+                  />
+                </div>
+              </template>
               <div v-else class="category-track-table">
                 <div class="category-track-table__header">
                   <span>#</span>
@@ -351,7 +366,7 @@
                 </div>
 
                 <article
-                  v-for="(track, index) in filteredCategoryTracks"
+                  v-for="(track, index) in paginatedCategoryRows"
                   :key="track.id"
                   class="category-track-row"
                   :class="{ 'is-expanded': expandedManagedTrackId === track.id }"
@@ -364,7 +379,7 @@
                     @keyup.enter="toggleManagedTrackExpanded(track.id)"
                     @keyup.space.prevent="toggleManagedTrackExpanded(track.id)"
                   >
-                    <span class="category-track-row__index">{{ String(index + 1).padStart(2, '0') }}</span>
+                    <span class="category-track-row__index">{{ String((musicRowPage - 1) * musicRowPageSize + index + 1).padStart(2, '0') }}</span>
                     <span class="category-track-row__title">
                       <span class="category-track-row__cover">
                         <img v-if="track.coverUrl" :src="track.coverUrl" :alt="track.title" />
@@ -537,6 +552,16 @@
                     </div>
                   </transition>
                 </article>
+                <div v-if="filteredCategoryTracks.length > musicRowPageSize" class="music-list-pagination">
+                  <el-pagination
+                    v-model:current-page="musicRowPage"
+                    :page-size="musicRowPageSize"
+                    :total="filteredCategoryTracks.length"
+                    background
+                    layout="prev, pager, next"
+                    @current-change="handleMusicRowPageChange"
+                  />
+                </div>
               </div>
             </section>
           </main>
@@ -599,6 +624,10 @@ type PlaylistStatusFilter = 'all' | MusicTrackStatus
 
 const playlistStatusFilter = ref<PlaylistStatusFilter>('all')
 const musicDisplayMode = ref<'cards' | 'rows'>('cards')
+const musicCardPageSize = 8
+const musicCardPage = ref(1)
+const musicRowPageSize = 10
+const musicRowPage = ref(1)
 const player = useMusicPlayerStore()
 const userStore = useUserStore()
 const router = useRouter()
@@ -642,6 +671,20 @@ const filteredCategoryTracks = computed(() => {
     if (!keyword) return true
     return matchesTrackKeyword(track, keyword)
   })
+})
+
+const musicCardPageCount = computed(() => Math.max(1, Math.ceil(filteredCategoryTracks.value.length / musicCardPageSize)))
+
+const paginatedCategoryTracks = computed(() => {
+  const start = (musicCardPage.value - 1) * musicCardPageSize
+  return filteredCategoryTracks.value.slice(start, start + musicCardPageSize)
+})
+
+const musicRowPageCount = computed(() => Math.max(1, Math.ceil(filteredCategoryTracks.value.length / musicRowPageSize)))
+
+const paginatedCategoryRows = computed(() => {
+  const start = (musicRowPage.value - 1) * musicRowPageSize
+  return filteredCategoryTracks.value.slice(start, start + musicRowPageSize)
 })
 
 const activeLyricLines = computed<LyricLine[]>(() => {
@@ -721,6 +764,23 @@ watch(
     }
   },
   { immediate: true },
+)
+
+watch([selectedCategoryId, playlistSearch, playlistStatusFilter, musicDisplayMode], () => {
+  musicCardPage.value = 1
+  musicRowPage.value = 1
+})
+
+watch(
+  () => filteredCategoryTracks.value.length,
+  () => {
+    if (musicCardPage.value > musicCardPageCount.value) {
+      musicCardPage.value = musicCardPageCount.value
+    }
+    if (musicRowPage.value > musicRowPageCount.value) {
+      musicRowPage.value = musicRowPageCount.value
+    }
+  },
 )
 
 async function loadMusic() {
@@ -873,6 +933,16 @@ function setMusicDisplayMode(mode: 'cards' | 'rows') {
   expandedManagedTrackId.value = null
 }
 
+function handleMusicCardPageChange(page: number) {
+  musicCardPage.value = page
+  expandedManagedTrackId.value = null
+}
+
+function handleMusicRowPageChange(page: number) {
+  musicRowPage.value = page
+  expandedManagedTrackId.value = null
+}
+
 function setPlayMode(mode: 'sequence' | 'shuffle') {
   player.setMode(mode)
 }
@@ -908,7 +978,7 @@ function openEditTrack(track: MusicTrack) {
 
 async function removeTrack(track: MusicTrack) {
   try {
-    await ElMessageBox.confirm(`确定删除《${track.title}》吗？如果它还在分类里，后端会拒绝删除。`, '删除歌曲', {
+    await ElMessageBox.confirm(`确定删除《${track.title}》吗？删除时会自动从所有分类中移除。`, '删除歌曲', {
       confirmButtonText: '删除',
       cancelButtonText: '取消',
       type: 'warning',
@@ -2731,11 +2801,11 @@ function handlePlaylistSearchSubmit() {
 }
 
 .playlist-categories__create {
-  margin-top: auto;
   display: grid;
-  gap: 10px;
-  padding-top: 16px;
-  border-top: 1px solid rgba(238, 218, 226, 0.72);
+  gap: 8px;
+  margin-top: 2px;
+  padding-top: 0;
+  border-top: 0;
 }
 
 .playlist-categories__create-actions {
@@ -2746,17 +2816,25 @@ function handlePlaylistSearchSubmit() {
 
 .playlist-categories__new {
   width: 100%;
-  min-height: 42px;
-  border: 1px dashed rgba(218, 148, 175, 0.58);
+  min-height: 56px;
+  padding: 0 12px;
+  border: 1px dashed rgba(218, 148, 175, 0.42);
   border-radius: 14px;
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  gap: 6px;
+  justify-content: flex-start;
+  gap: 10px;
   color: #d46d96;
-  background: rgba(255, 247, 251, 0.76);
+  background: rgba(255, 247, 251, 0.52);
   font-weight: 800;
   cursor: pointer;
+  transition: transform 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+}
+
+.playlist-categories__new:hover {
+  transform: translateX(2px);
+  border-color: rgba(251, 114, 153, 0.5);
+  background: rgba(255, 241, 247, 0.78);
 }
 
 .category-track-board {
@@ -2928,6 +3006,43 @@ function handlePlaylistSearchSubmit() {
   grid-template-columns: repeat(auto-fill, minmax(214px, 1fr));
   gap: 16px;
   padding: 18px 0 4px;
+}
+
+.music-card-pagination,
+.music-list-pagination {
+  display: flex;
+  justify-content: center;
+  padding: 20px 0 2px;
+}
+
+:deep(.music-card-pagination .el-pagination),
+:deep(.music-list-pagination .el-pagination) {
+  --el-pagination-button-bg-color: rgba(255, 255, 255, 0.58);
+  --el-pagination-bg-color: rgba(255, 255, 255, 0.58);
+  --el-pagination-hover-color: #fb7299;
+  --el-color-primary: #fb7299;
+  gap: 6px;
+}
+
+:deep(.music-card-pagination .btn-prev),
+:deep(.music-card-pagination .btn-next),
+:deep(.music-card-pagination .el-pager li),
+:deep(.music-list-pagination .btn-prev),
+:deep(.music-list-pagination .btn-next),
+:deep(.music-list-pagination .el-pager li) {
+  min-width: 30px;
+  height: 30px;
+  border: 1px solid rgba(238, 218, 226, 0.64);
+  border-radius: 10px;
+  color: #9a8791;
+  box-shadow: none;
+}
+
+:deep(.music-card-pagination .el-pagination.is-background .el-pager li.is-active),
+:deep(.music-list-pagination .el-pagination.is-background .el-pager li.is-active) {
+  border-color: transparent;
+  color: #fff;
+  background: linear-gradient(135deg, #ff8db9, #fb7299);
 }
 
 .music-track-card {
@@ -3200,7 +3315,7 @@ function handlePlaylistSearchSubmit() {
   background: rgba(255, 250, 252, 0.58);
 }
 
-.music-track-card__footer > span:first-child {
+.music-track-card__year {
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -3209,17 +3324,12 @@ function handlePlaylistSearchSubmit() {
   line-height: 1;
 }
 
-.music-track-card__footer > span:first-child::before {
-  content: '';
+.music-track-card__year-icon {
   flex: 0 0 auto;
-  width: 13px;
-  height: 13px;
-  border: 1.5px solid rgba(213, 111, 149, 0.48);
-  border-radius: 4px;
-  background:
-    linear-gradient(180deg, rgba(255, 185, 212, 0.72) 0 3px, transparent 3px),
-    rgba(255, 255, 255, 0.58);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.76);
+  width: 15px;
+  height: 15px;
+  color: #d56f95;
+  opacity: 0.72;
 }
 
 .music-track-card__actions {
