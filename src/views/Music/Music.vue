@@ -27,6 +27,15 @@
             <span class="tone-arm__base"></span>
             <span class="tone-arm__needle"></span>
           </div>
+          <div class="audio-visualizer" :class="{ 'is-active': player.playing }" aria-label="Audio spectrum visualizer">
+            <span
+              v-for="(barHeight, index) in spectrumBars"
+              :key="index"
+              class="audio-visualizer__bar"
+              :style="{ '--bar-height': `${barHeight}px`, '--bar-delay': `${index * 18}ms` }"
+              aria-hidden="true"
+            ></span>
+          </div>
         </div>
 
         <div class="radio-panel__body">
@@ -65,22 +74,6 @@
             <button type="button" class="control-btn" title="下一首" @click="player.next">
               <el-icon><Right /></el-icon>
             </button>
-          </div>
-
-          <div class="audio-visualizer" :class="{ 'is-active': player.playing }" aria-label="Audio visualizer">
-            <span class="audio-visualizer__pulse" aria-hidden="true"></span>
-            <div class="audio-visualizer__bars" aria-hidden="true">
-              <span
-                v-for="(bar, index) in visualizerBars"
-                :key="index"
-                class="audio-visualizer__bar"
-                :style="{
-                  '--bar-height': `${bar.height}px`,
-                  '--bar-delay': `${bar.delay}ms`,
-                  '--bar-boost': String(bar.boost),
-                }"
-              ></span>
-            </div>
           </div>
 
           <div class="progress-row">
@@ -185,8 +178,18 @@
               :key="playlist.id || playlist.name"
               type="button"
               class="playlist-category-card"
-              :class="{ 'is-editing': selectedCategoryId === playlist.id }"
+              :class="{
+                'is-editing': selectedCategoryId === playlist.id,
+                'is-drop-target': canDropTrackToCategory(playlist),
+                'is-drag-over': dragOverCategoryId === playlist.id,
+                'is-drop-disabled': isDraggingTrack && !canDropTrackToCategory(playlist),
+              }"
+              :title="canManage ? `拖拽歌曲到“${playlist.name}”可快速分类` : undefined"
               @click="selectCategory(playlist.id ?? null)"
+              @dragenter="handleCategoryDragEnter($event, playlist)"
+              @dragover="handleCategoryDragOver($event, playlist)"
+              @dragleave="handleCategoryDragLeave(playlist)"
+              @drop="handleCategoryDrop($event, playlist)"
             >
               <span class="playlist-category-card__marker">
                 <el-icon><Folder /></el-icon>
@@ -288,6 +291,10 @@
                         v-for="track in paginatedCategoryTracks"
                         :key="track.id"
                         class="music-track-card"
+                        :class="{ 'is-dragging': draggedTrackId === track.id }"
+                        :draggable="canManage"
+                        @dragstart="handleTrackDragStart($event, track)"
+                        @dragend="handleTrackDragEnd"
                       >
                       <div class="music-track-card__cover">
                         <img v-if="track.coverUrl" :src="track.coverUrl" :alt="track.title" />
@@ -389,7 +396,10 @@
                       v-for="(track, index) in paginatedCategoryRows"
                       :key="track.id"
                       class="category-track-row"
-                      :class="{ 'is-expanded': expandedManagedTrackId === track.id }"
+                      :class="{ 'is-expanded': expandedManagedTrackId === track.id, 'is-dragging': draggedTrackId === track.id }"
+                      :draggable="canManage"
+                      @dragstart="handleTrackDragStart($event, track)"
+                      @dragend="handleTrackDragEnd"
                     >
                       <div
                         class="category-track-row__main"
@@ -594,7 +604,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Back, Close, Delete, Edit, Folder, Grid, List, Plus, Refresh, Right, Search, Sort, VideoPause, VideoPlay } from '@element-plus/icons-vue'
@@ -628,6 +638,21 @@ interface LyricLine {
   current: boolean
 }
 
+interface MusicSpectrumRuntime {
+  audioContext: AudioContext
+  analyser: AnalyserNode
+  source: MediaElementAudioSourceNode
+}
+
+declare global {
+  interface Window {
+    __chen404MusicSpectrumRuntime?: MusicSpectrumRuntime
+    webkitAudioContext?: typeof AudioContext
+  }
+}
+
+const SPECTRUM_BAR_COUNT = 36
+
 const defaultHero = resolveFeatureHero(null, 'music')
 const heroBgImage = ref(defaultHero.bgImage)
 const heroBgPosition = ref(defaultHero.bgPosition)
@@ -639,6 +664,8 @@ const trackDurationMap = ref<Record<number, number>>({})
 const playlistSaving = ref(false)
 const selectedCategoryId = ref<number | null>(null)
 const expandedManagedTrackId = ref<number | null>(null)
+const draggedTrackId = ref<number | null>(null)
+const dragOverCategoryId = ref<number | null>(null)
 const creatingCategory = ref(false)
 const categoryDraft = ref('')
 const playlistSearch = ref('')
@@ -654,32 +681,15 @@ const player = useMusicPlayerStore()
 const userStore = useUserStore()
 const router = useRouter()
 const resolvingTrackDurationIds = new Set<number>()
+const spectrumBars = ref<number[]>(createIdleSpectrumBars())
+let spectrumFrameId: number | null = null
+let spectrumData: Uint8Array<ArrayBuffer> | null = null
 const { user } = storeToRefs(userStore)
 const { loadSiteConfig } = useSiteConfig()
 const canManage = computed(() => isAdminUser(user.value))
 const activeTrack = computed(() => player.currentTrack)
-const visualizerBars = [
-  { height: 16, delay: 0, boost: 1.05 },
-  { height: 9, delay: 120, boost: 1.65 },
-  { height: 24, delay: 240, boost: 1.2 },
-  { height: 13, delay: 80, boost: 1.8 },
-  { height: 30, delay: 180, boost: 1.12 },
-  { height: 18, delay: 300, boost: 1.48 },
-  { height: 10, delay: 40, boost: 1.9 },
-  { height: 22, delay: 220, boost: 1.26 },
-  { height: 35, delay: 340, boost: 1.05 },
-  { height: 14, delay: 140, boost: 1.72 },
-  { height: 26, delay: 260, boost: 1.16 },
-  { height: 18, delay: 20, boost: 1.56 },
-  { height: 31, delay: 200, boost: 1.08 },
-  { height: 12, delay: 320, boost: 1.82 },
-  { height: 23, delay: 100, boost: 1.32 },
-  { height: 15, delay: 280, boost: 1.68 },
-  { height: 28, delay: 60, boost: 1.14 },
-  { height: 11, delay: 360, boost: 1.86 },
-  { height: 20, delay: 160, boost: 1.42 },
-  { height: 9, delay: 380, boost: 1.95 },
-]
+const isDraggingTrack = computed(() => draggedTrackId.value != null)
+const activeAudioUrl = computed(() => activeTrack.value?.audioUrl || '')
 
 const playlistStatusOptions: Array<{ label: string; value: PlaylistStatusFilter }> = [
   { label: '全部', value: 'all' },
@@ -790,12 +800,40 @@ function getTrackLyricPreview(track: MusicTrack): LyricLine[] {
 }
 
 onMounted(() => {
+  player.audio.addEventListener('playing', handleSpectrumAudioPlaying)
+  player.audio.addEventListener('pause', handleSpectrumAudioPause)
+  player.audio.addEventListener('ended', handleSpectrumAudioPause)
+  if (player.playing) {
+    startSpectrumLoop()
+  }
   void userStore.syncAuthState().finally(loadMusic)
   void loadSiteConfig(true).then((config) => {
     const hero = resolveFeatureHero(config, 'music')
     heroBgImage.value = hero.bgImage
     heroBgPosition.value = hero.bgPosition
   })
+})
+
+onUnmounted(() => {
+  player.audio.removeEventListener('playing', handleSpectrumAudioPlaying)
+  player.audio.removeEventListener('pause', handleSpectrumAudioPause)
+  player.audio.removeEventListener('ended', handleSpectrumAudioPause)
+  stopSpectrumLoop(false)
+})
+
+watch(
+  () => player.playing,
+  (playing) => {
+    if (playing) {
+      startSpectrumLoop()
+      return
+    }
+    stopSpectrumLoop(true)
+  },
+)
+
+watch(activeAudioUrl, () => {
+  spectrumBars.value = createIdleSpectrumBars()
 })
 
 watch(
@@ -826,6 +864,102 @@ watch(
     }
   },
 )
+
+function handleSpectrumAudioPlaying() {
+  startSpectrumLoop()
+}
+
+function handleSpectrumAudioPause() {
+  stopSpectrumLoop(true)
+}
+
+function startSpectrumLoop() {
+  if (spectrumFrameId != null) return
+  void ensureSpectrumRuntime().then((runtime) => {
+    if (!runtime || !player.playing || spectrumFrameId != null) return
+    spectrumData = spectrumData ?? new Uint8Array(runtime.analyser.frequencyBinCount)
+    const drawFrame = () => {
+      drawSpectrumFrame(runtime.analyser)
+      spectrumFrameId = window.requestAnimationFrame(drawFrame)
+    }
+    drawFrame()
+  })
+}
+
+function stopSpectrumLoop(resetBars: boolean) {
+  if (spectrumFrameId != null) {
+    window.cancelAnimationFrame(spectrumFrameId)
+    spectrumFrameId = null
+  }
+  if (resetBars) {
+    spectrumBars.value = createIdleSpectrumBars()
+  }
+}
+
+async function ensureSpectrumRuntime() {
+  try {
+    const runtime = getSpectrumRuntime()
+    if (!runtime) return null
+    if (runtime.audioContext.state === 'suspended') {
+      await runtime.audioContext.resume()
+    }
+    return runtime
+  } catch {
+    return null
+  }
+}
+
+function getSpectrumRuntime(): MusicSpectrumRuntime | null {
+  if (window.__chen404MusicSpectrumRuntime) {
+    return window.__chen404MusicSpectrumRuntime
+  }
+  const AudioContextConstructor = window.AudioContext ?? window.webkitAudioContext
+  if (!AudioContextConstructor) return null
+  const audioContext = new AudioContextConstructor()
+  const analyser = audioContext.createAnalyser()
+  analyser.fftSize = 128
+  analyser.smoothingTimeConstant = 0.78
+  const source = audioContext.createMediaElementSource(player.audio)
+  source.connect(analyser)
+  analyser.connect(audioContext.destination)
+  window.__chen404MusicSpectrumRuntime = {
+    audioContext,
+    analyser,
+    source,
+  }
+  return window.__chen404MusicSpectrumRuntime
+}
+
+function drawSpectrumFrame(analyser: AnalyserNode) {
+  if (!spectrumData) return
+  analyser.getByteFrequencyData(spectrumData)
+  const lastIndex = spectrumData.length - 1
+  const frameBars = Array.from({ length: SPECTRUM_BAR_COUNT }, (_, index) => {
+    const frequencyIndex = Math.min(lastIndex, Math.floor(((index + 1) / SPECTRUM_BAR_COUNT) ** 1.28 * lastIndex))
+    const normalized = spectrumData?.[frequencyIndex] ? spectrumData[frequencyIndex] / 255 : 0
+    const shaped = Math.pow(normalized, 0.72)
+    return Math.round(7 + shaped * 48)
+  })
+  const hasAudioEnergy = frameBars.some((height) => height > 8)
+  spectrumBars.value = hasAudioEnergy ? frameBars : createFallbackSpectrumBars()
+}
+
+function createIdleSpectrumBars() {
+  return Array.from({ length: SPECTRUM_BAR_COUNT }, (_, index) => {
+    const wave = Math.sin(index * 0.58) * 0.5 + Math.sin(index * 0.21) * 0.5
+    return Math.round(13 + Math.max(-0.45, wave) * 8)
+  })
+}
+
+function createFallbackSpectrumBars() {
+  const time = player.audio.currentTime || performance.now() / 1000
+  return Array.from({ length: SPECTRUM_BAR_COUNT }, (_, index) => {
+    const slowWave = Math.sin(time * (3.4 + index * 0.035) + index * 0.62)
+    const fastWave = Math.sin(time * (7.8 + index * 0.018) + index * 1.34)
+    const shaped = (slowWave * 0.62 + fastWave * 0.38 + 1) / 2
+    return Math.round(8 + Math.max(0, shaped) * 34)
+  })
+}
 
 async function loadMusic() {
   loading.value = true
@@ -1163,6 +1297,12 @@ function isTrackInSelectedCategory(trackId: number) {
   return isTrackInCategory(trackId, selectedCategory.value)
 }
 
+function canDropTrackToCategory(category: MusicPlaylist | null, trackId = draggedTrackId.value) {
+  if (!canManage.value || playlistSaving.value || !category?.id || trackId == null) return false
+  if (!trackMap.value.has(trackId)) return false
+  return !isTrackInCategory(trackId, category)
+}
+
 async function toggleTrackCategory(trackId: number, category: MusicPlaylist) {
   if (!category.id) return
   const trackIds = (category.tracks ?? []).map((track) => track.id)
@@ -1174,9 +1314,7 @@ async function toggleTrackCategory(trackId: number, category: MusicPlaylist) {
 async function addTrackToSelectedCategory(trackId: number) {
   const category = selectedCategory.value
   if (!category) return
-  const trackIds = (category.tracks ?? []).map((track) => track.id)
-  if (trackIds.includes(trackId)) return
-  await persistCategoryTracks(category, [...trackIds, trackId], '已加入当前分类')
+  await addTrackToCategory(category, trackId, '已加入当前分类')
 }
 
 async function removeTrackFromSelectedCategory(trackId: number) {
@@ -1186,14 +1324,97 @@ async function removeTrackFromSelectedCategory(trackId: number) {
   await persistCategoryTracks(category, trackIds, '已移出当前分类')
 }
 
+async function addTrackToCategory(category: MusicPlaylist, trackId: number, successMessage: string) {
+  const trackIds = (category.tracks ?? []).map((track) => track.id)
+  if (trackIds.includes(trackId)) return
+  await persistCategoryTracks(category, [...trackIds, trackId], successMessage)
+}
+
+function handleTrackDragStart(event: DragEvent, track: MusicTrack) {
+  if (!canManage.value || playlistSaving.value) {
+    event.preventDefault()
+    return
+  }
+  draggedTrackId.value = track.id
+  dragOverCategoryId.value = null
+  if (!event.dataTransfer) return
+  event.dataTransfer.effectAllowed = 'copy'
+  event.dataTransfer.setData('text/plain', String(track.id))
+  event.dataTransfer.setData('application/x-chen404-music-track', String(track.id))
+}
+
+function handleTrackDragEnd() {
+  clearTrackDragState()
+}
+
+function handleCategoryDragEnter(event: DragEvent, category: MusicPlaylist) {
+  if (!canDropTrackToCategory(category)) return
+  event.preventDefault()
+  dragOverCategoryId.value = category.id ?? null
+}
+
+function handleCategoryDragOver(event: DragEvent, category: MusicPlaylist) {
+  if (!event.dataTransfer) return
+  if (!canDropTrackToCategory(category)) {
+    event.dataTransfer.dropEffect = 'none'
+    return
+  }
+  event.preventDefault()
+  event.dataTransfer.dropEffect = 'copy'
+  dragOverCategoryId.value = category.id ?? null
+}
+
+function handleCategoryDragLeave(category: MusicPlaylist) {
+  if (dragOverCategoryId.value === category.id) {
+    dragOverCategoryId.value = null
+  }
+}
+
+async function handleCategoryDrop(event: DragEvent, category: MusicPlaylist) {
+  event.preventDefault()
+  const trackId = resolveDraggedTrackId(event)
+  dragOverCategoryId.value = null
+  if (trackId == null || !category.id) {
+    clearTrackDragState()
+    return
+  }
+  if (isTrackInCategory(trackId, category)) {
+    ElMessage.info('歌曲已在该分类中')
+    clearTrackDragState()
+    return
+  }
+  if (!canDropTrackToCategory(category, trackId)) {
+    clearTrackDragState()
+    return
+  }
+  try {
+    await addTrackToCategory(category, trackId, `已加入“${category.name}”`)
+  } finally {
+    clearTrackDragState()
+  }
+}
+
+function resolveDraggedTrackId(event: DragEvent) {
+  if (draggedTrackId.value != null) return draggedTrackId.value
+  const transfer = event.dataTransfer
+  const rawId = transfer?.getData('application/x-chen404-music-track') || transfer?.getData('text/plain')
+  const id = Number(rawId)
+  return Number.isFinite(id) && trackMap.value.has(id) ? id : null
+}
+
+function clearTrackDragState() {
+  draggedTrackId.value = null
+  dragOverCategoryId.value = null
+}
+
 async function persistCategoryTracks(category: MusicPlaylist, trackIds: number[], successMessage: string) {
   if (!category.id || playlistSaving.value) return
   playlistSaving.value = true
   try {
     const saved = await saveMusicPlaylistTracks(category.id, { trackIds })
     replaceAdminPlaylist(saved)
+    syncCurrentPlaylist(saved)
     ElMessage.success(successMessage)
-    await loadMusic()
   } finally {
     playlistSaving.value = false
   }
@@ -1206,6 +1427,11 @@ function replaceAdminPlaylist(saved: MusicPlaylist) {
     return
   }
   adminPlaylists.value.push(saved)
+}
+
+function syncCurrentPlaylist(saved: MusicPlaylist) {
+  if (player.currentPlaylist?.id !== saved.id) return
+  player.setQueue(saved.tracks ?? player.queue, saved)
 }
 
 function statusLabel(status: MusicTrackStatus) {
@@ -1265,8 +1491,10 @@ function handlePlaylistSearchSubmit() {
 .radio-panel {
   position: relative;
   display: grid;
-  grid-template-columns: minmax(240px, 340px) minmax(0, 1fr);
-  gap: clamp(22px, 3vw, 34px);
+  grid-template-columns: minmax(260px, 380px) minmax(320px, 560px);
+  justify-content: center;
+  align-items: center;
+  gap: clamp(24px, 4vw, 64px);
   padding: clamp(18px, 2.3vw, 28px);
   border-radius: 30px;
   border: 1px solid rgba(255, 220, 232, 0.66);
@@ -1291,6 +1519,9 @@ function handlePlaylistSearchSubmit() {
   position: relative;
   min-width: 0;
   display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: 14px;
   place-items: center;
 }
 
@@ -1319,15 +1550,6 @@ function handlePlaylistSearchSubmit() {
     radial-gradient(circle, rgba(255, 255, 255, 0.9) 0 10%, rgba(255, 180, 210, 0.44) 11% 18%, transparent 19%),
     repeating-radial-gradient(circle, rgba(255, 255, 255, 0.24) 0 2px, rgba(132, 92, 112, 0.08) 3px 5px),
     linear-gradient(135deg, #fff0f6, #efeaf7);
-}
-
-.record-disc::after {
-  content: '';
-  position: absolute;
-  inset: 42%;
-  border-radius: 50%;
-  background: rgba(255, 252, 254, 0.88);
-  box-shadow: inset 0 0 0 1px rgba(235, 203, 218, 0.9);
 }
 
 .record-disc__rings {
@@ -1407,6 +1629,7 @@ function handlePlaylistSearchSubmit() {
 .radio-panel__body {
   position: relative;
   z-index: 1;
+  width: min(100%, 560px);
   display: grid;
   gap: 14px;
   align-content: start;
@@ -1567,79 +1790,39 @@ function handlePlaylistSearchSubmit() {
 
 .audio-visualizer {
   position: relative;
-  width: min(760px, 100%);
-  min-height: 72px;
-  padding: 10px 22px 10px 18px;
-  border: 1px solid rgba(255, 217, 230, 0.78);
-  border-radius: 24px;
-  display: grid;
-  grid-template-columns: 22px minmax(0, 1fr);
-  align-items: center;
-  gap: 12px;
-  background:
-    radial-gradient(circle at 12% 24%, rgba(255, 190, 216, 0.22), transparent 38%),
-    linear-gradient(135deg, rgba(255, 255, 255, 0.82), rgba(255, 246, 251, 0.66));
-  box-shadow:
-    0 14px 28px rgba(224, 165, 188, 0.12),
-    inset 0 1px 0 rgba(255, 255, 255, 0.82);
-  overflow: hidden;
-}
-
-.audio-visualizer::before {
-  content: '';
-  position: absolute;
-  inset: 13px 22px 13px 52px;
-  border-radius: 999px;
-  background: linear-gradient(90deg, rgba(255, 229, 239, 0), rgba(255, 207, 226, 0.46), rgba(255, 229, 239, 0));
-  opacity: 0.72;
-  pointer-events: none;
-}
-
-.audio-visualizer__pulse {
-  position: relative;
-  z-index: 1;
-  width: 4px;
-  height: 18px;
-  border-radius: 999px;
-  background: #ff9fc2;
-  box-shadow:
-    9px 8px 0 -1px rgba(251, 114, 153, 0.72),
-    18px 2px 0 -1px rgba(255, 192, 218, 0.84);
-  opacity: 0.78;
-  transform-origin: bottom center;
-}
-
-.audio-visualizer.is-active .audio-visualizer__pulse {
-  animation: visualizer-pulse 1.2s ease-out infinite;
-}
-
-.audio-visualizer__bars {
-  position: relative;
-  z-index: 1;
-  min-width: 0;
-  height: 46px;
+  z-index: 2;
+  width: min(100%, 320px);
+  height: 72px;
+  padding: 10px 12px 12px;
+  border: 0;
   display: flex;
-  align-items: center;
-  gap: clamp(5px, 1.1vw, 10px);
-  overflow: hidden;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 4px;
+  background: transparent;
+  box-shadow: none;
+  overflow: visible;
 }
 
 .audio-visualizer__bar {
-  flex: 0 0 clamp(3px, 0.55vw, 6px);
+  position: relative;
+  z-index: 1;
+  flex: 0 0 4px;
   height: var(--bar-height);
   border-radius: 999px;
-  background: linear-gradient(180deg, #ffc2dc 0%, #fb7299 74%, #f59bbc 100%);
-  box-shadow:
-    0 7px 13px rgba(251, 114, 153, 0.18),
-    inset 0 1px 0 rgba(255, 255, 255, 0.52);
-  opacity: 0.78;
-  transform-origin: center;
-  transform: scaleY(0.72);
+  background: rgba(251, 114, 153, 0.56);
+  box-shadow: 0 4px 10px rgba(251, 114, 153, 0.12);
+  opacity: 0.76;
+  transition: height 72ms linear, opacity 160ms ease;
+}
+
+.audio-visualizer.is-active {
+  background: transparent;
 }
 
 .audio-visualizer.is-active .audio-visualizer__bar {
-  animation: visualizer-bar-dance 920ms ease-in-out infinite;
-  animation-delay: var(--bar-delay);
+  background: rgba(251, 114, 153, 0.66);
+  opacity: 1;
 }
 
 .progress-row {
@@ -2408,6 +2591,33 @@ function handlePlaylistSearchSubmit() {
   transform: translateX(2px);
   background: rgba(245, 155, 188, 0.1);
   box-shadow: none;
+}
+
+.playlist-category-card.is-drop-target {
+  background:
+    linear-gradient(135deg, rgba(255, 241, 247, 0.9), rgba(255, 255, 255, 0.72));
+  box-shadow:
+    inset 0 0 0 1px rgba(251, 114, 153, 0.24),
+    0 10px 22px rgba(245, 155, 188, 0.11);
+}
+
+.playlist-category-card.is-drag-over {
+  transform: translateX(4px) scale(1.02);
+  background:
+    linear-gradient(135deg, rgba(255, 232, 242, 0.98), rgba(255, 255, 255, 0.88));
+  box-shadow:
+    inset 0 0 0 2px rgba(251, 114, 153, 0.34),
+    0 16px 28px rgba(245, 155, 188, 0.18);
+}
+
+.playlist-category-card.is-drag-over::before {
+  width: 4px;
+  background: #fb7299;
+  box-shadow: 0 0 12px rgba(251, 114, 153, 0.32);
+}
+
+.playlist-category-card.is-drop-disabled {
+  opacity: 0.56;
 }
 
 .playlist-category-card.is-editing {
@@ -3193,10 +3403,26 @@ function handlePlaylistSearchSubmit() {
   transition: transform 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
 }
 
+.music-track-card[draggable='true'] {
+  cursor: grab;
+}
+
+.music-track-card[draggable='true']:active {
+  cursor: grabbing;
+}
+
 .music-track-card:hover {
   transform: translateY(-3px);
   background: rgba(255, 255, 255, 0.94);
   box-shadow: 0 18px 32px rgba(164, 126, 148, 0.14);
+}
+
+.music-track-card.is-dragging {
+  transform: translateY(-4px) scale(0.985);
+  opacity: 0.72;
+  box-shadow:
+    0 18px 34px rgba(164, 126, 148, 0.2),
+    inset 0 0 0 2px rgba(251, 114, 153, 0.24);
 }
 
 .music-track-card__cover {
@@ -3529,6 +3755,23 @@ function handlePlaylistSearchSubmit() {
   border-top: 1px solid rgba(242, 226, 233, 0.72);
 }
 
+.category-track-row[draggable='true'] {
+  cursor: grab;
+}
+
+.category-track-row[draggable='true']:active {
+  cursor: grabbing;
+}
+
+.category-track-row.is-dragging {
+  opacity: 0.68;
+}
+
+.category-track-row.is-dragging .category-track-row__main {
+  background: rgba(255, 241, 247, 0.9);
+  box-shadow: inset 0 0 0 2px rgba(251, 114, 153, 0.22);
+}
+
 .category-track-row__main {
   width: 100%;
   min-width: 0;
@@ -3804,45 +4047,13 @@ function handlePlaylistSearchSubmit() {
   to { transform: rotate(360deg); }
 }
 
-@keyframes visualizer-pulse {
-  0%,
-  100% {
-    transform: scaleY(0.76);
-    opacity: 0.62;
-  }
-
-  45% {
-    transform: scaleY(1.18);
-    opacity: 1;
-  }
-}
-
-@keyframes visualizer-bar-dance {
-  0%,
-  100% {
-    opacity: 0.48;
-    transform: scaleY(0.44);
-  }
-
-  38% {
-    opacity: 1;
-    transform: scaleY(var(--bar-boost));
-  }
-
-  66% {
-    opacity: 0.7;
-    transform: scaleY(0.82);
-  }
-}
-
 @media (prefers-reduced-motion: reduce) {
   .radio-panel__cover.is-playing .record-disc {
     animation: none;
   }
 
-  .audio-visualizer.is-active .audio-visualizer__pulse,
-  .audio-visualizer.is-active .audio-visualizer__bar {
-    animation: none;
+  .audio-visualizer__bar {
+    transition: none;
   }
 }
 

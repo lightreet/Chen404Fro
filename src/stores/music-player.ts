@@ -249,6 +249,7 @@ export const useMusicPlayerStore = defineStore('music-player', () => {
     isSeeking,
     volume,
     mode,
+    audio,
     hasQueue,
     setQueue,
     loadPublicQueue,

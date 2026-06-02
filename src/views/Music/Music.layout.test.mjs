@@ -31,3 +31,32 @@ test('defines layout rules that let the pagination stay pinned to the bottom edg
     /\.music-card-pagination,\s*\.music-list-pagination\s*\{[\s\S]*margin-top:\s*auto;[\s\S]*\}/,
   );
 });
+
+test('keeps card and row tracks draggable for quick categorization', () => {
+  assert.match(
+    musicViewSource,
+    /class="music-track-card"[\s\S]*:draggable="canManage"[\s\S]*@dragstart="handleTrackDragStart\(\$event, track\)"/,
+  );
+  assert.match(
+    musicViewSource,
+    /class="category-track-row"[\s\S]*:draggable="canManage"[\s\S]*@dragstart="handleTrackDragStart\(\$event, track\)"/,
+  );
+});
+
+test('keeps playlist categories as managed drop targets', () => {
+  assert.match(
+    musicViewSource,
+    /class="playlist-category-card"[\s\S]*@dragover="handleCategoryDragOver\(\$event, playlist\)"[\s\S]*@drop="handleCategoryDrop\(\$event, playlist\)"/,
+  );
+  assert.match(
+    musicViewSource,
+    /\.playlist-category-card\.is-drag-over\s*\{/,
+  );
+});
+
+test('saves category track changes without reloading the whole music page', () => {
+  const persistMatch = musicViewSource.match(/async function persistCategoryTracks[\s\S]*?function replaceAdminPlaylist/);
+  assert.ok(persistMatch);
+  assert.doesNotMatch(persistMatch[0], /loadMusic\(/);
+  assert.match(persistMatch[0], /replaceAdminPlaylist\(saved\)[\s\S]*syncCurrentPlaylist\(saved\)/);
+});
