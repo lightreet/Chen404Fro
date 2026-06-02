@@ -1491,10 +1491,10 @@ function handlePlaylistSearchSubmit() {
 .radio-panel {
   position: relative;
   display: grid;
-  grid-template-columns: minmax(260px, 380px) minmax(320px, 560px);
+  grid-template-columns: repeat(2, minmax(320px, 520px));
   justify-content: center;
   align-items: center;
-  gap: clamp(24px, 4vw, 64px);
+  gap: clamp(24px, 3.4vw, 56px);
   padding: clamp(18px, 2.3vw, 28px);
   border-radius: 30px;
   border: 1px solid rgba(255, 220, 232, 0.66);
@@ -1517,12 +1517,14 @@ function handlePlaylistSearchSubmit() {
 
 .radio-panel__visual {
   position: relative;
+  width: min(100%, 520px);
   min-width: 0;
   display: grid;
   align-content: center;
   justify-items: center;
   gap: 14px;
   place-items: center;
+  justify-self: center;
 }
 
 .radio-panel__cover {
@@ -1629,11 +1631,12 @@ function handlePlaylistSearchSubmit() {
 .radio-panel__body {
   position: relative;
   z-index: 1;
-  width: min(100%, 560px);
+  width: min(100%, 520px);
   display: grid;
   gap: 14px;
   align-content: start;
   min-width: 0;
+  justify-self: center;
 }
 
 .radio-panel__meta,
