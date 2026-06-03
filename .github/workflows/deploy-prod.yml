@@ -17,6 +17,8 @@ jobs:
     env:
       VITE_API_BASE_URL: https://www.chen404.cn/api
       VITE_IMAGE_BASE_URL: https://www.chen404.cn
+      VITE_AMAP_KEY: ${{ secrets.VITE_AMAP_KEY }}
+      VITE_AMAP_SECURITY_CODE: ${{ secrets.VITE_AMAP_SECURITY_CODE }}
 
     steps:
       - name: Checkout
