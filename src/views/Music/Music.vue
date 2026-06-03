@@ -62,16 +62,16 @@
           </p>
 
           <div class="player-controls">
-            <button type="button" class="control-btn" title="上一首" @click="player.previous">
+            <button type="button" class="control-btn" title="上一首" @click="handlePreviousTrack">
               <el-icon><Back /></el-icon>
             </button>
-            <button type="button" class="control-btn control-btn--primary" title="播放/暂停" @click="player.toggle">
+            <button type="button" class="control-btn control-btn--primary" title="播放/暂停" @click="handleTogglePlayback">
               <el-icon>
                 <VideoPause v-if="player.playing" />
                 <VideoPlay v-else />
               </el-icon>
             </button>
-            <button type="button" class="control-btn" title="下一首" @click="player.next">
+            <button type="button" class="control-btn" title="下一首" @click="handleNextTrack">
               <el-icon><Right /></el-icon>
             </button>
           </div>
@@ -652,6 +652,7 @@ declare global {
 }
 
 const SPECTRUM_BAR_COUNT = 36
+const SPECTRUM_HALF_BAR_COUNT = SPECTRUM_BAR_COUNT / 2
 
 const defaultHero = resolveFeatureHero(null, 'music')
 const heroBgImage = ref(defaultHero.bgImage)
@@ -833,6 +834,9 @@ watch(
 )
 
 watch(activeAudioUrl, () => {
+  if (!canAnalyzeAudioUrl(activeAudioUrl.value)) {
+    disposeSpectrumRuntime()
+  }
   spectrumBars.value = createIdleSpectrumBars()
 })
 
@@ -875,15 +879,17 @@ function handleSpectrumAudioPause() {
 
 function startSpectrumLoop() {
   if (spectrumFrameId != null) return
-  void ensureSpectrumRuntime().then((runtime) => {
-    if (!runtime || !player.playing || spectrumFrameId != null) return
-    spectrumData = spectrumData ?? new Uint8Array(runtime.analyser.frequencyBinCount)
-    const drawFrame = () => {
+  const drawFrame = () => {
+    const runtime = window.__chen404MusicSpectrumRuntime
+    if (runtime?.audioContext.state === 'running') {
+      spectrumData = spectrumData ?? new Uint8Array(runtime.analyser.frequencyBinCount)
       drawSpectrumFrame(runtime.analyser)
-      spectrumFrameId = window.requestAnimationFrame(drawFrame)
+    } else {
+      spectrumBars.value = createFallbackSpectrumBars()
     }
-    drawFrame()
-  })
+    spectrumFrameId = window.requestAnimationFrame(drawFrame)
+  }
+  drawFrame()
 }
 
 function stopSpectrumLoop(resetBars: boolean) {
@@ -896,9 +902,31 @@ function stopSpectrumLoop(resetBars: boolean) {
   }
 }
 
-async function ensureSpectrumRuntime() {
+function canAnalyzeAudioUrl(audioUrl: string) {
+  if (!audioUrl.trim()) return false
   try {
-    const runtime = getSpectrumRuntime()
+    return new URL(audioUrl, window.location.href).origin === window.location.origin
+  } catch {
+    return false
+  }
+}
+
+function disposeSpectrumRuntime() {
+  const runtime = window.__chen404MusicSpectrumRuntime
+  if (!runtime) return
+  runtime.source.disconnect()
+  runtime.analyser.disconnect()
+  void runtime.audioContext.close().catch(() => undefined)
+  delete window.__chen404MusicSpectrumRuntime
+}
+
+async function ensureSpectrumRuntime(audioUrl = activeAudioUrl.value) {
+  try {
+    if (!canAnalyzeAudioUrl(audioUrl)) {
+      disposeSpectrumRuntime()
+      return null
+    }
+    const runtime = getSpectrumRuntime(audioUrl)
     if (!runtime) return null
     if (runtime.audioContext.state === 'suspended') {
       await runtime.audioContext.resume()
@@ -909,7 +937,14 @@ async function ensureSpectrumRuntime() {
   }
 }
 
-function getSpectrumRuntime(): MusicSpectrumRuntime | null {
+async function primeSpectrumRuntimeForUserGesture(audioUrl?: string) {
+  await ensureSpectrumRuntime(audioUrl)
+}
+
+function getSpectrumRuntime(audioUrl = activeAudioUrl.value): MusicSpectrumRuntime | null {
+  if (!canAnalyzeAudioUrl(audioUrl)) {
+    return null
+  }
   if (window.__chen404MusicSpectrumRuntime) {
     return window.__chen404MusicSpectrumRuntime
   }
@@ -932,33 +967,75 @@ function getSpectrumRuntime(): MusicSpectrumRuntime | null {
 
 function drawSpectrumFrame(analyser: AnalyserNode) {
   if (!spectrumData) return
-  analyser.getByteFrequencyData(spectrumData)
-  const lastIndex = spectrumData.length - 1
-  const frameBars = Array.from({ length: SPECTRUM_BAR_COUNT }, (_, index) => {
-    const frequencyIndex = Math.min(lastIndex, Math.floor(((index + 1) / SPECTRUM_BAR_COUNT) ** 1.28 * lastIndex))
-    const normalized = spectrumData?.[frequencyIndex] ? spectrumData[frequencyIndex] / 255 : 0
-    const shaped = Math.pow(normalized, 0.72)
-    return Math.round(7 + shaped * 48)
+  const currentSpectrumData = spectrumData
+  analyser.getByteFrequencyData(currentSpectrumData)
+  const frameBars = createMirroredSpectrumBars((distanceFromCenter) => {
+    const normalizedDistance = distanceFromCenter / Math.max(1, SPECTRUM_HALF_BAR_COUNT - 1)
+    const startRatio = normalizedDistance ** 1.72
+    const endRatio = ((distanceFromCenter + 1) / SPECTRUM_HALF_BAR_COUNT) ** 1.72
+    const [startIndex, endIndex] = resolveSpectrumRange(
+      currentSpectrumData.length,
+      startRatio,
+      endRatio,
+    )
+    const average = readSpectrumAverage(currentSpectrumData, startIndex, endIndex)
+    const shaped = Math.pow(average, 0.78)
+    const centerWeight = 0.58 + Math.pow(1 - normalizedDistance, 1.08) * 0.68
+    return Math.round(7 + shaped * 38 * centerWeight + centerWeight * 6)
   })
-  const hasAudioEnergy = frameBars.some((height) => height > 8)
+  const hasAudioEnergy = frameBars.some((height) => height > 12)
   spectrumBars.value = hasAudioEnergy ? frameBars : createFallbackSpectrumBars()
 }
 
 function createIdleSpectrumBars() {
-  return Array.from({ length: SPECTRUM_BAR_COUNT }, (_, index) => {
-    const wave = Math.sin(index * 0.58) * 0.5 + Math.sin(index * 0.21) * 0.5
-    return Math.round(13 + Math.max(-0.45, wave) * 8)
+  return createMirroredSpectrumBars((distanceFromCenter) => {
+    const normalizedDistance = distanceFromCenter / Math.max(1, SPECTRUM_HALF_BAR_COUNT - 1)
+    const bloom = Math.cos(normalizedDistance * Math.PI * 0.82) * 0.5 + 0.5
+    const ripple = Math.sin(distanceFromCenter * 0.86) * 1.8 + Math.sin(distanceFromCenter * 0.31 + 1.2) * 1.3
+    return Math.round(9 + bloom * 16 + ripple)
   })
 }
 
 function createFallbackSpectrumBars() {
   const time = player.audio.currentTime || performance.now() / 1000
-  return Array.from({ length: SPECTRUM_BAR_COUNT }, (_, index) => {
-    const slowWave = Math.sin(time * (3.4 + index * 0.035) + index * 0.62)
-    const fastWave = Math.sin(time * (7.8 + index * 0.018) + index * 1.34)
-    const shaped = (slowWave * 0.62 + fastWave * 0.38 + 1) / 2
-    return Math.round(8 + Math.max(0, shaped) * 34)
+  return createMirroredSpectrumBars((distanceFromCenter) => {
+    const normalizedDistance = distanceFromCenter / Math.max(1, SPECTRUM_HALF_BAR_COUNT - 1)
+    const centerWeight = Math.pow(1 - normalizedDistance, 1.12)
+    const slowWave = Math.sin(time * (3.2 + centerWeight * 1.4) + distanceFromCenter * 0.64)
+    const fastWave = Math.sin(time * (7.3 + normalizedDistance * 0.22) + distanceFromCenter * 1.16)
+    const shaped = (slowWave * 0.58 + fastWave * 0.42 + 1) / 2
+    return Math.round(8 + centerWeight * 8 + Math.max(0, shaped) * (12 + centerWeight * 14))
   })
+}
+
+function createMirroredSpectrumBars(
+  createCenterBarHeight: (distanceFromCenter: number) => number,
+) {
+  const centerToEdgeBars = Array.from(
+    { length: SPECTRUM_HALF_BAR_COUNT },
+    (_, distanceFromCenter) => createCenterBarHeight(distanceFromCenter),
+  )
+  return [...centerToEdgeBars.slice().reverse(), ...centerToEdgeBars]
+}
+
+function resolveSpectrumRange(
+  spectrumLength: number,
+  startRatio: number,
+  endRatio: number,
+) {
+  const lastIndex = Math.max(0, spectrumLength - 1)
+  const startIndex = Math.min(lastIndex, Math.floor(startRatio * spectrumLength))
+  const endIndex = Math.min(lastIndex, Math.max(startIndex, Math.floor(endRatio * spectrumLength) - 1))
+  return [startIndex, endIndex] as const
+}
+
+function readSpectrumAverage(spectrumValues: Uint8Array<ArrayBuffer>, startIndex: number, endIndex: number) {
+  let total = 0
+  for (let index = startIndex; index <= endIndex; index += 1) {
+    total += spectrumValues[index] ?? 0
+  }
+  const sampleCount = endIndex - startIndex + 1
+  return sampleCount > 0 ? total / sampleCount / 255 : 0
 }
 
 async function loadMusic() {
@@ -1094,16 +1171,44 @@ function ensureSelectedCategoryExists() {
 }
 
 async function playTrack(track: MusicTrack, expandRow = true) {
+  await primeSpectrumRuntimeForUserGesture(track.audioUrl)
   if (musicDisplayMode.value === 'rows' && expandRow) {
     expandedManagedTrackId.value = track.id
   }
   const queue = filteredCategoryTracks.value.length ? filteredCategoryTracks.value : tracks.value
   await player.playTrack(track, queue, selectedCategory.value)
+  if (player.playing) {
+    await primeSpectrumRuntimeForUserGesture(track.audioUrl)
+  }
 }
 
 function pauseTrack(track: MusicTrack) {
   if (activeTrack.value?.id !== track.id) return
   player.pause()
+}
+
+async function handleTogglePlayback() {
+  await primeSpectrumRuntimeForUserGesture(activeTrack.value?.audioUrl)
+  await player.toggle()
+  if (player.playing) {
+    await primeSpectrumRuntimeForUserGesture(activeTrack.value?.audioUrl)
+  }
+}
+
+async function handlePreviousTrack() {
+  await primeSpectrumRuntimeForUserGesture(activeTrack.value?.audioUrl)
+  await player.previous()
+  if (player.playing) {
+    await primeSpectrumRuntimeForUserGesture(activeTrack.value?.audioUrl)
+  }
+}
+
+async function handleNextTrack() {
+  await primeSpectrumRuntimeForUserGesture(activeTrack.value?.audioUrl)
+  await player.next()
+  if (player.playing) {
+    await primeSpectrumRuntimeForUserGesture(activeTrack.value?.audioUrl)
+  }
 }
 
 function setMusicDisplayMode(mode: 'cards' | 'rows') {
