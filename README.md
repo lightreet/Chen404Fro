@@ -214,7 +214,7 @@ OPENAPI_INPUT=http://localhost:10404/api/v3/api-docs npm run gen:sdk
 
 ## 文档
 
-- [前端架构设计](doc/architecture.md)
-- [前端功能审查与优化清单](doc/feature-audit-2026-05-28.md)
+- [前端架构设计](docs/architecture.md)
+- [前端功能审查与优化清单](docs/feature-audit-2026-05-28.md)
 - [表情模块说明](src/emoji/README.md)
 - [SDK 说明](src/sdk/README.md)
