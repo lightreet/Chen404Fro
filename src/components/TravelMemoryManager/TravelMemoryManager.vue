@@ -264,6 +264,10 @@ interface Props {
   showToolbar?: boolean
 }
 
+type TravelMemoryManagerForm = Omit<CreateTravelMemoryCommand, 'entries' | 'stops'> & {
+  entries: TravelMemoryEntryUpsertCommand[]
+}
+
 const props = withDefaults(defineProps<Props>(), {
   selectedId: null,
   activeLocation: null,
@@ -290,7 +294,7 @@ const currentEditingLocation = computed(() =>
   editingId.value != null ? list.value.find((item) => item.id === editingId.value) || null : null,
 )
 
-const createEmptyForm = (): CreateTravelMemoryCommand => ({
+const createEmptyForm = (): TravelMemoryManagerForm => ({
   title: '',
   province: '',
   city: '',
@@ -303,7 +307,7 @@ const createEmptyForm = (): CreateTravelMemoryCommand => ({
   entries: [],
 })
 
-const form = reactive<CreateTravelMemoryCommand>(createEmptyForm())
+const form = reactive<TravelMemoryManagerForm>(createEmptyForm())
 
 function resetForm() {
   Object.assign(form, createEmptyForm())
@@ -332,32 +336,7 @@ function goCreatePage() {
 }
 
 function openEditDialog(row: TravelMemoryLocationDetail) {
-  editingId.value = row.id
-  Object.assign(form, {
-    title: row.title || '',
-    province: row.province || '',
-    city: row.city || '',
-    latitude: row.latitude,
-    longitude: row.longitude,
-    summaryNote: row.summaryNote || '',
-    visitedAt: row.visitedAt || '',
-    status: row.status ?? 1,
-    sortOrder: row.sortOrder ?? 0,
-    entries: (row.entries || []).map((entry) => ({
-      id: entry.id,
-      imageUrl: entry.imageUrl,
-      remark: entry.remark || '',
-      thanksNote: entry.thanksNote || '',
-      shotAt: entry.shotAt || '',
-      displayOrder: entry.displayOrder ?? 0,
-      cover: !!entry.cover,
-      sourceLatitude: entry.sourceLatitude,
-      sourceLongitude: entry.sourceLongitude,
-      geoSource: entry.geoSource || 'NONE',
-    })),
-  })
-  selectedEntryIndex.value = 0
-  drawerVisible.value = true
+  router.push({ name: 'TravelMemoryEdit', params: { id: row.id } })
 }
 
 function goCurrentEditPage() {
@@ -365,7 +344,7 @@ function goCurrentEditPage() {
     ElMessage.info('先选择一个地点，再进行编辑。')
     return
   }
-  openEditDialog(props.activeLocation)
+  router.push({ name: 'TravelMemoryEdit', params: { id: props.activeLocation.id } })
 }
 
 function beforeImageUpload(file: File) {
