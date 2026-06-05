@@ -203,10 +203,25 @@ export interface TravelMemoryEntry {
   thanksNote?: string;
   shotAt?: string;
   displayOrder?: number;
+  stopId?: number;
   cover?: boolean;
+  stopCover?: boolean;
   sourceLatitude?: number;
   sourceLongitude?: number;
   geoSource?: TravelMemoryGeoSource;
+}
+
+export interface TravelMemoryStop {
+  id?: number;
+  title: string;
+  storyNote?: string;
+  coverImage?: string;
+  visitedAt?: string;
+  latitude?: number;
+  longitude?: number;
+  sortOrder?: number;
+  entryCount?: number;
+  entries: TravelMemoryEntry[];
 }
 
 export interface TravelMemoryLocationListItem {
@@ -227,6 +242,7 @@ export interface TravelMemoryLocationDetail extends TravelMemoryLocationListItem
   status?: number;
   sortOrder?: number;
   entries: TravelMemoryEntry[];
+  stops?: TravelMemoryStop[];
   createTime?: string;
   updateTime?: string;
 }
@@ -239,9 +255,21 @@ export interface TravelMemoryEntryUpsertCommand {
   shotAt?: string;
   displayOrder?: number;
   cover?: boolean;
+  stopCover?: boolean;
   sourceLatitude?: number;
   sourceLongitude?: number;
   geoSource?: TravelMemoryGeoSource;
+}
+
+export interface TravelMemoryStopUpsertCommand {
+  id?: number;
+  title: string;
+  storyNote?: string;
+  visitedAt?: string;
+  latitude?: number;
+  longitude?: number;
+  sortOrder?: number;
+  entries: TravelMemoryEntryUpsertCommand[];
 }
 
 export interface CreateTravelMemoryCommand {
@@ -255,7 +283,8 @@ export interface CreateTravelMemoryCommand {
   visitedEndAt?: string;
   status?: number;
   sortOrder?: number;
-  entries: TravelMemoryEntryUpsertCommand[];
+  stops?: TravelMemoryStopUpsertCommand[];
+  entries?: TravelMemoryEntryUpsertCommand[];
 }
 
 export interface UpdateTravelMemoryCommand extends CreateTravelMemoryCommand {}
