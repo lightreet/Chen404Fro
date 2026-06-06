@@ -39,14 +39,6 @@
           </div>
         </div>
 
-        <div v-if="activeStopTarget" class="map-panel__focus-banner">
-          <div>
-            <strong>片段定位中</strong>
-            <span>地图点击会写入「{{ stopDisplayTitle(activeStopTarget, coordinateTargetStopIndex ?? 0) }}」的单独坐标</span>
-          </div>
-          <button type="button" @click="switchToLocationTarget">返回主地点</button>
-        </div>
-
         <div class="map-panel__canvas">
           <TravelMemoryMap
             ref="pickerMapRef"
@@ -88,7 +80,7 @@
             <span>{{ currentLocationSubTitle }}</span>
           </div>
           <button type="button" @click="clearCoordinateSelection">
-            {{ isStopCoordinateTarget ? '清除片段坐标' : '清除选择' }}
+            清除选择
           </button>
         </div>
       </aside>
@@ -239,6 +231,10 @@
                 <span>{{ stopCount }} 个片段</span>
                 <span>{{ photoCount }} 张照片</span>
               </div>
+              <button type="button" class="section-action section-action--primary" @click="addStop">
+                <el-icon><Plus /></el-icon>
+                添加旅途片段
+              </button>
             </div>
           </div>
 
@@ -247,138 +243,212 @@
               v-for="(stop, stopIndex) in form.stops"
               :key="stop.id || `stop-${stopIndex}`"
               class="stop-card"
-              :class="{ 'is-active': stopIndex === selectedStopIndex || stopIndex === coordinateTargetStopIndex }"
+              :class="{ 'is-active': stopIndex === selectedStopIndex, 'is-expanded': isStopExpanded(stopIndex) }"
             >
-              <div class="stop-card__side">
-                <div class="stop-card__header">
+              <template v-if="isStopExpanded(stopIndex)">
+                <div class="stop-editor-main">
+                  <div class="stop-card__header">
+                    <span class="stop-number">{{ String(stopIndex + 1).padStart(2, '0') }}</span>
+                    <button type="button" class="stop-title-main" @click="selectStop(stopIndex)">
+                      <h3>{{ stopDisplayTitle(stop, stopIndex) }}</h3>
+                    </button>
+                    <div class="stop-actions">
+                      <button
+                        type="button"
+                        class="icon-button icon-button--toggle"
+                        title="折叠片段"
+                        aria-label="折叠片段"
+                        @click="collapseStop(stopIndex)"
+                      >
+                        <el-icon><ArrowUp /></el-icon>
+                      </button>
+                      <button
+                        type="button"
+                        class="icon-button"
+                        title="上移片段"
+                        aria-label="上移片段"
+                        :disabled="stopIndex === 0"
+                        @click="moveStop(stopIndex, -1)"
+                      >
+                        <el-icon><Top /></el-icon>
+                      </button>
+                      <button
+                        type="button"
+                        class="icon-button"
+                        title="下移片段"
+                        aria-label="下移片段"
+                        :disabled="stopIndex === form.stops.length - 1"
+                        @click="moveStop(stopIndex, 1)"
+                      >
+                        <el-icon><Bottom /></el-icon>
+                      </button>
+                      <button type="button" class="icon-button" title="删除片段" aria-label="删除片段" @click="removeStop(stopIndex)">
+                        <el-icon><Close /></el-icon>
+                      </button>
+                    </div>
+                  </div>
+
+                  <div class="stop-editor-grid">
+                    <div class="stop-fields-panel">
+                      <div class="field">
+                        <label>片段 / 景点标题</label>
+                        <el-input v-model="stop.title" maxlength="50" placeholder="例如：凌晨 2 点的街道" @focus="selectStop(stopIndex)" />
+                      </div>
+
+                      <div class="field">
+                        <label>片段文字</label>
+                        <el-input
+                          v-model="stop.storyNote"
+                          type="textarea"
+                          :rows="5"
+                          maxlength="500"
+                          show-word-limit
+                          placeholder="记录这个片段里最值得留下的一小段。"
+                          @focus="selectStop(stopIndex)"
+                        />
+                      </div>
+
+                      <div class="field stop-date-field">
+                        <label>片段日期（可选）</label>
+                        <el-date-picker
+                          v-model="stop.visitedAt"
+                          type="date"
+                          value-format="YYYY-MM-DDTHH:mm:ss"
+                          placeholder="选择片段日期"
+                          class="w-full"
+                        />
+                      </div>
+
+                      <span class="stop-help">此片段会成为详情页“这趟路的节奏”中的一个站点。</span>
+                    </div>
+
+                    <div class="field field--subsection field--gallery">
+                      <div class="field-head">
+                        <label>片段照片</label>
+                        <span class="field-head__meta">{{ stop.entries.length }} 张，第一张为片段封面，可设整趟封面</span>
+                      </div>
+
+                      <div
+                        class="photo-strip"
+                        :class="{
+                          'is-empty': !stop.entries.length,
+                          'is-single': stop.entries.length === 1,
+                        }"
+                      >
+                        <div
+                          v-for="(entry, entryIndex) in stop.entries"
+                          :key="entry.id || entry.imageUrl || `${stopIndex}-${entryIndex}`"
+                          class="mini-photo"
+                          :class="{
+                            'is-cover': entry.stopCover,
+                            'is-action-open': isEntryActionsOpen(stopIndex, entryIndex),
+                            'is-dragging': isDraggingEntry(stopIndex, entryIndex),
+                          }"
+                          draggable="true"
+                          @dragstart="handleEntryDragStart($event, stopIndex, entryIndex)"
+                          @dragend="handleEntryDragEnd"
+                          @dragover.prevent="handleEntryDragOver"
+                          @drop="handleEntryDrop($event, stopIndex, entryIndex)"
+                        >
+                          <div class="mini-photo__media" @click="toggleEntryActions(stopIndex, entryIndex)">
+                            <img :src="entry.imageUrl" :alt="entry.remark || stop.title || form.title || `片段照片 ${entryIndex + 1}`" />
+                            <span v-if="entry.stopCover" class="mini-photo-badge">片段封面</span>
+                            <span v-if="entry.cover" class="mini-photo-badge mini-photo-badge--travel">旅行封面</span>
+                            <span class="mini-photo-drag-handle" title="拖拽排序" aria-hidden="true">
+                              <el-icon><Rank /></el-icon>
+                            </span>
+                            <button
+                              type="button"
+                              class="mini-photo-more"
+                              title="照片操作"
+                              @click.stop="toggleEntryActions(stopIndex, entryIndex)"
+                            >
+                              ⋯
+                            </button>
+                            <div class="mini-photo__overlay" @click.stop>
+                              <button type="button" class="mini-photo-overlay-action" @click="setTravelCoverFromOverlay(stopIndex, entryIndex)">
+                                设为旅行封面
+                              </button>
+                              <div class="mini-photo__mobile-sort">
+                                <button type="button" class="mini-photo-overlay-action" @click="moveEntryFromOverlay(stopIndex, entryIndex, -1)">
+                                  前移
+                                </button>
+                                <button type="button" class="mini-photo-overlay-action" @click="moveEntryFromOverlay(stopIndex, entryIndex, 1)">
+                                  后移
+                                </button>
+                              </div>
+                              <button type="button" class="mini-photo-overlay-action is-danger" @click="removeEntryFromOverlay(stopIndex, entryIndex)">
+                                删除
+                              </button>
+                            </div>
+                          </div>
+                          <div class="mini-photo__remark">
+                            <el-input
+                              v-if="isEditingEntryRemark(stopIndex, entryIndex)"
+                              v-model="entry.remark"
+                              maxlength="80"
+                              placeholder="添加一句照片说明"
+                              autofocus
+                              class="photo-remark-input"
+                              @blur="finishEntryRemarkEdit"
+                            />
+                            <button
+                              v-else
+                              type="button"
+                              class="mini-photo__remark-preview"
+                              :class="{ 'is-empty': !entry.remark?.trim() }"
+                              @click="editEntryRemark(stopIndex, entryIndex)"
+                            >
+                              {{ entry.remark?.trim() || '添加一句照片说明' }}
+                            </button>
+                          </div>
+                        </div>
+
+                        <el-upload
+                          class="stop-photo-upload mini-photo-add-tile"
+                          :show-file-list="false"
+                          :before-upload="beforeImageUpload"
+                          :http-request="(options) => handleUploadStopImage(stopIndex, options)"
+                          accept="image/*"
+                          multiple
+                        >
+                          <button type="button" class="mini-photo-add">
+                            <el-icon><Plus /></el-icon>
+                            <span>{{ stop.entries.length ? '继续添加' : '添加照片' }}</span>
+                          </button>
+                        </el-upload>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </template>
+              <template v-else>
+                <button type="button" class="stop-compact" @click="selectStop(stopIndex)">
                   <span class="stop-number">{{ String(stopIndex + 1).padStart(2, '0') }}</span>
-                  <div class="stop-title-main" @click="selectStop(stopIndex)">
-                    <h3>{{ stopDisplayTitle(stop, stopIndex) }}</h3>
-                  </div>
-                  <div class="stop-actions">
-                    <button type="button" class="icon-button" title="上移片段" @click="moveStop(stopIndex, -1)">
-                      ↑
-                    </button>
-                    <button type="button" class="icon-button" title="下移片段" @click="moveStop(stopIndex, 1)">
-                      ↓
-                    </button>
-                    <button type="button" class="icon-button" title="删除片段" @click="removeStop(stopIndex)">
-                      ×
-                    </button>
-                  </div>
-                </div>
-
-                <div class="field">
-                  <label>片段 / 景点标题</label>
-                  <el-input v-model="stop.title" maxlength="50" placeholder="例如：凌晨 2 点的街道" @focus="selectStop(stopIndex)" />
-                </div>
-
-                <div class="field">
-                  <label>片段文字</label>
-                  <el-input
-                    v-model="stop.storyNote"
-                    type="textarea"
-                    :rows="4"
-                    maxlength="500"
-                    placeholder="记录这个片段里最值得留下的一小段。"
-                    @focus="selectStop(stopIndex)"
-                  />
-                </div>
-
-                <div class="stop-meta-grid">
-                  <div class="field">
-                    <label>片段日期（可选）</label>
-                    <el-date-picker
-                      v-model="stop.visitedAt"
-                      type="date"
-                      value-format="YYYY-MM-DDTHH:mm:ss"
-                      placeholder="选择片段日期"
-                      class="w-full"
-                    />
-                  </div>
-                </div>
-
-                <div class="field field--subsection">
-                  <div class="field-head">
-                    <label>片段定位</label>
-                    <span class="field-head__meta">
-                      {{ stop.latitude != null && stop.longitude != null ? '独立坐标' : '跟随主地点' }}
+                  <span class="stop-compact__body">
+                    <span class="stop-compact__title">{{ stopDisplayTitle(stop, stopIndex) }}</span>
+                    <span class="stop-compact__meta">
+                      <span>{{ stopDateText(stop) }}</span>
+                      <span>{{ stop.entries.length }} 张照片</span>
                     </span>
-                  </div>
-                  <p class="stop-coordinate-text">{{ stopCoordinateSummary(stop) }}</p>
-                  <div class="stop-coordinate-actions">
-                    <button type="button" class="stop-coordinate-action" @click="activateStopCoordinateTarget(stopIndex)">单独定位</button>
-                    <button type="button" class="stop-coordinate-action" @click="useLocationCoordinateForStop(stopIndex)">使用主地点</button>
-                  </div>
-                </div>
-                <span class="stop-help">此片段会成为详情页“这趟路的节奏”中的一个站点。</span>
-              </div>
-
-              <div class="field field--subsection field--gallery">
-                <div class="field-head">
-                  <label>片段照片</label>
-                  <span class="field-head__meta">{{ stop.entries.length }} 张，可设片段封面和整趟封面</span>
-                </div>
-
-                <div v-if="stop.entries.length" class="photo-strip">
-                  <div
-                    v-for="(entry, entryIndex) in stop.entries"
-                    :key="entry.id || entry.imageUrl || `${stopIndex}-${entryIndex}`"
-                    class="mini-photo"
-                  >
-                    <img :src="entry.imageUrl" :alt="entry.remark || stop.title || form.title || `片段照片 ${entryIndex + 1}`" />
-                    <span v-if="entry.stopCover" class="mini-photo-badge">片段封面</span>
-                    <span v-if="entry.cover" class="mini-photo-badge mini-photo-badge--travel">旅行封面</span>
-                    <div class="mini-photo__toolbar">
-                      <button type="button" class="mini-photo-icon" title="前移照片" @click="moveEntry(stopIndex, entryIndex, -1)">←</button>
-                      <button type="button" class="mini-photo-icon" title="后移照片" @click="moveEntry(stopIndex, entryIndex, 1)">→</button>
-                      <button type="button" class="mini-photo-remove" title="删除照片" @click="removeEntry(stopIndex, entryIndex)">×</button>
-                    </div>
-                    <div class="mini-photo__actions">
-                      <button type="button" class="mini-photo-action" :class="{ active: entry.stopCover }" @click="setStopCover(stopIndex, entryIndex)">
-                        设片段封面
-                      </button>
-                      <button type="button" class="mini-photo-action" :class="{ active: entry.cover }" @click="setTravelCover(stopIndex, entryIndex)">
-                        设旅行封面
-                      </button>
-                    </div>
-                    <el-input v-model="entry.remark" maxlength="80" placeholder="照片备注（可选）" class="photo-inline-input" />
-                    <el-date-picker
-                      v-model="entry.shotAt"
-                      type="datetime"
-                      value-format="YYYY-MM-DDTHH:mm:ss"
-                      placeholder="拍摄时间（可选）"
-                      class="w-full photo-inline-input"
-                    />
-                  </div>
-                </div>
-
-                <p v-else class="stop-gallery-empty">这个片段还没有照片，先上传一张吧。</p>
-
-                <el-upload
-                  class="stop-photo-upload"
-                  :show-file-list="false"
-                  :before-upload="beforeImageUpload"
-                  :http-request="(options) => handleUploadStopImage(stopIndex, options)"
-                  accept="image/*"
-                  multiple
-                >
-                  <button type="button" class="mini-photo-add">
-                    <el-icon><Plus /></el-icon>
-                    添加照片
-                  </button>
-                </el-upload>
-              </div>
+                  </span>
+                  <span class="stop-compact__thumbs" aria-hidden="true">
+                    <span
+                      v-for="(entry, entryIndex) in stopPreviewEntries(stop)"
+                      :key="entry.id || entry.imageUrl || `${stopIndex}-preview-${entryIndex}`"
+                      class="stop-compact__thumb"
+                    >
+                      <img :src="entry.imageUrl" :alt="entry.remark || stop.title || `片段照片 ${entryIndex + 1}`" />
+                    </span>
+                    <span v-if="!stop.entries.length" class="stop-compact__empty">暂无照片</span>
+                  </span>
+                  <span class="stop-compact__toggle" title="展开片段" aria-label="展开片段">
+                    <el-icon><ArrowDown /></el-icon>
+                  </span>
+                </button>
+              </template>
             </article>
 
-            <button type="button" class="add-stop-card" @click="addStop">
-              <span class="add-stop-card__icon">+</span>
-              <div class="add-stop-card__copy">
-                <h3>添加旅途片段 / 景点</h3>
-                <p>记录下一个景点、一段街区，或者一段值得单独留下的路。</p>
-              </div>
-              <span class="add-stop-card__cta">新增分组</span>
-            </button>
           </div>
         </section>
       </main>
@@ -408,7 +478,7 @@ import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue'
 import type { AxiosError } from 'axios'
 import type { UploadRequestOptions } from 'element-plus'
 import { ElMessage } from 'element-plus'
-import { ArrowDown, ArrowLeft, Close, Location, Plus, Search } from '@element-plus/icons-vue'
+import { ArrowDown, ArrowLeft, ArrowUp, Bottom, Close, Location, Plus, Rank, Search, Top } from '@element-plus/icons-vue'
 import { useRoute, useRouter } from 'vue-router'
 import TravelMemoryMap from '@/components/TravelMemoryMap/TravelMemoryMap.vue'
 import {
@@ -435,10 +505,6 @@ interface TravelMemoryEditorForm extends Omit<CreateTravelMemoryCommand, 'entrie
   stops: TravelMemoryStopUpsertCommand[]
 }
 
-type CoordinateTarget =
-  | { type: 'location' }
-  | { type: 'stop'; stopIndex: number }
-
 const route = useRoute()
 const router = useRouter()
 const { siteConfig, loadSiteConfig } = useSiteConfig()
@@ -455,8 +521,11 @@ const locationSearchKeyword = ref('')
 const locationSearchRequest = ref(0)
 const advancedOpen = ref(false)
 const selectedStopIndex = ref(0)
-const coordinateTarget = ref<CoordinateTarget>({ type: 'location' })
+const expandedStopIndex = ref<number | null>(0)
 const editingDetail = ref<TravelMemoryLocationDetail | null>(null)
+const editingEntryRemark = ref<{ stopIndex: number; entryIndex: number } | null>(null)
+const activeEntryActions = ref<{ stopIndex: number; entryIndex: number } | null>(null)
+const draggingEntry = ref<{ stopIndex: number; entryIndex: number } | null>(null)
 let locationResolveRequestId = 0
 
 const editingId = computed(() => {
@@ -473,53 +542,11 @@ const stopCount = computed(() => form.stops.length)
 const photoCount = computed(() => allEntries.value.length)
 const coverEntry = computed(() => allEntries.value.find((entry) => entry.cover) || allEntries.value[0] || null)
 const hasPickedLocation = computed(() => form.latitude != null && form.longitude != null)
-const coordinateTargetStopIndex = computed(() => coordinateTarget.value.type === 'stop' ? coordinateTarget.value.stopIndex : null)
-const isStopCoordinateTarget = computed(() => coordinateTarget.value.type === 'stop')
-const activeStopTarget = computed(() => {
-  const index = coordinateTargetStopIndex.value
-  return index == null ? null : form.stops[index] || null
-})
-const hasCurrentTargetCoordinate = computed(() => {
-  if (coordinateTarget.value.type === 'location') {
-    return hasPickedLocation.value
-  }
-  const stop = form.stops[coordinateTarget.value.stopIndex]
-  return !!stop && stop.latitude != null && stop.longitude != null
-})
-const pickerLatitude = computed(() => {
-  if (coordinateTarget.value.type === 'location') {
-    return form.latitude ?? null
-  }
-  const stop = form.stops[coordinateTarget.value.stopIndex]
-  return stop?.latitude ?? null
-})
-const pickerLongitude = computed(() => {
-  if (coordinateTarget.value.type === 'location') {
-    return form.longitude ?? null
-  }
-  const stop = form.stops[coordinateTarget.value.stopIndex]
-  return stop?.longitude ?? null
-})
-const currentLocationTitle = computed(() => {
-  if (coordinateTarget.value.type === 'stop') {
-    const stop = form.stops[coordinateTarget.value.stopIndex]
-    return `当前片段：${stopDisplayTitle(stop, coordinateTarget.value.stopIndex)}`
-  }
-  return form.city || form.province || form.title || '未命名地点'
-})
+const hasCurrentTargetCoordinate = computed(() => hasPickedLocation.value)
+const pickerLatitude = computed(() => form.latitude ?? null)
+const pickerLongitude = computed(() => form.longitude ?? null)
+const currentLocationTitle = computed(() => form.city || form.province || form.title || '未命名地点')
 const currentLocationSubTitle = computed(() => {
-  if (coordinateTarget.value.type === 'stop') {
-    const stop = form.stops[coordinateTarget.value.stopIndex]
-    if (!stop) return '点击地图为片段单独定位'
-    if (stop.latitude != null && stop.longitude != null) {
-      return `${Number(stop.latitude).toFixed(4)}，${Number(stop.longitude).toFixed(4)}`
-    }
-    if (form.latitude != null && form.longitude != null) {
-      return '当前使用主地点坐标'
-    }
-    return '点击地图为这个片段单独定位'
-  }
-
   const regionText = [form.province, form.city].filter(Boolean).join(' · ')
   if (regionText) return regionText
   if (form.latitude != null && form.longitude != null) {
@@ -556,8 +583,6 @@ const createEmptyStop = (index: number): TravelMemoryStopUpsertCommand => ({
   title: '',
   storyNote: '',
   visitedAt: '',
-  latitude: undefined,
-  longitude: undefined,
   sortOrder: index,
   entries: [],
 })
@@ -581,7 +606,7 @@ const form = reactive<TravelMemoryEditorForm>(createEmptyForm())
 function resetForm() {
   Object.assign(form, createEmptyForm())
   selectedStopIndex.value = 0
-  coordinateTarget.value = { type: 'location' }
+  expandedStopIndex.value = 0
   resolvingLocationMeta.value = false
   locationMetaNeedsManualConfirm.value = false
   lastResolvedAddress.value = ''
@@ -592,13 +617,56 @@ function stopDisplayTitle(stop?: Pick<TravelMemoryStopUpsertCommand, 'title'> | 
   return stop?.title?.trim() || `第 ${index + 1} 站`
 }
 
+function stopDateText(stop: Pick<TravelMemoryStopUpsertCommand, 'visitedAt'>) {
+  return stop.visitedAt ? stop.visitedAt.slice(0, 10) : '未选择日期'
+}
+
+function stopPreviewEntries(stop: Pick<TravelMemoryStopUpsertCommand, 'entries'>) {
+  return stop.entries
+    .slice()
+    .sort((a, b) => Number(b.stopCover) - Number(a.stopCover) || (a.displayOrder ?? 0) - (b.displayOrder ?? 0))
+    .slice(0, 3)
+}
+
+function isEditingEntryRemark(stopIndex: number, entryIndex: number) {
+  return editingEntryRemark.value?.stopIndex === stopIndex && editingEntryRemark.value.entryIndex === entryIndex
+}
+
+function editEntryRemark(stopIndex: number, entryIndex: number) {
+  editingEntryRemark.value = { stopIndex, entryIndex }
+}
+
+function finishEntryRemarkEdit() {
+  editingEntryRemark.value = null
+}
+
+function isEntryActionsOpen(stopIndex: number, entryIndex: number) {
+  return activeEntryActions.value?.stopIndex === stopIndex && activeEntryActions.value.entryIndex === entryIndex
+}
+
+function toggleEntryActions(stopIndex: number, entryIndex: number) {
+  activeEntryActions.value = isEntryActionsOpen(stopIndex, entryIndex) ? null : { stopIndex, entryIndex }
+}
+
+function closeEntryActions() {
+  activeEntryActions.value = null
+}
+
+function isDraggingEntry(stopIndex: number, entryIndex: number) {
+  return draggingEntry.value?.stopIndex === stopIndex && draggingEntry.value.entryIndex === entryIndex
+}
+
+function stopEntryShotAt(stop: Pick<TravelMemoryStopUpsertCommand, 'visitedAt'>) {
+  return stop.visitedAt || form.visitedAt || undefined
+}
+
 function cloneEntry(entry: TravelMemoryEntry, index: number): TravelMemoryEntryUpsertCommand {
   return {
     id: entry.id,
     imageUrl: entry.imageUrl,
     remark: entry.remark || '',
     thanksNote: entry.thanksNote || '',
-    shotAt: entry.shotAt || '',
+    shotAt: '',
     displayOrder: index,
     cover: !!entry.cover,
     stopCover: !!entry.stopCover,
@@ -632,8 +700,6 @@ function buildStopsFromDetail(detail: TravelMemoryLocationDetail): TravelMemoryS
       title: stop.title || '',
       storyNote: stop.storyNote || '',
       visitedAt: stop.visitedAt || '',
-      latitude: stop.latitude,
-      longitude: stop.longitude,
       sortOrder: stopIndex,
       entries: (stop.entries || [])
         .slice()
@@ -658,7 +724,7 @@ function fillFormFromDetail(detail: TravelMemoryLocationDetail) {
   })
   normalizeAllStops()
   selectedStopIndex.value = 0
-  coordinateTarget.value = { type: 'location' }
+  expandedStopIndex.value = 0
   resolvingLocationMeta.value = false
   locationMetaNeedsManualConfirm.value = false
   lastResolvedAddress.value = [detail.province, detail.city].filter(Boolean).join(' / ')
@@ -676,14 +742,6 @@ function applyEditorMeta() {
 
 async function focusCurrentMapTarget() {
   await nextTick()
-  if (coordinateTarget.value.type === 'stop') {
-    const stop = form.stops[coordinateTarget.value.stopIndex]
-    if (stop?.latitude != null && stop.longitude != null) {
-      pickerMapRef.value?.focusPickerLocation(stop.latitude, stop.longitude)
-    }
-    return
-  }
-
   if (form.latitude != null && form.longitude != null) {
     pickerMapRef.value?.focusPickerLocation(form.latitude, form.longitude)
   }
@@ -757,7 +815,19 @@ function resolveSaveErrorMessage(error: unknown) {
 }
 
 function selectStop(index: number) {
-  selectedStopIndex.value = Math.max(0, Math.min(index, form.stops.length - 1))
+  const nextIndex = Math.max(0, Math.min(index, form.stops.length - 1))
+  selectedStopIndex.value = nextIndex
+  expandedStopIndex.value = nextIndex
+}
+
+function isStopExpanded(index: number) {
+  return expandedStopIndex.value === index
+}
+
+function collapseStop(index: number) {
+  if (expandedStopIndex.value === index) {
+    expandedStopIndex.value = null
+  }
 }
 
 function ensureUploadStopIndex(preferredIndex = selectedStopIndex.value) {
@@ -771,18 +841,9 @@ function ensureUploadStopIndex(preferredIndex = selectedStopIndex.value) {
 
 function normalizeStopCover(stop: TravelMemoryStopUpsertCommand) {
   if (!stop.entries.length) return
-  let assigned = false
-  stop.entries.forEach((entry) => {
-    if (entry.stopCover && !assigned) {
-      assigned = true
-      entry.stopCover = true
-      return
-    }
-    entry.stopCover = false
+  stop.entries.forEach((entry, entryIndex) => {
+    entry.stopCover = entryIndex === 0
   })
-  if (!assigned) {
-    stop.entries[0].stopCover = true
-  }
 }
 
 function normalizeTravelCover() {
@@ -817,8 +878,8 @@ function normalizeAllStops() {
 }
 
 async function appendUploadedEntry(
-  result: { url: string; shotAt?: string; latitude?: number; longitude?: number },
-  options: { stopIndex: number; cover?: boolean; stopCover?: boolean } = { stopIndex: 0 },
+  result: { url: string; latitude?: number; longitude?: number },
+  options: { stopIndex: number; cover?: boolean } = { stopIndex: 0 },
 ) {
   const stop = form.stops[options.stopIndex]
   if (!stop) return
@@ -828,20 +889,14 @@ async function appendUploadedEntry(
       entry.cover = false
     })
   }
-  if (options.stopCover) {
-    stop.entries.forEach((entry) => {
-      entry.stopCover = false
-    })
-  }
-
   const nextEntry: TravelMemoryEntryUpsertCommand = {
     imageUrl: result.url,
     remark: '',
     thanksNote: '',
-    shotAt: result.shotAt,
+    shotAt: '',
     displayOrder: stop.entries.length,
     cover: options.cover || allEntries.value.length === 0,
-    stopCover: options.stopCover || stop.entries.length === 0,
+    stopCover: stop.entries.length === 0,
     sourceLatitude: result.latitude,
     sourceLongitude: result.longitude,
     geoSource: result.latitude != null && result.longitude != null ? 'EXIF' : 'NONE',
@@ -854,10 +909,7 @@ async function handleUploadStopImage(stopIndex: number, options: UploadRequestOp
   uploading.value = true
   try {
     const result = await uploadTravelMemoryImage(options.file as File)
-    await appendUploadedEntry(result, { stopIndex, stopCover: form.stops[stopIndex]?.entries.length === 0 })
-    if (coordinateTarget.value.type === 'stop' && coordinateTarget.value.stopIndex === stopIndex && result.latitude != null && result.longitude != null) {
-      updateStopCoordinate(stopIndex, result.latitude, result.longitude)
-    }
+    await appendUploadedEntry(result, { stopIndex })
     if ((form.latitude == null || form.longitude == null) && result.latitude != null && result.longitude != null) {
       await applyLocationCoordinateSelection(result.latitude, result.longitude, { silent: true })
     }
@@ -879,7 +931,6 @@ async function handleUploadCoverImage(options: UploadRequestOptions) {
     await appendUploadedEntry(result, {
       stopIndex,
       cover: true,
-      stopCover: form.stops[stopIndex].entries.length === 0,
     })
     if ((form.latitude == null || form.longitude == null) && result.latitude != null && result.longitude != null) {
       await applyLocationCoordinateSelection(result.latitude, result.longitude, { silent: true })
@@ -898,14 +949,6 @@ function updateLocationCoordinateFields(latitude: number, longitude: number) {
   const coordinate = normalizeCoordinate(latitude, longitude)
   form.latitude = coordinate.latitude
   form.longitude = coordinate.longitude
-}
-
-function updateStopCoordinate(stopIndex: number, latitude: number, longitude: number) {
-  const stop = form.stops[stopIndex]
-  if (!stop) return
-  const coordinate = normalizeCoordinate(latitude, longitude)
-  stop.latitude = coordinate.latitude
-  stop.longitude = coordinate.longitude
 }
 
 async function resolveLocationMetaFromCoordinate(
@@ -954,12 +997,6 @@ async function applyLocationCoordinateSelection(
 }
 
 async function handlePickCoordinate(payload: { latitude: number; longitude: number }) {
-  if (coordinateTarget.value.type === 'stop') {
-    updateStopCoordinate(coordinateTarget.value.stopIndex, payload.latitude, payload.longitude)
-    pickerMapRef.value?.focusPickerLocation(payload.latitude, payload.longitude)
-    ElMessage.success('已为片段设置单独坐标')
-    return
-  }
   await applyLocationCoordinateSelection(payload.latitude, payload.longitude)
   pickerMapRef.value?.focusPickerLocation(payload.latitude, payload.longitude)
 }
@@ -967,12 +1004,6 @@ async function handlePickCoordinate(payload: { latitude: number; longitude: numb
 async function handleExistingLocationSelect(id: number) {
   const target = list.value.find((item) => item.id === id)
   if (!target || target.latitude == null || target.longitude == null) return
-  if (coordinateTarget.value.type === 'stop') {
-    updateStopCoordinate(coordinateTarget.value.stopIndex, Number(target.latitude), Number(target.longitude))
-    pickerMapRef.value?.focusPickerLocation(Number(target.latitude), Number(target.longitude))
-    ElMessage.success('已引用现有地点坐标到片段')
-    return
-  }
   await applyLocationCoordinateSelection(Number(target.latitude), Number(target.longitude))
   pickerMapRef.value?.focusPickerLocation(Number(target.latitude), Number(target.longitude))
   form.province = target.province || form.province
@@ -1003,17 +1034,6 @@ function zoomOutPickerMap() {
   pickerMapRef.value?.zoomOut()
 }
 
-function switchToLocationTarget() {
-  coordinateTarget.value = { type: 'location' }
-  void focusCurrentMapTarget()
-}
-
-function activateStopCoordinateTarget(stopIndex: number) {
-  selectStop(stopIndex)
-  coordinateTarget.value = { type: 'stop', stopIndex }
-  void focusCurrentMapTarget()
-}
-
 function locateCurrentPosition() {
   if (!navigator.geolocation) {
     ElMessage.warning('当前浏览器不支持自动定位')
@@ -1024,13 +1044,6 @@ function locateCurrentPosition() {
     async (position) => {
       const latitude = position.coords.latitude
       const longitude = position.coords.longitude
-
-      if (coordinateTarget.value.type === 'stop') {
-        updateStopCoordinate(coordinateTarget.value.stopIndex, latitude, longitude)
-        pickerMapRef.value?.focusPickerLocation(latitude, longitude)
-        ElMessage.success('已为当前片段定位')
-        return
-      }
 
       await applyLocationCoordinateSelection(latitude, longitude)
       pickerMapRef.value?.focusPickerLocation(latitude, longitude)
@@ -1048,29 +1061,12 @@ function locateCurrentPosition() {
 }
 
 function clearCoordinateSelection() {
-  if (coordinateTarget.value.type === 'stop') {
-    const stop = form.stops[coordinateTarget.value.stopIndex]
-    if (!stop) return
-    stop.latitude = undefined
-    stop.longitude = undefined
-    return
-  }
   form.latitude = undefined
   form.longitude = undefined
   form.province = ''
   form.city = ''
   lastResolvedAddress.value = ''
   locationMetaNeedsManualConfirm.value = false
-}
-
-function useLocationCoordinateForStop(stopIndex: number) {
-  const stop = form.stops[stopIndex]
-  if (!stop) return
-  stop.latitude = undefined
-  stop.longitude = undefined
-  if (coordinateTarget.value.type === 'stop' && coordinateTarget.value.stopIndex === stopIndex) {
-    switchToLocationTarget()
-  }
 }
 
 function setTravelCover(stopIndex: number, entryIndex: number) {
@@ -1081,12 +1077,9 @@ function setTravelCover(stopIndex: number, entryIndex: number) {
   })
 }
 
-function setStopCover(stopIndex: number, entryIndex: number) {
-  const stop = form.stops[stopIndex]
-  if (!stop) return
-  stop.entries.forEach((entry, currentIndex) => {
-    entry.stopCover = currentIndex === entryIndex
-  })
+function setTravelCoverFromOverlay(stopIndex: number, entryIndex: number) {
+  setTravelCover(stopIndex, entryIndex)
+  closeEntryActions()
 }
 
 function removeCoverEntry() {
@@ -1112,15 +1105,6 @@ function moveStop(stopIndex: number, direction: -1 | 1) {
   form.stops.splice(nextIndex, 0, movedStop)
   normalizeAllStops()
   selectStop(nextIndex)
-  if (coordinateTarget.value.type === 'stop') {
-    if (coordinateTarget.value.stopIndex === stopIndex) {
-      coordinateTarget.value = { type: 'stop', stopIndex: nextIndex }
-    } else if (direction === -1 && coordinateTarget.value.stopIndex === nextIndex) {
-      coordinateTarget.value = { type: 'stop', stopIndex: nextIndex + 1 }
-    } else if (direction === 1 && coordinateTarget.value.stopIndex === nextIndex) {
-      coordinateTarget.value = { type: 'stop', stopIndex: nextIndex - 1 }
-    }
-  }
 }
 
 function removeStop(stopIndex: number) {
@@ -1130,9 +1114,6 @@ function removeStop(stopIndex: number) {
   }
   normalizeAllStops()
   selectStop(Math.min(stopIndex, form.stops.length - 1))
-  if (coordinateTarget.value.type === 'stop' && coordinateTarget.value.stopIndex === stopIndex) {
-    switchToLocationTarget()
-  }
 }
 
 function addStop() {
@@ -1152,6 +1133,21 @@ function moveEntry(stopIndex: number, entryIndex: number, direction: -1 | 1) {
   normalizeAllStops()
 }
 
+function moveEntryToIndex(stopIndex: number, fromIndex: number, toIndex: number) {
+  const stop = form.stops[stopIndex]
+  if (!stop || fromIndex === toIndex) return
+  if (fromIndex < 0 || fromIndex >= stop.entries.length) return
+  if (toIndex < 0 || toIndex >= stop.entries.length) return
+  const [movedEntry] = stop.entries.splice(fromIndex, 1)
+  stop.entries.splice(toIndex, 0, movedEntry)
+  normalizeAllStops()
+}
+
+function moveEntryFromOverlay(stopIndex: number, entryIndex: number, direction: -1 | 1) {
+  moveEntry(stopIndex, entryIndex, direction)
+  closeEntryActions()
+}
+
 function removeEntry(stopIndex: number, entryIndex: number) {
   const stop = form.stops[stopIndex]
   if (!stop) return
@@ -1159,14 +1155,36 @@ function removeEntry(stopIndex: number, entryIndex: number) {
   normalizeAllStops()
 }
 
-function stopCoordinateSummary(stop: TravelMemoryStopUpsertCommand) {
-  if (stop.latitude != null && stop.longitude != null) {
-    return `片段坐标：${Number(stop.latitude).toFixed(4)}，${Number(stop.longitude).toFixed(4)}`
+function removeEntryFromOverlay(stopIndex: number, entryIndex: number) {
+  removeEntry(stopIndex, entryIndex)
+  closeEntryActions()
+}
+
+function handleEntryDragStart(event: DragEvent, stopIndex: number, entryIndex: number) {
+  draggingEntry.value = { stopIndex, entryIndex }
+  closeEntryActions()
+  event.dataTransfer?.setData('text/plain', `${stopIndex}:${entryIndex}`)
+  if (event.dataTransfer) {
+    event.dataTransfer.effectAllowed = 'move'
   }
-  if (form.latitude != null && form.longitude != null) {
-    return '使用主地点坐标'
+}
+
+function handleEntryDragOver(event: DragEvent) {
+  if (event.dataTransfer) {
+    event.dataTransfer.dropEffect = 'move'
   }
-  return '还没有片段坐标'
+}
+
+function handleEntryDrop(event: DragEvent, stopIndex: number, entryIndex: number) {
+  event.preventDefault()
+  const source = draggingEntry.value
+  draggingEntry.value = null
+  if (!source || source.stopIndex !== stopIndex) return
+  moveEntryToIndex(stopIndex, source.entryIndex, entryIndex)
+}
+
+function handleEntryDragEnd() {
+  draggingEntry.value = null
 }
 
 function validateStopsBeforeSave() {
@@ -1229,18 +1247,16 @@ async function handleSave() {
       title: stop.title.trim(),
       storyNote: stop.storyNote?.trim() || '',
       visitedAt: stop.visitedAt || undefined,
-      latitude: stop.latitude,
-      longitude: stop.longitude,
       sortOrder: stopIndex,
       entries: stop.entries.map((entry, entryIndex) => ({
         id: entry.id,
         imageUrl: entry.imageUrl,
         remark: entry.remark?.trim() || '',
         thanksNote: entry.thanksNote?.trim() || '',
-        shotAt: entry.shotAt || undefined,
+        shotAt: stopEntryShotAt(stop),
         displayOrder: entryIndex,
         cover: !!entry.cover,
-        stopCover: !!entry.stopCover,
+        stopCover: entryIndex === 0,
         sourceLatitude: entry.sourceLatitude,
         sourceLongitude: entry.sourceLongitude,
         geoSource: entry.geoSource || 'NONE',
@@ -1296,7 +1312,7 @@ watch(
   width: min(1540px, calc(100vw - 72px));
   min-height: 100vh;
   margin: 0 auto;
-  padding: 78px 0 calc(96px + env(safe-area-inset-bottom, 0));
+  padding: 78px 0 calc(132px + env(safe-area-inset-bottom, 0));
   color: #43343c;
 }
 
@@ -1385,12 +1401,12 @@ watch(
 .small-pill {
   display: inline-flex;
   align-items: center;
-  min-height: 30px;
-  padding: 0 12px;
+  min-height: 28px;
+  padding: 0 10px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.72);
-  border: 1px solid rgba(238, 226, 235, 0.88);
-  color: #8f8290;
+  background: rgba(255, 255, 255, 0.52);
+  border: 1px solid rgba(238, 226, 235, 0.62);
+  color: #a095a2;
   font-size: 12px;
   font-weight: 700;
   white-space: nowrap;
@@ -1477,42 +1493,6 @@ watch(
   color: #fff;
   background: linear-gradient(135deg, #ff4f91, #ff8cb4);
   box-shadow: 0 8px 18px rgba(255, 99, 151, 0.26);
-}
-
-.map-panel__focus-banner {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 12px;
-  align-items: center;
-  margin-bottom: 16px;
-  padding: 14px 16px;
-  border-radius: 14px;
-  border: 1px solid rgba(255, 187, 211, 0.92);
-  background:
-    linear-gradient(180deg, rgba(255, 251, 253, 0.96), rgba(255, 247, 251, 0.9)),
-    radial-gradient(circle at 90% 8%, rgba(255, 206, 224, 0.26), transparent 34%);
-}
-
-.map-panel__focus-banner strong {
-  color: #4f414b;
-  font-size: 13px;
-}
-
-.map-panel__focus-banner span {
-  display: block;
-  margin-top: 4px;
-  color: #918695;
-  font-size: 12px;
-  line-height: 1.45;
-}
-
-.map-panel__focus-banner button {
-  min-height: 34px;
-  padding: 0 14px;
-  border: 1px solid rgba(238, 226, 235, 0.96);
-  border-radius: 999px;
-  color: #6f6570;
-  background: rgba(255, 255, 255, 0.82);
 }
 
 .map-search {
@@ -2011,20 +1991,45 @@ watch(
 .editor-card--stops {
   grid-column: 1 / -1;
   grid-row: 2;
-  gap: 16px;
-  padding-bottom: 24px;
+  gap: 14px;
+  padding: 24px;
 }
 
 .editor-card--stops .section-title--inline {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
-  align-items: start;
+  align-items: center;
   gap: 18px;
 }
 
 .editor-card--stops .inline-actions {
-  align-self: start;
+  display: flex;
+  align-items: center;
   justify-content: flex-end;
+  gap: 14px;
+}
+
+.section-action {
+  min-height: 38px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 18px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 177, 207, 0.92);
+  color: #fb5d95;
+  background: rgba(255, 255, 255, 0.92);
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.section-action--primary {
+  border-color: rgba(255, 93, 148, 0.92);
+  color: #fff;
+  background: linear-gradient(135deg, #ff5d94, #ff79ab);
+  box-shadow: 0 12px 24px rgba(255, 93, 148, 0.18);
 }
 
 .inline-stats {
@@ -2057,64 +2062,76 @@ watch(
 
 .stop-board {
   display: grid;
-  gap: 18px;
+  gap: 10px;
 }
 
 .stop-card {
   position: relative;
   display: grid;
   grid-template-columns: 1fr;
-  gap: 16px;
-  padding: 18px;
-  border: 1px solid rgba(238, 226, 235, 0.96);
-  border-radius: 20px;
-  background: rgba(255, 255, 255, 0.94);
-  box-shadow: 0 12px 24px rgba(213, 190, 203, 0.1);
+  min-width: 0;
+  padding: 0;
+  border: 1px solid rgba(244, 224, 234, 0.96);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.9);
+  overflow: hidden;
+  box-shadow: 0 10px 22px rgba(213, 190, 203, 0.08);
 }
 
 .stop-card.is-active {
-  border-color: rgba(255, 151, 189, 0.9);
-  box-shadow:
-    0 0 0 3px rgba(255, 166, 200, 0.18),
-    0 18px 30px rgba(213, 190, 203, 0.14);
+  border-color: rgba(255, 206, 224, 0.96);
+  box-shadow: 0 12px 26px rgba(213, 190, 203, 0.12);
 }
 
-.stop-card__side {
+.stop-card.is-expanded {
+  border-color: rgba(255, 151, 189, 0.9);
+  box-shadow:
+    0 0 0 2px rgba(255, 166, 200, 0.2),
+    0 18px 34px rgba(213, 190, 203, 0.14);
+}
+
+.stop-editor-main {
   display: grid;
-  align-content: start;
-  gap: 12px;
-  min-width: 0;
+  gap: 18px;
+  padding: 22px;
 }
 
 .stop-card__header {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
 }
 
 .stop-number {
   display: inline-grid;
   place-items: center;
-  width: 34px;
-  height: 34px;
+  width: 40px;
+  height: 40px;
   border-radius: 999px;
   color: #fff;
   background: rgba(255, 91, 144, 0.92);
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 900;
   box-shadow: 0 10px 20px rgba(255, 91, 144, 0.18);
 }
 
 .stop-title-main {
+  display: block;
+  width: 100%;
   min-width: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  text-align: left;
   cursor: pointer;
 }
 
 .stop-title-main h3 {
   margin: 0;
   color: #2f2730;
-  font-size: 16px;
+  font-size: 18px;
+  font-weight: 900;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -2122,26 +2139,63 @@ watch(
 
 .stop-actions {
   display: flex;
-  gap: 7px;
+  align-items: center;
+  gap: 8px;
 }
 
-.icon-button,
-.mini-photo-icon {
+.icon-button {
   display: grid;
   place-items: center;
-  width: 28px;
-  height: 28px;
+  width: 32px;
+  height: 32px;
   padding: 0;
-  border: 1px solid rgba(238, 226, 235, 0.96);
+  border: 1px solid rgba(245, 218, 230, 0.96);
   border-radius: 999px;
-  color: #9a8f9b;
-  background: rgba(255, 255, 255, 0.82);
+  color: #a88b9a;
+  background: rgba(255, 255, 255, 0.92);
+  cursor: pointer;
+  transition:
+    border-color 0.18s ease,
+    color 0.18s ease,
+    background-color 0.18s ease,
+    box-shadow 0.18s ease,
+    transform 0.18s ease;
 }
 
-.stop-meta-grid {
+.icon-button:hover:not(:disabled) {
+  border-color: rgba(255, 151, 189, 0.88);
+  color: #fb5f93;
+  background: rgba(255, 247, 251, 0.98);
+  box-shadow: 0 8px 18px rgba(245, 155, 188, 0.16);
+  transform: translateY(-1px);
+}
+
+.icon-button:disabled {
+  color: #d2c5ce;
+  background: rgba(255, 255, 255, 0.62);
+  cursor: not-allowed;
+}
+
+.icon-button--toggle {
+  color: #8f7c88;
+}
+
+.stop-editor-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
+  grid-template-columns: minmax(320px, 0.82fr) minmax(540px, 1.18fr);
+  gap: 26px;
+  align-items: start;
+}
+
+.stop-fields-panel {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+  padding: 2px 0 0;
+}
+
+.stop-date-field {
+  width: min(260px, 100%);
 }
 
 .field--subsection {
@@ -2150,11 +2204,9 @@ watch(
 }
 
 .field--gallery {
-  gap: 12px;
+  gap: 14px;
 }
 
-.stop-coordinate-text,
-.stop-gallery-empty,
 .stop-help {
   margin: 0;
   color: #918695;
@@ -2162,33 +2214,22 @@ watch(
   line-height: 1.55;
 }
 
-.stop-coordinate-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.stop-coordinate-action {
-  min-height: 32px;
-  padding: 0 14px;
-  border-radius: 999px;
-  border: 1px solid rgba(232, 218, 227, 0.96);
-  color: #6f6570;
-  background: rgba(255, 255, 255, 0.86);
-  font-size: 12px;
-  font-weight: 700;
-}
-
-.stop-coordinate-action:hover {
-  border-color: rgba(255, 182, 208, 0.96);
-  color: #e44d78;
-  background: rgba(255, 255, 255, 0.98);
-}
-
 .photo-strip {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 14px;
+  grid-template-columns: minmax(260px, 1.18fr) repeat(2, minmax(150px, 0.62fr));
+  grid-auto-rows: minmax(112px, auto);
+  gap: 12px;
+  align-items: start;
+}
+
+.photo-strip.is-empty {
+  grid-template-columns: minmax(220px, 320px);
+  justify-content: start;
+}
+
+.photo-strip.is-single {
+  grid-template-columns: minmax(420px, 600px) minmax(220px, 280px);
+  justify-content: start;
   align-items: start;
 }
 
@@ -2196,25 +2237,64 @@ watch(
   position: relative;
   display: grid;
   align-content: start;
-  gap: 10px;
+  gap: 7px;
   min-width: 0;
-  padding: 10px;
-  border-radius: 14px;
+  padding: 0;
+  border-radius: 12px;
+  border: 0;
+  background: transparent;
+  cursor: grab;
+  transition:
+    opacity 0.18s ease,
+    transform 0.18s ease;
+}
+
+.mini-photo.is-dragging {
+  opacity: 0.48;
+  transform: scale(0.985);
+}
+
+.mini-photo__media {
+  position: relative;
+  overflow: hidden;
+  border-radius: 12px;
   border: 1px solid rgba(238, 226, 235, 0.96);
   background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 10px 20px rgba(213, 190, 203, 0.08);
+}
+
+.mini-photo.is-cover:not(:only-child) {
+  grid-row: span 2;
+}
+
+.photo-strip.is-single .mini-photo {
+  grid-column: auto;
+  grid-row: auto;
+  width: 100%;
+  max-width: 600px;
 }
 
 .mini-photo img {
+  display: block;
   width: 100%;
-  aspect-ratio: 4 / 3;
+  aspect-ratio: 16 / 11;
   object-fit: cover;
-  border-radius: 12px;
+  border-radius: 0;
+}
+
+.mini-photo.is-cover:not(:only-child) img {
+  aspect-ratio: 4 / 3;
+}
+
+.photo-strip.is-single .mini-photo img {
+  aspect-ratio: 16 / 9;
+  max-height: 360px;
 }
 
 .mini-photo-badge {
   position: absolute;
-  top: 14px;
-  left: 14px;
+  top: 10px;
+  left: 10px;
   min-height: 22px;
   padding: 0 8px;
   display: inline-flex;
@@ -2228,64 +2308,139 @@ watch(
 
 .mini-photo-badge--travel {
   left: auto;
-  right: 42px;
+  right: 46px;
   background: rgba(97, 86, 102, 0.92);
 }
 
-.mini-photo__toolbar {
+.mini-photo-drag-handle {
   position: absolute;
-  top: 12px;
-  right: 12px;
-  display: flex;
-  gap: 6px;
+  top: 10px;
+  right: 10px;
+  display: inline-grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border: 1px solid rgba(255, 255, 255, 0.46);
+  border-radius: 999px;
+  color: rgba(255, 255, 255, 0.92);
+  background: rgba(40, 32, 38, 0.32);
+  opacity: 0.58;
+  pointer-events: none;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  transition:
+    opacity 0.18s ease,
+    background-color 0.18s ease,
+    transform 0.18s ease;
 }
 
-.mini-photo-remove {
+.mini-photo:hover .mini-photo-drag-handle,
+.mini-photo.is-dragging .mini-photo-drag-handle {
+  opacity: 1;
+  background: rgba(40, 32, 38, 0.5);
+  transform: translateY(-1px);
+}
+
+.mini-photo-more {
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
   display: grid;
   place-items: center;
-  width: 26px;
-  height: 26px;
+  width: 30px;
+  height: 30px;
   padding: 0;
-  border: 1px solid rgba(238, 226, 235, 0.96);
+  border: 1px solid rgba(255, 255, 255, 0.45);
   border-radius: 999px;
-  color: #ff5d94;
-  background: rgba(255, 255, 255, 0.92);
+  color: #fff;
+  background: rgba(40, 32, 38, 0.45);
+  opacity: 0;
+  pointer-events: none;
+  cursor: pointer;
+  transition: opacity 0.18s ease;
 }
 
-.mini-photo__actions {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
+.mini-photo__overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 7px;
+  padding: 42px 10px 12px;
+  background: linear-gradient(180deg, rgba(40, 32, 38, 0.04), rgba(40, 32, 38, 0.58));
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.18s ease;
 }
 
-.mini-photo-action {
-  min-height: 28px;
-  width: 100%;
-  padding: 0 8px;
+.mini-photo:hover .mini-photo__overlay,
+.mini-photo:hover .mini-photo-more,
+.mini-photo.is-action-open .mini-photo__overlay,
+.mini-photo.is-action-open .mini-photo-more {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.mini-photo-overlay-action {
+  min-height: 30px;
+  padding: 0 11px;
+  border: 1px solid rgba(255, 255, 255, 0.5);
   border-radius: 999px;
-  border: 1px solid rgba(238, 226, 235, 0.96);
-  color: #8a7a84;
-  background: rgba(255, 255, 255, 0.86);
+  color: #fff;
+  background: rgba(255, 255, 255, 0.18);
   font-size: 11px;
-  font-weight: 700;
+  font-weight: 800;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  cursor: pointer;
 }
 
-.mini-photo-action.active {
-  color: #e44d78;
-  border-color: rgba(255, 187, 211, 0.92);
-  background: rgba(255, 247, 251, 0.92);
+.mini-photo-overlay-action.is-danger {
+  color: #ffedf3;
+  border-color: rgba(255, 161, 190, 0.58);
+  background: rgba(255, 85, 132, 0.36);
 }
 
-.photo-inline-input :deep(.el-input__wrapper),
-.photo-inline-input :deep(.el-textarea__inner),
-.photo-inline-input :deep(.el-date-editor.el-input__wrapper) {
+.mini-photo__mobile-sort {
+  display: none;
+  gap: 7px;
+}
+
+.mini-photo__remark {
+  min-width: 0;
+  padding: 0 2px;
+}
+
+.mini-photo__remark-preview {
+  width: 100%;
   min-height: 34px;
+  padding: 0 2px;
+  border: 0;
+  color: #5f5962;
+  background: transparent;
+  font-size: 12px;
+  line-height: 1.45;
+  text-align: left;
+  cursor: text;
+}
+
+.mini-photo__remark-preview.is-empty {
+  color: #aaa1aa;
+}
+
+.photo-remark-input :deep(.el-input__wrapper) {
+  min-height: 34px;
+  border-radius: 10px;
 }
 
 .mini-photo-add {
   width: 100%;
-  min-height: 44px;
+  min-height: 100%;
+  aspect-ratio: 16 / 11;
   display: inline-flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: 8px;
@@ -2293,74 +2448,143 @@ watch(
   border-radius: 14px;
   color: #5f5962;
   background: rgba(255, 255, 255, 0.86);
+  cursor: pointer;
+}
+
+.photo-strip.is-empty .mini-photo-add {
+  aspect-ratio: 4 / 3;
+}
+
+.photo-strip.is-single .mini-photo-add {
+  min-height: 220px;
+  aspect-ratio: 4 / 3;
 }
 
 .stop-photo-upload :deep(.el-upload) {
   display: block;
   width: 100%;
+  height: 100%;
 }
 
-.add-stop-card {
-  min-height: 132px;
+.stop-compact {
+  width: 100%;
+  min-height: 74px;
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  gap: 18px;
+  grid-template-columns: auto minmax(160px, 1fr) minmax(180px, auto) auto;
   align-items: center;
-  padding: 22px 24px;
-  border: 1px dashed rgba(228, 214, 223, 0.96);
-  border-radius: 20px;
-  background: rgba(255, 255, 255, 0.9);
-  color: #5f5962;
+  gap: 16px;
+  padding: 14px 18px;
+  border: 0;
+  background: rgba(255, 255, 255, 0.84);
+  color: #4f414b;
   text-align: left;
+  cursor: pointer;
+  transition:
+    background-color 0.18s ease,
+    box-shadow 0.18s ease;
 }
 
-.add-stop-card__icon {
-  display: inline-grid;
-  place-items: center;
-  width: 46px;
-  height: 46px;
+.stop-compact:hover {
+  background: rgba(255, 250, 253, 0.96);
+  box-shadow: inset 0 0 0 1px rgba(255, 196, 217, 0.72);
+}
+
+.stop-compact .stop-number {
+  width: 34px;
+  height: 34px;
+  font-size: 13px;
+}
+
+.stop-compact__body {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+
+.stop-compact__title {
+  min-width: 0;
+  overflow: hidden;
+  color: #3d333b;
+  font-size: 15px;
+  font-weight: 900;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.stop-compact__meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  color: #8d8190;
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.stop-compact__meta span + span::before {
+  content: '';
+  display: inline-block;
+  width: 4px;
+  height: 4px;
+  margin-right: 12px;
   border-radius: 999px;
-  color: #e44d78;
+  background: rgba(224, 190, 207, 0.9);
+  vertical-align: middle;
+}
+
+.stop-compact__thumbs {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+  justify-content: flex-end;
+}
+
+.stop-compact__thumb {
+  width: 70px;
+  aspect-ratio: 16 / 10;
+  overflow: hidden;
+  border-radius: 8px;
   background: rgba(255, 247, 251, 0.96);
-  border: 1px solid rgba(255, 187, 211, 0.92);
-  font-size: 20px;
+  box-shadow: inset 0 0 0 1px rgba(238, 226, 235, 0.82);
+}
+
+.stop-compact__thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.stop-compact__empty {
+  color: #918695;
+  font-size: 13px;
   font-weight: 700;
 }
 
-.add-stop-card__copy {
-  display: grid;
-  gap: 6px;
-}
-
-.add-stop-card__copy h3,
-.add-stop-card__copy p {
-  margin: 0;
-}
-
-.add-stop-card__copy h3 {
-  color: #4f414b;
-  font-size: 15px;
-  font-weight: 800;
-}
-
-.add-stop-card__copy p {
-  color: #918695;
-  font-size: 12px;
-  line-height: 1.6;
-}
-
-.add-stop-card__cta {
-  display: inline-flex;
-  align-items: center;
-  min-height: 34px;
-  padding: 0 14px;
+.stop-compact__toggle {
+  display: inline-grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid rgba(245, 218, 230, 0.96);
   border-radius: 999px;
-  color: #8a7a84;
+  color: #a88b9a;
   background: rgba(255, 255, 255, 0.92);
-  border: 1px solid rgba(232, 218, 227, 0.96);
-  font-size: 12px;
-  font-weight: 800;
-  white-space: nowrap;
+  transition:
+    border-color 0.18s ease,
+    color 0.18s ease,
+    background-color 0.18s ease,
+    box-shadow 0.18s ease,
+    transform 0.18s ease;
+}
+
+.stop-compact:hover .stop-compact__toggle {
+  border-color: rgba(255, 151, 189, 0.88);
+  color: #fb5f93;
+  background: rgba(255, 247, 251, 0.98);
+  box-shadow: 0 8px 18px rgba(245, 155, 188, 0.16);
+  transform: translateY(-1px);
 }
 
 .travel-memory-create__footer {
@@ -2482,11 +2706,44 @@ watch(
     grid-column: 1;
     grid-row: auto;
   }
+
+  .stop-editor-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .photo-strip {
+    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  }
+
+  .photo-strip.is-single {
+    grid-template-columns: minmax(320px, 520px) minmax(190px, 240px);
+  }
+
+  .photo-strip.is-single .mini-photo {
+    max-width: 520px;
+  }
+
+  .photo-strip.is-single .mini-photo img {
+    max-height: 320px;
+  }
+
+  .mini-photo.is-cover {
+    grid-row: auto;
+  }
+
+  .stop-compact {
+    grid-template-columns: auto minmax(140px, 1fr) auto;
+  }
+
+  .stop-compact__thumbs {
+    display: none;
+  }
 }
 
 @media (max-width: 760px) {
   .travel-memory-create-page {
     width: min(100vw - 18px, 100%);
+    padding-bottom: calc(168px + env(safe-area-inset-bottom, 0));
   }
 
   .travel-memory-map-panel,
@@ -2523,10 +2780,23 @@ watch(
   .date-range-row,
   .form-meta-row,
   .photo-strip,
-  .add-stop-card,
-  .stop-meta-grid,
+  .photo-strip.is-empty,
+  .photo-strip.is-single,
+  .stop-editor-grid,
   .editor-card--stops .section-title--inline {
     grid-template-columns: 1fr;
+  }
+
+  .editor-card--stops .inline-actions {
+    justify-content: flex-start;
+  }
+
+  .section-action {
+    width: 100%;
+  }
+
+  .stop-editor-main {
+    padding: 16px;
   }
 
   .date-range-row__divider {
@@ -2537,8 +2807,55 @@ watch(
     grid-template-columns: auto minmax(0, 1fr);
   }
 
-  .mini-photo__actions {
-    grid-template-columns: 1fr;
+  .stop-actions {
+    justify-content: flex-start;
+  }
+
+  .mini-photo {
+    cursor: default;
+  }
+
+  .mini-photo-drag-handle {
+    opacity: 0.82;
+  }
+
+  .photo-strip.is-single .mini-photo {
+    max-width: none;
+  }
+
+  .photo-strip.is-single .mini-photo img {
+    max-height: none;
+  }
+
+  .photo-strip.is-single .mini-photo-add {
+    min-height: 180px;
+    aspect-ratio: 16 / 10;
+  }
+
+  .mini-photo-more {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .mini-photo__overlay {
+    align-content: end;
+    align-items: flex-end;
+    padding: 46px 12px 14px;
+  }
+
+  .mini-photo__mobile-sort {
+    display: flex;
+  }
+
+  .stop-compact {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    gap: 10px;
+    padding: 12px;
+  }
+
+  .stop-compact__meta,
+  .stop-compact__thumbs {
+    display: none;
   }
 
   .field-head {
@@ -2548,14 +2865,6 @@ watch(
 
   .field-head__meta {
     white-space: normal;
-  }
-
-  .stop-coordinate-actions {
-    flex-direction: column;
-  }
-
-  .stop-actions {
-    grid-column: 1 / -1;
   }
 
   .map-picked-card {
