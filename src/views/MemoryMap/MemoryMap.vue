@@ -50,7 +50,7 @@
               <TravelMemoryMap
                 :locations="locations"
                 :active-id="activeId"
-                @select="handleSelectLocation"
+                @select="selectMapLocation"
               />
 
               <div v-if="canManage" class="spread-map-actions">
@@ -66,27 +66,31 @@
           </article>
 
           <aside class="memory-spread__page memory-spread__page--detail">
-            <div v-if="loadingDetail" class="journal-state">地点详情加载中...</div>
-            <template v-else-if="activeDetail">
-              <div class="travel-journal">
+            <template v-if="activeDetail">
+              <div
+                class="travel-journal"
+                :class="{ 'is-loading': loadingDetail }"
+                :aria-busy="loadingDetail"
+              >
+                <div v-if="loadingDetail" class="travel-journal__loading-note">正在切换地点...</div>
                 <div class="travel-journal__head">
                   <div class="travel-journal__copy">
                     <span class="eyebrow">Travel Detail</span>
-                  <div class="travel-journal__headline">
-                    <span class="travel-journal__flower">✿</span>
-                    <h2>{{ journalTitle }}</h2>
+                    <div class="travel-journal__headline">
+                      <span class="travel-journal__flower">✿</span>
+                      <h2>{{ journalTitle }}</h2>
+                    </div>
+                    <div class="travel-journal__facts">
+                      <span v-if="journalLocationText" class="travel-journal__fact travel-journal__fact--location">
+                        <el-icon><Location /></el-icon>
+                        <span>{{ journalLocationText }}</span>
+                      </span>
+                      <span v-if="journalDateRange" class="travel-journal__fact travel-journal__fact--date">
+                        <el-icon><Calendar /></el-icon>
+                        <span>{{ journalDateRange }}</span>
+                      </span>
+                    </div>
                   </div>
-                  <div class="travel-journal__facts">
-                    <span v-if="journalLocationText" class="travel-journal__fact travel-journal__fact--location">
-                      <el-icon><Location /></el-icon>
-                      <span>{{ journalLocationText }}</span>
-                    </span>
-                    <span v-if="journalDateRange" class="travel-journal__fact travel-journal__fact--date">
-                      <el-icon><Calendar /></el-icon>
-                      <span>{{ journalDateRange }}</span>
-                    </span>
-                  </div>
-                </div>
 
                   <div class="travel-journal__stamp">
                     <span>旅途邮戳</span>
@@ -94,47 +98,47 @@
                   </div>
                 </div>
 
-                <div class="travel-journal__cover">
-                  <img class="travel-journal__tape" :src="tapeCornerAsset" alt="" aria-hidden="true" />
-                  <img
-                    v-if="coverEntry?.imageUrl"
-                    :src="coverEntry.imageUrl"
-                    :alt="coverEntry.remark || activeDetail.title"
-                  />
-                  <div v-else class="travel-journal__cover-empty">等待封面图片</div>
+                <div class="travel-journal__media">
+                  <div class="travel-journal__cover">
+                    <img class="travel-journal__tape" :src="tapeCornerAsset" alt="" aria-hidden="true" />
+                    <img
+                      v-if="coverEntry?.imageUrl"
+                      :src="coverEntry.imageUrl"
+                      :alt="coverEntry.remark || activeDetail.title"
+                    />
+                    <div v-else class="travel-journal__cover-empty">等待封面图片</div>
+                  </div>
+
+                  <div class="travel-journal__entries">
+                    <article
+                      v-for="note in journalNotes"
+                      :key="note.key"
+                      class="journal-note"
+                    >
+                      <div class="journal-note__thumb">
+                        <img v-if="note.imageUrl" :src="note.imageUrl" :alt="note.title" />
+                        <div v-else class="journal-note__thumb--placeholder" />
+                      </div>
+                      <div class="journal-note__body">
+                        <h4>{{ note.title }}</h4>
+                        <p>{{ note.copy }}</p>
+                        <span>{{ formatDate(note.date) || '留白的一天' }}</span>
+                      </div>
+                    </article>
+                  </div>
                 </div>
 
-                <div class="travel-journal__entries">
-                  <article
-                    v-for="entry in noteEntries"
-                    :key="entry.id || entry.imageUrl"
-                    class="journal-note"
-                  >
-                    <div class="journal-note__thumb">
-                      <img :src="entry.imageUrl" :alt="entry.remark || activeDetail.title" />
-                    </div>
-                    <div class="journal-note__body">
-                      <h4>{{ entry.remark || '旅途碎片' }}</h4>
-                      <p>{{ entry.thanksNote || '把这一刻写进记忆里，留给未来再次翻阅。' }}</p>
-                      <span>{{ formatDate(entry.shotAt) || '留白的一天' }}</span>
-                    </div>
-                  </article>
-                </div>
+                <div class="travel-journal__footer">
+                  <div class="travel-journal__quote">
+                    <p>{{ journalQuote }}</p>
+                  </div>
 
-                <div class="travel-journal__quote">
-                  <span class="travel-journal__quote-mark">❝</span>
-                  <p>{{ journalQuote }}</p>
-                </div>
-
-                <div v-if="canManage" class="travel-journal__actions travel-journal__actions--note">
-                  <el-button plain class="journal-action journal-action--note-edit" @click="openCurrentEditDialog">
-                    <el-icon><EditPen /></el-icon>
-                    编辑该游记
-                  </el-button>
-                  <el-button class="journal-action journal-action--note-danger" @click="deleteCurrentLocation">
-                    <el-icon><Delete /></el-icon>
-                    删除该游记
-                  </el-button>
+                  <div v-if="activeDetail" class="travel-journal__actions travel-journal__actions--note">
+                    <el-button type="primary" class="journal-action journal-action--detail-view" @click="openCurrentDetailPage">
+                      <el-icon><View /></el-icon>
+                      查看游记
+                    </el-button>
+                  </div>
                 </div>
               </div>
             </template>
@@ -228,9 +232,9 @@
               role="button"
               tabindex="0"
               :ref="(element) => setGalleryCardRef(location.id, element)"
-              @click="openGalleryLocationDetail(location.id)"
-              @keydown.enter.prevent="openGalleryLocationDetail(location.id)"
-              @keydown.space.prevent="openGalleryLocationDetail(location.id)"
+              @click="selectGalleryLocation(location.id)"
+              @keydown.enter.prevent="selectGalleryLocation(location.id)"
+              @keydown.space.prevent="selectGalleryLocation(location.id)"
             >
               <div class="gallery-card__cover">
                 <img v-if="location.coverImage" :src="location.coverImage" :alt="location.title" />
@@ -271,6 +275,14 @@
                   </span>
                   <strong>{{ location.entryCount || 0 }} 张照片</strong>
                 </div>
+                <button
+                  type="button"
+                  class="gallery-card__view-button"
+                  @click.stop="openGalleryLocationDetail(location.id)"
+                >
+                  <el-icon><View /></el-icon>
+                  <span>查看游记</span>
+                </button>
               </div>
             </article>
           </div>
@@ -293,7 +305,7 @@ import { useRouter } from 'vue-router'
 import dayjs from 'dayjs'
 import { storeToRefs } from 'pinia'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Calendar, Delete, EditPen, Location, MoreFilled } from '@element-plus/icons-vue'
+import { Calendar, Delete, EditPen, Location, MoreFilled, View } from '@element-plus/icons-vue'
 import DefaultLayout from '@/layouts/DefaultLayout.vue'
 import PageHero from '@/components/PageHero/PageHero.vue'
 import FeatureAccessCover from '@/components/FeatureAccessCover.vue'
@@ -302,7 +314,7 @@ import { deleteTravelMemory, getTravelMemories, getTravelMemoryDetail } from '@/
 import { useSiteConfig } from '@/composables/useSiteConfig'
 import { buildMemoryMapCoverConfig, resolveFeatureHero } from '@/modules/feature-access/constants'
 import { useUserStore } from '@/stores/user'
-import type { TravelMemoryEntry, TravelMemoryLocationDetail, TravelMemoryLocationListItem } from '@/types'
+import type { TravelMemoryEntry, TravelMemoryLocationDetail, TravelMemoryLocationListItem, TravelMemoryStop } from '@/types'
 import { isAdminUser, isFriendUser } from '@/utils/permission'
 import tapeCornerAsset from '@/assets/memory-map/tape-corner.svg'
 
@@ -326,6 +338,7 @@ const activeDetail = ref<TravelMemoryLocationDetail | null>(null)
 const detailCache = ref<Record<number, TravelMemoryLocationDetail>>({})
 const activeGalleryActionId = ref<number | null>(null)
 const galleryCardRefs = new Map<number, HTMLElement>()
+let detailRequestVersion = 0
 const canManage = computed(() => isAdminUser(user.value))
 const canViewContent = computed(() => isAdminUser(user.value) || isFriendUser(user.value))
 const memoryMapCover = computed(() => buildMemoryMapCoverConfig(isLoggedIn.value))
@@ -336,6 +349,42 @@ const coverEntry = computed<TravelMemoryEntry | null>(() => {
 const noteEntries = computed(() => {
   const entries = activeDetail.value?.entries || []
   return entries.slice(0, 3)
+})
+interface JournalNote {
+  key: string
+  imageUrl: string
+  title: string
+  copy: string
+  date?: string
+}
+
+const journalNotes = computed<JournalNote[]>(() => {
+  const detail = activeDetail.value
+  if (!detail) return []
+  const stops = (detail.stops || []).filter((stop) => stop.entries?.length)
+  if (!stops.length) {
+    return noteEntries.value.map((entry, index) => buildEntryJournalNote(entry, index, detail.title, detail.visitedAt))
+  }
+
+  const notes: JournalNote[] = []
+  const usedEntries = new Set<TravelMemoryEntry>()
+  stops.slice(0, 3).forEach((stop, stopIndex) => {
+    const entry = stopCoverEntry(stop)
+    if (!entry) return
+    usedEntries.add(entry)
+    notes.push(buildStopJournalNote(stop, entry, stopIndex, detail.title, detail.visitedAt))
+  })
+
+  const overflowEntries = stops
+    .flatMap((stop) => stop.entries.map((entry) => ({ stop, entry })))
+    .filter(({ entry }) => !usedEntries.has(entry))
+
+  for (const { stop, entry } of overflowEntries) {
+    if (notes.length >= 3) break
+    notes.push(buildStopJournalNote(stop, entry, notes.length, detail.title, detail.visitedAt))
+  }
+
+  return notes.slice(0, 3)
 })
 const totalPhotoCount = computed(() =>
   locations.value.reduce((sum, location) => sum + Number(location.entryCount || 0), 0),
@@ -426,20 +475,25 @@ async function loadMemories(preferredId?: number | null) {
       } else {
         activeId.value = null
         activeDetail.value = null
+        loadingDetail.value = false
       }
       return
     }
+    detailRequestVersion += 1
     detailCache.value = {}
     locations.value = []
     resetGalleryVisibleCount()
     activeId.value = null
     activeDetail.value = null
+    loadingDetail.value = false
   } catch {
+    detailRequestVersion += 1
     detailCache.value = {}
     locations.value = []
     resetGalleryVisibleCount()
     activeId.value = null
     activeDetail.value = null
+    loadingDetail.value = false
     ElMessage.error('旅行地点加载失败')
   } finally {
     loading.value = false
@@ -447,6 +501,7 @@ async function loadMemories(preferredId?: number | null) {
 }
 
 async function handleSelectLocation(id: number, options: { syncGallery?: boolean } = {}) {
+  const requestVersion = ++detailRequestVersion
   activeGalleryActionId.value = null
   activeId.value = id
   ensureGalleryLocationVisible(id)
@@ -456,33 +511,40 @@ async function handleSelectLocation(id: number, options: { syncGallery?: boolean
   }
 
   if (detailCache.value[id]) {
+    loadingDetail.value = false
     activeDetail.value = detailCache.value[id]
     return
   }
 
-  activeDetail.value = null
   loadingDetail.value = true
   try {
     const detail = await getTravelMemoryDetail(id)
+    if (requestVersion !== detailRequestVersion || activeId.value !== id) {
+      return
+    }
     detailCache.value[id] = detail
     activeDetail.value = detail
   } catch {
-    ElMessage.error('地点详情加载失败')
+    if (requestVersion === detailRequestVersion && activeId.value === id) {
+      ElMessage.error('地点详情加载失败')
+    }
   } finally {
-    loadingDetail.value = false
+    if (requestVersion === detailRequestVersion) {
+      loadingDetail.value = false
+    }
   }
-}
-
-function openCurrentEditDialog() {
-  if (!activeDetail.value) {
-    ElMessage.info('先选择一个地点，再进行编辑。')
-    return
-  }
-  router.push({ name: 'TravelMemoryEdit', params: { id: activeDetail.value.id } })
 }
 
 function openCreateDialog() {
   router.push({ name: 'TravelMemoryCreate' })
+}
+
+function openCurrentDetailPage() {
+  if (!activeDetail.value) {
+    ElMessage.info('先选择一个地点，再查看游记。')
+    return
+  }
+  router.push({ name: 'TravelMemoryDetail', params: { id: activeDetail.value.id } })
 }
 
 function toggleGalleryActions(id: number) {
@@ -518,35 +580,6 @@ async function deleteGalleryLocation(location: TravelMemoryLocationListItem) {
   }
 }
 
-async function deleteCurrentLocation() {
-  if (!activeDetail.value) {
-    ElMessage.info('先选择一个地点，再进行删除。')
-    return
-  }
-
-  const target = activeDetail.value
-  try {
-    await ElMessageBox.confirm(
-      `确定要删除“${target.title}”吗？删除后将无法恢复。`,
-      '删除旅行地点',
-      {
-        confirmButtonText: '删除',
-        cancelButtonText: '取消',
-        type: 'warning',
-      },
-    )
-    await deleteTravelMemory(target.id)
-    ElMessage.success('地点已删除')
-    detailCache.value = {}
-    await loadMemories()
-  } catch (error) {
-    if (error === 'cancel' || error === 'close') {
-      return
-    }
-    ElMessage.error('删除地点失败')
-  }
-}
-
 function formatDate(value?: string) {
   return value ? dayjs(value).format('YYYY.MM.DD') : ''
 }
@@ -562,6 +595,50 @@ function formatDateRange(start?: string, end?: string) {
 function formatLocation(location?: { province?: string; city?: string }) {
   if (!location) return '未标注地点'
   return [location.province, location.city].filter(Boolean).join(' · ') || '未标注地点'
+}
+
+function stopCoverEntry(stop: TravelMemoryStop) {
+  return stop.entries.find((entry) => entry.stopCover) || stop.entries[0] || null
+}
+
+function buildStopJournalNote(
+  stop: TravelMemoryStop,
+  entry: TravelMemoryEntry,
+  index: number,
+  fallbackTitle: string,
+  fallbackDate?: string,
+): JournalNote {
+  const title = stop.title?.trim() || fallbackTitle?.trim() || `第 ${index + 1} 站`
+  return {
+    key: `stop-${stop.id || index}-${entry.id || entry.imageUrl || index}`,
+    imageUrl: entry.imageUrl,
+    title,
+    copy: entry.remark?.trim() || stop.storyNote?.trim() || entry.thanksNote?.trim() || '把这一刻写进记忆里，留给未来再次翻阅。',
+    date: stop.visitedAt || entry.shotAt || fallbackDate,
+  }
+}
+
+function selectGalleryLocation(id: number) {
+  void handleSelectLocation(id)
+}
+
+function selectMapLocation(id: number) {
+  void handleSelectLocation(id, { syncGallery: false })
+}
+
+function buildEntryJournalNote(
+  entry: TravelMemoryEntry,
+  index: number,
+  fallbackTitle: string,
+  fallbackDate?: string,
+): JournalNote {
+  return {
+    key: `entry-${entry.id || entry.imageUrl || index}`,
+    imageUrl: entry.imageUrl,
+    title: entry.remark?.trim() || fallbackTitle || '旅途碎片',
+    copy: entry.thanksNote?.trim() || '把这一刻写进记忆里，留给未来再次翻阅。',
+    date: entry.shotAt || fallbackDate,
+  }
 }
 
 function galleryLocationSummary(location: TravelMemoryLocationListItem) {
@@ -688,6 +765,7 @@ onMounted(async () => {
 .memory-spread {
   display: grid;
   grid-template-columns: minmax(0, 1.36fr) minmax(340px, 0.84fr);
+  align-items: stretch;
   overflow: hidden;
 }
 
@@ -737,7 +815,7 @@ onMounted(async () => {
 .memory-spread__page {
   position: relative;
   min-width: 0;
-  padding: clamp(22px, 1.8vw, 26px);
+  padding: clamp(20px, 1.6vw, 24px);
 }
 
 .memory-spread__page::before {
@@ -755,17 +833,17 @@ onMounted(async () => {
 }
 
 .memory-spread__page--detail {
-  padding-left: clamp(38px, 3.2vw, 50px);
-  padding-right: clamp(32px, 3vw, 42px);
+  display: flex;
+  padding-left: clamp(20px, 1.6vw, 24px);
+  padding-right: clamp(20px, 1.6vw, 24px);
+  padding-top: clamp(20px, 1.6vw, 24px);
+  padding-bottom: clamp(20px, 1.6vw, 24px);
   background:
     linear-gradient(180deg, rgba(255, 252, 249, 0.42), rgba(255, 246, 242, 0.32));
 }
 
-.travel-journal__head,
-.travel-journal__footer {
-  display: flex;
-  justify-content: space-between;
-  gap: 16px;
+.memory-spread__page--detail::before {
+  display: none;
 }
 
 .panel-caption span {
@@ -793,8 +871,8 @@ onMounted(async () => {
   min-height: 100%;
   display: grid;
   grid-template-rows: auto 1fr auto;
-  gap: 18px;
-  padding: clamp(24px, 2vw, 28px);
+  gap: 12px;
+  padding: clamp(16px, 1.4vw, 20px);
   border-radius: 32px;
   background:
     linear-gradient(180deg, rgba(255, 252, 250, 0.94), rgba(255, 247, 244, 0.82)),
@@ -809,7 +887,7 @@ onMounted(async () => {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  gap: 24px;
+  gap: 18px;
 }
 
 .spread-heading {
@@ -819,7 +897,7 @@ onMounted(async () => {
 
 .spread-heading__copy {
   display: grid;
-  gap: 10px;
+  gap: 8px;
   max-width: 32rem;
 }
 
@@ -851,7 +929,7 @@ onMounted(async () => {
   gap: 10px;
   flex-shrink: 0;
   min-width: 144px;
-  padding: 14px 18px;
+  padding: 12px 16px;
   border-radius: 22px;
   background: rgba(255, 251, 252, 0.92);
   border: 1px solid rgba(239, 220, 226, 0.94);
@@ -910,8 +988,8 @@ onMounted(async () => {
 }
 
 :deep(.travel-map-stage) {
-  min-height: 520px;
-  padding: 8px 6px 82px;
+  min-height: 460px;
+  padding: 6px 4px 70px;
 }
 
 :deep(.travel-map-board) {
@@ -935,17 +1013,55 @@ onMounted(async () => {
 }
 
 .travel-journal {
-  display: grid;
-  gap: 18px;
+  position: relative;
+  flex: 1;
+  min-height: 100%;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: clamp(16px, 1.4vw, 20px);
+  border-radius: 32px;
+  background:
+    linear-gradient(180deg, rgba(255, 252, 250, 0.9), rgba(255, 247, 244, 0.72)),
+    radial-gradient(circle at top right, rgba(255, 224, 233, 0.18), transparent 30%);
+  border: 1px solid rgba(231, 214, 207, 0.9);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.86),
+    0 20px 40px rgba(219, 189, 194, 0.08);
+}
+
+.travel-journal.is-loading {
+  opacity: 0.94;
+}
+
+.travel-journal__loading-note {
+  position: absolute;
+  top: 18px;
+  right: 18px;
+  z-index: 2;
+  padding: 7px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(241, 206, 219, 0.92);
+  color: #bd6d89;
+  background: rgba(255, 250, 252, 0.94);
+  box-shadow: 0 10px 22px rgba(225, 181, 197, 0.14);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
 }
 
 .travel-journal__head {
-  align-items: flex-start;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 20px;
+  width: 100%;
 }
 
 .travel-journal__copy {
   display: grid;
-  gap: 12px;
+  gap: 11px;
   min-width: 0;
 }
 
@@ -957,16 +1073,16 @@ onMounted(async () => {
 
 .travel-journal__flower {
   color: #db7f9d;
-  font-size: 22px;
+  font-size: 20px;
   line-height: 1;
-  transform: translateY(8px);
+  transform: translateY(6px);
 }
 
 .travel-journal__headline h2 {
   margin: 0;
   color: #4c333d;
   font-family: var(--memory-title-font);
-  font-size: clamp(24px, 1.8vw, 31px);
+  font-size: clamp(20px, 1.45vw, 26px);
   font-weight: 700;
   line-height: 1.18;
 }
@@ -974,7 +1090,7 @@ onMounted(async () => {
 .travel-journal__facts {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px 18px;
+  gap: 8px 14px;
 }
 
 .travel-journal__fact {
@@ -997,9 +1113,9 @@ onMounted(async () => {
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  min-width: 102px;
-  min-height: 102px;
-  padding: 10px;
+  min-width: 88px;
+  min-height: 88px;
+  padding: 7px;
   border-radius: 999px;
   color: #c1708b;
   text-align: center;
@@ -1018,7 +1134,7 @@ onMounted(async () => {
 .travel-journal__stamp strong {
   margin-top: 4px;
   font-family: var(--memory-title-font);
-  font-size: 17px;
+  font-size: 16px;
   font-weight: 700;
   line-height: 1.1;
 }
@@ -1032,51 +1148,41 @@ onMounted(async () => {
   font-size: 24px;
 }
 
+.travel-journal__media {
+  display: grid;
+  gap: 22px;
+  width: 100%;
+  margin-top: 0;
+}
+
 .travel-journal__cover {
   position: relative;
-  height: 214px;
-  padding: 12px;
+  height: 156px;
+  padding: 9px;
   border-radius: 18px;
   overflow: hidden;
   background:
     linear-gradient(135deg, rgba(255, 255, 255, 0.98), rgba(252, 250, 247, 0.95)),
     linear-gradient(135deg, rgba(255, 239, 245, 0.94), rgba(245, 249, 255, 0.82));
-  border: 1px solid rgba(237, 221, 228, 0.9);
   box-shadow:
-    0 16px 28px rgba(217, 189, 198, 0.14),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.72);
+    0 16px 28px rgba(217, 189, 198, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.78);
 }
 
 .travel-journal__cover img:last-child {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  border-radius: 8px;
+  border-radius: 10px;
 }
 
 .travel-journal__tape {
   position: absolute;
-  top: 10px;
-  left: 18px;
-  width: 92px;
+  top: 7px;
+  left: 12px;
+  width: 72px;
   z-index: 2;
   pointer-events: none;
-}
-
-.travel-journal__cover::after {
-  content: '✿';
-  position: absolute;
-  right: 12px;
-  bottom: 12px;
-  width: 34px;
-  height: 34px;
-  display: grid;
-  place-items: center;
-  border-radius: 999px;
-  background: rgba(255, 251, 252, 0.84);
-  color: #d78aa5;
-  font-size: 18px;
-  box-shadow: 0 12px 20px rgba(224, 186, 198, 0.16);
 }
 
 .travel-journal__cover--placeholder {
@@ -1104,7 +1210,8 @@ onMounted(async () => {
 .travel-journal__entries {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
+  gap: 10px;
+  align-items: stretch;
 }
 
 .travel-journal__entries--placeholder {
@@ -1114,21 +1221,15 @@ onMounted(async () => {
 .journal-note {
   position: relative;
   display: grid;
-  grid-template-rows: 78px 1fr;
+  grid-template-rows: 104px minmax(0, 1fr);
+  height: 100%;
+  min-height: 210px;
   border-radius: 16px;
   background: rgba(255, 255, 255, 0.8);
-  border: 1px solid rgba(239, 226, 233, 0.92);
   overflow: hidden;
-  box-shadow: 0 12px 22px rgba(220, 191, 200, 0.1);
-}
-
-.journal-note::after {
-  content: '✿';
-  position: absolute;
-  right: 8px;
-  bottom: 8px;
-  color: rgba(221, 147, 172, 0.32);
-  font-size: 12px;
+  box-shadow:
+    0 12px 22px rgba(220, 191, 200, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.72);
 }
 
 .journal-note__thumb {
@@ -1155,10 +1256,10 @@ onMounted(async () => {
 
 .journal-note__body {
   display: grid;
-  gap: 6px;
+  gap: 5px;
   align-content: start;
-  min-height: 128px;
-  padding: 10px 11px 14px;
+  min-height: 0;
+  padding: 10px 10px 12px;
   text-align: left;
 }
 
@@ -1166,17 +1267,21 @@ onMounted(async () => {
   margin: 0;
   color: #5d3d4b;
   font-size: 13px;
-  line-height: 1.5;
+  line-height: 1.42;
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
 }
 
 .journal-note__body p {
   margin: 0;
   color: var(--text-secondary);
   font-size: 11px;
-  line-height: 1.72;
+  line-height: 1.68;
   display: -webkit-box;
   overflow: hidden;
-  -webkit-line-clamp: 3;
+  -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
 }
 
@@ -1198,16 +1303,24 @@ onMounted(async () => {
   gap: 10px;
   padding: 18px 20px 18px 50px;
   border-radius: 20px;
-  border: 1px solid rgba(240, 214, 220, 0.96);
   background:
     linear-gradient(180deg, rgba(255, 252, 252, 0.98), rgba(255, 247, 248, 0.94)),
     radial-gradient(circle at top right, rgba(255, 224, 233, 0.18), transparent 38%);
+  border: 1px solid rgba(240, 214, 220, 0.96);
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.86),
     0 12px 24px rgba(226, 196, 206, 0.12);
 }
 
-.travel-journal__quote-mark {
+.travel-journal__footer {
+  display: grid;
+  gap: 18px;
+  margin-top: auto;
+  padding-top: 6px;
+}
+
+.travel-journal__quote::before {
+  content: '“';
   position: absolute;
   top: 16px;
   left: 18px;
@@ -1226,9 +1339,10 @@ onMounted(async () => {
 
 .travel-journal__actions--note {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: minmax(0, 1fr);
   align-items: stretch;
-  gap: 16px;
+  gap: 18px;
+  width: 100%;
 }
 
 .travel-journal__actions {
@@ -1237,6 +1351,11 @@ onMounted(async () => {
   justify-content: center;
   align-items: stretch;
   gap: 12px;
+}
+
+.travel-journal__actions.travel-journal__actions--note {
+  display: grid;
+  gap: 18px;
 }
 
 .travel-journal__actions--empty {
@@ -1272,26 +1391,21 @@ onMounted(async () => {
   --el-button-text-color: #d07a8f;
 }
 
-.journal-action--note-edit {
+.journal-action--detail-view {
+  --el-button-text-color: #ffffff;
+  --el-button-hover-text-color: #ffffff;
   width: 100%;
   min-width: 0;
-  flex-basis: auto;
-  box-shadow: 0 10px 20px rgba(214, 194, 201, 0.16);
-}
-
-.journal-action--note-danger {
-  --el-button-bg-color: linear-gradient(135deg, rgba(255, 133, 176, 0.98), rgba(247, 113, 158, 0.98));
-  min-width: 0;
-  width: 100%;
-  flex-basis: auto;
+  flex-basis: 100%;
+  padding-inline: 16px;
   color: #fff !important;
   border: none !important;
   background: linear-gradient(135deg, rgba(255, 133, 176, 0.98), rgba(247, 113, 158, 0.98)) !important;
   box-shadow: 0 12px 22px rgba(243, 136, 171, 0.28) !important;
 }
 
-:deep(.journal-action--note-danger:hover),
-:deep(.journal-action--note-danger:focus-visible) {
+:deep(.journal-action--detail-view:hover),
+:deep(.journal-action--detail-view:focus-visible) {
   color: #fff !important;
   border: none !important;
   background: linear-gradient(135deg, rgba(255, 145, 184, 1), rgba(248, 123, 166, 1)) !important;
@@ -1579,8 +1693,8 @@ onMounted(async () => {
 
 .gallery-card__body {
   display: grid;
-  gap: 8px;
-  min-height: 132px;
+  gap: 9px;
+  min-height: 170px;
   padding: 12px 14px 11px;
   border-top: 1px solid rgba(243, 224, 231, 0.84);
 }
@@ -1660,6 +1774,44 @@ onMounted(async () => {
   line-height: 1;
 }
 
+.gallery-card__view-button {
+  width: 100%;
+  min-height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  border: 1px solid rgba(238, 194, 209, 0.92);
+  border-radius: 999px;
+  color: #c96f8f;
+  background: rgba(255, 247, 250, 0.94);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  transition:
+    transform 0.18s ease,
+    color 0.18s ease,
+    border-color 0.18s ease,
+    background 0.18s ease,
+    box-shadow 0.18s ease;
+}
+
+.gallery-card__view-button:hover,
+.gallery-card__view-button:focus-visible {
+  transform: translateY(-1px);
+  color: #fff;
+  border-color: rgba(247, 126, 166, 0.96);
+  background: linear-gradient(135deg, rgba(255, 139, 180, 0.98), rgba(247, 112, 158, 0.98));
+  box-shadow: 0 10px 20px rgba(241, 134, 170, 0.22);
+  outline: none;
+}
+
+.gallery-card__view-button .el-icon {
+  flex: 0 0 auto;
+  font-size: 14px;
+}
+
 .gallery-load-more {
   display: flex;
   justify-content: center;
@@ -1714,9 +1866,17 @@ onMounted(async () => {
   }
 
   .travel-journal__head,
-  .travel-journal__footer,
+  .travel-journal__footer {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
   .panel-heading {
     flex-direction: column;
+  }
+
+  .travel-journal__stamp {
+    justify-self: start;
   }
 
   .spread-map-card__hero {
@@ -1780,6 +1940,18 @@ onMounted(async () => {
 
   .travel-journal__headline h2 {
     font-size: 28px;
+  }
+
+  .travel-journal__head {
+    gap: 10px;
+  }
+
+  .travel-journal {
+    gap: 18px;
+  }
+
+  .travel-journal__footer {
+    margin-top: 0;
   }
 
   .travel-journal__cover {

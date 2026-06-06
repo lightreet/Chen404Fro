@@ -118,6 +118,15 @@
               :transform="`translate(${point.x}, ${point.y})`"
               @click.stop="handleMarkerClick(point.id)"
             >
+              <rect
+                class="travel-map-marker__hit-area"
+                :x="point.label.side === 'left' ? -Math.max(48, point.label.width + 22) : -24"
+                y="-42"
+                :width="point.label.width + 72"
+                :height="Math.max(54, point.label.height + 30)"
+                rx="18"
+                ry="18"
+              />
               <line
                 v-if="point.label.connectorVisible"
                 class="travel-map-marker__connector"
@@ -133,6 +142,7 @@
                   'is-left': point.label.side === 'left',
                 }"
                 :transform="`translate(${point.label.left}, ${point.label.top})`"
+                @click.stop="handleMarkerClick(point.id)"
               >
                 <rect
                   class="travel-map-marker__label-bg"
@@ -1005,6 +1015,23 @@ function selectBoundaryChoice(id: number) {
   emit('select', id)
 }
 
+function selectBoundaryTarget(id: string, fallbackId: number) {
+  const targets = boundaryLocationsMap.value.get(id) ?? []
+  if (targets.length === 1) {
+    closeBoundaryChoice()
+    emit('select', targets[0].id)
+    return
+  }
+
+  if (targets.length > 1) {
+    boundaryChoiceId.value = id
+    return
+  }
+
+  closeBoundaryChoice()
+  emit('select', fallbackId)
+}
+
 function zoomIn() {
   if (props.pickerMode && map?.zoomIn) {
     map.zoomIn()
@@ -1097,7 +1124,13 @@ function handleWheelZoom(event: WheelEvent) {
 function handlePointerDown(event: PointerEvent) {
   if (event.button !== 0) return
   const target = event.target as HTMLElement | SVGElement | null
-  if (target?.closest?.('.travel-map-controls, .travel-map-legend')) return
+  if (
+    target?.closest?.(
+      '.travel-map-controls, .travel-map-legend, .travel-map-choice-card, .travel-map-marker, .travel-map-city-boundary.is-clickable',
+    )
+  ) {
+    return
+  }
 
   dragStart = {
     pointerId: event.pointerId,
@@ -1141,6 +1174,12 @@ function handleMarkerClick(id: number) {
   if (Date.now() - lastDragEndedAt < DRAG_SUPPRESS_DURATION) {
     return
   }
+  const boundaryId = locationBoundaryMap.value.get(id)
+  if (boundaryId) {
+    selectBoundaryTarget(boundaryId, id)
+    return
+  }
+
   closeBoundaryChoice()
   emit('select', id)
 }
@@ -1617,6 +1656,11 @@ defineExpose({
   pointer-events: auto;
 }
 
+.travel-map-marker__hit-area {
+  fill: transparent;
+  pointer-events: all;
+}
+
 .travel-map-marker__ripple {
   fill: rgba(255, 167, 196, 0.12);
 }
@@ -1628,7 +1672,8 @@ defineExpose({
 }
 
 .travel-map-marker__label-bubble {
-  pointer-events: none;
+  cursor: pointer;
+  pointer-events: auto;
 }
 
 .travel-map-marker__label-bg {
@@ -1665,6 +1710,7 @@ defineExpose({
     sans-serif;
   font-weight: 600;
   dominant-baseline: middle;
+  pointer-events: none;
 }
 
 .travel-map-marker.is-active .travel-map-marker__pin {
