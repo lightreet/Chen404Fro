@@ -66,7 +66,7 @@
                 <el-form-item label="风格">
                   <el-input v-model="form.genre" maxlength="80" placeholder="City Pop / Indie / J-pop" />
                 </el-form-item>
-                <el-form-item label="上架状态">
+                <el-form-item class="form-grid__wide" label="上架状态">
                   <div class="track-status-selector" role="radiogroup" aria-label="歌曲上架状态">
                     <button
                       v-for="option in trackStatusOptions"
@@ -74,12 +74,14 @@
                       type="button"
                       class="track-status-selector__option"
                       :class="[`is-${option.value}`, { 'is-active': form.status === option.value }]"
+                      role="radio"
                       :aria-checked="form.status === option.value"
                       @click="form.status = option.value"
                     >
                       <span class="track-status-selector__dot"></span>
                       <span class="track-status-selector__copy">
                         <strong>{{ option.label }}</strong>
+                        <small>{{ option.description }}</small>
                       </span>
                     </button>
                   </div>
@@ -137,20 +139,30 @@
               </div>
               <div class="media-grid">
                 <el-form-item label="音频文件">
-                  <div class="upload-field">
-                    <div class="upload-action-row">
+                  <div class="media-resource-card" :class="{ 'has-value': Boolean(form.audioUrl) }">
+                    <div class="media-resource-card__main">
+                      <div class="media-resource-icon media-resource-icon--audio">
+                        <span></span>
+                      </div>
+                      <div class="media-resource-copy">
+                        <strong>{{ audioResourceTitle }}</strong>
+                        <span>{{ audioUploadHint }}</span>
+                      </div>
+                    </div>
+                    <div class="media-resource-card__actions">
                       <el-upload
                         :show-file-list="false"
                         :http-request="handleAudioUpload"
                         :before-upload="beforeAudioUpload"
                         :accept="AUDIO_UPLOAD_ACCEPT"
                       >
-                        <div class="media-upload-box" :class="{ 'is-uploading': uploadingAudio, 'has-value': Boolean(form.audioUrl) }">
-                          <el-icon><Plus /></el-icon>
-                          <span>{{ uploadingAudio ? '上传中' : '上传音频' }}</span>
+                        <div class="media-upload-button" :class="{ 'is-uploading': uploadingAudio }">
+                          <el-icon v-if="!uploadingAudio"><Upload /></el-icon>
+                          <span>{{ audioUploadButtonText }}</span>
                         </div>
                       </el-upload>
                     </div>
+                    <audio v-if="form.audioUrl" class="media-resource-audio" :src="form.audioUrl" controls />
                     <div class="upload-input-stack">
                       <el-input
                         v-model="form.audioUrl"
@@ -163,16 +175,26 @@
                   </div>
                 </el-form-item>
                 <el-form-item label="封面图片">
-                  <div class="cover-upload-row">
-                    <div class="upload-action-row">
+                  <div class="media-resource-card" :class="{ 'has-value': Boolean(form.coverUrl) }">
+                    <div class="media-resource-card__main">
+                      <div class="media-resource-cover">
+                        <img v-if="form.coverUrl" :src="form.coverUrl" :alt="form.title || '封面预览'" />
+                        <span v-else>Cover</span>
+                      </div>
+                      <div class="media-resource-copy">
+                        <strong>{{ coverResourceTitle }}</strong>
+                        <span>{{ coverUploadHint }}</span>
+                      </div>
+                    </div>
+                    <div class="media-resource-card__actions">
                       <el-upload
                         :show-file-list="false"
                         :http-request="handleCoverUpload"
                         accept="image/jpeg,image/png,image/webp,image/gif"
                       >
-                        <div class="media-upload-box" :class="{ 'is-uploading': uploadingCover, 'has-value': Boolean(form.coverUrl) }">
-                          <el-icon><Plus /></el-icon>
-                          <span>{{ uploadingCover ? '上传中' : '上传封面' }}</span>
+                        <div class="media-upload-button" :class="{ 'is-uploading': uploadingCover }">
+                          <el-icon v-if="!uploadingCover"><Upload /></el-icon>
+                          <span>{{ coverUploadButtonText }}</span>
                         </div>
                       </el-upload>
                     </div>
@@ -322,7 +344,7 @@
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from 'vue'
 import { ElMessage, type UploadRequestOptions } from 'element-plus'
-import { ArrowLeft, Plus, Upload } from '@element-plus/icons-vue'
+import { ArrowLeft, Upload } from '@element-plus/icons-vue'
 import { useRoute, useRouter } from 'vue-router'
 import { createMusicTrack, getAdminMusicTrack, suggestMusicTrack, updateMusicTrack } from '@/api/music'
 import { uploadMusicAudio, uploadMusicCover, type UploadResult } from '@/api/upload'
@@ -332,6 +354,11 @@ const route = useRoute()
 const router = useRouter()
 type UploadError = Parameters<UploadRequestOptions['onError']>[0]
 type LyricSummaryTone = 'empty' | 'success' | 'warning'
+type TrackStatusOption = {
+  label: string
+  value: MusicTrackStatus
+  description: string
+}
 
 interface ParsedLrcLine {
   key: string
@@ -403,15 +430,35 @@ const coverUploadHint = computed(() => {
   if (form.coverUrl?.trim()) return '使用手动填写的封面地址'
   return '可选，支持 JPG、PNG、WebP、GIF'
 })
+const audioResourceTitle = computed(() => {
+  if (uploadingAudio.value) return '上传处理中'
+  if (form.audioFileId) return audioUploadName.value || '已上传音频'
+  if (form.audioUrl.trim()) return '已填写音频地址'
+  return '还没有音频文件'
+})
+const coverResourceTitle = computed(() => {
+  if (uploadingCover.value) return '上传处理中'
+  if (form.coverFileId) return coverUploadName.value || '已上传封面'
+  if (form.coverUrl?.trim()) return '已填写封面地址'
+  return '还没有封面图片'
+})
+const audioUploadButtonText = computed(() => {
+  if (uploadingAudio.value) return '上传中'
+  return form.audioUrl.trim() ? '更换音频' : '上传音频'
+})
+const coverUploadButtonText = computed(() => {
+  if (uploadingCover.value) return '上传中'
+  return form.coverUrl?.trim() ? '更换封面' : '上传封面'
+})
 
 const lyricTypeOptions = [
   { label: 'LRC 时间轴', value: 'lrc' },
   { label: '普通歌词', value: 'plain' },
 ]
-const trackStatusOptions: Array<{ label: string; value: MusicTrackStatus }> = [
-  { label: '已发布', value: 'published' },
-  { label: '草稿', value: 'draft' },
-  { label: '已归档', value: 'archived' },
+const trackStatusOptions: TrackStatusOption[] = [
+  { label: '发布', value: 'published', description: '保存后前台可播放' },
+  { label: '草稿', value: 'draft', description: '先保存整理，不公开' },
+  { label: '归档', value: 'archived', description: '保留资料，前台隐藏' },
 ]
 const MAX_AUDIO_UPLOAD_SIZE = 60 * 1024 * 1024
 const MAX_AUDIO_UPLOAD_SIZE_MB = MAX_AUDIO_UPLOAD_SIZE / 1024 / 1024
@@ -929,7 +976,7 @@ function createEmptyTrackForm(): MusicTrackUpsertCommand {
     lyricSource: '',
     recommendation: '',
     moodText: '',
-    status: 'draft',
+    status: 'published',
   }
 }
 </script>
@@ -1103,6 +1150,10 @@ function createEmptyTrackForm(): MusicTrackUpsertCommand {
   gap: 14px;
 }
 
+.form-grid__wide {
+  grid-column: 1 / -1;
+}
+
 .title-field {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
@@ -1253,84 +1304,154 @@ function createEmptyTrackForm(): MusicTrackUpsertCommand {
   font-weight: 800;
 }
 
-.upload-field,
-.cover-upload-row {
-  width: 100%;
-  display: grid;
-  justify-items: center;
-  gap: 12px;
-}
-
-.upload-input-stack {
-  width: min(100%, 520px);
+.media-resource-card {
   min-width: 0;
   display: grid;
-  justify-items: center;
-  gap: 6px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  padding: 12px;
+  border: 1px solid rgba(238, 226, 235, 0.94);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.68);
 }
 
-.upload-action-row {
+.media-resource-card.has-value {
+  border-color: rgba(255, 188, 213, 0.82);
+  background:
+    linear-gradient(180deg, rgba(255, 253, 254, 0.9), rgba(255, 246, 250, 0.82));
+}
+
+.media-resource-card__main {
+  min-width: 0;
   display: grid;
-  place-items: center;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
 }
 
-.upload-action-row :deep(.el-upload) {
+.media-resource-card__actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.media-resource-card__actions :deep(.el-upload) {
   display: block;
 }
 
-.media-upload-box {
-  width: 140px;
-  height: 112px;
+.media-resource-icon,
+.media-resource-cover {
+  width: 48px;
+  height: 48px;
   display: grid;
   place-items: center;
-  align-content: center;
-  gap: 8px;
-  border: 1.5px dashed rgba(255, 143, 184, 0.72);
-  border-radius: 14px;
-  background: rgba(255, 250, 253, 0.78);
-  color: #ff5e99;
-  cursor: pointer;
-  transition:
-    border-color 0.2s ease,
-    background 0.2s ease,
-    color 0.2s ease,
-    box-shadow 0.2s ease,
-    transform 0.2s ease;
+  border-radius: 12px;
+  overflow: hidden;
+  flex: none;
 }
 
-.media-upload-box:hover {
-  border-color: rgba(255, 91, 144, 0.9);
-  background: rgba(255, 244, 249, 0.96);
-  color: #f04486;
-  box-shadow: 0 12px 24px rgba(255, 111, 160, 0.14);
-  transform: translateY(-1px);
+.media-resource-icon {
+  border: 1px solid rgba(255, 190, 215, 0.78);
+  background:
+    radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.94) 0 22%, rgba(255, 143, 184, 0.34) 23% 34%, transparent 35%),
+    repeating-radial-gradient(circle, rgba(128, 92, 112, 0.08) 0 2px, transparent 3px 5px),
+    linear-gradient(135deg, rgba(255, 241, 247, 0.98), rgba(244, 239, 249, 0.94));
 }
 
-.media-upload-box.is-uploading {
-  cursor: wait;
-  opacity: 0.72;
-  transform: none;
+.media-resource-icon span {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: #fb7299;
+  box-shadow: 0 0 0 5px rgba(255, 126, 174, 0.18);
 }
 
-.media-upload-box.has-value {
-  border-color: rgba(255, 119, 169, 0.74);
-  background: rgba(255, 248, 251, 0.92);
+.media-resource-cover {
+  border: 1px solid rgba(238, 226, 235, 0.94);
+  background: rgba(255, 246, 250, 0.9);
+  color: #d56f95;
+  font-size: 11px;
+  font-weight: 800;
 }
 
-.media-upload-box .el-icon {
-  font-size: 24px;
+.media-resource-cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
-.media-upload-box span {
+.media-resource-copy {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.media-resource-copy strong,
+.media-resource-copy span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.media-resource-copy strong {
+  color: #3d333b;
   font-size: 13px;
   font-weight: 800;
 }
 
+.media-resource-copy span,
 .upload-hint {
   color: #9b8b96;
   font-size: 12px;
   line-height: 1.4;
-  text-align: center;
+}
+
+.media-upload-button {
+  min-height: 32px;
+  min-width: 104px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 0 14px;
+  border: 1px solid rgba(255, 169, 202, 0.9);
+  border-radius: 999px;
+  background: rgba(255, 241, 247, 0.9);
+  color: #d95f8d;
+  cursor: pointer;
+  font-weight: 800;
+  font-size: 13px;
+  transition: border-color 0.18s ease, background 0.18s ease, color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.media-upload-button:hover {
+  border-color: rgba(255, 118, 170, 0.95);
+  background: rgba(255, 233, 243, 0.96);
+  color: #e44d78;
+  box-shadow: 0 8px 18px rgba(255, 111, 160, 0.14);
+}
+
+.media-upload-button.is-uploading {
+  cursor: wait;
+  opacity: 0.72;
+  box-shadow: none;
+}
+
+.media-resource-audio,
+.upload-input-stack {
+  grid-column: 1 / -1;
+}
+
+.media-resource-audio {
+  width: 100%;
+  height: 34px;
+}
+
+.upload-input-stack {
+  min-width: 0;
+  display: grid;
+  gap: 6px;
 }
 
 .lyrics-editor {
@@ -1419,24 +1540,25 @@ function createEmptyTrackForm(): MusicTrackUpsertCommand {
 .track-status-selector {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 10px;
+  gap: 8px;
+  padding: 4px;
+  border: 1px solid rgba(238, 226, 235, 0.92);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.58);
 }
 
 .track-status-selector__option {
-  min-height: 54px;
-  padding: 12px 14px;
-  border: 1px solid rgba(232, 220, 229, 0.92);
-  border-radius: 16px;
+  min-height: 58px;
+  padding: 9px 11px;
+  border: 1px solid transparent;
+  border-radius: 11px;
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   color: #7c6a74;
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(255, 248, 252, 0.82));
-  box-shadow:
-    0 10px 24px rgba(183, 146, 164, 0.08),
-    inset 0 1px 0 rgba(255, 255, 255, 0.95);
+  background: transparent;
+  box-shadow: none;
   text-align: left;
   cursor: pointer;
   transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease, background 0.18s ease, color 0.18s ease;
@@ -1444,10 +1566,7 @@ function createEmptyTrackForm(): MusicTrackUpsertCommand {
 
 .track-status-selector__option:hover {
   transform: translateY(-1px);
-  border-color: rgba(243, 172, 202, 0.92);
-  box-shadow:
-    0 12px 28px rgba(220, 156, 183, 0.14),
-    inset 0 1px 0 rgba(255, 255, 255, 0.98);
+  background: rgba(255, 248, 252, 0.86);
 }
 
 .track-status-selector__option.is-active {
@@ -1482,14 +1601,29 @@ function createEmptyTrackForm(): MusicTrackUpsertCommand {
 
 .track-status-selector__copy {
   min-width: 0;
-  display: flex;
-  align-items: center;
+  display: grid;
+  gap: 2px;
 }
 
 .track-status-selector__copy strong {
   color: inherit;
   font-size: 13px;
   font-weight: 800;
+}
+
+.track-status-selector__copy small {
+  min-width: 0;
+  overflow: hidden;
+  color: #9b8b96;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.track-status-selector__option.is-active .track-status-selector__copy small {
+  color: #8f6678;
 }
 
 .lyrics-status span {
@@ -1797,11 +1931,17 @@ function createEmptyTrackForm(): MusicTrackUpsertCommand {
   .form-grid,
   .media-grid,
   .title-field,
-  .upload-field,
-  .cover-upload-row,
   .lyrics-editor-head,
   .track-status-selector {
     grid-template-columns: 1fr;
+  }
+
+  .media-resource-card {
+    grid-template-columns: 1fr;
+  }
+
+  .media-resource-card__actions {
+    justify-content: flex-start;
   }
 
   .lyrics-editor-head,

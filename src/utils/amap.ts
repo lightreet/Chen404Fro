@@ -5,6 +5,7 @@ let geocoderPromise: Promise<any> | null = null
 let geocoderInstance: any = null
 
 const AMAP_SCRIPT_ID = 'chen404-amap-script'
+const AMAP_LOAD_TIMEOUT_MS = 12000
 
 export interface AmapReverseGeocodeResult {
   province: string
@@ -53,19 +54,55 @@ export function loadAmap(): Promise<any> {
 
   loadingPromise = new Promise((resolve, reject) => {
     const existing = document.getElementById(AMAP_SCRIPT_ID) as HTMLScriptElement | null
-    if (existing) {
-      existing.addEventListener('load', () => resolve((window as any).AMap))
-      existing.addEventListener('error', () => reject(new Error('高德地图脚本加载失败')))
+    const script = existing?.dataset.amapStatus === 'error' ? null : existing ?? document.createElement('script')
+    if (existing?.dataset.amapStatus === 'error') {
+      existing.remove()
+    }
+
+    const targetScript = script ?? document.createElement('script')
+    let settled = false
+    const rejectLoad = (message: string) => {
+      if (settled) return
+      settled = true
+      window.clearTimeout(timeout)
+      targetScript.dataset.amapStatus = 'error'
+      targetScript.remove()
+      reject(new Error(message))
+    }
+    const timeout = window.setTimeout(() => rejectLoad('高德地图脚本加载超时'), AMAP_LOAD_TIMEOUT_MS)
+
+    const completeLoad = () => {
+      if (settled) return
+      const AMap = (window as any).AMap
+      if (!AMap) {
+        rejectLoad('高德地图脚本加载完成但未初始化')
+        return
+      }
+      settled = true
+      window.clearTimeout(timeout)
+      targetScript.dataset.amapStatus = 'loaded'
+      resolve(AMap)
+    }
+
+    const failLoad = () => {
+      rejectLoad('高德地图脚本加载失败')
+    }
+
+    targetScript.addEventListener('load', completeLoad, { once: true })
+    targetScript.addEventListener('error', failLoad, { once: true })
+
+    if (targetScript !== existing) {
+      targetScript.id = AMAP_SCRIPT_ID
+      targetScript.async = true
+      targetScript.dataset.amapStatus = 'loading'
+      targetScript.src = `https://webapi.amap.com/maps?v=2.0&key=${encodeURIComponent(key)}`
+      document.head.appendChild(targetScript)
       return
     }
 
-    const script = document.createElement('script')
-    script.id = AMAP_SCRIPT_ID
-    script.async = true
-    script.src = `https://webapi.amap.com/maps?v=2.0&key=${encodeURIComponent(key)}`
-    script.onload = () => resolve((window as any).AMap)
-    script.onerror = () => reject(new Error('高德地图脚本加载失败'))
-    document.head.appendChild(script)
+    if ((window as any).AMap) {
+      completeLoad()
+    }
   }).finally(() => {
     loadingPromise = null
   })

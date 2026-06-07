@@ -998,8 +998,10 @@ onMounted(async () => {
 }
 
 :deep(.travel-map-controls) {
-  left: 8px;
-  bottom: 18px;
+  top: 16px;
+  right: 16px;
+  left: auto;
+  bottom: auto;
 }
 
 :deep(.travel-map-control) {
