@@ -53,15 +53,33 @@ jobs:
       - name: Upload dist.zip
         shell: bash
         run: |
-          scp -v \
-            -i ~/.ssh/id_ed25519 \
-            -o BatchMode=yes \
-            -o ConnectTimeout=15 \
-            -o ServerAliveInterval=15 \
-            -o ServerAliveCountMax=3 \
-            -P "${{ secrets.SERVER_PORT }}" \
-            dist.zip \
-            "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/home/deploy/dist.zip"
+          SSH_OPTS=(
+            -i ~/.ssh/id_ed25519
+            -o BatchMode=yes
+            -o ConnectTimeout=15
+            -o ServerAliveInterval=15
+            -o ServerAliveCountMax=3
+          )
+
+          ssh "${SSH_OPTS[@]}" \
+            -p "${{ secrets.SERVER_PORT }}" \
+            "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}" \
+            "echo ssh-ready"
+
+          for attempt in {1..5}; do
+            if scp -v \
+              "${SSH_OPTS[@]}" \
+              -P "${{ secrets.SERVER_PORT }}" \
+              dist.zip \
+              "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/home/deploy/dist.zip"; then
+              exit 0
+            fi
+            echo "scp upload failed on attempt ${attempt}/5; retrying in 10 seconds..."
+            sleep 10
+          done
+
+          echo "scp upload failed after 5 attempts" >&2
+          exit 1
 
       - name: Deploy frontend
         shell: bash
