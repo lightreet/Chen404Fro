@@ -1,9 +1,14 @@
 <template>
   <div
     class="travel-map-shell"
-    :class="{ 'is-picker-mode': pickerMode }"
+    :class="{
+      'is-picker-mode': pickerMode,
+      'is-amap-display-mode': useAmapDisplay,
+      'is-svg-fallback-mode': !pickerMode && !useAmapDisplay,
+    }"
     :data-city-map-status="cityMapStatus"
     :data-city-boundary-count="cityBoundaryCount || undefined"
+    :data-display-map-status="displayMapStatus"
   >
     <div
       v-if="pickerMode"
@@ -27,6 +32,13 @@
       </div>
 
       <div
+        v-if="useAmapDisplay"
+        ref="containerRef"
+        class="travel-map-canvas travel-map-canvas--display"
+      />
+
+      <div
+        v-else
         ref="viewportRef"
         class="travel-map-viewport"
         :class="{ 'is-dragging': isDragging }"
@@ -178,30 +190,31 @@
             </g>
           </svg>
 
-          <div v-if="boundaryChoiceLocations.length" class="travel-map-choice-card">
-            <div class="travel-map-choice-card__head">
-              <strong>这个城市有多段旅行</strong>
-              <button type="button" aria-label="关闭地点选择" @click="closeBoundaryChoice">×</button>
-            </div>
-            <button
-              v-for="location in boundaryChoiceLocations"
-              :key="location.id"
-              type="button"
-              class="travel-map-choice-card__item"
-              @click="selectBoundaryChoice(location.id)"
-            >
-              <span>{{ location.title }}</span>
-              <small>{{ [location.province, location.city].filter(Boolean).join(' · ') || '查看这段旅行' }}</small>
-            </button>
-          </div>
         </div>
+      </div>
+
+      <div v-if="boundaryChoiceLocations.length" class="travel-map-choice-card">
+        <div class="travel-map-choice-card__head">
+          <strong>这里有几段旅行</strong>
+          <button type="button" aria-label="关闭地点选择" @click="closeBoundaryChoice">×</button>
+        </div>
+        <button
+          v-for="location in boundaryChoiceLocations"
+          :key="location.id"
+          type="button"
+          class="travel-map-choice-card__item"
+          @click="selectBoundaryChoice(location.id)"
+        >
+          <span>{{ location.title }}</span>
+          <small>{{ [location.province, location.city].filter(Boolean).join(' · ') || '查看这段旅行' }}</small>
+        </button>
       </div>
 
       <div class="travel-map-legend">
         <span class="travel-map-legend__flower"></span>
-        <span>滚轮缩放，按住左键拖动地图</span>
+        <span>{{ mapLegendText }}</span>
       </div>
-      <div v-if="cityMapFallbackText" class="travel-map-data-note">{{ cityMapFallbackText }}</div>
+      <div v-if="mapStatusNote" class="travel-map-data-note">{{ mapStatusNote }}</div>
 
       <div class="travel-map-petals">
         <span class="petal petal--one" />
@@ -266,9 +279,28 @@ type LabelPlacement = {
   connectorVisible: boolean
 }
 
+type MarkerHitArea = {
+  left: number
+  top: number
+  width: number
+  height: number
+}
+
+type MarkerPinBox = {
+  left: number
+  top: number
+  width: number
+  height: number
+}
+
 type MarkerDisplayPoint = ProjectedPoint & {
   label: LabelPlacement
   labelText: string
+}
+
+type AmapDisplayPoint = MarkerDisplayPoint & {
+  markerOffsetX: number
+  markerOffsetY: number
 }
 
 type DecorativeCity = {
@@ -324,6 +356,8 @@ const LABEL_BOX_HEIGHT = 22
 const LABEL_BOX_PADDING_X = 8
 const LABEL_GAP = 10
 const LABEL_SAFE_MARGIN = 10
+const AMAP_DIRECT_SELECT_MIN_ZOOM = 11.5
+const AMAP_DIRECT_SELECT_MIN_DISTANCE = 40
 const PIN_PATH = 'M0 0 C-5.4 -6.8 -10.4 -12.6 -10.4 -19.8 C-10.4 -26.2 -5.8 -31 0 -31 C5.8 -31 10.4 -26.2 10.4 -19.8 C10.4 -12.6 5.4 -6.8 0 0 Z'
 const ACTIVE_PIN_PATH = 'M0 0 C-6.2 -7.8 -12 -14.2 -12 -22.2 C-12 -29.3 -6.7 -34.8 0 -34.8 C6.7 -34.8 12 -29.3 12 -22.2 C12 -14.2 6.2 -7.8 0 0 Z'
 
@@ -351,7 +385,9 @@ const errorText = ref('')
 const cityMapData = shallowRef<ChinaCityMapGeoJson | null>(null)
 const provinceMapData = shallowRef<ChinaProvinceMapGeoJson | null>(null)
 const cityMapStatus = ref<'idle' | 'loading' | 'ready' | 'fallback'>(props.pickerMode ? 'idle' : 'loading')
+const displayMapStatus = ref<'idle' | 'loading' | 'ready' | 'fallback'>(props.pickerMode ? 'idle' : 'loading')
 const cityMapFallbackText = ref('')
+const displayMapFallbackText = ref('')
 const displayScale = ref(BASE_SCALE)
 const mapPan = ref({ x: 0, y: 0 })
 const isDragging = ref(false)
@@ -360,8 +396,11 @@ const boundaryChoiceId = ref<string | null>(null)
 let map: any = null
 let AMapRef: any = null
 let markers: any[] = []
+let routeLine: any = null
 let pickerMarker: any = null
 let clickHandler: ((event: any) => void) | null = null
+let zoomEndHandler: (() => void) | null = null
+let moveEndHandler: (() => void) | null = null
 let geocoder: any = null
 let dragStart:
   | {
@@ -374,6 +413,16 @@ let dragStart:
     }
   | null = null
 let lastDragEndedAt = 0
+let hasFitDisplayView = false
+
+const useAmapDisplay = computed(() => !props.pickerMode && displayMapStatus.value !== 'fallback')
+const isAmapDisplayReady = computed(() => !props.pickerMode && displayMapStatus.value === 'ready' && !!map)
+const mapLegendText = computed(() =>
+  useAmapDisplay.value
+    ? '滚轮缩放，拖动真实地图，点击花签查看旅行'
+    : '滚轮缩放，按住左键拖动地图',
+)
+const mapStatusNote = computed(() => displayMapFallbackText.value || (!useAmapDisplay.value ? cityMapFallbackText.value : ''))
 
 const cityProjection = computed(() => {
   const projectionSource = provinceMapData.value?.features.length
@@ -446,6 +495,13 @@ const visitedBoundaryIds = computed(() => new Set(locationBoundaryMap.value.valu
 const activeBoundaryId = computed(() =>
   props.activeId != null ? locationBoundaryMap.value.get(props.activeId) ?? null : null,
 )
+const locationChoiceKeyMap = computed(() => {
+  const result = new Map<number, string>()
+  props.locations.forEach((location) => {
+    result.set(location.id, locationBoundaryMap.value.get(location.id) ?? getFallbackLocationChoiceKey(location))
+  })
+  return result
+})
 const mapBoardStyle = computed(() => ({
   transform: `translate3d(${mapPan.value.x}px, ${mapPan.value.y}px, 0) scale(${displayScale.value})`,
 }))
@@ -483,11 +539,11 @@ const decorativeCities = computed<DecorativeCity[]>(() =>
 const boundaryLocationsMap = computed(() => {
   const result = new Map<string, TravelMemoryLocationListItem[]>()
   props.locations.forEach((location) => {
-    const boundaryId = locationBoundaryMap.value.get(location.id)
-    if (!boundaryId) return
-    const locations = result.get(boundaryId) ?? []
+    const choiceKey = locationChoiceKeyMap.value.get(location.id)
+    if (!choiceKey) return
+    const locations = result.get(choiceKey) ?? []
     locations.push(location)
-    result.set(boundaryId, locations)
+    result.set(choiceKey, locations)
   })
 
   return result
@@ -757,6 +813,22 @@ function buildFallbackLabelPlacement(labelText: string, active: boolean) {
 
 function getMarkerLabelText(point: ProjectedPoint) {
   return point.city || point.province || point.title
+}
+
+function getFallbackLocationChoiceKey(location: TravelMemoryLocationListItem) {
+  const province = String(location.province || '').trim()
+  const city = String(location.city || '').trim()
+  if (province || city) {
+    return `place:${province}:${city}`
+  }
+
+  if (isValidCoordinate(location.latitude, location.longitude)) {
+    const latitude = Number(location.latitude).toFixed(3)
+    const longitude = Number(location.longitude).toFixed(3)
+    return `coord:${latitude}:${longitude}`
+  }
+
+  return `location:${String(location.id)}`
 }
 
 function estimateLabelWidth(text: string, active: boolean) {
@@ -1033,7 +1105,7 @@ function selectBoundaryTarget(id: string, fallbackId: number) {
 }
 
 function zoomIn() {
-  if (props.pickerMode && map?.zoomIn) {
+  if ((props.pickerMode || isAmapDisplayReady.value) && map?.zoomIn) {
     map.zoomIn()
     return
   }
@@ -1041,7 +1113,7 @@ function zoomIn() {
 }
 
 function zoomOut() {
-  if (props.pickerMode && map?.zoomOut) {
+  if ((props.pickerMode || isAmapDisplayReady.value) && map?.zoomOut) {
     map.zoomOut()
     return
   }
@@ -1049,8 +1121,30 @@ function zoomOut() {
 }
 
 function resetZoom() {
+  if (isAmapDisplayReady.value) {
+    resetDisplayView()
+    return
+  }
   displayScale.value = BASE_SCALE
   mapPan.value = { x: 0, y: 0 }
+}
+
+function resetDisplayView() {
+  if (!isAmapDisplayReady.value) {
+    resetZoom()
+    return
+  }
+  fitDisplayView(true)
+}
+
+function scheduleAmapMarkerRefresh() {
+  if (typeof window === 'undefined') {
+    refreshMarkers()
+    return
+  }
+  window.requestAnimationFrame(() => {
+    refreshMarkers()
+  })
 }
 
 function resetPickerView() {
@@ -1174,14 +1268,48 @@ function handleMarkerClick(id: number) {
   if (Date.now() - lastDragEndedAt < DRAG_SUPPRESS_DURATION) {
     return
   }
-  const boundaryId = locationBoundaryMap.value.get(id)
-  if (boundaryId) {
-    selectBoundaryTarget(boundaryId, id)
+  const choiceKey = locationChoiceKeyMap.value.get(id)
+  if (choiceKey) {
+    if (shouldSelectAmapLocationDirectly(choiceKey)) {
+      closeBoundaryChoice()
+      emit('select', id)
+      return
+    }
+    selectBoundaryTarget(choiceKey, id)
     return
   }
 
   closeBoundaryChoice()
   emit('select', id)
+}
+
+function shouldSelectAmapLocationDirectly(choiceKey: string) {
+  if (!isAmapDisplayReady.value || !map?.getZoom) return false
+  const targets = boundaryLocationsMap.value.get(choiceKey) ?? []
+  if (targets.length <= 1) return true
+
+  const zoom = Number(map.getZoom())
+  if (!Number.isFinite(zoom) || zoom < AMAP_DIRECT_SELECT_MIN_ZOOM) {
+    return false
+  }
+
+  const pixels = targets.map((location) => getAmapContainerPixel(location))
+  if (pixels.some((pixel) => !pixel)) {
+    return false
+  }
+
+  for (let leftIndex = 0; leftIndex < pixels.length; leftIndex += 1) {
+    for (let rightIndex = leftIndex + 1; rightIndex < pixels.length; rightIndex += 1) {
+      const left = pixels[leftIndex]
+      const right = pixels[rightIndex]
+      if (!left || !right) return false
+      if (Math.hypot(left.x - right.x, left.y - right.y) < AMAP_DIRECT_SELECT_MIN_DISTANCE) {
+        return false
+      }
+    }
+  }
+
+  return true
 }
 
 async function initCityMapData() {
@@ -1203,13 +1331,12 @@ async function initCityMapData() {
 }
 
 async function initMap() {
-  if (!props.pickerMode) {
-    loading.value = false
-    return
-  }
-
   loading.value = true
   errorText.value = ''
+  displayMapFallbackText.value = ''
+  if (!props.pickerMode) {
+    displayMapStatus.value = 'loading'
+  }
   try {
     AMapRef = await loadAmap()
     if (!containerRef.value) return
@@ -1221,20 +1348,39 @@ async function initMap() {
       viewMode: '2D',
     })
 
-    clickHandler = (event: any) => {
-      const lng = Number(event?.lnglat?.getLng?.())
-      const lat = Number(event?.lnglat?.getLat?.())
-      if (isValidCoordinate(lat, lng)) {
-        const coordinate = gcj02ToWgs84(lat, lng)
-        setPickerMarker(coordinate.latitude, coordinate.longitude)
-        emit('pick', coordinate)
+    if (props.pickerMode) {
+      clickHandler = (event: any) => {
+        const lng = Number(event?.lnglat?.getLng?.())
+        const lat = Number(event?.lnglat?.getLat?.())
+        if (isValidCoordinate(lat, lng)) {
+          const coordinate = gcj02ToWgs84(lat, lng)
+          setPickerMarker(coordinate.latitude, coordinate.longitude)
+          emit('pick', coordinate)
+        }
       }
+      map.on('click', clickHandler)
+      refreshMarkers()
+      syncPickerMarker()
+    } else {
+      displayMapStatus.value = 'ready'
+      zoomEndHandler = () => scheduleAmapMarkerRefresh()
+      moveEndHandler = () => {
+        closeBoundaryChoice()
+        scheduleAmapMarkerRefresh()
+      }
+      map.on('zoomend', zoomEndHandler)
+      map.on('moveend', moveEndHandler)
+      refreshMarkers()
+      refreshDisplayRoute()
     }
-    map.on('click', clickHandler)
-    refreshMarkers()
-    syncPickerMarker()
   } catch {
-    errorText.value = getAmapUnavailableReason() || '地图加载失败，请检查本地网络或 Key 配置。'
+    if (props.pickerMode) {
+      errorText.value = getAmapUnavailableReason() || '地图加载失败，请检查本地网络或 Key 配置。'
+    } else {
+      displayMapStatus.value = 'fallback'
+      displayMapFallbackText.value = getAmapUnavailableReason() || '真实地图暂不可用，已切换手账地图。'
+      errorText.value = ''
+    }
   } finally {
     loading.value = false
   }
@@ -1247,31 +1393,247 @@ function clearMarkers() {
 }
 
 function refreshMarkers() {
-  if (!props.pickerMode || !map || !AMapRef) return
+  if (!map || !AMapRef) return
   clearMarkers()
 
   const points = props.locations.filter((item) => isValidCoordinate(item.latitude, item.longitude))
+  const displayPointMap = props.pickerMode ? new Map<number, AmapDisplayPoint>() : getAmapDisplayPointMap(points)
   markers = points.map((item) => {
     const coordinate = wgs84ToGcj02(Number(item.latitude), Number(item.longitude))
+    const active = item.id === props.activeId
+    const displayPoint = displayPointMap.get(item.id)
     const marker = new AMapRef.Marker({
       position: [coordinate.longitude, coordinate.latitude],
       title: item.title,
-      offset: new AMapRef.Pixel(-12, -12),
-      content: buildMarkerHtml(item.id === props.activeId),
+      offset: props.pickerMode
+        ? new AMapRef.Pixel(-12, -12)
+        : new AMapRef.Pixel(displayPoint?.markerOffsetX ?? 0, displayPoint?.markerOffsetY ?? 0),
+      content: props.pickerMode ? buildPickerMarkerHtml(active) : buildDisplayMarkerHtml(item, displayPoint),
+      zIndex: active ? 120 : 80,
     })
-    marker.on('click', () => emit('select', item.id))
+    marker.on('click', () => {
+      if (props.pickerMode) {
+        emit('select', item.id)
+        return
+      }
+      handleMarkerClick(item.id)
+    })
     return marker
   })
 
   if (markers.length) {
     map.add(markers)
-    map.setFitView(markers, false, [70, 70, 70, 70], 4)
+    bindDisplayMarkerButtons()
+    if (props.pickerMode) {
+      map.setFitView(markers, false, [70, 70, 70, 70], 4)
+    } else {
+      fitDisplayView(false)
+    }
   }
 }
 
-function buildMarkerHtml(active: boolean) {
+function getAmapDisplayPointMap(points: TravelMemoryLocationListItem[]) {
+  const rawPoints = points
+    .map((item) => {
+      const pixel = getAmapContainerPixel(item)
+      if (!pixel) return null
+      return {
+        ...item,
+        x: pixel.x,
+        y: pixel.y,
+      }
+    })
+    .filter((point): point is ProjectedPoint => !!point)
+
+  const rawPointMap = new Map(rawPoints.map((point) => [point.id, point]))
+  return new Map(
+    layoutMarkerPoints(spreadOverlappingPoints(rawPoints, props.activeId), props.activeId).map((point) => {
+      const rawPoint = rawPointMap.get(point.id) ?? point
+      return [
+        point.id,
+        {
+          ...point,
+          markerOffsetX: point.x - rawPoint.x,
+          markerOffsetY: point.y - rawPoint.y,
+        },
+      ] as const
+    }),
+  )
+}
+
+function getAmapContainerPixel(item: TravelMemoryLocationListItem) {
+  if (!map || !AMapRef) return null
+  const coordinate = wgs84ToGcj02(Number(item.latitude), Number(item.longitude))
+  const lngLat = new AMapRef.LngLat(coordinate.longitude, coordinate.latitude)
+  const pixel = map.lngLatToContainer(lngLat)
+  const x = Number(pixel?.getX?.() ?? pixel?.x)
+  const y = Number(pixel?.getY?.() ?? pixel?.y)
+  if (!Number.isFinite(x) || !Number.isFinite(y)) return null
+  return { x, y }
+}
+
+function buildPickerMarkerHtml(active: boolean) {
   const glow = active ? 'travel-map-pin travel-map-pin--active' : 'travel-map-pin'
   return `<div class="${glow}"><span></span></div>`
+}
+
+function buildDisplayMarkerHtml(item: TravelMemoryLocationListItem, displayPoint?: AmapDisplayPoint) {
+  const labelText = displayPoint?.labelText ?? item.city ?? item.province ?? item.title
+  const label = displayPoint?.label ?? buildFallbackLabelPlacement(labelText, item.id === props.activeId)
+  const active = item.id === props.activeId
+  const pin = getHtmlMarkerPinBox(active)
+  const hitArea = buildHtmlMarkerHitArea(label, pin)
+  const connector = buildHtmlMarkerConnector(label, hitArea)
+  const sideClass = label.side === 'left' ? ' is-left' : label.side === 'top' ? ' is-top' : ''
+  const ariaLabel = active ? `当前旅行地点：${labelText}` : `查看旅行地点：${labelText}`
+
+  return `
+    <button
+      type="button"
+      class="travel-map-html-marker${active ? ' is-active' : ''}${sideClass}"
+      data-location-id="${item.id}"
+      aria-label="${escapeHtml(ariaLabel)}"
+      aria-pressed="${active ? 'true' : 'false'}"
+      style="width:${hitArea.width}px;height:${hitArea.height}px;transform:translate(${hitArea.left}px,${hitArea.top}px)"
+    >
+      ${connector}
+      <span
+        class="travel-map-html-marker__label"
+        style="left:${label.left - hitArea.left}px;top:${label.top - hitArea.top}px;width:${label.width}px;height:${label.height}px"
+      >${escapeHtml(labelText)}</span>
+      <span
+        class="travel-map-html-marker__pin"
+        style="left:${pin.left - hitArea.left}px;top:${pin.top - hitArea.top}px;width:${pin.width}px;height:${pin.height}px"
+        aria-hidden="true"
+      ><span></span></span>
+    </button>
+  `
+}
+
+function bindDisplayMarkerButtons() {
+  if (props.pickerMode || !containerRef.value) return
+  containerRef.value.querySelectorAll<HTMLButtonElement>('.travel-map-html-marker[data-location-id]').forEach((button) => {
+    const id = Number(button.dataset.locationId)
+    if (!Number.isFinite(id)) return
+    button.addEventListener('click', (event) => {
+      event.stopPropagation()
+      handleMarkerClick(id)
+    })
+    button.addEventListener('keydown', (event) => {
+      if (event.key !== 'Enter' && event.key !== ' ') return
+      event.preventDefault()
+      event.stopPropagation()
+      handleMarkerClick(id)
+    })
+  })
+}
+
+function getHtmlMarkerPinBox(active: boolean): MarkerPinBox {
+  return active
+    ? { left: -12, top: -34, width: 24, height: 32 }
+    : { left: -10, top: -30, width: 20, height: 28 }
+}
+
+function buildHtmlMarkerHitArea(label: LabelPlacement, pin: MarkerPinBox): MarkerHitArea {
+  const touchPadding = 10
+  const connectorPadding = label.connectorVisible ? 6 : 0
+  const connectorLeft = Math.min(label.connectorStartX, label.connectorEndX) - connectorPadding
+  const connectorTop = Math.min(label.connectorStartY, label.connectorEndY) - connectorPadding
+  const connectorRight = Math.max(label.connectorStartX, label.connectorEndX) + connectorPadding
+  const connectorBottom = Math.max(label.connectorStartY, label.connectorEndY) + connectorPadding
+  const left = Math.floor(Math.min(label.left, pin.left, connectorLeft) - touchPadding)
+  const top = Math.floor(Math.min(label.top, pin.top, connectorTop) - touchPadding)
+  const right = Math.ceil(Math.max(label.left + label.width, pin.left + pin.width, connectorRight) + touchPadding)
+  const bottom = Math.ceil(Math.max(label.top + label.height, pin.top + pin.height, connectorBottom) + touchPadding)
+
+  return {
+    left,
+    top,
+    width: Math.max(44, right - left),
+    height: Math.max(44, bottom - top),
+  }
+}
+
+function buildHtmlMarkerConnector(label: LabelPlacement, hitArea: MarkerHitArea) {
+  if (!label.connectorVisible) return ''
+  const deltaX = label.connectorEndX - label.connectorStartX
+  const deltaY = label.connectorEndY - label.connectorStartY
+  const width = Math.hypot(deltaX, deltaY)
+  const angle = Math.atan2(deltaY, deltaX)
+
+  return `
+    <span
+      class="travel-map-html-marker__connector"
+      style="left:${label.connectorStartX - hitArea.left}px;top:${label.connectorStartY - hitArea.top}px;width:${width}px;transform:rotate(${angle}rad)"
+      aria-hidden="true"
+    ></span>
+  `
+}
+
+function escapeHtml(value: string) {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+}
+
+function refreshDisplayRoute() {
+  if (props.pickerMode || !map || !AMapRef) return
+  clearDisplayRoute()
+
+  const path = getSortedRouteLocations()
+    .filter((item) => isValidCoordinate(item.latitude, item.longitude))
+    .map((item) => {
+      const coordinate = wgs84ToGcj02(Number(item.latitude), Number(item.longitude))
+      return [coordinate.longitude, coordinate.latitude]
+    })
+
+  if (path.length < 2) return
+
+  routeLine = new AMapRef.Polyline({
+    path,
+    zIndex: 60,
+    showDir: false,
+    strokeColor: '#ef88ab',
+    strokeOpacity: 0.68,
+    strokeWeight: 3,
+    strokeStyle: 'dashed',
+    strokeDasharray: [8, 8],
+    lineJoin: 'round',
+    lineCap: 'round',
+  })
+  map.add(routeLine)
+}
+
+function clearDisplayRoute() {
+  if (!map || !routeLine) return
+  map.remove(routeLine)
+  routeLine = null
+}
+
+function getSortedRouteLocations() {
+  return [...props.locations].sort((left, right) => {
+    if (left.visitedAt && right.visitedAt) {
+      return new Date(left.visitedAt).getTime() - new Date(right.visitedAt).getTime()
+    }
+    if (left.visitedAt) return -1
+    if (right.visitedAt) return 1
+    return left.id - right.id
+  })
+}
+
+function fitDisplayView(force = false) {
+  if (!isAmapDisplayReady.value) return
+  if (!force && hasFitDisplayView) return
+
+  if (markers.length) {
+    map.setFitView(markers, false, [78, 78, 78, 78], 4)
+  } else {
+    map.setZoomAndCenter(4.4, [104.0, 35.0])
+  }
+  hasFitDisplayView = true
 }
 
 function setPickerMarker(latitude: number, longitude: number) {
@@ -1355,13 +1717,26 @@ async function searchPickerLocation(keyword: string) {
 }
 
 watch(
-  () => [props.locations, props.activeId] as const,
+  () => props.locations,
   async () => {
-    if (!props.pickerMode) return
+    await nextTick()
+    if (props.pickerMode) {
+      refreshMarkers()
+      return
+    }
+    hasFitDisplayView = false
+    refreshMarkers()
+    refreshDisplayRoute()
+  },
+  { deep: true },
+)
+
+watch(
+  () => props.activeId,
+  async () => {
     await nextTick()
     refreshMarkers()
   },
-  { deep: true },
 )
 
 watch(
@@ -1379,6 +1754,11 @@ watch(
 )
 
 function handleResize() {
+  if (isAmapDisplayReady.value) {
+    map?.resize?.()
+    scheduleAmapMarkerRefresh()
+    return
+  }
   mapPan.value = clampPan(mapPan.value)
 }
 
@@ -1393,13 +1773,24 @@ onBeforeUnmount(() => {
   if (map && clickHandler) {
     map.off('click', clickHandler)
   }
+  if (map && zoomEndHandler) {
+    map.off('zoomend', zoomEndHandler)
+  }
+  if (map && moveEndHandler) {
+    map.off('moveend', moveEndHandler)
+  }
+  clearDisplayRoute()
   if (map) {
     map.destroy()
   }
   map = null
   markers = []
+  routeLine = null
   pickerMarker = null
   geocoder = null
+  clickHandler = null
+  zoomEndHandler = null
+  moveEndHandler = null
 })
 
 defineExpose({
@@ -1431,6 +1822,21 @@ defineExpose({
   min-height: 392px;
 }
 
+.travel-map-canvas--display {
+  position: relative;
+  z-index: 1;
+  min-height: 500px;
+  border-radius: 18px;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 18% 12%, rgba(255, 220, 232, 0.22), transparent 34%),
+    linear-gradient(180deg, rgba(255, 253, 252, 0.96), rgba(250, 245, 247, 0.92));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.72),
+    0 16px 36px rgba(201, 169, 180, 0.14);
+  filter: saturate(0.94) sepia(0.03);
+}
+
 .travel-map-stage {
   position: relative;
   display: flex;
@@ -1438,6 +1844,21 @@ defineExpose({
   justify-content: center;
   min-height: 500px;
   padding: 8px 8px 76px;
+}
+
+.travel-map-shell.is-amap-display-mode .travel-map-stage {
+  display: block;
+}
+
+.travel-map-shell.is-amap-display-mode .travel-map-haze,
+.travel-map-shell.is-amap-display-mode .travel-map-petals {
+  z-index: 2;
+}
+
+.travel-map-shell.is-amap-display-mode .travel-map-controls,
+.travel-map-shell.is-amap-display-mode .travel-map-legend,
+.travel-map-shell.is-amap-display-mode .travel-map-data-note {
+  z-index: 5;
 }
 
 .travel-map-viewport {
@@ -1721,9 +2142,11 @@ defineExpose({
 
 .travel-map-controls {
   position: absolute;
-  left: 12px;
-  bottom: 14px;
-  z-index: 3;
+  top: 14px;
+  right: 14px;
+  left: auto;
+  bottom: auto;
+  z-index: 6;
   display: grid;
   gap: 10px;
 }
@@ -1888,6 +2311,11 @@ defineExpose({
     padding: 10px 0 74px;
   }
 
+  .travel-map-canvas--display {
+    min-height: 420px;
+    border-radius: 16px;
+  }
+
   .travel-map-viewport {
     min-height: 336px;
   }
@@ -1897,8 +2325,17 @@ defineExpose({
   }
 
   .travel-map-controls {
-    left: 10px;
-    bottom: 22px;
+    top: 12px;
+    right: 12px;
+    left: auto;
+    bottom: auto;
+    gap: 8px;
+  }
+
+  .travel-map-control {
+    width: 38px;
+    height: 38px;
+    border-radius: 13px;
   }
 
   .travel-map-legend {
@@ -1947,5 +2384,122 @@ defineExpose({
   box-shadow:
     0 0 0 6px rgba(75, 123, 236, 0.16),
     0 12px 18px rgba(75, 123, 236, 0.22);
+}
+
+.travel-map-html-marker {
+  position: relative;
+  box-sizing: border-box;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  appearance: none;
+  cursor: pointer;
+  pointer-events: auto;
+  touch-action: manipulation;
+  font-family:
+    'Microsoft YaHei UI',
+    'PingFang SC',
+    'Hiragino Sans GB',
+    'Noto Sans CJK SC',
+    sans-serif;
+}
+
+.travel-map-html-marker:focus-visible {
+  outline: none;
+}
+
+.travel-map-html-marker:focus-visible .travel-map-html-marker__label {
+  border-color: rgba(251, 114, 153, 0.98);
+  box-shadow:
+    0 10px 22px rgba(229, 134, 170, 0.24),
+    0 0 0 4px rgba(251, 114, 153, 0.22),
+    0 0 0 7px rgba(255, 255, 255, 0.72);
+}
+
+.travel-map-html-marker__label {
+  position: absolute;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 8px;
+  border-radius: 11px;
+  border: 1px solid rgba(239, 199, 214, 0.96);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(255, 249, 252, 0.94)),
+    radial-gradient(circle at 18% 12%, rgba(255, 215, 230, 0.32), transparent 42%);
+  color: #6b4f59;
+  font-size: 10.5px;
+  font-weight: 700;
+  line-height: 1;
+  white-space: nowrap;
+  box-shadow: 0 8px 16px rgba(207, 156, 176, 0.16);
+  backdrop-filter: blur(10px);
+  transform: translateZ(0);
+  pointer-events: none;
+}
+
+.travel-map-html-marker__connector {
+  position: absolute;
+  z-index: 0;
+  height: 1.4px;
+  border-radius: 999px;
+  background: rgba(206, 145, 168, 0.72);
+  transform-origin: left center;
+  pointer-events: none;
+}
+
+.travel-map-html-marker__pin {
+  position: absolute;
+  left: -10px;
+  top: -30px;
+  z-index: 2;
+  width: 20px;
+  height: 28px;
+  border: 2px solid rgba(255, 255, 255, 0.96);
+  border-radius: 50% 50% 50% 0;
+  background: linear-gradient(135deg, rgba(255, 133, 175, 0.98), rgba(255, 170, 197, 0.94));
+  box-shadow:
+    0 8px 14px rgba(246, 136, 173, 0.2),
+    0 0 0 6px rgba(251, 114, 153, 0.12);
+  transform: rotate(-45deg);
+}
+
+.travel-map-html-marker__pin span {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.98);
+  transform: translate(-50%, -50%);
+}
+
+.travel-map-html-marker.is-active .travel-map-html-marker__label {
+  border-color: rgba(242, 154, 190, 0.98);
+  color: #5f3f4b;
+  box-shadow:
+    0 10px 20px rgba(229, 134, 170, 0.22),
+    0 0 0 4px rgba(255, 214, 228, 0.24);
+}
+
+.travel-map-html-marker.is-active .travel-map-html-marker__pin {
+  width: 24px;
+  height: 32px;
+  left: -12px;
+  top: -34px;
+  background: linear-gradient(135deg, rgba(255, 96, 151, 0.99), rgba(255, 142, 178, 0.98));
+  box-shadow:
+    0 12px 22px rgba(246, 112, 158, 0.26),
+    0 0 0 8px rgba(251, 114, 153, 0.16);
+}
+
+@media (max-width: 768px) {
+  .travel-map-html-marker__label {
+    max-width: 108px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
 }
 </style>

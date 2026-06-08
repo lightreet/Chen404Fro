@@ -357,14 +357,6 @@
                             <span class="mini-photo-drag-handle" title="拖拽排序" aria-hidden="true">
                               <el-icon><Rank /></el-icon>
                             </span>
-                            <button
-                              type="button"
-                              class="mini-photo-more"
-                              title="照片操作"
-                              @click.stop="toggleEntryActions(stopIndex, entryIndex)"
-                            >
-                              ⋯
-                            </button>
                             <div class="mini-photo__overlay" @click.stop>
                               <button type="button" class="mini-photo-overlay-action" @click="setTravelCoverFromOverlay(stopIndex, entryIndex)">
                                 设为旅行封面
@@ -2341,25 +2333,6 @@ watch(
   transform: translateY(-1px);
 }
 
-.mini-photo-more {
-  position: absolute;
-  right: 10px;
-  bottom: 10px;
-  display: grid;
-  place-items: center;
-  width: 30px;
-  height: 30px;
-  padding: 0;
-  border: 1px solid rgba(255, 255, 255, 0.45);
-  border-radius: 999px;
-  color: #fff;
-  background: rgba(40, 32, 38, 0.45);
-  opacity: 0;
-  pointer-events: none;
-  cursor: pointer;
-  transition: opacity 0.18s ease;
-}
-
 .mini-photo__overlay {
   position: absolute;
   inset: 0;
@@ -2376,9 +2349,7 @@ watch(
 }
 
 .mini-photo:hover .mini-photo__overlay,
-.mini-photo:hover .mini-photo-more,
-.mini-photo.is-action-open .mini-photo__overlay,
-.mini-photo.is-action-open .mini-photo-more {
+.mini-photo.is-action-open .mini-photo__overlay {
   opacity: 1;
   pointer-events: auto;
 }
@@ -2830,11 +2801,6 @@ watch(
   .photo-strip.is-single .mini-photo-add {
     min-height: 180px;
     aspect-ratio: 16 / 10;
-  }
-
-  .mini-photo-more {
-    opacity: 1;
-    pointer-events: auto;
   }
 
   .mini-photo__overlay {
