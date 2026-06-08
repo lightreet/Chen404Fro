@@ -653,6 +653,10 @@ declare global {
 
 const SPECTRUM_BAR_COUNT = 36
 const SPECTRUM_HALF_BAR_COUNT = SPECTRUM_BAR_COUNT / 2
+const SPECTRUM_MIN_HEIGHT = 8
+const SPECTRUM_MAX_HEIGHT = 46
+const SPECTRUM_DECORATIVE_BLEND = 0.28
+const SPECTRUM_CENTER_SOFTENING = 0.24
 
 const defaultHero = resolveFeatureHero(null, 'music')
 const heroBgImage = ref(defaultHero.bgImage)
@@ -685,6 +689,7 @@ const resolvingTrackDurationIds = new Set<number>()
 const spectrumBars = ref<number[]>(createIdleSpectrumBars())
 let spectrumFrameId: number | null = null
 let spectrumData: Uint8Array<ArrayBuffer> | null = null
+let spectrumDynamicPeak = 0.18
 const { user } = storeToRefs(userStore)
 const { loadSiteConfig } = useSiteConfig()
 const canManage = computed(() => isAdminUser(user.value))
@@ -837,6 +842,7 @@ watch(activeAudioUrl, () => {
   if (!canAnalyzeAudioUrl(activeAudioUrl.value)) {
     disposeSpectrumRuntime()
   }
+  spectrumDynamicPeak = 0.18
   spectrumBars.value = createIdleSpectrumBars()
 })
 
@@ -898,6 +904,7 @@ function stopSpectrumLoop(resetBars: boolean) {
     spectrumFrameId = null
   }
   if (resetBars) {
+    spectrumDynamicPeak = 0.18
     spectrumBars.value = createIdleSpectrumBars()
   }
 }
@@ -968,23 +975,60 @@ function getSpectrumRuntime(audioUrl = activeAudioUrl.value): MusicSpectrumRunti
 function drawSpectrumFrame(analyser: AnalyserNode) {
   if (!spectrumData) return
   const currentSpectrumData = spectrumData
+  const time = player.audio.currentTime || performance.now() / 1000
   analyser.getByteFrequencyData(currentSpectrumData)
-  const frameBars = createMirroredSpectrumBars((distanceFromCenter) => {
+  const centerBars = Array.from({ length: SPECTRUM_HALF_BAR_COUNT }, (_, distanceFromCenter) => {
     const normalizedDistance = distanceFromCenter / Math.max(1, SPECTRUM_HALF_BAR_COUNT - 1)
-    const startRatio = normalizedDistance ** 1.72
-    const endRatio = ((distanceFromCenter + 1) / SPECTRUM_HALF_BAR_COUNT) ** 1.72
-    const [startIndex, endIndex] = resolveSpectrumRange(
+
+    const mainStartRatio = 0.055 + normalizedDistance ** 1.08 * 0.72
+    const mainEndRatio = mainStartRatio + 0.05 + normalizedDistance * 0.052
+    const [mainStartIndex, mainEndIndex] = resolveSpectrumRange(
       currentSpectrumData.length,
-      startRatio,
-      endRatio,
+      mainStartRatio,
+      mainEndRatio,
     )
-    const average = readSpectrumAverage(currentSpectrumData, startIndex, endIndex)
-    const shaped = Math.pow(average, 0.78)
-    const centerWeight = 0.58 + Math.pow(1 - normalizedDistance, 1.08) * 0.68
-    return Math.round(7 + shaped * 38 * centerWeight + centerWeight * 6)
+
+    const accentRatio = 0.11 + (Math.sin(time * 0.48 + (distanceFromCenter + 1) * 1.72) * 0.5 + 0.5) * 0.64
+    const [accentStartIndex, accentEndIndex] = resolveSpectrumRange(
+      currentSpectrumData.length,
+      accentRatio,
+      accentRatio + 0.045,
+    )
+
+    const primaryEnergy = readSpectrumAverage(currentSpectrumData, mainStartIndex, mainEndIndex)
+    const accentEnergy = readSpectrumAverage(currentSpectrumData, accentStartIndex, accentEndIndex)
+    const lowPulse = readSpectrumAverage(currentSpectrumData, 1, Math.min(5, currentSpectrumData.length - 1))
+    return primaryEnergy * 0.64 + accentEnergy * 0.28 + lowPulse * 0.08
   })
-  const hasAudioEnergy = frameBars.some((height) => height > 12)
-  spectrumBars.value = hasAudioEnergy ? frameBars : createFallbackSpectrumBars()
+
+  const peak = Math.max(...centerBars)
+  if (peak < 0.025) {
+    spectrumBars.value = createFallbackSpectrumBars()
+    return
+  }
+
+  spectrumDynamicPeak = Math.max(peak, spectrumDynamicPeak * 0.94)
+  const fallbackCenterBars = createFallbackCenterSpectrumBars()
+  const centerHeights = centerBars.map((energy, distanceFromCenter) => {
+    const normalizedDistance = distanceFromCenter / Math.max(1, SPECTRUM_HALF_BAR_COUNT - 1)
+    const normalizedEnergy = Math.min(1, energy / Math.max(0.08, spectrumDynamicPeak))
+    const compressedEnergy = Math.pow(normalizedEnergy, 0.74)
+    const centerSoftening = 1 - Math.max(0, 1 - normalizedDistance * 3.2) * SPECTRUM_CENTER_SOFTENING
+    const sideLift = Math.sin(normalizedDistance * Math.PI) * 0.12
+    const shimmer = 0.9
+      + Math.sin(time * 1.7 + distanceFromCenter * 2.13) * 0.07
+      + Math.sin(time * 3.1 + distanceFromCenter * 0.73) * 0.04
+    const contour = 0.46 + Math.pow(1 - normalizedDistance, 0.78) * 0.26 + sideLift
+    const decorativeHeight = fallbackCenterBars[distanceFromCenter] ?? SPECTRUM_MIN_HEIGHT
+    const decorativeEnergy = (decorativeHeight - SPECTRUM_MIN_HEIGHT) / (SPECTRUM_MAX_HEIGHT - SPECTRUM_MIN_HEIGHT)
+    const shapedEnergy = Math.min(1, compressedEnergy * centerSoftening * shimmer)
+    const blendedEnergy = shapedEnergy * (1 - SPECTRUM_DECORATIVE_BLEND) + decorativeEnergy * SPECTRUM_DECORATIVE_BLEND
+    const targetHeight = SPECTRUM_MIN_HEIGHT + blendedEnergy * (SPECTRUM_MAX_HEIGHT - SPECTRUM_MIN_HEIGHT) * contour
+    return Math.round(Math.min(SPECTRUM_MAX_HEIGHT, targetHeight))
+  })
+  const frameBars = createMirroredBarsFromCenter(softenDominantCenterBars(centerHeights))
+
+  spectrumBars.value = smoothSpectrumBars(frameBars)
 }
 
 function createIdleSpectrumBars() {
@@ -997,14 +1041,40 @@ function createIdleSpectrumBars() {
 }
 
 function createFallbackSpectrumBars() {
+  return createMirroredBarsFromCenter(createFallbackCenterSpectrumBars())
+}
+
+function createFallbackCenterSpectrumBars() {
   const time = player.audio.currentTime || performance.now() / 1000
-  return createMirroredSpectrumBars((distanceFromCenter) => {
+  return Array.from({ length: SPECTRUM_HALF_BAR_COUNT }, (_, distanceFromCenter) => {
     const normalizedDistance = distanceFromCenter / Math.max(1, SPECTRUM_HALF_BAR_COUNT - 1)
     const centerWeight = Math.pow(1 - normalizedDistance, 1.12)
     const slowWave = Math.sin(time * (3.2 + centerWeight * 1.4) + distanceFromCenter * 0.64)
     const fastWave = Math.sin(time * (7.3 + normalizedDistance * 0.22) + distanceFromCenter * 1.16)
     const shaped = (slowWave * 0.58 + fastWave * 0.42 + 1) / 2
     return Math.round(8 + centerWeight * 8 + Math.max(0, shaped) * (12 + centerWeight * 14))
+  })
+}
+
+function createMirroredBarsFromCenter(centerToEdgeBars: number[]) {
+  return [...centerToEdgeBars.slice().reverse(), ...centerToEdgeBars]
+}
+
+function smoothSpectrumBars(nextBars: number[]) {
+  const currentBars = spectrumBars.value
+  return nextBars.map((nextHeight, index) => {
+    const currentHeight = currentBars[index] ?? nextHeight
+    const easing = nextHeight > currentHeight ? 0.42 : 0.22
+    return Math.round(currentHeight + (nextHeight - currentHeight) * easing)
+  })
+}
+
+function softenDominantCenterBars(centerToEdgeBars: number[]) {
+  const surroundingPeak = Math.max(...centerToEdgeBars.slice(3), SPECTRUM_MIN_HEIGHT)
+  const centerCap = Math.max(28, surroundingPeak + 7)
+  return centerToEdgeBars.map((height, index) => {
+    if (index > 2) return height
+    return Math.round(Math.min(height, centerCap + index * 2))
   })
 }
 
