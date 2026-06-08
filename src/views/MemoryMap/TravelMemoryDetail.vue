@@ -1,158 +1,272 @@
 <template>
-  <DefaultLayout :wide-content="true" :show-live2-d="false" :show-header="false">
-    <div class="travel-memory-detail-page">
-      <div v-if="detail" class="travel-memory-detail__toolbar">
-        <div class="travel-memory-detail__toolbar-inner">
-          <button type="button" class="travel-memory-detail__back" @click="goBack">
-            <el-icon><ArrowLeft /></el-icon>
-            <span>返回</span>
-          </button>
-        </div>
+  <div class="travel-detail-page">
+    <header class="detail-top-dock">
+      <div class="detail-dock-row">
+        <button type="button" class="detail-back-link" @click="goToMap">
+          <el-icon><ArrowLeft /></el-icon>
+          <span>返回</span>
+        </button>
       </div>
+    </header>
 
-      <el-skeleton v-if="loading" :rows="12" animated />
+    <div v-if="loading" class="detail-loading">
+      <el-skeleton :rows="14" animated />
+    </div>
 
-      <section v-else-if="detail" class="travel-memory-detail-sheet">
-        <article class="travel-memory-polaroid-hero">
-          <div class="travel-memory-polaroid-hero__gallery" aria-label="旅行照片相册">
-            <div v-if="photoSlides.length" class="travel-memory-polaroid-stage">
-              <figure
-                v-for="(entry, index) in photoSlides"
-                :key="entry.id || entry.imageUrl || index"
-                class="travel-memory-polaroid"
-                :class="getPhotoCardClass(index)"
-                :aria-hidden="index !== activePhotoIndex"
-              >
-                <span class="travel-memory-polaroid__pin" aria-hidden="true">
-                  <el-icon><PriceTag /></el-icon>
-                </span>
-                <div class="travel-memory-polaroid__photo">
-                  <img :src="entry.imageUrl" :alt="entry.remark || detail.title" />
-                </div>
-                <figcaption class="travel-memory-polaroid__caption">
-                  <span v-if="photoSlides.length > 1" class="travel-memory-polaroid__caption-pager">
-                    {{ index + 1 }} / {{ photoSlides.length }}
-                  </span>
-                  <strong>{{ entry.remark || detail.title }}</strong>
-                  <span class="travel-memory-polaroid__meta">
-                    <el-icon><Calendar /></el-icon>
-                    {{ formatDate(entry.shotAt) || visitDate || '留白的一天' }}
-                  </span>
-                  <span class="travel-memory-polaroid__meta">
-                    <el-icon><Location /></el-icon>
-                    {{ locationText || stampLabel }}
-                  </span>
-                  <p>
-                    <el-icon><ChatDotRound /></el-icon>
-                    <span>{{ entry.thanksNote || journalQuote }}</span>
-                  </p>
-                </figcaption>
-              </figure>
+    <section v-else-if="detail" class="travel-detail-shell">
+      <article class="detail-hero-cover">
+        <img v-if="heroImage" :src="heroImage" :alt="detail.title" />
+        <div v-else class="detail-hero-cover__empty">等待封面照片</div>
+
+        <div class="detail-hero-cover__content">
+          <div class="detail-hero-cover__meta">
+            <span v-if="locationText">
+              <el-icon><Location /></el-icon>
+              {{ locationText }}
+            </span>
+            <span v-if="visitDate">
+              <el-icon><Calendar /></el-icon>
+              {{ visitDate }}
+            </span>
+          </div>
+          <h1>{{ detail.title }}</h1>
+          <p>{{ journalQuote }}</p>
+        </div>
+      </article>
+
+      <main class="travel-detail-main" aria-label="旅行游记正文">
+        <section class="detail-story-list" aria-label="旅行片段">
+          <div class="story-list-head">
+            <span class="story-list-head__eyebrow">旅途展开</span>
+            <div class="story-list-head__copy">
+              <h2>旅行片段</h2>
+              <p>把照片、时间和当时的心情按顺序翻开，这一趟的节奏会更清楚。</p>
             </div>
-
-            <div v-else class="travel-memory-polaroid-hero__empty">等待封面图片</div>
-
-            <template v-if="photoSlides.length > 1">
-              <button class="travel-memory-polaroid-hero__nav is-prev" type="button" aria-label="上一张照片" @click="switchPhoto(-1)">
-                <el-icon><ArrowLeft /></el-icon>
-              </button>
-              <button class="travel-memory-polaroid-hero__nav is-next" type="button" aria-label="下一张照片" @click="switchPhoto(1)">
-                <el-icon><ArrowRight /></el-icon>
-              </button>
-            </template>
           </div>
 
-          <div class="travel-memory-polaroid-hero__copy">
-            <span class="travel-memory-polaroid-hero__kicker">Travel Memory</span>
-            <h1>{{ detail.title }}</h1>
-            <p>{{ journalQuote }}</p>
-            <div class="travel-memory-polaroid-hero__facts">
-              <span v-if="locationText">
-                <el-icon><Location /></el-icon>
-                {{ locationText }}
-              </span>
-              <span v-if="visitDate">
-                <el-icon><Calendar /></el-icon>
-                {{ visitDate }}
-              </span>
-              <span>{{ photoSlides.length }} 张照片</span>
-              <span>{{ storyStops.length }} 个片段</span>
-            </div>
-            <div class="travel-memory-polaroid-hero__stamp">
-              <span>旅途邮戳</span>
-              <strong>{{ stampLabel }}</strong>
-            </div>
-          </div>
-        </article>
-
-        <div class="travel-memory-story">
-          <section class="travel-memory-prologue">
-            <p>{{ journalQuote }}</p>
-          </section>
-
-          <section class="travel-memory-route-card">
-            <div class="section-head">
-              <h2>这趟路的节奏</h2>
-              <span>{{ storyStops.length.toString().padStart(2, '0') }} Stops</span>
-            </div>
-            <div class="travel-memory-route">
-              <div
-                v-for="(stop, index) in storyStops"
-                :key="stop.id || `route-${index}`"
-                class="travel-memory-route-step"
-                :style="{ '--route-tone': routeTones[index % routeTones.length] }"
-              >
-                <b>{{ String(index + 1).padStart(2, '0') }}</b>
+          <article
+            v-for="(stop, index) in storyStops"
+            :id="`travel-stop-${index}`"
+            :key="stop.id || `scene-${index}`"
+            class="detail-story-card"
+          >
+            <div class="detail-story-card__head">
+              <span class="detail-story-card__index">{{ String(index + 1).padStart(2, '0') }}</span>
+              <div>
                 <h3>{{ stop.title }}</h3>
-                <p>{{ stop.storyNote?.trim() || stopSceneSummary(stop) }}</p>
+                <p>
+                  <el-icon><Calendar /></el-icon>
+                  {{ stopDateText(stop) || visitDate || '旅行片段' }}
+                  <template v-if="stop.entries.length"> · {{ stop.entries.length }} 张照片</template>
+                </p>
               </div>
             </div>
-          </section>
 
-          <section class="travel-memory-scenes">
-            <div class="travel-memory-scenes__rail" aria-hidden="true"></div>
-            <article
-              v-for="(stop, index) in storyStops"
-              :key="stop.id || `scene-${index}`"
-              class="travel-memory-scene"
-              :class="{ 'is-reversed': index % 2 === 1 }"
+            <p class="detail-story-card__note">{{ stop.storyNote?.trim() || stopSceneSummary(stop) }}</p>
+
+            <el-tooltip
+              effect="light"
+              placement="top"
+              :show-after="120"
+              popper-class="travel-photo-tooltip"
+              :disabled="!hasPhotoDescription(stopCoverEntry(stop))"
             >
-              <span class="travel-memory-scene__number">{{ String(index + 1).padStart(2, '0') }}</span>
-              <figure class="travel-memory-scene__photo">
+              <figure class="detail-story-card__cover">
                 <img
                   v-if="stopCoverEntry(stop)?.imageUrl"
                   :src="stopCoverEntry(stop)?.imageUrl"
-                  :alt="stopCoverEntry(stop)?.remark || stop.title"
+                  :alt="photoTooltipTitle(stopCoverEntry(stop), stop.title)"
                 />
-                <div v-else class="travel-memory-scene__photo-empty">等待片段照片</div>
+                <div v-else class="detail-story-card__empty">暂无片段照片</div>
               </figure>
-              <div class="travel-memory-scene__note">
-                <span class="travel-memory-scene__date">{{ stopDateText(stop) || visitDate || '旅程片段' }}</span>
-                <h2>{{ stop.title }}</h2>
-                <p>{{ stop.storyNote?.trim() || stopSceneSummary(stop) }}</p>
-              </div>
-            </article>
-          </section>
-        </div>
-      </section>
+              <template #content>
+                <div class="travel-photo-tooltip__title">
+                  {{ photoTooltipTitle(stopCoverEntry(stop), stop.title) }}
+                </div>
+                <p v-if="photoTooltipNote(stopCoverEntry(stop))" class="travel-photo-tooltip__note">
+                  {{ photoTooltipNote(stopCoverEntry(stop)) }}
+                </p>
+              </template>
+            </el-tooltip>
 
-      <section v-else class="travel-memory-detail-empty">
-        <p>{{ errorMessage }}</p>
-        <el-button type="primary" @click="router.push('/memory-map')">返回旅行地图</el-button>
-      </section>
-    </div>
-  </DefaultLayout>
+            <div v-if="stopThumbnailEntries(stop).length" class="detail-story-card__thumbs">
+              <el-tooltip
+                v-for="entry in stopThumbnailEntries(stop).slice(0, 4)"
+                :key="entry.id || entry.imageUrl"
+                effect="light"
+                placement="top"
+                :show-after="120"
+                popper-class="travel-photo-tooltip"
+                :disabled="!hasPhotoDescription(entry)"
+              >
+                <button
+                  type="button"
+                  class="detail-thumb"
+                  :aria-label="photoTooltipTitle(entry, stop.title)"
+                  @click="focusEntry(entry)"
+                >
+                  <img :src="entry.imageUrl" :alt="photoTooltipTitle(entry, stop.title)" />
+                </button>
+                <template #content>
+                  <div class="travel-photo-tooltip__title">{{ photoTooltipTitle(entry, stop.title) }}</div>
+                  <p v-if="photoTooltipNote(entry)" class="travel-photo-tooltip__note">{{ photoTooltipNote(entry) }}</p>
+                </template>
+              </el-tooltip>
+            </div>
+          </article>
+        </section>
+      </main>
+
+      <aside class="travel-detail-rail" aria-label="旅行辅助信息">
+        <section class="detail-card overview-card" aria-label="地点与旅程概览">
+          <div class="overview-card__topline">
+            <span class="detail-card__eyebrow">旅行地点</span>
+            <div class="overview-card__seal">
+              <span>旅行邮戳</span>
+              <strong>{{ stampLabel }}</strong>
+            </div>
+          </div>
+          <h2>{{ locationText || detail.title }}</h2>
+          <p class="overview-card__date">{{ visitDate || '暂未记录' }}</p>
+          <div class="overview-card__facts" aria-label="旅程概览">
+            <article class="overview-card__fact">
+              <span>片段</span>
+              <strong>{{ storyStops.length }}</strong>
+            </article>
+            <article class="overview-card__fact">
+              <span>照片</span>
+              <strong>{{ allEntries.length }}</strong>
+            </article>
+            <article class="overview-card__fact">
+              <span>天数</span>
+              <strong>{{ durationNumber }}</strong>
+            </article>
+          </div>
+        </section>
+
+        <nav class="detail-card fragment-card" aria-label="片段目录">
+          <div class="detail-card__head">
+            <h2>片段目录</h2>
+            <span>{{ storyStops.length.toString().padStart(2, '0') }}</span>
+          </div>
+          <a
+            v-for="(stop, index) in storyStops"
+            :key="stop.id || `catalog-${index}`"
+            class="fragment-link"
+            :class="{ 'is-active': index === activeStopIndex }"
+            :href="`#travel-stop-${index}`"
+            :aria-current="index === activeStopIndex ? 'location' : undefined"
+            @click="activeStopIndex = index"
+          >
+            <b>{{ String(index + 1).padStart(2, '0') }}</b>
+            <span>
+              <strong>{{ stop.title }}</strong>
+              <small>{{ stopDateText(stop) || visitDate || '未记录日期' }}</small>
+            </span>
+          </a>
+        </nav>
+
+        <section class="detail-card mini-map-card">
+          <div class="detail-card__head">
+            <h2>地图位置</h2>
+            <el-icon><MapLocation /></el-icon>
+          </div>
+          <div
+            class="mini-map-card__canvas"
+            :class="{ 'has-amap': showAmap, 'has-error': amapErrorText }"
+            aria-label="高德地图定位"
+          >
+            <div ref="amapContainerRef" class="mini-map-card__amap"></div>
+            <div v-if="amapErrorText" class="mini-map-card__fallback">
+              <el-icon><MapLocation /></el-icon>
+              <strong>{{ detail.city || detail.province || '旅行坐标' }}</strong>
+              <small>{{ amapErrorText }}</small>
+            </div>
+          </div>
+          <p class="mini-map-card__coord">
+            <span>坐标</span>
+            {{ coordinateText }}
+          </p>
+        </section>
+
+        <section class="detail-card album-card">
+          <div class="detail-card__head">
+            <h2>旅行相册</h2>
+            <span>共 {{ allEntries.length }} 张</span>
+          </div>
+          <div v-if="allEntries.length" class="album-grid">
+            <el-tooltip
+              v-for="entry in allEntries.slice(0, 9)"
+              :key="entry.id || entry.imageUrl"
+              effect="light"
+              placement="top"
+              :show-after="120"
+              popper-class="travel-photo-tooltip"
+              :disabled="!hasPhotoDescription(entry)"
+            >
+              <button
+                type="button"
+                class="album-grid__item"
+                :aria-label="photoTooltipTitle(entry, detail.title)"
+                @click="focusEntry(entry)"
+              >
+                <img :src="entry.imageUrl" :alt="photoTooltipTitle(entry, detail.title)" />
+              </button>
+              <template #content>
+                <div class="travel-photo-tooltip__title">{{ photoTooltipTitle(entry, detail.title) }}</div>
+                <p v-if="photoTooltipNote(entry)" class="travel-photo-tooltip__note">{{ photoTooltipNote(entry) }}</p>
+              </template>
+            </el-tooltip>
+          </div>
+          <p v-else class="album-card__empty">这篇游记还没有公开照片。</p>
+        </section>
+      </aside>
+
+      <nav class="detail-memory-nav" aria-label="上一篇和下一篇游记">
+        <button
+          type="button"
+          class="detail-memory-nav__item is-prev"
+          :disabled="!previousMemory"
+          @click="previousMemory && goToMemory(previousMemory.id)"
+        >
+          <span>
+            <el-icon><ArrowLeft /></el-icon>
+            上一篇游记
+          </span>
+          <strong>{{ previousMemory?.title || '已经是第一篇' }}</strong>
+        </button>
+        <button
+          type="button"
+          class="detail-memory-nav__item is-next"
+          :disabled="!nextMemory"
+          @click="nextMemory && goToMemory(nextMemory.id)"
+        >
+          <span>
+            下一篇游记
+            <el-icon><ArrowRight /></el-icon>
+          </span>
+          <strong>{{ nextMemory?.title || '已经是最后一篇' }}</strong>
+        </button>
+      </nav>
+    </section>
+
+    <section v-else class="travel-detail-empty">
+      <p>{{ errorMessage }}</p>
+      <el-button type="primary" @click="goToMap">返回旅行地图</el-button>
+    </section>
+  </div>
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue'
 import dayjs from 'dayjs'
 import { useRoute, useRouter } from 'vue-router'
-import { ArrowLeft, ArrowRight, Calendar, ChatDotRound, Location, PriceTag } from '@element-plus/icons-vue'
-import DefaultLayout from '@/layouts/DefaultLayout.vue'
-import { getTravelMemoryDetail } from '@/api/travel-memory'
-import type { TravelMemoryEntry, TravelMemoryLocationDetail, TravelMemoryStop } from '@/types'
+import { ArrowLeft, ArrowRight, Calendar, Location, MapLocation } from '@element-plus/icons-vue'
+import { getTravelMemories, getTravelMemoryDetail } from '@/api/travel-memory'
 import { useSiteConfig } from '@/composables/useSiteConfig'
+import type { TravelMemoryEntry, TravelMemoryLocationDetail, TravelMemoryLocationListItem, TravelMemoryStop } from '@/types'
+import { getAmapUnavailableReason, loadAmap } from '@/utils/amap'
+import { wgs84ToGcj02 } from '@/utils/coordinate'
 import { applySiteMeta, resolveSeoDescription } from '@/utils/siteConfig'
 
 const route = useRoute()
@@ -161,14 +275,14 @@ const { siteConfig, loadSiteConfig } = useSiteConfig()
 
 const loading = ref(false)
 const detail = ref<TravelMemoryLocationDetail | null>(null)
+const memories = ref<TravelMemoryLocationListItem[]>([])
+const activeStopIndex = ref(0)
+const amapContainerRef = ref<HTMLElement | null>(null)
+const amapInstance = shallowRef<any | null>(null)
+const amapMarker = shallowRef<any | null>(null)
+const amapErrorText = ref('')
 const errorMessage = ref('这篇旅行游记不存在或暂时无法查看。')
-const activePhotoIndex = ref(0)
-const routeTones = [
-  'rgba(255, 198, 220, 0.56)',
-  'rgba(209, 235, 247, 0.58)',
-  'rgba(255, 232, 191, 0.6)',
-  'rgba(219, 242, 232, 0.58)',
-]
+let storyStopObserver: IntersectionObserver | null = null
 
 const storyStops = computed<TravelMemoryStop[]>(() => {
   if (!detail.value) return []
@@ -193,7 +307,7 @@ const storyStops = computed<TravelMemoryStop[]>(() => {
 
   return [
     {
-      title: detail.value.title || '旅途片段',
+      title: detail.value.title || '旅行片段',
       storyNote: detail.value.summaryNote || '',
       coverImage: detail.value.coverImage,
       visitedAt: detail.value.visitedAt,
@@ -206,30 +320,83 @@ const storyStops = computed<TravelMemoryStop[]>(() => {
   ]
 })
 
+const allEntries = computed<TravelMemoryEntry[]>(() => {
+  const seen = new Set<string>()
+  const entries = [...storyStops.value.flatMap((stop) => stop.entries), ...(detail.value?.entries || [])]
+  return entries
+    .filter((entry) => {
+      const key = String(entry.id ?? entry.imageUrl)
+      if (seen.has(key)) return false
+      seen.add(key)
+      return Boolean(entry.imageUrl)
+    })
+    .sort((a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0))
+})
+
 const coverEntry = computed<TravelMemoryEntry | null>(() => {
-  const entries = detail.value?.entries || []
-  return entries.find((entry) => entry.cover) || entries[0] || null
+  return allEntries.value.find((entry) => entry.cover) || allEntries.value[0] || null
 })
 
-const photoSlides = computed(() => {
-  const entries = (detail.value?.entries || []).slice()
-  if (!entries.length) return []
-  const cover = entries.find((entry) => entry.cover) || entries[0]
-  const rest = entries.filter((entry) => entry !== cover)
-  return [cover, ...rest]
-})
-
+const heroImage = computed(() => detail.value?.coverImage || coverEntry.value?.imageUrl || '')
 const locationText = computed(() => formatLocation(detail.value))
 const visitDate = computed(() => formatDateRange(detail.value?.visitedAt, detail.value?.visitedEndAt))
-const stampLabel = computed(() => detail.value?.city || detail.value?.province || detail.value?.title || '旅途')
+const stampLabel = computed(() => detail.value?.city || detail.value?.province || detail.value?.title || '旅行')
 const journalQuote = computed(() => {
   const summary = detail.value?.summaryNote?.trim()
   if (summary) return summary
   const coverNote = coverEntry.value?.thanksNote?.trim()
   if (coverNote) return coverNote
-  const firstNote = photoSlides.value[0]?.thanksNote?.trim()
+  const firstNote = allEntries.value[0]?.thanksNote?.trim()
   return firstNote || '风把旅途吹得很轻，阳光、街道和傍晚都像在慢慢发亮。'
 })
+
+const sortedMemories = computed(() => {
+  return memories.value
+    .slice()
+    .sort((a, b) => {
+      const timeA = dayjs(a.visitedAt || '').valueOf() || 0
+      const timeB = dayjs(b.visitedAt || '').valueOf() || 0
+      if (timeA !== timeB) return timeB - timeA
+      return b.id - a.id
+    })
+})
+
+const currentMemoryIndex = computed(() => {
+  if (!detail.value) return -1
+  return sortedMemories.value.findIndex((item) => item.id === detail.value?.id)
+})
+
+const previousMemory = computed(() => {
+  const index = currentMemoryIndex.value
+  return index > 0 ? sortedMemories.value[index - 1] : null
+})
+
+const nextMemory = computed(() => {
+  const index = currentMemoryIndex.value
+  return index >= 0 && index < sortedMemories.value.length - 1 ? sortedMemories.value[index + 1] : null
+})
+
+const durationNumber = computed(() => {
+  const start = detail.value?.visitedAt
+  const end = detail.value?.visitedEndAt || start
+  if (!start || !end) return 1
+  const days = dayjs(end).startOf('day').diff(dayjs(start).startOf('day'), 'day') + 1
+  return Number.isFinite(days) && days > 0 ? days : 1
+})
+
+const coordinateText = computed(() => {
+  if (detail.value?.latitude == null || detail.value?.longitude == null) return '暂未记录精确坐标'
+  return `${Number(detail.value.latitude).toFixed(4)}, ${Number(detail.value.longitude).toFixed(4)}`
+})
+
+const amapCoordinate = computed(() => {
+  const latitude = detail.value?.latitude
+  const longitude = detail.value?.longitude
+  if (latitude == null || longitude == null) return null
+  return wgs84ToGcj02(Number(latitude), Number(longitude))
+})
+
+const showAmap = computed(() => Boolean(amapCoordinate.value && !amapErrorText.value))
 
 function formatDate(value?: string) {
   return value ? dayjs(value).format('YYYY.MM.DD') : ''
@@ -252,6 +419,17 @@ function stopCoverEntry(stop: TravelMemoryStop) {
   return stop.entries.find((entry) => entry.stopCover) || stop.entries.find((entry) => entry.cover) || stop.entries[0] || null
 }
 
+function isSameEntry(a: TravelMemoryEntry | null | undefined, b: TravelMemoryEntry | null | undefined) {
+  if (!a || !b) return false
+  if (a.id != null && b.id != null && a.id === b.id) return true
+  return Boolean(a.imageUrl && b.imageUrl && a.imageUrl === b.imageUrl)
+}
+
+function stopThumbnailEntries(stop: TravelMemoryStop) {
+  const cover = stopCoverEntry(stop)
+  return stop.entries.filter((entry) => !isSameEntry(entry, cover))
+}
+
 function stopDateText(stop: TravelMemoryStop) {
   return formatDate(stop.visitedAt)
 }
@@ -259,6 +437,98 @@ function stopDateText(stop: TravelMemoryStop) {
 function stopSceneSummary(stop: TravelMemoryStop) {
   const cover = stopCoverEntry(stop)
   return cover?.thanksNote?.trim() || cover?.remark?.trim() || journalQuote.value
+}
+
+function photoTooltipTitle(entry: TravelMemoryEntry | null | undefined, fallback: string) {
+  return entry?.remark?.trim() || fallback
+}
+
+function photoTooltipNote(entry: TravelMemoryEntry | null | undefined) {
+  return entry?.thanksNote?.trim() || ''
+}
+
+function hasPhotoDescription(entry: TravelMemoryEntry | null | undefined) {
+  return Boolean(entry?.remark?.trim() || entry?.thanksNote?.trim())
+}
+
+function parseStopIndex(id: string) {
+  const match = id.match(/travel-stop-(\d+)/)
+  if (!match) return -1
+  return Number(match[1])
+}
+
+function destroyStoryStopObserver() {
+  if (!storyStopObserver) return
+  storyStopObserver.disconnect()
+  storyStopObserver = null
+}
+
+async function bindStoryStopObserver() {
+  destroyStoryStopObserver()
+  await nextTick()
+
+  const sections = Array.from(document.querySelectorAll<HTMLElement>('[id^="travel-stop-"]'))
+  if (!sections.length) {
+    activeStopIndex.value = 0
+    return
+  }
+
+  const visibleRatios = new Map<number, number>()
+  const updateActiveStop = () => {
+    if (visibleRatios.size) {
+      activeStopIndex.value = [...visibleRatios.entries()].sort((a, b) => b[1] - a[1] || a[0] - b[0])[0][0]
+      return
+    }
+
+    const closest = sections
+      .map((section) => ({
+        index: parseStopIndex(section.id),
+        distance: Math.abs(section.getBoundingClientRect().top - 148),
+      }))
+      .filter((item) => item.index >= 0)
+      .sort((a, b) => a.distance - b.distance)[0]
+
+    if (closest) {
+      activeStopIndex.value = closest.index
+    }
+  }
+
+  storyStopObserver = new IntersectionObserver(
+    (entries) => {
+      for (const entry of entries) {
+        const index = parseStopIndex((entry.target as HTMLElement).id)
+        if (index < 0) continue
+        if (entry.isIntersecting) {
+          visibleRatios.set(index, entry.intersectionRatio)
+        } else {
+          visibleRatios.delete(index)
+        }
+      }
+      updateActiveStop()
+    },
+    {
+      rootMargin: '-120px 0px -52% 0px',
+      threshold: [0.16, 0.38, 0.65, 0.9],
+    },
+  )
+
+  for (const section of sections) {
+    storyStopObserver.observe(section)
+  }
+
+  updateActiveStop()
+}
+
+function focusEntry(entry: TravelMemoryEntry) {
+  const stopIndex = storyStops.value.findIndex((stop) =>
+    stop.entries.some((item) => item === entry || item.id === entry.id || item.imageUrl === entry.imageUrl),
+  )
+  if (stopIndex >= 0) {
+    activeStopIndex.value = stopIndex
+    document.querySelector(`#travel-stop-${stopIndex}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  } else {
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
 }
 
 function applyDetailMeta() {
@@ -280,10 +550,16 @@ async function loadDetail() {
   }
 
   loading.value = true
+  activeStopIndex.value = 0
   errorMessage.value = '这篇旅行游记不存在或暂时无法查看。'
   try {
-    await loadSiteConfig().catch(() => null)
-    detail.value = await getTravelMemoryDetail(numericId)
+    const [, detailResult, memoryList] = await Promise.all([
+      loadSiteConfig().catch(() => null),
+      getTravelMemoryDetail(numericId),
+      getTravelMemories().catch(() => []),
+    ])
+    detail.value = detailResult
+    memories.value = memoryList
     applyDetailMeta()
   } catch {
     detail.value = null
@@ -292,791 +568,1134 @@ async function loadDetail() {
   }
 }
 
-function goBack() {
-  if (window.history.length > 1) {
-    router.back()
-    return
-  }
+function goToMap() {
   router.push('/memory-map')
 }
 
-function switchPhoto(direction: 1 | -1) {
-  const total = photoSlides.value.length
-  if (total <= 1) return
-  activePhotoIndex.value = (activePhotoIndex.value + direction + total) % total
+function destroyMiniAmap() {
+  amapMarker.value = null
+  if (amapInstance.value?.destroy) {
+    amapInstance.value.destroy()
+  }
+  amapInstance.value = null
 }
 
-function getPhotoCardClass(index: number) {
-  const total = photoSlides.value.length
-  if (total <= 1) return 'is-active'
+async function renderMiniAmap() {
+  const coordinate = amapCoordinate.value
+  if (!coordinate) {
+    amapErrorText.value = '暂未记录精确坐标'
+    destroyMiniAmap()
+    return
+  }
 
-  const offset = (index - activePhotoIndex.value + total) % total
-  if (offset === 0) return 'is-active'
-  if (offset === 1) return 'is-next'
-  if (offset === total - 1) return 'is-prev'
-  return 'is-hidden'
+  await nextTick()
+  const container = amapContainerRef.value
+  if (!container) return
+
+  try {
+    amapErrorText.value = ''
+    const AMap = await loadAmap()
+    const center = [coordinate.longitude, coordinate.latitude]
+
+    if (!amapInstance.value) {
+      amapInstance.value = new AMap.Map(container, {
+        resizeEnable: true,
+        zoom: 15,
+        center,
+        mapStyle: 'amap://styles/whitesmoke',
+        viewMode: '2D',
+        dragEnable: true,
+        zoomEnable: true,
+        scrollWheel: true,
+        doubleClickZoom: true,
+      })
+    } else {
+      amapInstance.value.setZoomAndCenter(15, center)
+    }
+
+    if (!amapMarker.value) {
+      amapMarker.value = new AMap.Marker({
+        position: center,
+        title: detail.value?.city || detail.value?.title || '旅行位置',
+        offset: new AMap.Pixel(-13, -30),
+      })
+      amapInstance.value.add(amapMarker.value)
+    } else {
+      amapMarker.value.setPosition(center)
+      amapMarker.value.setTitle(detail.value?.city || detail.value?.title || '旅行位置')
+    }
+  } catch {
+    destroyMiniAmap()
+    amapErrorText.value = getAmapUnavailableReason() || '高德地图加载失败'
+  }
+}
+
+function goToMemory(id: number) {
+  router.push({ name: 'TravelMemoryDetail', params: { id } })
 }
 
 watch(
   () => route.params.id,
   () => {
-    activePhotoIndex.value = 0
     void loadDetail()
   },
 )
 
-watch(photoSlides, (slides) => {
-  if (activePhotoIndex.value >= slides.length) {
-    activePhotoIndex.value = 0
-  }
-})
+watch(
+  amapCoordinate,
+  () => {
+    void renderMiniAmap()
+  },
+  { flush: 'post' },
+)
+
+watch(
+  () => [detail.value?.id, storyStops.value.length],
+  () => {
+    activeStopIndex.value = 0
+    void bindStoryStopObserver()
+  },
+  { flush: 'post' },
+)
 
 onMounted(() => {
   void loadDetail()
+  void renderMiniAmap()
+})
+
+onBeforeUnmount(() => {
+  destroyStoryStopObserver()
+  destroyMiniAmap()
 })
 </script>
 
 <style scoped lang="scss">
-.travel-memory-detail-page {
-  width: min(1180px, calc(100vw - 72px));
-  margin: clamp(18px, 2.4vw, 34px) auto 64px;
-  padding-top: 98px;
-}
+.travel-detail-page {
+  --travel-ink: #34262e;
+  --travel-body: #615661;
+  --travel-muted: #887d88;
+  --travel-soft: #9d8d99;
+  --travel-accent: #eb739d;
+  --travel-accent-strong: #d85d86;
+  --travel-border: rgba(210, 196, 205, 0.7);
+  --travel-border-strong: rgba(199, 183, 193, 0.9);
+  --travel-card: rgba(248, 243, 246, 0.94);
+  --travel-card-strong: rgba(253, 249, 251, 0.98);
+  --travel-shadow: 0 16px 36px rgba(166, 144, 158, 0.09);
 
-.travel-memory-detail-sheet {
   position: relative;
-  overflow: hidden;
-  padding: clamp(18px, 2vw, 28px);
-  border-radius: 38px;
+  min-height: 100vh;
+  padding: calc(72px + env(safe-area-inset-top, 0px)) 0 56px;
+  color: var(--travel-ink);
   background:
-    radial-gradient(circle at 12% 10%, rgba(255, 188, 213, 0.22), transparent 28%),
-    radial-gradient(circle at 86% 22%, rgba(255, 226, 179, 0.22), transparent 26%),
-    linear-gradient(135deg, rgba(255, 252, 248, 0.98), rgba(255, 244, 249, 0.9) 56%, rgba(249, 253, 255, 0.92));
-  border: 1px solid rgba(239, 211, 220, 0.92);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.9),
-    0 26px 70px rgba(164, 96, 124, 0.14);
+    radial-gradient(circle at 12% 0%, rgba(239, 226, 234, 0.76), transparent 30%),
+    radial-gradient(circle at 88% 8%, rgba(233, 232, 240, 0.92), transparent 34%),
+    linear-gradient(180deg, #f8f3f6 0%, #f5f0f4 42%, #fbf8fa 100%);
+
+  &::before {
+    content: '';
+    position: fixed;
+    inset: calc(58px + env(safe-area-inset-top, 0px)) 0 0;
+    z-index: 0;
+    pointer-events: none;
+    opacity: 0.4;
+    background:
+      linear-gradient(90deg, transparent 0, rgba(176, 141, 153, 0.018) 1px, transparent 1px) 0 0 / 46px 46px,
+      linear-gradient(0deg, transparent 0, rgba(176, 141, 153, 0.014) 1px, transparent 1px) 0 0 / 46px 46px;
+  }
 }
 
-.travel-memory-detail__toolbar {
+.detail-top-dock,
+.detail-loading,
+.travel-detail-shell,
+.travel-detail-empty {
+  position: relative;
+  z-index: 1;
+}
+
+.detail-top-dock {
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
-  z-index: 285;
-  padding:
-    calc(11px + env(safe-area-inset-top, 0))
-    calc(36px + env(safe-area-inset-right, 0))
-    11px
-    calc(36px + env(safe-area-inset-left, 0));
-  border-bottom: 1px solid rgba(239, 211, 220, 0.9);
-  background: rgba(255, 250, 253, 0.76);
-  box-shadow: 0 8px 30px rgba(164, 96, 124, 0.1);
+  z-index: 280;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-left: env(safe-area-inset-left, 0);
+  padding-right: env(safe-area-inset-right, 0);
+  border-bottom: 1px solid rgba(214, 202, 210, 0.88);
+  background: linear-gradient(180deg, rgba(249, 245, 248, 0.94), rgba(243, 238, 243, 0.84));
+  box-shadow: 0 10px 24px rgba(166, 146, 157, 0.08);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
+  box-sizing: border-box;
 }
 
-.travel-memory-detail__toolbar-inner {
-  width: min(1180px, calc(100vw - 72px));
-  min-height: 54px;
-  margin: 0 auto;
+.detail-dock-row {
   display: flex;
   align-items: center;
+  width: min(1360px, calc(100vw - 48px));
+  min-height: 52px;
+  margin: 0 auto;
 }
 
-.travel-memory-detail__back {
+.detail-back-link {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 0;
+  gap: 7px;
+  min-height: 34px;
+  padding: 0 12px;
   border: 0;
+  border-radius: 999px;
+  color: #7f737f;
   background: transparent;
-  color: #8f6b78;
-  cursor: pointer;
   font: inherit;
+  font-size: 14px;
   font-weight: 700;
-  transition: color 0.2s ease, transform 0.2s ease;
+  text-decoration: none;
+  cursor: pointer;
+  transition: color 0.18s ease, background-color 0.18s ease;
+
+  .el-icon {
+    width: 16px;
+    height: 16px;
+    font-size: 16px;
+  }
+
+  &:hover {
+    color: #564650;
+    background: rgba(235, 115, 157, 0.08);
+  }
 }
 
-.travel-memory-detail__back:hover {
-  color: #ff5e99;
-  transform: translateY(-1px);
-}
-
-.travel-memory-polaroid-hero {
-  position: relative;
-  display: grid;
-  grid-template-columns: minmax(360px, 0.92fr) minmax(320px, 0.78fr);
-  align-items: center;
-  gap: clamp(28px, 5vw, 68px);
-  min-height: clamp(540px, 56vw, 690px);
-  padding: clamp(30px, 5vw, 72px);
-  border-radius: 34px;
-  overflow: hidden;
-  background:
-    radial-gradient(circle at 18% 18%, rgba(255, 179, 211, 0.28), transparent 26%),
-    radial-gradient(circle at 72% 18%, rgba(255, 234, 187, 0.22), transparent 24%),
-    linear-gradient(135deg, rgba(255, 252, 249, 0.96), rgba(255, 242, 248, 0.9));
-  border: 1px solid rgba(239, 207, 220, 0.96);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.9),
-    0 26px 64px rgba(155, 92, 119, 0.14);
-}
-
-.travel-memory-polaroid-hero::before {
-  content: '';
-  position: absolute;
-  inset: 22px;
-  pointer-events: none;
-  border: 1px dashed rgba(224, 143, 174, 0.28);
+.detail-loading {
+  width: min(1360px, calc(100vw - 48px));
+  margin: 0 auto;
+  padding: 28px;
+  border: 1px solid var(--travel-border);
   border-radius: 26px;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: var(--travel-shadow);
 }
 
-.travel-memory-polaroid-hero__gallery {
-  position: relative;
-  z-index: 1;
+.travel-detail-shell {
   display: grid;
-  place-items: center;
-  min-height: clamp(460px, 48vw, 590px);
+  grid-template-areas:
+    "hero rail"
+    "main rail"
+    "pager rail";
+  grid-template-columns: minmax(0, 1fr) 300px;
+  justify-content: center;
+  align-items: start;
+  gap: 28px;
+  width: min(1360px, calc(100vw - 48px));
+  margin: 0 auto;
 }
 
-.travel-memory-polaroid-stage {
-  position: relative;
-  z-index: 2;
-  width: min(78%, 430px);
-  height: clamp(430px, 45vw, 560px);
-  perspective: 1200px;
-}
-
-.travel-memory-polaroid {
-  position: absolute;
-  inset: 0;
-  z-index: 2;
-  display: grid;
-  grid-template-rows: minmax(0, 1fr) auto;
-  width: 100%;
-  height: 100%;
-  margin: 0;
-  padding: 12px 12px 18px;
-  border: 1px solid rgba(246, 222, 229, 0.96);
-  border-radius: 20px 20px 16px 16px;
-  background: linear-gradient(180deg, #fffefd 0%, #fffaf7 66%, #fff8f9 100%);
-  box-shadow:
-    0 22px 42px rgba(108, 66, 83, 0.18),
-    0 2px 0 rgba(255, 255, 255, 0.9) inset,
-    0 -1px 0 rgba(236, 205, 216, 0.5) inset;
-  opacity: 0;
-  transform-origin: center bottom;
-  transition:
-    opacity 0.42s ease,
-    filter 0.42s ease,
-    transform 0.58s cubic-bezier(0.2, 0.82, 0.2, 1);
-}
-
-.travel-memory-polaroid.is-active {
-  z-index: 5;
-  opacity: 1;
-  transform: translate3d(0, 0, 80px) rotate(-2deg) scale(1);
-}
-
-.travel-memory-polaroid.is-prev {
-  z-index: 3;
-  opacity: 0.66;
-  filter: saturate(0.9);
-  transform: translate3d(-72px, -6px, 0) rotate(-9deg) scale(0.86);
-}
-
-.travel-memory-polaroid.is-next {
-  z-index: 4;
-  opacity: 0.72;
-  filter: saturate(0.92);
-  transform: translate3d(78px, -2px, 20px) rotate(7deg) scale(0.88);
-}
-
-.travel-memory-polaroid.is-hidden {
-  z-index: 1;
-  pointer-events: none;
-  opacity: 0;
-  filter: blur(4px);
-  transform: translate3d(24px, 54px, -80px) rotate(2deg) scale(0.86);
-}
-
-.travel-memory-polaroid__pin {
-  position: absolute;
-  top: -15px;
-  left: 50%;
-  z-index: 7;
-  display: grid;
-  place-items: center;
-  width: 56px;
-  height: 28px;
-  border: 1px solid rgba(244, 177, 202, 0.54);
-  border-radius: 999px;
-  color: #d97b9d;
-  background: rgba(255, 211, 226, 0.78);
-  box-shadow:
-    0 10px 18px rgba(173, 98, 129, 0.14),
-    inset 0 1px 0 rgba(255, 255, 255, 0.72);
-  transform: translateX(-50%) rotate(-4deg);
-}
-
-.travel-memory-polaroid__photo {
+.detail-hero-cover {
+  grid-area: hero;
   position: relative;
   overflow: hidden;
-  height: clamp(260px, 28vw, 345px);
-  border-radius: 10px;
-  background: linear-gradient(135deg, #fff0f5, #edf4ff);
-  box-shadow:
-    0 1px 0 rgba(255, 255, 255, 0.72),
-    0 0 0 1px rgba(225, 197, 207, 0.42);
-}
-
-.travel-memory-polaroid__photo img {
-  display: block;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.travel-memory-polaroid__caption {
-  position: relative;
-  z-index: 3;
-  display: grid;
-  grid-template-columns: 1fr auto;
-  gap: 8px 12px;
-  min-height: 116px;
-  padding: 15px 14px 0;
-  color: #6d4b58;
-  background: rgba(255, 253, 252, 0.96);
-}
-
-.travel-memory-polaroid__caption strong {
-  grid-column: 1 / -1;
-  overflow: hidden;
-  padding-right: 80px;
-  font-size: clamp(16px, 1.45vw, 20px);
-  font-weight: 900;
-  line-height: 1.28;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.travel-memory-polaroid__meta {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  min-width: 0;
-  color: #d1769a;
-  font-size: 12px;
-  font-weight: 900;
-  letter-spacing: 0.06em;
-}
-
-.travel-memory-polaroid__caption p {
-  grid-column: 1 / -1;
-  display: -webkit-box;
-  overflow: hidden;
-  margin: 0;
-  color: #80616d;
-  font-size: 12px;
-  font-weight: 700;
-  line-height: 1.55;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-}
-
-.travel-memory-polaroid__caption-pager {
-  position: absolute;
-  top: 13px;
-  right: 12px;
-  display: inline-flex;
-  align-items: center;
-  min-height: 32px;
-  padding: 0 14px;
-  border-radius: 999px;
-  color: #c86e92;
-  background: rgba(255, 247, 250, 0.86);
-  border: 1px solid rgba(233, 179, 199, 0.62);
-  font-size: 12px;
-  font-weight: 900;
-}
-
-.travel-memory-polaroid-hero__empty {
-  min-height: 420px;
-  display: grid;
-  place-items: center;
+  min-height: 460px;
+  height: clamp(460px, 44vw, 520px);
+  border: 1px solid rgba(255, 255, 255, 0.58);
   border-radius: 28px;
-  color: #c47b98;
-  letter-spacing: 0.2em;
-  background: rgba(255, 255, 255, 0.58);
-  border: 1px dashed rgba(223, 145, 176, 0.48);
+  color: #fff;
+  background: linear-gradient(135deg, #87626f, #4f3640);
+  box-shadow:
+    0 22px 48px rgba(86, 56, 68, 0.16),
+    inset 0 1px 0 rgba(255, 255, 255, 0.44);
+
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+      linear-gradient(90deg, rgba(18, 13, 16, 0.34) 0%, rgba(18, 13, 16, 0.12) 40%, rgba(18, 13, 16, 0.02) 76%, rgba(18, 13, 16, 0.08) 100%),
+      linear-gradient(0deg, rgba(20, 14, 18, 0.48) 0%, rgba(20, 14, 18, 0.16) 42%, rgba(20, 14, 18, 0.02) 78%, rgba(20, 14, 18, 0.08) 100%);
+  }
+
+  img,
+  .detail-hero-cover__empty {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+  }
+
+  img {
+    object-fit: cover;
+    filter: saturate(1.06) brightness(1.02) contrast(1.02);
+  }
 }
 
-.travel-memory-polaroid-hero__copy {
+.detail-hero-cover__empty {
+  display: grid;
+  place-items: center;
+  color: rgba(255, 255, 255, 0.8);
+  background: linear-gradient(135deg, #503741, #9a6c7d);
+  font-weight: 700;
+  letter-spacing: 0.12em;
+}
+
+.detail-hero-cover__content {
   position: relative;
   z-index: 1;
   display: grid;
-  justify-items: start;
-  align-content: center;
+  align-content: end;
+  box-sizing: border-box;
+  width: min(580px, 100%);
+  min-height: inherit;
+  padding: clamp(30px, 3vw, 42px);
+
+  h1 {
+    max-width: 9ch;
+    margin: 12px 0 0;
+    color: #fff;
+    font-family: "Microsoft YaHei UI", "PingFang SC", "Hiragino Sans GB", "Noto Sans CJK SC", sans-serif;
+    font-size: clamp(42px, 4vw, 58px);
+    font-weight: 700;
+    line-height: 1.04;
+    letter-spacing: -0.01em;
+    text-wrap: balance;
+    text-shadow: 0 6px 18px rgba(16, 11, 14, 0.18);
+  }
+
+  p {
+    max-width: 32ch;
+    margin: 14px 0 0;
+    color: rgba(255, 255, 255, 0.92);
+    font-size: 15px;
+    font-weight: 500;
+    line-height: 1.75;
+    text-shadow: 0 4px 14px rgba(16, 11, 14, 0.14);
+  }
 }
 
-.travel-memory-polaroid-hero__kicker {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 18px;
-  color: #d17398;
-  font-size: 12px;
-  font-weight: 900;
-  letter-spacing: 0.26em;
-  text-transform: uppercase;
-}
-
-.travel-memory-polaroid-hero__kicker::before {
-  content: '';
-  width: 42px;
-  height: 1px;
-  background: currentColor;
-}
-
-.travel-memory-polaroid-hero__copy h1 {
-  margin: 0;
-  color: #4c3340;
-  font-family: 'Ma Shan Zheng', 'ZCOOL KuaiLe', 'PingFang SC', sans-serif;
-  font-size: clamp(48px, 6.4vw, 96px);
-  font-weight: 400;
-  line-height: 1;
-}
-
-.travel-memory-polaroid-hero__copy p {
-  max-width: 560px;
-  margin: 24px 0 0;
-  color: #765766;
-  font-size: clamp(15px, 1.5vw, 19px);
-  font-weight: 700;
-  line-height: 1.9;
-}
-
-.travel-memory-polaroid-hero__facts {
+.detail-hero-cover__meta {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
-  margin-top: 26px;
+
+  span {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    min-height: 34px;
+    padding: 0 12px;
+    border: 1px solid rgba(255, 255, 255, 0.24);
+    border-radius: 999px;
+    color: rgba(255, 255, 255, 0.94);
+    background: rgba(255, 255, 255, 0.16);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.22);
+    font-size: 13px;
+    font-weight: 600;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+
+    .el-icon {
+      width: 15px;
+      height: 15px;
+      font-size: 15px;
+    }
+  }
 }
 
-.travel-memory-polaroid-hero__facts span {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  min-height: 36px;
-  padding: 0 14px;
-  border: 1px solid rgba(235, 186, 204, 0.84);
-  border-radius: 999px;
-  color: #86596a;
-  background: rgba(255, 255, 255, 0.68);
-  font-size: 13px;
-  font-weight: 800;
-}
-
-.travel-memory-polaroid-hero__stamp {
-  display: inline-flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  width: clamp(106px, 12vw, 142px);
-  height: clamp(106px, 12vw, 142px);
-  margin-top: 34px;
-  padding: 14px;
-  border-radius: 999px;
-  color: #cf6f96;
-  text-align: center;
-  border: 2px dashed rgba(221, 127, 163, 0.6);
-  background: rgba(255, 255, 255, 0.52);
-  box-shadow: inset 0 0 0 10px rgba(255, 241, 247, 0.7);
-  transform: rotate(-7deg);
-}
-
-.travel-memory-polaroid-hero__stamp strong {
-  max-width: 4em;
-  font-size: clamp(24px, 3vw, 36px);
-  line-height: 1.08;
-}
-
-.travel-memory-polaroid-hero__nav {
-  position: absolute;
-  top: 50%;
-  z-index: 4;
-  display: grid;
-  place-items: center;
-  width: 46px;
-  height: 46px;
-  padding: 0;
-  border: 1px solid rgba(233, 179, 199, 0.86);
-  border-radius: 999px;
-  color: #c86e92;
-  background: rgba(255, 255, 255, 0.84);
-  box-shadow: 0 16px 32px rgba(148, 91, 114, 0.18);
-  cursor: pointer;
-  transform: translateY(-50%);
-}
-
-.travel-memory-polaroid-hero__nav.is-prev {
-  left: 2px;
-}
-
-.travel-memory-polaroid-hero__nav.is-next {
-  right: 2px;
-}
-
-.travel-memory-story {
+.travel-detail-main {
+  grid-area: main;
   display: grid;
   gap: 24px;
-  margin-top: 24px;
+  min-width: 0;
 }
 
-.travel-memory-prologue,
-.travel-memory-route-card,
-.travel-memory-scene__note {
-  border: 1px solid rgba(237, 213, 221, 0.94);
-  background: rgba(255, 252, 253, 0.82);
-  box-shadow: 0 12px 24px rgba(226, 196, 206, 0.12);
-}
-
-.travel-memory-prologue {
-  padding: 28px 30px 24px;
-  border-radius: 28px;
-}
-
-.travel-memory-prologue p {
-  margin: 0;
-  color: #6c4d5a;
-  font-size: clamp(20px, 2vw, 28px);
-  font-weight: 700;
-  line-height: 1.7;
-}
-
-.travel-memory-route-card {
-  padding: 24px 26px;
-  border-radius: 28px;
-}
-
-.section-head {
-  display: flex;
-  align-items: end;
-  justify-content: space-between;
-  gap: 18px;
-  margin-bottom: 20px;
-}
-
-.section-head h2 {
-  margin: 0;
-  color: #4c3340;
-  font-size: 24px;
-  line-height: 1.2;
-}
-
-.section-head span {
-  color: #9b7f8a;
-  font-size: 13px;
-  font-weight: 800;
-}
-
-.travel-memory-route {
+.travel-detail-rail {
+  grid-area: rail;
+  position: sticky;
+  top: calc(72px + env(safe-area-inset-top, 0px));
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+  align-content: start;
+}
+
+.detail-card,
+.detail-story-card,
+.detail-memory-nav__item {
+  border: 1px solid var(--travel-border);
+  background: linear-gradient(180deg, var(--travel-card-strong), var(--travel-card));
+  box-shadow:
+    var(--travel-shadow),
+    inset 0 1px 0 rgba(255, 255, 255, 0.82);
+}
+
+.detail-card {
+  overflow: hidden;
+  padding: 20px;
+  border-radius: 22px;
+}
+
+.detail-card__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+
+  h2 {
+    margin: 0;
+    color: var(--travel-ink);
+    font-size: 15px;
+    font-weight: 700;
+    line-height: 1.35;
+  }
+
+  > .el-icon {
+    width: 18px;
+    height: 18px;
+    color: #bd8195;
+    font-size: 18px;
+  }
+
+  > span {
+    color: var(--travel-muted);
+    font-size: 13px;
+    font-weight: 600;
+  }
+}
+
+.detail-card__eyebrow {
+  color: var(--travel-soft);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.overview-card {
+  background:
+    radial-gradient(circle at 84% 14%, rgba(233, 225, 233, 0.82), transparent 30%),
+    linear-gradient(160deg, rgba(252, 248, 250, 0.99), rgba(246, 241, 245, 0.96));
+}
+
+.overview-card__topline {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
   gap: 16px;
 }
 
-.travel-memory-route-step {
-  position: relative;
-  min-height: 124px;
-  padding: 18px 16px;
-  border-radius: 20px;
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.78), rgba(255, 248, 252, 0.66)),
-    linear-gradient(135deg, var(--route-tone), transparent 64%);
-  border: 1px solid rgba(236, 214, 224, 0.76);
-}
-
-.travel-memory-route-step::after {
-  content: '';
-  position: absolute;
-  top: 31px;
-  right: -18px;
-  width: 20px;
-  height: 1px;
-  background: rgba(225, 151, 180, 0.55);
-}
-
-.travel-memory-route-step:last-child::after {
-  display: none;
-}
-
-.travel-memory-route-step b {
-  display: inline-grid;
+.overview-card__seal {
+  display: grid;
   place-items: center;
-  width: 34px;
-  height: 34px;
+  flex-shrink: 0;
+  width: 64px;
+  height: 64px;
+  border: 1px dashed rgba(240, 111, 157, 0.22);
+  border-radius: 999px;
+  color: #a36f83;
+  background:
+    radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.96), rgba(255, 247, 250, 0.84));
+  box-shadow:
+    0 10px 22px rgba(223, 153, 180, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.84);
+  text-align: center;
+
+  span {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+  }
+
+  strong {
+    max-width: 4em;
+    font-size: 15px;
+    line-height: 1.08;
+  }
+}
+
+.overview-card h2 {
+  margin: 12px 0 0;
+  color: var(--travel-ink);
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 1.18;
+  text-wrap: balance;
+}
+
+.overview-card__date {
+  margin: 10px 0 0;
+  color: var(--travel-muted);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.6;
+}
+
+.overview-card__facts {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.overview-card__fact {
+  display: grid;
+  gap: 4px;
+  min-height: 72px;
+  padding: 12px 10px;
+  border: 1px solid rgba(212, 194, 204, 0.76);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.62);
+
+  span {
+    color: var(--travel-muted);
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1.3;
+  }
+
+  strong {
+    color: var(--travel-ink);
+    font-size: 22px;
+    font-weight: 700;
+    line-height: 1;
+  }
+}
+
+.fragment-card {
+  display: grid;
+  gap: 8px;
+}
+
+.fragment-link {
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  min-height: 56px;
+  padding: 10px 12px;
+  border-radius: 16px;
+  color: var(--travel-body);
+  text-decoration: none;
+  transition:
+    color 0.18s ease,
+    background-color 0.18s ease,
+    transform 0.18s ease,
+    box-shadow 0.18s ease;
+
+  b {
+    display: grid;
+    place-items: center;
+    width: 28px;
+    height: 28px;
+    border: 1px solid rgba(240, 111, 157, 0.18);
+    border-radius: 999px;
+    color: #a86c80;
+    background: rgba(255, 255, 255, 0.86);
+    box-shadow: 0 6px 12px rgba(220, 138, 170, 0.05);
+    font-size: 10px;
+    font-weight: 700;
+  }
+
+  span {
+    display: grid;
+    gap: 3px;
+    min-width: 0;
+  }
+
+  strong {
+    overflow: hidden;
+    color: inherit;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 13px;
+    font-weight: 700;
+  }
+
+  small {
+    overflow: hidden;
+    color: var(--travel-muted);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 11px;
+    font-weight: 500;
+  }
+
+  &:hover {
+    color: var(--travel-accent-strong);
+    background: rgba(248, 241, 245, 0.96);
+    transform: translateX(2px);
+  }
+
+  &.is-active {
+    color: var(--travel-accent-strong);
+    background: linear-gradient(90deg, rgba(235, 115, 157, 0.1), rgba(250, 246, 248, 0.94));
+    box-shadow: inset 0 0 0 1px rgba(235, 115, 157, 0.12);
+
+    b {
+      color: #fff;
+      border-color: transparent;
+      background: linear-gradient(135deg, var(--travel-accent), #ff8eaf);
+      box-shadow: 0 10px 18px rgba(240, 111, 157, 0.18);
+    }
+  }
+}
+
+.story-list-head {
+  display: grid;
+  gap: 12px;
+  max-width: 58ch;
+}
+
+.story-list-head__eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--travel-accent-strong);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+
+  &::before {
+    content: '';
+    width: 8px;
+    height: 8px;
+    border-radius: 999px;
+    background: var(--travel-accent);
+    box-shadow: 0 0 0 6px rgba(240, 111, 157, 0.12);
+  }
+}
+
+.story-list-head__copy {
+  display: grid;
+  gap: 8px;
+
+  h2 {
+    margin: 0;
+    color: var(--travel-ink);
+    font-size: clamp(30px, 2.6vw, 36px);
+    font-weight: 700;
+    line-height: 1.08;
+    letter-spacing: -0.01em;
+    text-wrap: balance;
+  }
+
+  p {
+    margin: 0;
+    color: var(--travel-muted);
+    font-size: 15px;
+    line-height: 1.75;
+  }
+}
+
+.detail-story-list {
+  display: grid;
+  gap: 22px;
+}
+
+.detail-story-card {
+  display: grid;
+  gap: 18px;
+  scroll-margin-top: 112px;
+  padding: 28px;
+  border-radius: 24px;
+}
+
+.detail-story-card__head {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: flex-start;
+  gap: 14px;
+  max-width: 74ch;
+
+  h3 {
+    margin: 0;
+    color: var(--travel-ink);
+    font-size: clamp(21px, 1.8vw, 25px);
+    font-weight: 700;
+    line-height: 1.26;
+    letter-spacing: -0.01em;
+    text-wrap: balance;
+  }
+
+  p {
+    display: inline-flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 5px;
+    margin: 8px 0 0;
+    color: var(--travel-muted);
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 1.45;
+  }
+}
+
+.detail-story-card__index {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
   border-radius: 999px;
   color: #fff;
-  background: rgba(255, 91, 144, 0.92);
-  font-size: 13px;
+  background: linear-gradient(135deg, var(--travel-accent), #ff8eaf);
+  box-shadow: 0 10px 18px rgba(240, 111, 157, 0.18);
+  font-size: 12px;
+  font-weight: 700;
 }
 
-.travel-memory-route-step h3 {
-  margin: 16px 0 0;
-  color: #4c3340;
+.detail-story-card__note {
+  max-width: 68ch;
+  margin: 0;
+  color: var(--travel-body);
   font-size: 16px;
+  font-weight: 400;
+  line-height: 1.85;
 }
 
-.travel-memory-route-step p {
-  margin: 7px 0 0;
-  color: #8b6f7c;
+.detail-story-card__cover {
+  overflow: hidden;
+  margin: 0;
+  aspect-ratio: 16 / 8.2;
+  min-height: 280px;
+  border-radius: 20px;
+  background: linear-gradient(135deg, #fff2f6, #fff8fb);
+  box-shadow:
+    0 14px 28px rgba(211, 158, 180, 0.08),
+    0 0 0 1px rgba(255, 255, 255, 0.68) inset;
+
+  img,
+  .detail-story-card__empty {
+    display: grid;
+    place-items: center;
+    width: 100%;
+    height: 100%;
+  }
+
+  img {
+    object-fit: cover;
+  }
+}
+
+.detail-hero-cover__empty,
+.detail-story-card__empty,
+.album-card__empty {
+  color: #c47b98;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+}
+
+.detail-story-card__thumbs {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.detail-memory-nav__item,
+.detail-thumb,
+.album-grid__item {
+  font: inherit;
+  cursor: pointer;
+}
+
+.detail-thumb,
+.album-grid__item {
+  overflow: hidden;
+  padding: 0;
+  border: 0;
+  background: transparent;
+
+  img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.22s ease;
+  }
+
+  &:hover img {
+    transform: scale(1.04);
+  }
+}
+
+.detail-thumb {
+  aspect-ratio: 1.24;
+  border-radius: 14px;
+  box-shadow: 0 0 0 1px rgba(240, 111, 157, 0.1) inset;
+}
+
+:deep(.travel-photo-tooltip) {
+  max-width: 260px;
+  border: 1px solid rgba(210, 196, 205, 0.92);
+  border-radius: 14px;
+  background: rgba(255, 251, 253, 0.96);
+  box-shadow: 0 14px 26px rgba(150, 125, 139, 0.14);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+
+  .el-popper__arrow::before {
+    border-color: rgba(210, 196, 205, 0.92);
+    background: rgba(255, 251, 253, 0.96);
+  }
+}
+
+.travel-photo-tooltip__title {
+  color: var(--travel-ink);
   font-size: 13px;
   font-weight: 700;
   line-height: 1.45;
 }
 
-.travel-memory-scenes {
-  position: relative;
-  display: grid;
-  gap: 36px;
-  padding: 6px 0 18px;
+.travel-photo-tooltip__note {
+  margin: 6px 0 0;
+  color: var(--travel-body);
+  font-size: 12px;
+  line-height: 1.65;
 }
 
-.travel-memory-scenes__rail {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  left: 50%;
-  width: 1px;
-  transform: translateX(-50%);
-  background: linear-gradient(180deg, transparent, rgba(225, 151, 180, 0.38), transparent);
-}
-
-.travel-memory-scene {
-  position: relative;
-  display: grid;
-  grid-template-columns: minmax(0, 1.14fr) minmax(260px, 0.86fr);
-  align-items: center;
-  gap: 28px;
-}
-
-.travel-memory-scene.is-reversed {
-  grid-template-columns: minmax(260px, 0.86fr) minmax(0, 1.14fr);
-}
-
-.travel-memory-scene.is-reversed .travel-memory-scene__photo {
-  grid-column: 2;
-}
-
-.travel-memory-scene.is-reversed .travel-memory-scene__note {
-  grid-column: 1;
-  grid-row: 1;
-}
-
-.travel-memory-scene__number {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  z-index: 2;
-  display: grid;
-  place-items: center;
-  width: 54px;
-  height: 54px;
-  border-radius: 999px;
-  color: #c96e91;
-  background: rgba(255, 252, 253, 0.96);
-  border: 1px solid rgba(244, 207, 220, 0.96);
-  box-shadow: 0 12px 28px rgba(172, 112, 138, 0.16);
-  font-size: 13px;
-  font-weight: 900;
-  letter-spacing: 0.08em;
-  transform: translate(-50%, -50%);
-}
-
-.travel-memory-scene__photo {
+.mini-map-card__canvas {
   position: relative;
   overflow: hidden;
-  margin: 0;
-  min-height: clamp(300px, 42vw, 520px);
-  border-radius: 32px;
-  background: #fff;
+  min-height: 220px;
+  margin-top: 16px;
+  border: 1px solid rgba(240, 111, 157, 0.12);
+  border-radius: 20px;
+  background: #f1edf0;
   box-shadow:
-    0 28px 58px rgba(113, 71, 89, 0.2),
-    0 0 0 10px rgba(255, 255, 255, 0.72);
-  transform: rotate(-1.2deg);
+    0 0 0 1px rgba(255, 255, 255, 0.74) inset,
+    0 12px 24px rgba(173, 151, 164, 0.06);
 }
 
-.travel-memory-scene.is-reversed .travel-memory-scene__photo {
-  transform: rotate(1.2deg);
-}
-
-.travel-memory-scene__photo img,
-.travel-memory-scene__photo-empty {
+.mini-map-card__amap {
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
-  min-height: inherit;
+}
+
+.mini-map-card__canvas.has-error .mini-map-card__amap {
+  display: none;
+}
+
+.mini-map-card__fallback {
+  position: absolute;
+  inset: 0;
   display: grid;
   place-items: center;
-}
-
-.travel-memory-scene__photo img {
-  object-fit: cover;
-}
-
-.travel-memory-scene__photo-empty {
-  color: #c47b98;
-  background: linear-gradient(135deg, #fff1f5, #edf4ff);
-}
-
-.travel-memory-scene__note {
-  position: relative;
-  z-index: 1;
-  padding: 28px 30px;
-  border-radius: 30px;
-}
-
-.travel-memory-scene__date {
-  display: inline-flex;
-  margin-bottom: 14px;
-  color: #d27798;
-  font-size: 12px;
-  font-weight: 900;
-  letter-spacing: 0.12em;
-}
-
-.travel-memory-scene__note h2 {
-  margin: 0;
-  color: #4d3441;
-  font-size: clamp(24px, 2.8vw, 42px);
-  font-weight: 900;
-  line-height: 1.18;
-}
-
-.travel-memory-scene__note p {
-  margin: 18px 0 0;
-  color: #755a66;
-  font-size: clamp(14px, 1.3vw, 17px);
-  line-height: 1.9;
-}
-
-.travel-memory-detail-empty {
-  display: grid;
-  place-items: center;
-  gap: 16px;
-  min-height: 320px;
-  padding: 40px 24px;
+  gap: 8px;
+  padding: 16px;
+  color: var(--travel-muted);
   text-align: center;
-  border-radius: 28px;
-  background: rgba(255, 252, 250, 0.94);
-  border: 1px solid rgba(234, 216, 210, 0.9);
+
+  .el-icon {
+    width: 20px;
+    height: 20px;
+    color: #cf7f9a;
+    font-size: 20px;
+  }
+
+  strong {
+    color: var(--travel-ink);
+    font-size: 15px;
+    font-weight: 700;
+    line-height: 1.25;
+  }
+
+  small {
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 1.6;
+  }
 }
 
-@media (max-width: 1100px) {
-  .travel-memory-route {
+.mini-map-card__coord {
+  display: grid;
+  gap: 4px;
+  margin: 12px 0 0;
+  color: var(--travel-muted);
+  font-size: 13px;
+  line-height: 1.5;
+
+  span {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+  }
+}
+
+.album-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.album-grid__item {
+  aspect-ratio: 1;
+  border-radius: 13px;
+  box-shadow: 0 0 0 1px rgba(240, 111, 157, 0.1) inset;
+}
+
+.travel-detail-empty {
+  display: grid;
+  place-items: center;
+  gap: 14px;
+  min-height: calc(100vh - 200px);
+  text-align: center;
+
+  p {
+    margin: 0;
+    color: var(--travel-muted);
+    font-size: 15px;
+  }
+}
+
+.detail-memory-nav {
+  grid-area: pager;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.detail-memory-nav__item {
+  display: grid;
+  gap: 10px;
+  min-height: 96px;
+  padding: 18px 20px;
+  border-radius: 22px;
+  color: var(--travel-ink);
+  text-align: left;
+  transition:
+    transform 0.18s ease,
+    box-shadow 0.18s ease,
+    border-color 0.18s ease;
+
+  span {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--travel-muted);
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 1.4;
+  }
+
+  strong {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 16px;
+    font-weight: 700;
+    line-height: 1.35;
+  }
+
+  &:hover:not(:disabled) {
+    border-color: var(--travel-border-strong);
+    box-shadow:
+      0 20px 42px rgba(201, 156, 178, 0.14),
+      inset 0 1px 0 rgba(255, 255, 255, 0.84);
+    transform: translateY(-1px);
+  }
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.55;
+  }
+}
+
+@media (max-width: 1280px) {
+  .detail-dock-row,
+  .detail-loading,
+  .travel-detail-shell {
+    width: min(1040px, calc(100vw - 40px));
+  }
+
+  .travel-detail-shell {
+    grid-template-areas:
+      "hero"
+      "main"
+      "rail"
+      "pager";
+    grid-template-columns: 1fr;
+    gap: 22px;
+  }
+
+  .travel-detail-rail {
+    position: static;
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .travel-memory-route-step:nth-child(2)::after {
-    display: none;
+  .fragment-card,
+  .album-card {
+    grid-column: 1 / -1;
+  }
+
+  .detail-hero-cover {
+    min-height: 400px;
+    height: clamp(400px, 48vw, 520px);
   }
 }
 
-@media (max-width: 960px) {
-  .travel-memory-polaroid-hero {
-    grid-template-columns: 1fr;
+@media (max-width: 760px) {
+  .travel-detail-page {
+    padding-top: calc(64px + env(safe-area-inset-top, 0px));
+    padding-bottom: 36px;
+
+    &::before {
+      inset: calc(54px + env(safe-area-inset-top, 0px)) 0 0;
+    }
   }
 
-  .travel-memory-scenes__rail,
-  .travel-memory-scene__number {
-    display: none;
-  }
-
-  .travel-memory-scene,
-  .travel-memory-scene.is-reversed {
-    grid-template-columns: 1fr;
-  }
-
-  .travel-memory-scene.is-reversed .travel-memory-scene__photo,
-  .travel-memory-scene.is-reversed .travel-memory-scene__note {
-    grid-column: auto;
-    grid-row: auto;
-  }
-}
-
-@media (max-width: 640px) {
-  .travel-memory-detail-page {
-    width: min(1120px, calc(100vw - 20px));
-    padding-top: 82px;
-  }
-
-  .travel-memory-detail__toolbar {
-    padding:
-      calc(9px + env(safe-area-inset-top, 0))
-      calc(10px + env(safe-area-inset-right, 0))
-      9px
-      calc(10px + env(safe-area-inset-left, 0));
-  }
-
-  .travel-memory-detail__toolbar-inner {
+  .detail-dock-row,
+  .detail-loading,
+  .travel-detail-shell {
     width: min(100vw - 20px, 100%);
-    min-height: 42px;
   }
 
-  .travel-memory-detail-sheet {
-    padding: 14px;
+  .detail-dock-row {
+    min-height: 50px;
+  }
+
+  .detail-back-link {
+    padding: 0 10px;
+  }
+
+  .travel-detail-shell {
+    gap: 16px;
+  }
+
+  .detail-hero-cover {
+    min-height: 320px;
+    height: clamp(320px, 82vw, 410px);
     border-radius: 24px;
   }
 
-  .travel-memory-polaroid-hero {
-    gap: 22px;
-    min-height: auto;
-    padding: 24px 16px 30px;
-    border-radius: 26px;
+  .detail-hero-cover__content {
+    width: min(100%, 360px);
+    padding: 22px 18px 24px;
+
+    h1 {
+      max-width: 9.5ch;
+      font-size: clamp(30px, 8vw, 42px);
+      line-height: 1.08;
+    }
+
+    p {
+      max-width: 28ch;
+      font-size: 14px;
+      line-height: 1.68;
+    }
   }
 
-  .travel-memory-polaroid-stage {
-    width: min(82%, 340px);
-    height: 440px;
+  .detail-hero-cover__meta {
+    gap: 8px;
+
+    span {
+      min-height: 32px;
+      padding: 0 10px;
+      font-size: 12px;
+    }
   }
 
-  .travel-memory-polaroid__photo {
-    height: 260px;
+  .detail-card {
+    padding: 16px;
+    border-radius: 20px;
   }
 
-  .travel-memory-polaroid-hero__copy h1 {
-    font-size: clamp(38px, 14vw, 62px);
-  }
-
-  .travel-memory-route {
+  .travel-detail-rail {
     grid-template-columns: 1fr;
   }
 
-  .travel-memory-route-step::after {
-    display: none;
+  .fragment-card,
+  .album-card {
+    grid-column: auto;
   }
 
-  .travel-memory-prologue {
-    padding: 24px 20px;
-    border-radius: 24px;
+  .overview-card__seal {
+    width: 58px;
+    height: 58px;
   }
 
-  .travel-memory-prologue p {
-    font-size: 18px;
+  .overview-card h2 {
+    font-size: 22px;
   }
 
-  .travel-memory-scene__photo {
-    min-height: 270px;
-    border-radius: 24px;
-    box-shadow:
-      0 18px 38px rgba(113, 71, 89, 0.16),
-      0 0 0 7px rgba(255, 255, 255, 0.72);
+  .overview-card__facts {
+    gap: 8px;
   }
 
-  .travel-memory-scene__note {
-    padding: 24px 20px;
-    border-radius: 24px;
+  .overview-card__fact {
+    min-height: 68px;
+    padding: 11px 9px;
+
+    strong {
+      font-size: 20px;
+    }
+  }
+
+  .story-list-head__copy {
+    gap: 6px;
+
+    h2 {
+      font-size: 28px;
+    }
+
+    p {
+      font-size: 14px;
+      line-height: 1.7;
+    }
+  }
+
+  .detail-story-card {
+    gap: 16px;
+    padding: 20px 16px;
+    border-radius: 22px;
+  }
+
+  .detail-story-card__head {
+    gap: 12px;
+
+    h3 {
+      font-size: 20px;
+    }
+  }
+
+  .detail-story-card__index {
+    width: 38px;
+    height: 38px;
+  }
+
+  .detail-story-card__note {
+    font-size: 15px;
+    line-height: 1.82;
+  }
+
+  .detail-story-card__cover {
+    aspect-ratio: 4 / 3;
+    min-height: 200px;
+    border-radius: 18px;
+  }
+
+  .detail-story-card__thumbs {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .mini-map-card__canvas {
+    min-height: 176px;
+  }
+
+  .detail-memory-nav {
+    grid-template-columns: 1fr;
+  }
+
+  .detail-memory-nav__item {
+    min-height: 86px;
+    padding: 16px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .detail-back-link,
+  .fragment-link,
+  .detail-memory-nav__item,
+  .detail-thumb img,
+  .album-grid__item img {
+    transition: none;
   }
 }
 </style>
