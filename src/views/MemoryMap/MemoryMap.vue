@@ -21,9 +21,84 @@
 
       <template v-else>
         <section class="memory-spread">
-          <div class="memory-spread__spine" aria-hidden="true">
-            <span v-for="ring in 7" :key="ring" class="memory-spread__ring" />
-          </div>
+          <aside class="memory-spread__page memory-spread__page--rail">
+            <div class="memory-rail">
+              <div class="panel-heading panel-heading--rail">
+                <div class="panel-heading__copy">
+                  <span class="eyebrow">Travel Index</span>
+                  <div class="panel-heading__title">
+                    <h2>旅行索引</h2>
+                  </div>
+                </div>
+                <div class="panel-caption">
+                  <span>{{ locations.length }} 个地点 · {{ totalPhotoCount }} 张照片</span>
+                </div>
+              </div>
+
+              <div v-if="loading" class="gallery-state memory-rail__state">地点加载中...</div>
+              <div v-else-if="!locations.length" class="memory-rail__list memory-rail__list--placeholder">
+                <article
+                  v-for="card in placeholderFilmCards"
+                  :key="card.title"
+                  class="rail-item rail-item--placeholder"
+                >
+                  <div class="rail-item__thumb rail-item__thumb--placeholder">
+                    <span>{{ card.label }}</span>
+                  </div>
+                </article>
+              </div>
+              <div v-else class="memory-rail__list">
+                <article
+                  v-for="location in visibleGalleryLocations"
+                  :key="location.id"
+                  class="rail-item"
+                  :class="{ 'is-active': activeId === location.id }"
+                  role="button"
+                  tabindex="0"
+                  :ref="(element) => setGalleryCardRef(location.id, element)"
+                  @click="selectGalleryLocation(location.id)"
+                  @keydown.enter.prevent="selectGalleryLocation(location.id)"
+                  @keydown.space.prevent="selectGalleryLocation(location.id)"
+                >
+                  <div class="rail-item__thumb-wrap">
+                    <img
+                      v-if="location.coverImage"
+                      class="rail-item__thumb"
+                      :src="location.coverImage"
+                      :alt="location.title"
+                    />
+                    <div v-else class="rail-item__thumb rail-item__thumb--empty">TRAVEL</div>
+
+                    <div v-if="canManage" class="rail-item__admin-overlay" @click.stop>
+                      <button
+                        type="button"
+                        class="rail-item__admin-button"
+                        aria-label="编辑地点"
+                        @click="editGalleryLocation(location.id)"
+                      >
+                        <el-icon><EditPen /></el-icon>
+                      </button>
+                      <button
+                        type="button"
+                        class="rail-item__admin-button rail-item__admin-button--danger"
+                        aria-label="删除地点"
+                        @click="deleteGalleryLocation(location)"
+                      >
+                        <el-icon><Delete /></el-icon>
+                      </button>
+                    </div>
+                  </div>
+                </article>
+              </div>
+
+              <div v-if="canLoadMoreGallery" class="gallery-load-more memory-rail__load-more">
+                <el-button plain class="gallery-load-more__button" @click="loadMoreGallery">
+                  加载更多
+                  <span class="gallery-load-more__count">剩余 {{ remainingGalleryCount }} 个地点</span>
+                </el-button>
+              </div>
+            </div>
+          </aside>
 
           <article class="memory-spread__page memory-spread__page--map">
             <div class="spread-map-card">
@@ -182,118 +257,6 @@
             </template>
           </aside>
         </section>
-
-        <section id="memory-gallery" class="memory-panel memory-panel--gallery">
-          <div class="panel-heading panel-heading--gallery">
-            <div class="panel-heading__copy">
-              <span class="eyebrow">Travel Gallery</span>
-              <div class="panel-heading__title">
-                <h2>旅行胶片</h2>
-              </div>
-            </div>
-            <div class="panel-caption">
-              <span>{{ locations.length }} 个地点 · {{ totalPhotoCount }} 张照片</span>
-            </div>
-          </div>
-
-          <div v-if="loading" class="gallery-state">地点加载中...</div>
-          <div v-else-if="!locations.length" class="gallery-track gallery-track--placeholder">
-            <article
-              v-for="card in placeholderFilmCards"
-              :key="card.title"
-              class="gallery-card gallery-card--placeholder"
-            >
-              <div class="gallery-card__cover gallery-card__cover--placeholder">
-                <span>{{ card.label }}</span>
-              </div>
-              <div class="gallery-card__body">
-                <h3>{{ card.title }}</h3>
-                <div class="gallery-card__place">
-                  <el-icon><Location /></el-icon>
-                  <span>{{ card.place }}</span>
-                </div>
-                <p>{{ card.copy }}</p>
-                <div class="gallery-card__footer">
-                  <span class="gallery-card__date">
-                    <el-icon><Calendar /></el-icon>
-                    {{ card.date }}
-                  </span>
-                  <span class="gallery-card__count">{{ card.meta }}</span>
-                </div>
-              </div>
-            </article>
-          </div>
-          <div v-else class="gallery-grid">
-            <article
-              v-for="location in visibleGalleryLocations"
-              :key="location.id"
-              class="gallery-card"
-              :class="{ 'is-active': activeId === location.id }"
-              role="button"
-              tabindex="0"
-              :ref="(element) => setGalleryCardRef(location.id, element)"
-              @click="selectGalleryLocation(location.id)"
-              @keydown.enter.prevent="selectGalleryLocation(location.id)"
-              @keydown.space.prevent="selectGalleryLocation(location.id)"
-            >
-              <div class="gallery-card__cover">
-                <img v-if="location.coverImage" :src="location.coverImage" :alt="location.title" />
-                <div v-else class="gallery-card__cover-empty">TRAVEL</div>
-                <div v-if="canManage" class="gallery-card__admin" @click.stop>
-                  <button
-                    type="button"
-                    class="gallery-card__admin-trigger"
-                    :aria-expanded="activeGalleryActionId === location.id"
-                    aria-label="打开管理操作"
-                    @click="toggleGalleryActions(location.id)"
-                  >
-                    <el-icon><MoreFilled /></el-icon>
-                  </button>
-                  <div v-if="activeGalleryActionId === location.id" class="gallery-card__admin-menu">
-                    <button type="button" @click="editGalleryLocation(location.id)">
-                      <el-icon><EditPen /></el-icon>
-                      <span>编辑</span>
-                    </button>
-                    <button type="button" class="is-danger" @click="deleteGalleryLocation(location)">
-                      <el-icon><Delete /></el-icon>
-                      <span>删除</span>
-                    </button>
-                  </div>
-                </div>
-              </div>
-              <div class="gallery-card__body">
-                <h3>{{ location.title }}</h3>
-                <div class="gallery-card__place">
-                  <el-icon><Location /></el-icon>
-                  <span>{{ formatLocation(location) }}</span>
-                </div>
-                <p>{{ galleryLocationSummary(location) }}</p>
-                <div class="gallery-card__footer">
-                  <span class="gallery-card__date">
-                    <el-icon><Calendar /></el-icon>
-                    {{ galleryLocationDate(location) }}
-                  </span>
-                  <span class="gallery-card__count">{{ location.entryCount || 0 }} 张照片</span>
-                </div>
-                <button
-                  type="button"
-                  class="gallery-card__view-button"
-                  @click.stop="openGalleryLocationDetail(location.id)"
-                >
-                  <el-icon><View /></el-icon>
-                  <span>查看游记</span>
-                </button>
-              </div>
-            </article>
-          </div>
-
-          <div v-if="canLoadMoreGallery" class="gallery-load-more">
-            <el-button plain class="gallery-load-more__button" @click="loadMoreGallery">
-              加载更多
-              <span class="gallery-load-more__count">剩余 {{ remainingGalleryCount }} 个地点</span>
-            </el-button>
-          </div>
-        </section>
       </template>
     </div>
   </DefaultLayout>
@@ -305,7 +268,7 @@ import { useRouter } from 'vue-router'
 import dayjs from 'dayjs'
 import { storeToRefs } from 'pinia'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Calendar, Delete, EditPen, Location, MoreFilled, View } from '@element-plus/icons-vue'
+import { Calendar, Delete, EditPen, Location, View } from '@element-plus/icons-vue'
 import DefaultLayout from '@/layouts/DefaultLayout.vue'
 import PageHero from '@/components/PageHero/PageHero.vue'
 import FeatureAccessCover from '@/components/FeatureAccessCover.vue'
@@ -318,8 +281,8 @@ import type { TravelMemoryEntry, TravelMemoryLocationDetail, TravelMemoryLocatio
 import { isAdminUser, isFriendUser } from '@/utils/permission'
 import tapeCornerAsset from '@/assets/memory-map/tape-corner.svg'
 
-const INITIAL_GALLERY_VISIBLE_COUNT = 4
-const GALLERY_LOAD_MORE_STEP = 5
+const INITIAL_GALLERY_VISIBLE_COUNT = 6
+const GALLERY_LOAD_MORE_STEP = 4
 
 const { siteConfig, loadSiteConfig } = useSiteConfig()
 const userStore = useUserStore()
@@ -336,7 +299,6 @@ const visibleGalleryCount = ref(INITIAL_GALLERY_VISIBLE_COUNT)
 const activeId = ref<number | null>(null)
 const activeDetail = ref<TravelMemoryLocationDetail | null>(null)
 const detailCache = ref<Record<number, TravelMemoryLocationDetail>>({})
-const activeGalleryActionId = ref<number | null>(null)
 const galleryCardRefs = new Map<number, HTMLElement>()
 let detailRequestVersion = 0
 const canManage = computed(() => isAdminUser(user.value))
@@ -502,7 +464,6 @@ async function loadMemories(preferredId?: number | null) {
 
 async function handleSelectLocation(id: number, options: { syncGallery?: boolean } = {}) {
   const requestVersion = ++detailRequestVersion
-  activeGalleryActionId.value = null
   activeId.value = id
   ensureGalleryLocationVisible(id)
   await nextTick()
@@ -547,17 +508,11 @@ function openCurrentDetailPage() {
   router.push({ name: 'TravelMemoryDetail', params: { id: activeDetail.value.id } })
 }
 
-function toggleGalleryActions(id: number) {
-  activeGalleryActionId.value = activeGalleryActionId.value === id ? null : id
-}
-
 function editGalleryLocation(id: number) {
-  activeGalleryActionId.value = null
   router.push({ name: 'TravelMemoryEdit', params: { id } })
 }
 
 async function deleteGalleryLocation(location: TravelMemoryLocationListItem) {
-  activeGalleryActionId.value = null
   try {
     await ElMessageBox.confirm(
       `确定要删除“${location.title}”吗？删除后将无法恢复。`,
@@ -641,14 +596,6 @@ function buildEntryJournalNote(
   }
 }
 
-function galleryLocationSummary(location: TravelMemoryLocationListItem) {
-  return location.summaryNote?.trim() || '把旅途里的光影、街道和心情收进这一张胶片。'
-}
-
-function galleryLocationDate(location: TravelMemoryLocationListItem) {
-  return formatDateRange(location.visitedAt, location.visitedEndAt) || '留白的一天'
-}
-
 function resetGalleryVisibleCount() {
   visibleGalleryCount.value = INITIAL_GALLERY_VISIBLE_COUNT
 }
@@ -681,11 +628,6 @@ function scrollGalleryCardIntoView(id: number) {
     block: 'nearest',
     inline: 'nearest',
   })
-}
-
-function openGalleryLocationDetail(id: number) {
-  activeGalleryActionId.value = null
-  router.push({ name: 'TravelMemoryDetail', params: { id } })
 }
 
 function resolveDefaultLocationId(
@@ -731,7 +673,8 @@ onMounted(async () => {
     sans-serif;
   display: grid;
   gap: var(--memory-gap);
-  width: min(1240px, calc(100vw - 148px));
+  width: min(1720px, calc(100vw - 40px));
+  max-width: 100%;
   margin-inline: auto;
   margin-top: clamp(18px, 2.4vw, 30px);
   padding-bottom: 44px;
@@ -747,103 +690,30 @@ onMounted(async () => {
   text-transform: uppercase;
 }
 
-.memory-spread,
-.memory-panel--gallery {
-  position: relative;
-  border-radius: var(--memory-card-radius);
-  background:
-    linear-gradient(180deg, rgba(255, 253, 251, 0.97), rgba(255, 247, 244, 0.95)),
-    radial-gradient(circle at top right, rgba(255, 219, 230, 0.26), transparent 34%),
-    url('@/assets/memory-map/paper-texture.svg');
-  background-size: auto, auto, 320px 320px;
-  border: 1px solid rgba(232, 213, 206, 0.92);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.88),
-    0 26px 54px rgba(216, 184, 188, 0.16);
-}
-
 .memory-spread {
+  position: relative;
   display: grid;
-  grid-template-columns: minmax(0, 1.36fr) minmax(340px, 0.84fr);
+  grid-template-columns: minmax(372px, 438px) minmax(0, 1.8fr) minmax(328px, 372px);
+  gap: clamp(16px, 1.1vw, 24px);
+  min-height: 840px;
+  overflow: visible;
   align-items: stretch;
-  overflow: hidden;
-}
-
-.memory-spread::before {
-  content: '';
-  position: absolute;
-  top: 20px;
-  bottom: 20px;
-  left: calc(100% * 1.36 / 2.2);
-  width: 18px;
-  transform: translateX(-50%);
-  border-radius: 999px;
-  background:
-    linear-gradient(180deg, rgba(224, 191, 181, 0.22), rgba(255, 255, 255, 0.84), rgba(224, 191, 181, 0.22));
-  box-shadow:
-    inset -1px 0 0 rgba(198, 156, 148, 0.16),
-    inset 1px 0 0 rgba(255, 255, 255, 0.86);
-  pointer-events: none;
-}
-
-.memory-spread__spine {
-  position: absolute;
-  top: 38px;
-  bottom: 38px;
-  left: calc(100% * 1.36 / 2.2);
-  width: 28px;
-  transform: translateX(-50%);
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  align-items: center;
-  z-index: 2;
-  pointer-events: none;
-}
-
-.memory-spread__ring {
-  width: 18px;
-  height: 18px;
-  border-radius: 999px;
-  background: linear-gradient(180deg, #d1b0a3, #f7ece5);
-  border: 1px solid rgba(182, 145, 136, 0.46);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.76),
-    0 2px 3px rgba(171, 133, 124, 0.14);
 }
 
 .memory-spread__page {
   position: relative;
   min-width: 0;
-  padding: clamp(20px, 1.6vw, 24px);
+  padding: 0;
 }
 
-.memory-spread__page::before {
-  content: '';
-  position: absolute;
-  inset: 14px;
-  border-radius: calc(var(--memory-card-radius) - 10px);
-  border: 1px solid rgba(229, 209, 201, 0.72);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.42);
-  pointer-events: none;
+.memory-spread__page + .memory-spread__page {
+  box-shadow: none;
 }
 
-.memory-spread__page--map::before {
-  display: none;
-}
-
-.memory-spread__page--detail {
+.memory-spread__page--rail {
   display: flex;
-  padding-left: clamp(20px, 1.6vw, 24px);
-  padding-right: clamp(20px, 1.6vw, 24px);
-  padding-top: clamp(20px, 1.6vw, 24px);
-  padding-bottom: clamp(20px, 1.6vw, 24px);
-  background:
-    linear-gradient(180deg, rgba(255, 252, 249, 0.42), rgba(255, 246, 242, 0.32));
-}
-
-.memory-spread__page--detail::before {
-  display: none;
+  min-height: 0;
+  background: transparent;
 }
 
 .panel-caption span {
@@ -861,9 +731,88 @@ onMounted(async () => {
   text-align: center;
 }
 
+.memory-rail {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  gap: 18px;
+  padding: clamp(18px, 1.25vw, 24px);
+  border-radius: 32px;
+  background:
+    linear-gradient(180deg, rgba(255, 252, 250, 0.9), rgba(255, 247, 244, 0.76)),
+    radial-gradient(circle at top left, rgba(255, 224, 233, 0.18), transparent 34%);
+  border: 1px solid rgba(243, 227, 233, 0.9);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.88),
+    0 16px 34px rgba(220, 191, 199, 0.07);
+}
+
+.panel-heading {
+  display: grid;
+  gap: 14px;
+}
+
+.panel-heading__copy {
+  display: grid;
+  gap: 10px;
+  max-width: 34rem;
+}
+
+.panel-heading__title {
+  display: block;
+}
+
+.panel-heading__copy h2 {
+  margin: 0;
+  color: #4e353e;
+  font-family: var(--memory-title-font);
+  font-size: clamp(24px, 1.7vw, 30px);
+  font-weight: 700;
+  line-height: 1.12;
+}
+
+.memory-rail__state {
+  min-height: 220px;
+}
+
+.memory-rail__list {
+  min-height: 0;
+  display: grid;
+  align-content: start;
+  gap: 18px;
+  overflow: auto;
+  padding-right: 8px;
+}
+
+.memory-rail__list::-webkit-scrollbar {
+  width: 8px;
+}
+
+.memory-rail__list::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: rgba(216, 177, 193, 0.54);
+}
+
+.memory-rail__list--placeholder {
+  overflow: hidden;
+}
+
+.memory-rail__load-more {
+  margin-top: 0;
+  justify-content: stretch;
+}
+
 .memory-spread__page--map {
-  padding-right: clamp(24px, 2vw, 30px);
   display: flex;
+  min-width: 0;
+  background: transparent;
+}
+
+.memory-spread__page--detail {
+  display: flex;
+  min-width: 0;
+  background: transparent;
 }
 
 .spread-map-card {
@@ -871,14 +820,16 @@ onMounted(async () => {
   min-height: 100%;
   display: grid;
   grid-template-rows: auto 1fr auto;
-  gap: 12px;
-  padding: clamp(16px, 1.4vw, 20px);
-  border-radius: 32px;
+  gap: 16px;
+  padding: clamp(16px, 1.1vw, 20px);
+  border-radius: 28px;
   background:
-    linear-gradient(180deg, rgba(255, 252, 250, 0.76), rgba(255, 247, 244, 0.56)),
-    radial-gradient(circle at top right, rgba(255, 224, 233, 0.16), transparent 30%);
-  border: none;
-  box-shadow: 0 14px 30px rgba(219, 189, 194, 0.06);
+    linear-gradient(180deg, rgba(255, 252, 250, 0.54), rgba(255, 247, 244, 0.34)),
+    radial-gradient(circle at top right, rgba(255, 224, 233, 0.08), transparent 28%);
+  border: 1px solid rgba(244, 228, 233, 0.38);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.78),
+    0 10px 24px rgba(219, 189, 194, 0.05);
 }
 
 .spread-map-card__hero {
@@ -986,12 +937,12 @@ onMounted(async () => {
 }
 
 :deep(.travel-map-stage) {
-  min-height: 460px;
-  padding: 6px 4px 70px;
+  min-height: 640px;
+  padding: 6px 0 74px;
 }
 
 :deep(.travel-map-board) {
-  width: 97%;
+  width: 100%;
   margin: 0 auto;
 }
 
@@ -1207,8 +1158,8 @@ onMounted(async () => {
 
 .travel-journal__entries {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 10px;
+  grid-template-columns: 1fr;
+  gap: 12px;
   align-items: stretch;
 }
 
@@ -1219,11 +1170,11 @@ onMounted(async () => {
 .journal-note {
   position: relative;
   display: grid;
-  grid-template-rows: 104px minmax(0, 1fr);
-  height: 100%;
-  min-height: 210px;
-  border-radius: 16px;
-  background: rgba(255, 255, 255, 0.8);
+  grid-template-columns: 108px minmax(0, 1fr);
+  align-items: stretch;
+  min-height: 0;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.82);
   overflow: hidden;
   box-shadow:
     0 12px 22px rgba(220, 191, 200, 0.08),
@@ -1232,6 +1183,7 @@ onMounted(async () => {
 
 .journal-note__thumb {
   background: rgba(249, 244, 247, 0.86);
+  min-height: 108px;
 }
 
 .journal-note__thumb img {
@@ -1498,319 +1450,174 @@ onMounted(async () => {
   min-height: 620px;
 }
 
-.memory-panel--gallery {
-  overflow: hidden;
-  padding: clamp(18px, 1.6vw, 22px);
-}
-
-.panel-heading {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 16px;
-  margin-bottom: 16px;
-}
-
-.panel-heading__copy {
-  display: grid;
-  gap: 10px;
-  max-width: 34rem;
-}
-
-.panel-heading__title {
-  display: block;
-}
-
-.panel-heading__copy h2 {
-  margin: 0;
-  color: #4e353e;
-  font-family: var(--memory-title-font);
-  font-size: clamp(20px, 1.35vw, 24px);
-  font-weight: 700;
-  line-height: 1.16;
+.gallery-state {
+  min-height: 220px;
 }
 
 .panel-caption {
   display: flex;
   gap: 10px;
   flex-wrap: wrap;
-  justify-content: flex-end;
+  justify-content: flex-start;
 }
 
-.gallery-state {
-  min-height: 220px;
-}
-
-.gallery-track {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 260px));
-  gap: 14px;
-  justify-content: start;
-  padding-bottom: 4px;
-}
-
-.gallery-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 260px));
-  gap: 16px;
-  justify-content: start;
-  align-items: start;
-}
-
-.gallery-card {
+.rail-item {
   position: relative;
+  display: block;
   width: 100%;
+  min-height: 0;
   padding: 0;
   border-radius: 16px;
-  border: 1px solid rgba(246, 191, 211, 0.74);
-  background: rgba(255, 255, 255, 0.97);
-  overflow: hidden;
+  border: 1px solid rgba(239, 223, 229, 0.82);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(255, 248, 250, 0.9)),
+    radial-gradient(circle at top left, rgba(255, 224, 233, 0.18), transparent 42%);
   text-align: left;
   cursor: pointer;
+  overflow: hidden;
   box-shadow:
-    0 12px 24px rgba(220, 171, 188, 0.12),
-    inset 0 1px 0 rgba(255, 255, 255, 0.92);
-  transition: transform 0.24s ease, border-color 0.24s ease, box-shadow 0.24s ease;
+    inset 0 1px 0 rgba(255, 255, 255, 0.92),
+    0 12px 24px rgba(220, 171, 188, 0.08);
+  transition:
+    transform 0.2s ease,
+    border-color 0.2s ease,
+    background 0.2s ease,
+    box-shadow 0.2s ease;
 }
 
-.gallery-card:hover,
-.gallery-card.is-active {
-  transform: translateY(-3px);
-  border-color: rgba(237, 133, 173, 0.82);
+.rail-item:hover,
+.rail-item.is-active,
+.rail-item:focus-visible {
+  transform: translateY(-1px);
+  border-color: rgba(235, 145, 180, 0.96);
+  background:
+    linear-gradient(180deg, rgba(255, 252, 253, 0.98), rgba(255, 243, 247, 0.92)),
+    radial-gradient(circle at top left, rgba(255, 214, 226, 0.28), transparent 44%);
   box-shadow:
-    0 14px 28px rgba(218, 158, 180, 0.18),
-    inset 0 1px 0 rgba(255, 255, 255, 0.96);
+    inset 0 1px 0 rgba(255, 255, 255, 0.98),
+    0 20px 32px rgba(218, 158, 180, 0.18);
 }
 
-.gallery-card__cover {
+.rail-item.is-active {
+  border-color: rgba(231, 119, 164, 0.98);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 245, 248, 0.9),
+    0 22px 36px rgba(220, 146, 175, 0.22);
+}
+
+.rail-item:focus-visible {
+  outline: none;
+}
+
+.rail-item__thumb-wrap {
   position: relative;
-  height: clamp(148px, 15vw, 168px);
-  background: linear-gradient(135deg, #fff0f5, #f5f8ff);
+  overflow: hidden;
+  border-radius: inherit;
 }
 
-.gallery-card__cover img {
+.rail-item__thumb-wrap::after {
+  content: '';
+  position: absolute;
+  inset: auto 0 0;
+  height: 36%;
+  background: linear-gradient(180deg, rgba(91, 58, 69, 0), rgba(91, 58, 69, 0.18));
+  pointer-events: none;
+}
+
+.rail-item__thumb {
   width: 100%;
-  height: 100%;
+  aspect-ratio: 12 / 5;
   display: block;
   object-fit: cover;
+  object-position: center center;
+  border-radius: inherit;
+  background: linear-gradient(135deg, rgba(255, 240, 246, 0.98), rgba(245, 248, 254, 0.9));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.82),
+    0 8px 18px rgba(219, 182, 194, 0.1);
 }
 
-.gallery-card__cover-empty,
-.gallery-card__cover--placeholder {
-  width: 100%;
-  height: 100%;
+.rail-item__thumb--empty,
+.rail-item__thumb--placeholder {
   display: grid;
   place-items: center;
   color: #c18ca3;
-  letter-spacing: 0.18em;
+  letter-spacing: 0.16em;
   font-size: 12px;
 }
 
-.gallery-card__admin {
-  position: absolute;
-  top: 10px;
-  right: 10px;
-  z-index: 3;
+.rail-item--placeholder {
+  cursor: default;
 }
 
-.gallery-card__admin-trigger {
+.rail-item__admin-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 6px;
+  padding: 14px 10px 12px;
+  background: linear-gradient(180deg, rgba(40, 32, 38, 0.04), rgba(40, 32, 38, 0.58));
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.18s ease;
+}
+
+.rail-item:hover .rail-item__admin-overlay,
+.rail-item:focus-within .rail-item__admin-overlay,
+.rail-item.is-active .rail-item__admin-overlay {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.rail-item__admin-button {
   width: 34px;
   height: 34px;
   display: inline-grid;
   place-items: center;
-  border: 1px solid rgba(255, 255, 255, 0.82);
+  align-items: center;
+  padding: 0;
+  border: 1px solid rgba(255, 246, 250, 0.82);
   border-radius: 999px;
-  color: #7e5364;
-  background: rgba(255, 255, 255, 0.82);
-  box-shadow: 0 10px 24px rgba(93, 52, 68, 0.16);
+  color: #fff;
+  background: rgba(255, 255, 255, 0.18);
   backdrop-filter: blur(12px);
   cursor: pointer;
   transition:
-    transform 0.18s ease,
+    color 0.18s ease,
     background 0.18s ease,
-    box-shadow 0.18s ease;
-}
-
-.gallery-card__admin-trigger:hover,
-.gallery-card__admin-trigger:focus-visible {
-  transform: translateY(-1px);
-  background: rgba(255, 246, 250, 0.96);
-  box-shadow: 0 14px 30px rgba(93, 52, 68, 0.2);
-  outline: none;
-}
-
-.gallery-card__admin-menu {
-  position: absolute;
-  top: 40px;
-  right: 0;
-  min-width: 116px;
-  display: grid;
-  gap: 6px;
-  padding: 8px;
-  border: 1px solid rgba(243, 207, 221, 0.92);
-  border-radius: 16px;
-  background: rgba(255, 255, 255, 0.96);
-  box-shadow: 0 18px 34px rgba(108, 63, 82, 0.18);
-  backdrop-filter: blur(16px);
-}
-
-.gallery-card__admin-menu button {
-  min-height: 34px;
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  padding: 0 10px;
-  border: 0;
-  border-radius: 11px;
-  color: #6a4a58;
-  background: transparent;
-  font-size: 13px;
-  font-weight: 700;
-  cursor: pointer;
-  transition:
-    color 0.18s ease,
-    background 0.18s ease;
-}
-
-.gallery-card__admin-menu button:hover,
-.gallery-card__admin-menu button:focus-visible {
-  color: #d84f82;
-  background: rgba(255, 236, 244, 0.88);
-  outline: none;
-}
-
-.gallery-card__admin-menu button.is-danger {
-  color: #b94a5c;
-}
-
-.gallery-card__admin-menu button.is-danger:hover,
-.gallery-card__admin-menu button.is-danger:focus-visible {
-  color: #d93652;
-  background: rgba(255, 235, 238, 0.94);
-}
-
-.gallery-card__body {
-  display: grid;
-  gap: 9px;
-  min-height: 170px;
-  padding: 12px 14px 11px;
-  border-top: 1px solid rgba(243, 224, 231, 0.84);
-}
-
-.gallery-card__body h3 {
-  margin: 0;
-  color: #4f3c46;
-  font-size: 15px;
-  font-weight: 700;
-  line-height: 1.32;
-  display: -webkit-box;
-  overflow: hidden;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-}
-
-.gallery-card__place,
-.gallery-card__date {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  min-width: 0;
-  color: #d7689a;
-  font-size: 12px;
-  font-weight: 600;
-  line-height: 1.3;
-}
-
-.gallery-card__place span {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.gallery-card__place :deep(.el-icon),
-.gallery-card__date :deep(.el-icon) {
-  flex: 0 0 auto;
-  font-size: 13px;
-}
-
-.gallery-card__body p {
-  min-height: 40px;
-  margin: 0;
-  color: #8d7b84;
-  font-size: 12px;
-  line-height: 1.65;
-  display: -webkit-box;
-  overflow: hidden;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-}
-
-.gallery-card__footer {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-  min-height: 24px;
-  padding-top: 9px;
-  border-top: 1px solid rgba(244, 224, 231, 0.86);
-}
-
-.gallery-card__date {
-  color: #a58c98;
-  font-weight: 600;
-}
-
-.gallery-card__count {
-  flex: 0 0 auto;
-  color: #cf7b9a;
-  font-size: 11px;
-  font-weight: 600;
-  line-height: 1.2;
-  letter-spacing: 0.02em;
-}
-
-.gallery-card__view-button {
-  width: 100%;
-  min-height: 34px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 7px;
-  border: 1px solid rgba(238, 194, 209, 0.92);
-  border-radius: 999px;
-  color: #c96f8f;
-  background: rgba(255, 247, 250, 0.94);
-  font-size: 12px;
-  font-weight: 700;
-  line-height: 1;
-  cursor: pointer;
-  transition:
-    transform 0.18s ease,
-    color 0.18s ease,
     border-color 0.18s ease,
-    background 0.18s ease,
-    box-shadow 0.18s ease;
+    transform 0.18s ease;
 }
 
-.gallery-card__view-button:hover,
-.gallery-card__view-button:focus-visible {
+.rail-item__admin-button .el-icon {
+  font-size: 15px;
+}
+
+.rail-item__admin-button:hover,
+.rail-item__admin-button:focus-visible {
   transform: translateY(-1px);
   color: #fff;
-  border-color: rgba(247, 126, 166, 0.96);
-  background: linear-gradient(135deg, rgba(255, 139, 180, 0.98), rgba(247, 112, 158, 0.98));
-  box-shadow: 0 10px 20px rgba(241, 134, 170, 0.22);
+  background: rgba(255, 255, 255, 0.28);
+  border-color: rgba(255, 255, 255, 0.94);
   outline: none;
 }
 
-.gallery-card__view-button .el-icon {
-  flex: 0 0 auto;
-  font-size: 14px;
+.rail-item__admin-button--danger {
+  color: #ffedf3;
+  border-color: rgba(255, 161, 190, 0.58);
+  background: rgba(255, 85, 132, 0.36);
+}
+
+.rail-item__admin-button--danger:hover,
+.rail-item__admin-button--danger:focus-visible {
+  background: rgba(201, 64, 92, 0.84);
 }
 
 .gallery-load-more {
   display: flex;
-  justify-content: center;
   margin-top: 22px;
 }
 
@@ -1822,6 +1629,7 @@ onMounted(async () => {
   --el-button-hover-border-color: rgba(228, 183, 199, 0.94);
   --el-button-hover-text-color: #6f4f5b;
   min-height: 44px;
+  width: 100%;
   padding: 0 18px;
   border-radius: 999px;
   box-shadow: 0 12px 24px rgba(225, 190, 202, 0.12);
@@ -1834,30 +1642,48 @@ onMounted(async () => {
   font-weight: 600;
 }
 
-.gallery-card--placeholder {
-  cursor: default;
+@media (max-width: 1439px) {
+  .memory-map-page {
+    width: min(1640px, calc(100vw - 32px));
+  }
+
+  .memory-spread {
+    grid-template-columns: minmax(336px, 390px) minmax(0, 1.64fr) minmax(316px, 350px);
+  }
 }
 
-@media (max-width: 1200px) {
+@media (max-width: 1280px) {
   .memory-spread {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(320px, 356px) minmax(0, 1.34fr) minmax(300px, 332px);
+    gap: 16px;
+  }
+}
+
+@media (max-width: 1180px) {
+  .memory-spread {
+    grid-template-columns: minmax(0, 1.14fr) minmax(300px, 0.86fr);
+    grid-template-areas:
+      'map detail'
+      'rail rail';
   }
 
-  .memory-spread::before,
-  .memory-spread__spine {
-    display: none;
+  .memory-spread__page--rail {
+    grid-area: rail;
+    box-shadow: inset 0 1px 0 rgba(230, 212, 205, 0.78);
   }
 
-  .memory-spread__page--map,
+  .memory-spread__page--map {
+    grid-area: map;
+  }
+
   .memory-spread__page--detail {
-    padding-left: clamp(24px, 2vw, 32px);
-    padding-right: clamp(24px, 2vw, 32px);
+    grid-area: detail;
   }
 }
 
 @media (max-width: 900px) {
   .memory-map-page {
-    width: min(1240px, calc(100vw - 40px));
+    width: calc(100vw - 28px);
     margin-top: 20px;
   }
 
@@ -1865,10 +1691,6 @@ onMounted(async () => {
   .travel-journal__footer {
     grid-template-columns: 1fr;
     gap: 16px;
-  }
-
-  .panel-heading {
-    flex-direction: column;
   }
 
   .travel-journal__stamp {
@@ -1887,27 +1709,33 @@ onMounted(async () => {
   .panel-caption {
     justify-content: flex-start;
   }
+
+  .rail-item__thumb {
+    aspect-ratio: 12 / 5;
+  }
 }
 
 @media (max-width: 768px) {
   .memory-map-page {
-    width: min(1240px, calc(100vw - 24px));
+    width: calc(100vw - 24px);
     margin-top: 16px;
   }
 
-  .memory-spread,
-  .memory-panel--gallery {
+  .memory-spread {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      'map'
+      'detail'
+      'rail';
     border-radius: 24px;
   }
 
-  .memory-spread__page,
-  .memory-panel--gallery {
+  .memory-spread__page {
     padding: 18px;
   }
 
-  .memory-spread__page::before {
-    inset: 10px;
-    border-radius: 18px;
+  .memory-spread__page + .memory-spread__page {
+    box-shadow: inset 0 1px 0 rgba(230, 212, 205, 0.78);
   }
 
   .spread-map-card {
@@ -1926,7 +1754,7 @@ onMounted(async () => {
   }
 
   :deep(.travel-map-stage) {
-    min-height: 420px;
+    min-height: 500px;
     padding: 6px 0 74px;
   }
 
@@ -1954,17 +1782,11 @@ onMounted(async () => {
     height: 220px;
   }
 
-  .travel-journal__entries {
-    grid-template-columns: 1fr;
-  }
-
   .journal-note {
     grid-template-columns: 108px minmax(0, 1fr);
-    grid-template-rows: none;
   }
 
   .journal-note__thumb {
-    height: auto;
     min-height: 108px;
   }
 
@@ -1976,15 +1798,17 @@ onMounted(async () => {
     width: 100%;
     flex-basis: 100%;
   }
-
-  .gallery-grid,
-  .gallery-track {
-    grid-template-columns: repeat(auto-fit, minmax(220px, 260px));
-    justify-content: center;
-  }
 }
 
 @media (max-width: 560px) {
+  .memory-rail__list {
+    padding-right: 0;
+  }
+
+  .rail-item__thumb {
+    aspect-ratio: 12 / 5;
+  }
+
   .travel-journal__stamp {
     min-width: 104px;
     min-height: 104px;
@@ -2004,15 +1828,6 @@ onMounted(async () => {
 
   .travel-journal__actions--note {
     grid-template-columns: 1fr;
-  }
-
-  .gallery-card__footer {
-    align-items: flex-start;
-    flex-direction: column;
-  }
-
-  .gallery-load-more__button {
-    width: 100%;
   }
 
   .gallery-load-more__count {
