@@ -12,6 +12,7 @@ export {}
 declare module 'vue' {
   export interface GlobalComponents {
     ArticleCard: typeof import('./components/ArticleCard/ArticleCard.vue')['default']
+    CategoryIcon: typeof import('./components/CategoryIcon/CategoryIcon.vue')['default']
     CommentItem: typeof import('./components/Comment/CommentItem.vue')['default']
     CommentSection: typeof import('./components/Comment/CommentSection.vue')['default']
     ElAlert: typeof import('element-plus/es')['ElAlert']

@@ -1,20 +1,18 @@
-/**
- * 分类图标仅离线注册少量 MDI（见 iconify/registerMdiSubset.ts）。
- * 未在此集合且未在 registerMdiSubset 注册的 mdi: 名称会回落为 mdi:folder。
- */
-export const REGISTERED_CATEGORY_MDICONS = new Set([
-  'mdi:folder',
-  'mdi:folder-open',
-  'mdi:vuejs',
-  'mdi:server',
-  'mdi:database',
-  'mdi:cloud',
-  'mdi:coffee',
-  'mdi:robot',
-])
+export const DEFAULT_CATEGORY_ICON = 'mdi:folder-open'
 
-export function resolveCategoryIcon(raw: string | null | undefined): string {
-  const s = (raw ?? '').trim()
-  if (!s.startsWith('mdi:')) return 'mdi:folder'
-  return REGISTERED_CATEGORY_MDICONS.has(s) ? s : 'mdi:folder'
+/**
+ * Normalize user-provided Iconify names while keeping remote icon support open.
+ * Empty values are treated as "use default icon"; non-empty values are preserved
+ * so preview/render layers can decide whether to fall back after a failed load.
+ */
+export function normalizeCategoryIcon(raw: string | null | undefined): string {
+  return (raw ?? '').trim().toLowerCase()
+}
+
+export function getCategoryIconOrFallback(
+  raw: string | null | undefined,
+  fallback: string = DEFAULT_CATEGORY_ICON,
+): string {
+  const normalized = normalizeCategoryIcon(raw)
+  return normalized || fallback
 }

@@ -218,7 +218,7 @@
                     <el-icon><Calendar /></el-icon>
                     {{ card.date }}
                   </span>
-                  <strong>{{ card.meta }}</strong>
+                  <span class="gallery-card__count">{{ card.meta }}</span>
                 </div>
               </div>
             </article>
@@ -273,7 +273,7 @@
                     <el-icon><Calendar /></el-icon>
                     {{ galleryLocationDate(location) }}
                   </span>
-                  <strong>{{ location.entryCount || 0 }} 张照片</strong>
+                  <span class="gallery-card__count">{{ location.entryCount || 0 }} 张照片</span>
                 </div>
                 <button
                   type="button"
@@ -875,12 +875,10 @@ onMounted(async () => {
   padding: clamp(16px, 1.4vw, 20px);
   border-radius: 32px;
   background:
-    linear-gradient(180deg, rgba(255, 252, 250, 0.94), rgba(255, 247, 244, 0.82)),
-    radial-gradient(circle at top right, rgba(255, 224, 233, 0.22), transparent 30%);
-  border: 1px solid rgba(231, 214, 207, 0.9);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.9),
-    0 20px 40px rgba(219, 189, 194, 0.12);
+    linear-gradient(180deg, rgba(255, 252, 250, 0.76), rgba(255, 247, 244, 0.56)),
+    radial-gradient(circle at top right, rgba(255, 224, 233, 0.16), transparent 30%);
+  border: none;
+  box-shadow: 0 14px 30px rgba(219, 189, 194, 0.06);
 }
 
 .spread-map-card__hero {
@@ -1025,12 +1023,10 @@ onMounted(async () => {
   padding: clamp(16px, 1.4vw, 20px);
   border-radius: 32px;
   background:
-    linear-gradient(180deg, rgba(255, 252, 250, 0.9), rgba(255, 247, 244, 0.72)),
-    radial-gradient(circle at top right, rgba(255, 224, 233, 0.18), transparent 30%);
-  border: 1px solid rgba(231, 214, 207, 0.9);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.86),
-    0 20px 40px rgba(219, 189, 194, 0.08);
+    linear-gradient(180deg, rgba(255, 252, 250, 0.74), rgba(255, 247, 244, 0.58)),
+    radial-gradient(circle at top right, rgba(255, 224, 233, 0.14), transparent 30%);
+  border: none;
+  box-shadow: 0 14px 30px rgba(219, 189, 194, 0.05);
 }
 
 .travel-journal.is-loading {
@@ -1754,7 +1750,8 @@ onMounted(async () => {
   justify-content: space-between;
   align-items: center;
   gap: 8px;
-  min-height: 28px;
+  flex-wrap: wrap;
+  min-height: 24px;
   padding-top: 9px;
   border-top: 1px solid rgba(244, 224, 231, 0.86);
 }
@@ -1764,16 +1761,13 @@ onMounted(async () => {
   font-weight: 600;
 }
 
-.gallery-card__footer strong {
+.gallery-card__count {
   flex: 0 0 auto;
-  padding: 6px 9px;
-  border-radius: 999px;
-  background: rgba(255, 244, 247, 0.95);
-  border: 1px solid rgba(237, 214, 223, 0.92);
-  color: #e66f9a;
+  color: #cf7b9a;
   font-size: 11px;
   font-weight: 600;
-  line-height: 1;
+  line-height: 1.2;
+  letter-spacing: 0.02em;
 }
 
 .gallery-card__view-button {
