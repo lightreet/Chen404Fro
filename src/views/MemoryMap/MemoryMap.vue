@@ -71,6 +71,7 @@
                     @click="selectGalleryLocation(location.id)"
                   >
                     <div class="rail-item__thumb-wrap">
+                      <span v-if="activeId === location.id" class="rail-item__active-badge">当前</span>
                       <img
                         v-if="location.coverImage"
                         class="rail-item__thumb"
@@ -80,24 +81,6 @@
                       <div v-else class="rail-item__thumb rail-item__thumb--empty">TRAVEL</div>
                     </div>
                   </button>
-                  <div v-if="canManage" class="rail-item__admin-overlay">
-                    <button
-                      type="button"
-                      class="rail-item__admin-button"
-                      aria-label="编辑地点"
-                      @click.stop="editGalleryLocation(location.id)"
-                    >
-                      <el-icon><EditPen /></el-icon>
-                    </button>
-                    <button
-                      type="button"
-                      class="rail-item__admin-button rail-item__admin-button--danger"
-                      aria-label="删除地点"
-                      @click.stop="deleteGalleryLocation(location)"
-                    >
-                      <el-icon><Delete /></el-icon>
-                    </button>
-                  </div>
                 </article>
               </div>
 
@@ -233,6 +216,14 @@
                       <el-icon><View /></el-icon>
                       查看游记
                     </el-button>
+                    <div v-if="canManage" class="travel-journal__manage">
+                      <el-button plain class="journal-action journal-action--manage" @click="editGalleryLocation(activeDetail.id)">
+                        编辑地点
+                      </el-button>
+                      <el-button plain class="journal-action journal-action--danger" @click="deleteGalleryLocation(activeDetail)">
+                        删除地点
+                      </el-button>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -288,7 +279,7 @@ import { useRoute, useRouter } from 'vue-router'
 import dayjs from 'dayjs'
 import { storeToRefs } from 'pinia'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Calendar, Delete, EditPen, Location, View } from '@element-plus/icons-vue'
+import { Calendar, Location, View } from '@element-plus/icons-vue'
 import DefaultLayout from '@/layouts/DefaultLayout.vue'
 import PageHero from '@/components/PageHero/PageHero.vue'
 import FeatureAccessCover from '@/components/FeatureAccessCover.vue'
@@ -548,7 +539,7 @@ function editGalleryLocation(id: number) {
   router.push({ name: 'TravelMemoryEdit', params: { id } })
 }
 
-async function deleteGalleryLocation(location: TravelMemoryLocationListItem) {
+async function deleteGalleryLocation(location: Pick<TravelMemoryLocationListItem, 'id' | 'title'>) {
   try {
     await ElMessageBox.confirm(
       `确定要删除“${location.title}”吗？删除后将无法恢复。`,
@@ -1409,7 +1400,15 @@ watch(
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   align-items: stretch;
-  gap: 14px;
+  gap: 12px;
+  width: 100%;
+}
+
+.travel-journal__manage {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 10px;
   width: 100%;
 }
 
@@ -1457,6 +1456,20 @@ watch(
 
 .journal-action--danger {
   --el-button-text-color: #d07a8f;
+}
+
+.journal-action--manage,
+.journal-action--danger {
+  width: auto;
+  min-width: 0;
+  flex: 0 0 auto;
+  padding-inline: 14px;
+}
+
+.journal-action--manage {
+  --el-button-bg-color: rgba(255, 251, 252, 0.9);
+  --el-button-border-color: rgba(232, 212, 222, 0.96);
+  --el-button-text-color: #7a5f6d;
 }
 
 .journal-action--detail-view {
@@ -1633,7 +1646,7 @@ watch(
 }
 
 .rail-item.is-active {
-  transform: translateY(-3px);
+  transform: translateY(-4px);
 }
 
 .rail-item__select:focus-visible {
@@ -1649,7 +1662,29 @@ watch(
     0 8px 14px rgba(195, 188, 192, 0.1),
     inset 0 0 0 1px rgba(255, 255, 255, 0.34);
   transition:
+    transform 0.22s ease,
     box-shadow 0.22s ease;
+}
+
+.rail-item__active-badge {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 3;
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 0 10px;
+  border-radius: 999px;
+  color: #fff;
+  background: linear-gradient(135deg, rgba(255, 141, 182, 0.98), rgba(237, 108, 154, 0.98));
+  box-shadow:
+    0 10px 18px rgba(235, 132, 169, 0.28),
+    inset 0 1px 0 rgba(255, 255, 255, 0.24);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  pointer-events: none;
 }
 
 .rail-item__thumb-wrap::before {
@@ -1673,7 +1708,9 @@ watch(
   object-position: center center;
   border-radius: inherit;
   background: linear-gradient(135deg, rgba(255, 240, 246, 0.98), rgba(245, 248, 254, 0.9));
-  transition: filter 0.22s ease;
+  transition:
+    transform 0.22s ease,
+    filter 0.22s ease;
 }
 
 .rail-item__thumb--empty,
@@ -1691,94 +1728,27 @@ watch(
 
 .rail-item:hover .rail-item__thumb-wrap,
 .rail-item__select:focus-visible .rail-item__thumb-wrap {
+  transform: translateY(-3px);
   box-shadow:
-    0 12px 18px rgba(201, 194, 198, 0.16),
+    0 18px 24px rgba(194, 185, 191, 0.18),
     inset 0 0 0 1px rgba(255, 255, 255, 0.5);
+}
+
+.rail-item:hover .rail-item__thumb,
+.rail-item__select:focus-visible .rail-item__thumb {
+  transform: scale(1.035);
 }
 
 .rail-item.is-active .rail-item__thumb-wrap {
   box-shadow:
-    0 16px 18px rgba(146, 146, 146, 0.3),
-    0 5px 10px rgba(203, 197, 200, 0.2);
+    0 20px 28px rgba(188, 170, 179, 0.22),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.42),
+    0 0 0 2px rgba(239, 128, 168, 0.28);
 }
 
 .rail-item.is-active .rail-item__thumb {
-  filter: saturate(1.02) brightness(1.01);
-}
-
-.rail-item__admin-overlay {
-  position: absolute;
-  inset: 0;
-  z-index: 4;
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
-  gap: 6px;
-  padding: 10px 10px 10px;
-  background: linear-gradient(180deg, rgba(40, 32, 38, 0.04), rgba(40, 32, 38, 0.58));
-  opacity: 0;
-  visibility: hidden;
-  pointer-events: none;
-  transition: opacity 0.18s ease;
-}
-
-.rail-item:hover .rail-item__admin-overlay,
-.rail-item:focus-within .rail-item__admin-overlay {
-  opacity: 1;
-  visibility: visible;
-}
-
-.rail-item__admin-button {
-  width: 32px;
-  height: 32px;
-  display: inline-grid;
-  place-items: center;
-  align-items: center;
-  padding: 0;
-  border: 1px solid rgba(255, 246, 250, 0.82);
-  border-radius: 999px;
-  color: #fff;
-  background: rgba(255, 255, 255, 0.18);
-  backdrop-filter: blur(12px);
-  cursor: pointer;
-  opacity: 0;
-  pointer-events: none;
-  transition:
-    opacity 0.18s ease,
-    color 0.18s ease,
-    background 0.18s ease,
-    border-color 0.18s ease,
-    transform 0.18s ease;
-}
-
-.rail-item:hover .rail-item__admin-button,
-.rail-item:focus-within .rail-item__admin-button {
-  opacity: 1;
-  pointer-events: auto;
-}
-
-.rail-item__admin-button .el-icon {
-  font-size: 15px;
-}
-
-.rail-item__admin-button:hover,
-.rail-item__admin-button:focus-visible {
-  transform: translateY(-1px);
-  color: #fff;
-  background: rgba(255, 255, 255, 0.28);
-  border-color: rgba(255, 255, 255, 0.94);
-  outline: none;
-}
-
-.rail-item__admin-button--danger {
-  color: #ffedf3;
-  border-color: rgba(255, 161, 190, 0.58);
-  background: rgba(255, 85, 132, 0.36);
-}
-
-.rail-item__admin-button--danger:hover,
-.rail-item__admin-button--danger:focus-visible {
-  background: rgba(201, 64, 92, 0.84);
+  transform: scale(1.03);
+  filter: saturate(1.04) brightness(1.02);
 }
 
 .gallery-load-more {
