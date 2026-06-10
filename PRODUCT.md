@@ -71,7 +71,7 @@ Improve the form/message relationship: the composer, message list, reply state, 
 
 ### Travel Memory Map
 
-The travel map currently has a real feature idea, but the visual direction is unstable. The underwater blue hero, scrapbook map spread, real AMap surface, gallery cards, and travel detail preview do not yet feel like one designed product surface.
+The travel map now has the right product skeleton: a public access cover, a travel index rail, a real map surface with graceful fallback, and a selected-place detail panel. The remaining weakness is not missing structure, but inconsistent tone between the locked state, the live map surface, and the paper-like detail materials.
 
 The target is **private travel atlas**, not aquarium, not SaaS map dashboard, not decorative notebook page. The map page should feel like opening a personal atlas on a desk: map, selected place, route, photo evidence, and gallery all belonging to the same physical scene.
 
@@ -79,7 +79,7 @@ The `新增旅游地点` entry is acceptable because it supports the owner workf
 
 ### Travel Memory Detail
 
-The travel detail page currently has useful content and good photos, but the structure reads closer to a generic photo article than a travel memory system. The first hero is strong enough, but the body rhythm becomes oversized and repetitive, with supporting information pushed too far down.
+The travel detail page now has the right itinerary/article split: photo hero, fragment list, support rail, mini map, album, and adjacent navigation are coordinated. The remaining work is mostly rhythm and density, not missing information architecture.
 
 The target is **travel article with itinerary rail**: photo-led hero, location/date context, story fragments, compact album, map, and previous/next navigation should feel coordinated. Side information should support reading, not arrive as a late pile of cards.
 
@@ -116,8 +116,8 @@ The refined rule: **dreamy at the entrance, precise at the task.**
 
 ## Current Gaps
 
-- Travel memory map needs a clearer atlas design model and stronger integration between hero, map, selected detail, and gallery.
-- Travel memory detail needs a stronger information architecture: hero, itinerary, story fragments, album, map, and navigation should appear in a deliberate reading order.
+- Travel memory map now has the correct atlas scaffolding, but the locked-state cover, the real map surface, and the selected-detail paper still need a tighter shared material language.
+- Travel memory detail now has the correct support rail structure, but the reading rhythm, media density, and desktop/mobile transitions still need refinement.
 - Guestbook needs a more coherent message-desk pattern for composer, message cards, replies, and moderation actions.
 - Archive should remain compact and utility-led while still fitting Chen404's material language.
 - Sakura Radio has strong foundations, but playlist deletion, listening history, favorites, comments, play counts, and system media controls are still missing.

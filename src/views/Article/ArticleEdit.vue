@@ -103,9 +103,9 @@
                   :class="{ selected: form.categoryId === category.id }"
                   @click="form.categoryId = category.id"
                 >
-                  <Icon
-                    class="category-card-icon"
-                    :icon="resolveCategoryIcon(category.icon || 'mdi:folder')"
+                  <CategoryIcon
+                    icon-class="category-card-icon"
+                    :icon="category.icon"
                     width="14"
                     height="14"
                   />
@@ -290,12 +290,11 @@
 
 <script setup lang="ts">
 import { h } from 'vue';
-import { Icon } from '@iconify/vue';
-import { resolveCategoryIcon } from '@/utils/categoryIcon';
 import { ArrowLeft, ArrowDown, Plus } from '@element-plus/icons-vue';
 import { MdEditor } from 'md-editor-v3';
 import 'md-editor-v3/lib/style.css';
 import { ArticleStatus } from '@/types';
+import CategoryIcon from '@/components/CategoryIcon/CategoryIcon.vue';
 import MdEditorEmojiToolbar from '@/components/Editor/MdEditorEmojiToolbar.vue';
 import MdEditorUnorderedListToolbar from '@/components/Editor/MdEditorUnorderedListToolbar.vue';
 import MdResizablePreview from '@/components/MdResizablePreview/MdResizablePreview.vue';

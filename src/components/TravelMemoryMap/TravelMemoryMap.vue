@@ -16,7 +16,7 @@
       class="travel-map-canvas"
     />
 
-    <div v-else class="travel-map-stage">
+      <div v-else ref="stageRef" class="travel-map-stage">
       <div class="travel-map-haze travel-map-haze--left" />
       <div class="travel-map-haze travel-map-haze--right" />
       <div class="travel-map-controls">
@@ -93,7 +93,7 @@
                 :d="cityBoundary.path"
                 class="travel-map-city-boundary"
                 :class="getBoundaryStateClass(cityBoundary.id)"
-                @click.stop="handleBoundaryClick(cityBoundary.id)"
+                @click.stop="handleBoundaryClick(cityBoundary.id, $event)"
               />
             </g>
             <path
@@ -128,7 +128,7 @@
               class="travel-map-marker"
               :class="{ 'is-active': point.id === activeId }"
               :transform="`translate(${point.x}, ${point.y})`"
-              @click.stop="handleMarkerClick(point.id)"
+              @click.stop="handleMarkerClick(point.id, $event)"
             >
               <rect
                 class="travel-map-marker__hit-area"
@@ -154,7 +154,7 @@
                   'is-left': point.label.side === 'left',
                 }"
                 :transform="`translate(${point.label.left}, ${point.label.top})`"
-                @click.stop="handleMarkerClick(point.id)"
+                @click.stop="handleMarkerClick(point.id, $event)"
               >
                 <rect
                   class="travel-map-marker__label-bg"
@@ -178,22 +178,34 @@
                 v-if="point.id === activeId"
                 class="travel-map-marker__ripple"
                 cx="0"
-                cy="-13.5"
-                r="15"
+                :cy="point.markerVisual.coreY"
+                :r="point.markerVisual.rippleRadius"
                 filter="url(#markerGlow)"
               />
-              <path
-                class="travel-map-marker__pin"
-                :d="point.id === activeId ? ACTIVE_PIN_PATH : PIN_PATH"
-              />
-              <circle class="travel-map-marker__core" :cy="point.id === activeId ? -16.8 : -14.8" :r="point.id === activeId ? 3.8 : 3" />
+              <svg
+                class="travel-map-marker__pin-icon"
+                :x="point.markerVisual.left"
+                :y="point.markerVisual.top"
+                :width="point.markerVisual.size"
+                :height="point.markerVisual.size"
+                viewBox="0 0 24 24"
+                aria-hidden="true"
+              >
+                <circle class="travel-map-marker__pin-core" cx="12" cy="9" r="2.7" />
+                <path class="travel-map-marker__pin-shape" :d="OPEN_SOURCE_MARKER_PATH" />
+              </svg>
             </g>
           </svg>
 
         </div>
       </div>
 
-      <div v-if="boundaryChoiceLocations.length" class="travel-map-choice-card">
+      <div
+        v-if="boundaryChoiceLocations.length"
+        ref="choiceCardRef"
+        class="travel-map-choice-card"
+        :style="boundaryChoiceStyle"
+      >
         <div class="travel-map-choice-card__head">
           <strong>这里有几段旅行</strong>
           <button type="button" aria-label="关闭地点选择" @click="closeBoundaryChoice">×</button>
@@ -237,6 +249,7 @@ import { computed, nextTick, onBeforeUnmount, onMounted, ref, shallowRef, watch 
 import { Minus, Plus, Refresh } from '@element-plus/icons-vue'
 import { geoContains, geoMercator, geoPath } from 'd3-geo'
 import chinaMapData from '@svg-maps/china'
+import mdiMapMarkerOutline from '@iconify/icons-mdi/map-marker-outline'
 import type { TravelMemoryLocationListItem } from '@/types'
 import { getAmapUnavailableReason, loadAmap } from '@/utils/amap'
 import { getCityNameCandidates, hasCityNameIntersection } from '@/utils/cityName'
@@ -296,6 +309,7 @@ type MarkerPinBox = {
 type MarkerDisplayPoint = ProjectedPoint & {
   label: LabelPlacement
   labelText: string
+  markerVisual: MarkerVisualSpec
 }
 
 type AmapDisplayPoint = MarkerDisplayPoint & {
@@ -332,6 +346,19 @@ type LayoutRect = {
   bottom: number
 }
 
+type MarkerVisualSpec = {
+  left: number
+  top: number
+  size: number
+  coreY: number
+  rippleRadius: number
+}
+
+type ChoiceAnchor = {
+  x: number
+  y: number
+}
+
 const MAP_BOUNDS = {
   minLng: 73,
   maxLng: 135,
@@ -358,8 +385,7 @@ const LABEL_GAP = 10
 const LABEL_SAFE_MARGIN = 10
 const AMAP_DIRECT_SELECT_MIN_ZOOM = 11.5
 const AMAP_DIRECT_SELECT_MIN_DISTANCE = 40
-const PIN_PATH = 'M0 0 C-5.4 -6.8 -10.4 -12.6 -10.4 -19.8 C-10.4 -26.2 -5.8 -31 0 -31 C5.8 -31 10.4 -26.2 10.4 -19.8 C10.4 -12.6 5.4 -6.8 0 0 Z'
-const ACTIVE_PIN_PATH = 'M0 0 C-6.2 -7.8 -12 -14.2 -12 -22.2 C-12 -29.3 -6.7 -34.8 0 -34.8 C6.7 -34.8 12 -29.3 12 -22.2 C12 -14.2 6.2 -7.8 0 0 Z'
+const OPEN_SOURCE_MARKER_PATH = extractOpenSourceMarkerPath(mdiMapMarkerOutline)
 
 const props = withDefaults(defineProps<Props>(), {
   locations: () => [],
@@ -380,6 +406,8 @@ const emit = defineEmits<{
 const viewportRef = ref<HTMLDivElement | null>(null)
 const boardRef = ref<HTMLDivElement | null>(null)
 const containerRef = ref<HTMLDivElement | null>(null)
+const stageRef = ref<HTMLDivElement | null>(null)
+const choiceCardRef = ref<HTMLDivElement | null>(null)
 const loading = ref(true)
 const errorText = ref('')
 const cityMapData = shallowRef<ChinaCityMapGeoJson | null>(null)
@@ -392,6 +420,8 @@ const displayScale = ref(BASE_SCALE)
 const mapPan = ref({ x: 0, y: 0 })
 const isDragging = ref(false)
 const boundaryChoiceId = ref<string | null>(null)
+const boundaryChoiceAnchor = ref<ChoiceAnchor | null>(null)
+const boundaryChoicePosition = ref<ChoiceAnchor | null>(null)
 
 let map: any = null
 let AMapRef: any = null
@@ -553,6 +583,14 @@ const boundaryChoiceLocations = computed(() =>
     ? (boundaryLocationsMap.value.get(boundaryChoiceId.value) ?? [])
     : [],
 )
+const boundaryChoiceStyle = computed(() => {
+  const position = boundaryChoicePosition.value
+  if (!position) return undefined
+  return {
+    left: `${position.x}px`,
+    top: `${position.y}px`,
+  }
+})
 const routePath = computed(() =>
   baseProjectedPoints.value.length >= 2 ? buildSmoothRoute(baseProjectedPoints.value) : '',
 )
@@ -678,6 +716,7 @@ function layoutMarkerPoints(points: ProjectedPoint[], activeId: number | null) {
       ...point,
       label: labelInfo?.placement ?? buildFallbackLabelPlacement(getMarkerLabelText(point), point.id === activeId),
       labelText: labelInfo?.text ?? getMarkerLabelText(point),
+      markerVisual: getMarkerVisualSpec(point.id === activeId),
     }
   })
 }
@@ -844,11 +883,24 @@ function getPointDensity(point: ProjectedPoint, points: ProjectedPoint[]) {
 }
 
 function getMarkerRect(point: ProjectedPoint, active: boolean): LayoutRect {
+  const visual = getMarkerVisualSpec(active)
   return {
-    left: point.x - (active ? 13 : 11.5),
-    top: point.y - (active ? 36 : 32),
-    right: point.x + (active ? 13 : 11.5),
-    bottom: point.y + 2,
+    left: point.x + visual.left,
+    top: point.y + visual.top,
+    right: point.x + visual.left + visual.size,
+    bottom: point.y + visual.top + visual.size,
+  }
+}
+
+function getMarkerVisualSpec(active: boolean): MarkerVisualSpec {
+  const size = active ? 31 : 27
+  const top = active ? -28.4 : -24.8
+  return {
+    left: -size / 2,
+    top,
+    size,
+    coreY: top + size * 0.375,
+    rippleRadius: active ? 16.5 : 0,
   }
 }
 
@@ -1063,7 +1115,7 @@ function findBoundaryFeatureByName(
   )
 }
 
-function handleBoundaryClick(id: string) {
+function handleBoundaryClick(id: string, event?: MouseEvent) {
   if (Date.now() - lastDragEndedAt < DRAG_SUPPRESS_DURATION) {
     return
   }
@@ -1075,11 +1127,18 @@ function handleBoundaryClick(id: string) {
     return
   }
 
-  boundaryChoiceId.value = targets.length > 1 ? id : null
+  if (targets.length > 1) {
+    openBoundaryChoice(id, resolveChoiceAnchorFromEvent(event) ?? resolveChoiceAnchorFromLocations(targets))
+    return
+  }
+
+  closeBoundaryChoice()
 }
 
 function closeBoundaryChoice() {
   boundaryChoiceId.value = null
+  boundaryChoiceAnchor.value = null
+  boundaryChoicePosition.value = null
 }
 
 function selectBoundaryChoice(id: number) {
@@ -1087,7 +1146,7 @@ function selectBoundaryChoice(id: number) {
   emit('select', id)
 }
 
-function selectBoundaryTarget(id: string, fallbackId: number) {
+function selectBoundaryTarget(id: string, fallbackId: number, anchor?: ChoiceAnchor | null) {
   const targets = boundaryLocationsMap.value.get(id) ?? []
   if (targets.length === 1) {
     closeBoundaryChoice()
@@ -1096,12 +1155,21 @@ function selectBoundaryTarget(id: string, fallbackId: number) {
   }
 
   if (targets.length > 1) {
-    boundaryChoiceId.value = id
+    openBoundaryChoice(id, anchor ?? resolveChoiceAnchorFromLocations(targets))
     return
   }
 
   closeBoundaryChoice()
   emit('select', fallbackId)
+}
+
+function openBoundaryChoice(id: string, anchor?: ChoiceAnchor | null) {
+  boundaryChoiceId.value = id
+  boundaryChoiceAnchor.value = anchor ?? null
+  boundaryChoicePosition.value = null
+  void nextTick(() => {
+    updateBoundaryChoicePosition()
+  })
 }
 
 function zoomIn() {
@@ -1264,7 +1332,7 @@ function handlePointerUp(event: PointerEvent) {
   isDragging.value = false
 }
 
-function handleMarkerClick(id: number) {
+function handleMarkerClick(id: number, trigger?: MouseEvent | HTMLElement | SVGElement | null) {
   if (Date.now() - lastDragEndedAt < DRAG_SUPPRESS_DURATION) {
     return
   }
@@ -1275,7 +1343,11 @@ function handleMarkerClick(id: number) {
       emit('select', id)
       return
     }
-    selectBoundaryTarget(choiceKey, id)
+    selectBoundaryTarget(
+      choiceKey,
+      id,
+      resolveChoiceAnchorFromTrigger(trigger) ?? resolveChoiceAnchorFromLocationId(id),
+    )
     return
   }
 
@@ -1481,11 +1553,13 @@ function buildDisplayMarkerHtml(item: TravelMemoryLocationListItem, displayPoint
   const labelText = displayPoint?.labelText ?? item.city ?? item.province ?? item.title
   const label = displayPoint?.label ?? buildFallbackLabelPlacement(labelText, item.id === props.activeId)
   const active = item.id === props.activeId
-  const pin = getHtmlMarkerPinBox(active)
+  const markerVisual = displayPoint?.markerVisual ?? getMarkerVisualSpec(active)
+  const pin = getHtmlMarkerPinBox(markerVisual)
   const hitArea = buildHtmlMarkerHitArea(label, pin)
   const connector = buildHtmlMarkerConnector(label, hitArea)
   const sideClass = label.side === 'left' ? ' is-left' : label.side === 'top' ? ' is-top' : ''
   const ariaLabel = active ? `当前旅行地点：${labelText}` : `查看旅行地点：${labelText}`
+  const markerIcon = buildDisplayMarkerSvg(active)
 
   return `
     <button
@@ -1505,7 +1579,7 @@ function buildDisplayMarkerHtml(item: TravelMemoryLocationListItem, displayPoint
         class="travel-map-html-marker__pin"
         style="left:${pin.left - hitArea.left}px;top:${pin.top - hitArea.top}px;width:${pin.width}px;height:${pin.height}px"
         aria-hidden="true"
-      ><span></span></span>
+      >${markerIcon}</span>
     </button>
   `
 }
@@ -1517,21 +1591,144 @@ function bindDisplayMarkerButtons() {
     if (!Number.isFinite(id)) return
     button.addEventListener('click', (event) => {
       event.stopPropagation()
-      handleMarkerClick(id)
+      handleMarkerClick(id, button)
     })
     button.addEventListener('keydown', (event) => {
       if (event.key !== 'Enter' && event.key !== ' ') return
       event.preventDefault()
       event.stopPropagation()
-      handleMarkerClick(id)
+      handleMarkerClick(id, button)
     })
   })
 }
 
-function getHtmlMarkerPinBox(active: boolean): MarkerPinBox {
-  return active
-    ? { left: -12, top: -34, width: 24, height: 32 }
-    : { left: -10, top: -30, width: 20, height: 28 }
+function updateBoundaryChoicePosition() {
+  const stage = stageRef.value
+  const card = choiceCardRef.value
+  if (!stage || !card) return
+
+  const stageRect = stage.getBoundingClientRect()
+  const cardWidth = card.offsetWidth
+  const cardHeight = card.offsetHeight
+  const margin = 18
+  const gap = 18
+  const fallbackX = margin
+  const fallbackY = Math.max(margin, stageRect.height - cardHeight - margin)
+  const anchor = boundaryChoiceAnchor.value ?? { x: fallbackX, y: fallbackY }
+
+  let left = anchor.x - cardWidth / 2
+  let top = anchor.y + gap
+
+  if (top + cardHeight > stageRect.height - margin) {
+    top = anchor.y - cardHeight - gap
+  }
+
+  left = clamp(left, margin, Math.max(margin, stageRect.width - cardWidth - margin))
+  top = clamp(top, margin, Math.max(margin, stageRect.height - cardHeight - margin))
+
+  boundaryChoicePosition.value = { x: left, y: top }
+}
+
+function resolveChoiceAnchorFromTrigger(trigger?: MouseEvent | HTMLElement | SVGElement | null) {
+  if (!trigger) return null
+  if (trigger instanceof MouseEvent) {
+    return resolveChoiceAnchorFromClientPoint(trigger.clientX, trigger.clientY)
+  }
+  return resolveChoiceAnchorFromElement(trigger)
+}
+
+function resolveChoiceAnchorFromEvent(event?: MouseEvent) {
+  if (!event) return null
+  return resolveChoiceAnchorFromClientPoint(event.clientX, event.clientY)
+}
+
+function resolveChoiceAnchorFromClientPoint(clientX: number, clientY: number) {
+  const stage = stageRef.value
+  if (!stage) return null
+  const stageRect = stage.getBoundingClientRect()
+  return {
+    x: clientX - stageRect.left,
+    y: clientY - stageRect.top,
+  }
+}
+
+function resolveChoiceAnchorFromElement(element: HTMLElement | SVGElement) {
+  const stage = stageRef.value
+  if (!stage) return null
+  const stageRect = stage.getBoundingClientRect()
+  const rect = element.getBoundingClientRect()
+  return {
+    x: rect.left - stageRect.left + rect.width / 2,
+    y: rect.top - stageRect.top + rect.height / 2,
+  }
+}
+
+function resolveChoiceAnchorFromLocationId(id: number) {
+  if (isAmapDisplayReady.value) {
+    const amapAnchor = resolveAmapChoiceAnchor(id)
+    if (amapAnchor) return amapAnchor
+  }
+  return resolveSvgChoiceAnchor(id)
+}
+
+function resolveChoiceAnchorFromLocations(locations: TravelMemoryLocationListItem[]) {
+  if (!locations.length) return null
+  const anchors = locations
+    .map((location) => resolveChoiceAnchorFromLocationId(location.id))
+    .filter((anchor): anchor is ChoiceAnchor => !!anchor)
+  if (!anchors.length) return null
+  return {
+    x: anchors.reduce((sum, anchor) => sum + anchor.x, 0) / anchors.length,
+    y: anchors.reduce((sum, anchor) => sum + anchor.y, 0) / anchors.length,
+  }
+}
+
+function resolveSvgChoiceAnchor(id: number) {
+  const point = displayPoints.value.find((item) => item.id === id)
+  if (!point) return null
+  return projectBoardPointToStage(point.x, point.y)
+}
+
+function resolveAmapChoiceAnchor(id: number) {
+  const location = props.locations.find((item) => item.id === id)
+  if (!location || !isValidCoordinate(location.latitude, location.longitude)) return null
+  const displayPointMap = getAmapDisplayPointMap(props.locations.filter((item) => isValidCoordinate(item.latitude, item.longitude)))
+  const point = displayPointMap.get(id)
+  if (!point) return null
+  return projectContainerPointToStage(point.x, point.y)
+}
+
+function projectBoardPointToStage(x: number, y: number) {
+  const stage = stageRef.value
+  const board = boardRef.value
+  if (!stage || !board) return null
+  const stageRect = stage.getBoundingClientRect()
+  const boardRect = board.getBoundingClientRect()
+  return {
+    x: boardRect.left - stageRect.left + (x / SVG_VIEWBOX.width) * boardRect.width,
+    y: boardRect.top - stageRect.top + (y / SVG_VIEWBOX.height) * boardRect.height,
+  }
+}
+
+function projectContainerPointToStage(x: number, y: number) {
+  const stage = stageRef.value
+  const container = containerRef.value
+  if (!stage || !container) return null
+  const stageRect = stage.getBoundingClientRect()
+  const containerRect = container.getBoundingClientRect()
+  return {
+    x: containerRect.left - stageRect.left + x,
+    y: containerRect.top - stageRect.top + y,
+  }
+}
+
+function getHtmlMarkerPinBox(markerVisual: MarkerVisualSpec): MarkerPinBox {
+  return {
+    left: markerVisual.left,
+    top: markerVisual.top,
+    width: markerVisual.size,
+    height: markerVisual.size,
+  }
 }
 
 function buildHtmlMarkerHitArea(label: LabelPlacement, pin: MarkerPinBox): MarkerHitArea {
@@ -1577,6 +1774,24 @@ function escapeHtml(value: string) {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;')
+}
+
+function buildDisplayMarkerSvg(active: boolean) {
+  const stateClass = active ? ' is-active' : ''
+  return `
+    <svg class="travel-map-html-marker__pin-svg${stateClass}" viewBox="0 0 24 24" focusable="false" aria-hidden="true">
+      <circle class="travel-map-html-marker__pin-core" cx="12" cy="9" r="2.7"></circle>
+      <path class="travel-map-html-marker__pin-shape" d="${OPEN_SOURCE_MARKER_PATH}"></path>
+    </svg>
+  `
+}
+
+function extractOpenSourceMarkerPath(iconData: unknown) {
+  const resolved = ((iconData as { default?: unknown }).default ?? iconData) as { body?: string }
+  const body = resolved.body || ''
+  const match = body.match(/d=\"([^\"]+)\"/)
+  if (match?.[1]) return match[1]
+  throw new Error('Failed to resolve open-source map marker path')
 }
 
 function refreshDisplayRoute() {
@@ -1740,6 +1955,15 @@ watch(
 )
 
 watch(
+  () => boundaryChoiceLocations.value.length,
+  async (count) => {
+    if (!count) return
+    await nextTick()
+    updateBoundaryChoicePosition()
+  },
+)
+
+watch(
   () => [props.pickerLatitude, props.pickerLongitude] as const,
   () => {
     syncPickerMarker()
@@ -1754,6 +1978,9 @@ watch(
 )
 
 function handleResize() {
+  if (boundaryChoiceLocations.value.length) {
+    updateBoundaryChoicePosition()
+  }
   if (isAmapDisplayReady.value) {
     map?.resize?.()
     scheduleAmapMarkerRefresh()
@@ -1998,8 +2225,8 @@ defineExpose({
 
 .travel-map-choice-card {
   position: absolute;
-  left: 24px;
-  bottom: 24px;
+  top: 18px;
+  left: 18px;
   z-index: 4;
   width: min(280px, calc(100% - 48px));
   max-height: min(320px, calc(100% - 48px));
@@ -2109,15 +2336,17 @@ defineExpose({
   stroke: rgba(242, 173, 199, 0.98);
 }
 
-.travel-map-marker__pin {
-  fill: rgba(255, 133, 175, 0.96);
-  stroke: rgba(255, 255, 255, 0.96);
-  stroke-width: 1.8;
-  filter: drop-shadow(0 6px 12px rgba(246, 136, 173, 0.16));
+.travel-map-marker__pin-icon {
+  overflow: visible;
+  filter: drop-shadow(0 7px 14px rgba(246, 136, 173, 0.18));
 }
 
-.travel-map-marker__core {
+.travel-map-marker__pin-core {
   fill: rgba(255, 255, 255, 0.98);
+}
+
+.travel-map-marker__pin-shape {
+  fill: rgba(255, 133, 175, 0.97);
 }
 
 .travel-map-marker__label {
@@ -2134,10 +2363,12 @@ defineExpose({
   pointer-events: none;
 }
 
-.travel-map-marker.is-active .travel-map-marker__pin {
-  fill: rgba(255, 104, 156, 0.98);
-  stroke: rgba(255, 248, 251, 0.98);
-  filter: drop-shadow(0 8px 14px rgba(246, 112, 158, 0.22));
+.travel-map-marker.is-active .travel-map-marker__pin-icon {
+  filter: drop-shadow(0 10px 20px rgba(246, 112, 158, 0.22));
+}
+
+.travel-map-marker.is-active .travel-map-marker__pin-shape {
+  fill: rgba(255, 104, 156, 0.99);
 }
 
 .travel-map-controls {
@@ -2451,29 +2682,25 @@ defineExpose({
 
 .travel-map-html-marker__pin {
   position: absolute;
-  left: -10px;
-  top: -30px;
   z-index: 2;
-  width: 20px;
-  height: 28px;
-  border: 2px solid rgba(255, 255, 255, 0.96);
-  border-radius: 50% 50% 50% 0;
-  background: linear-gradient(135deg, rgba(255, 133, 175, 0.98), rgba(255, 170, 197, 0.94));
-  box-shadow:
-    0 8px 14px rgba(246, 136, 173, 0.2),
-    0 0 0 6px rgba(251, 114, 153, 0.12);
-  transform: rotate(-45deg);
+  display: block;
+  filter: drop-shadow(0 8px 14px rgba(246, 136, 173, 0.2));
+  pointer-events: none;
 }
 
-.travel-map-html-marker__pin span {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  width: 6px;
-  height: 6px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.98);
-  transform: translate(-50%, -50%);
+.travel-map-html-marker__pin-svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+  overflow: visible;
+}
+
+.travel-map-html-marker__pin-core {
+  fill: rgba(255, 255, 255, 0.98);
+}
+
+.travel-map-html-marker__pin-shape {
+  fill: rgba(255, 133, 175, 0.98);
 }
 
 .travel-map-html-marker.is-active .travel-map-html-marker__label {
@@ -2485,14 +2712,11 @@ defineExpose({
 }
 
 .travel-map-html-marker.is-active .travel-map-html-marker__pin {
-  width: 24px;
-  height: 32px;
-  left: -12px;
-  top: -34px;
-  background: linear-gradient(135deg, rgba(255, 96, 151, 0.99), rgba(255, 142, 178, 0.98));
-  box-shadow:
-    0 12px 22px rgba(246, 112, 158, 0.26),
-    0 0 0 8px rgba(251, 114, 153, 0.16);
+  filter: drop-shadow(0 12px 22px rgba(246, 112, 158, 0.26));
+}
+
+.travel-map-html-marker.is-active .travel-map-html-marker__pin-shape {
+  fill: rgba(255, 96, 151, 0.99);
 }
 
 @media (max-width: 768px) {

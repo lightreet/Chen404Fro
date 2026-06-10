@@ -8,7 +8,7 @@
     <main class="main-content" :class="{ 'has-no-site-header': !showHeader }">
       <!-- 可选：全宽 Hero 插槽（用于首页等） -->
       <slot name="hero" />
-      <div class="container">
+      <div class="container" :class="{ 'container--wide': wideContent }">
         <div
           class="content-wrapper"
           :class="{
@@ -88,6 +88,11 @@ const { isMobile } = useLayoutMobile();
   display: flex;
   gap: 24px;
   align-items: flex-start;
+}
+
+.container--wide {
+  max-width: 100%;
+  padding-inline: clamp(12px, 1.8vw, 28px);
 }
 
 .main-area {

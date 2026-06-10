@@ -61,7 +61,7 @@ export function buildMemoryMapCoverConfig(isLoggedIn: boolean): FeatureAccessCov
 
   return {
     eyebrow: 'Memory Map',
-    title: '登录后解锁这张旅行地图',
+    title: '通过好友申请后解锁这张旅行地图',
     description: '这张地图目前只对知友开放。完成好友申请后，就能回来继续翻阅这些旅途记录。',
     noticeTitle: '当前仅对知友开放',
     noticeText: '如果你希望查看这部分旅行内容，可以先前往好友申请页提交理由，审核通过后就能访问。',

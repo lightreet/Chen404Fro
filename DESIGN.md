@@ -279,10 +279,11 @@ Components must be recognizable first and personal second. A user should underst
 ### Memory Map
 
 - **Role:** private travel atlas.
+- **Access cover:** because `/memory-map` is a public entry, the locked state must clearly distinguish "log in first" from "friend access required", and should feel like a paused atlas, not a dead end.
 - **First viewport:** show route title, map, selected place preview, and primary browsing actions. The selected place preview must be visually tied to the map marker or route.
 - **Material:** atlas paper, route ink, photo evidence, travel stamps used sparingly. Scrapbook details are accents, not structure.
 - **Map:** reserve safe corners for zoom/reset/attribution. Custom controls must be grouped in a toolbar and visually subordinate to the map.
-- **Gallery:** belongs below as supporting evidence. It should not compete with the map/detail pair.
+- **Index rail:** on desktop, place switching belongs in a left-side travel index rail. On smaller screens it may fall below the map, but it should not return as a second full card grid competing with the map/detail pair.
 - **Owner action:** `新增旅游地点` is allowed but should sit as a clear secondary action, not the page's visual center.
 - **Ban:** unrelated ocean/underwater hero, excessive tape/stamp/ring decoration, map and preview looking like two unrelated apps.
 

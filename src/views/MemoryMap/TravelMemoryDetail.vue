@@ -283,6 +283,7 @@ const amapMarker = shallowRef<any | null>(null)
 const amapErrorText = ref('')
 const errorMessage = ref('这篇旅行游记不存在或暂时无法查看。')
 let storyStopObserver: IntersectionObserver | null = null
+let detailRequestVersion = 0
 
 const storyStops = computed<TravelMemoryStop[]>(() => {
   if (!detail.value) return []
@@ -541,11 +542,15 @@ function applyDetailMeta() {
 }
 
 async function loadDetail() {
+  const requestVersion = ++detailRequestVersion
   const rawId = Array.isArray(route.params.id) ? route.params.id[0] : route.params.id
   const numericId = Number(rawId)
   if (!Number.isFinite(numericId)) {
-    detail.value = null
-    errorMessage.value = '这篇旅行游记不存在或暂时无法查看。'
+    if (requestVersion === detailRequestVersion) {
+      detail.value = null
+      memories.value = []
+      errorMessage.value = '这篇旅行游记不存在或暂时无法查看。'
+    }
     return
   }
 
@@ -558,18 +563,29 @@ async function loadDetail() {
       getTravelMemoryDetail(numericId),
       getTravelMemories().catch(() => []),
     ])
+    if (requestVersion !== detailRequestVersion) return
     detail.value = detailResult
     memories.value = memoryList
     applyDetailMeta()
   } catch {
+    if (requestVersion !== detailRequestVersion) return
     detail.value = null
+    memories.value = []
   } finally {
-    loading.value = false
+    if (requestVersion === detailRequestVersion) {
+      loading.value = false
+    }
   }
 }
 
 function goToMap() {
-  router.push('/memory-map')
+  const routeId = Array.isArray(route.params.id) ? route.params.id[0] : route.params.id
+  const fallbackId = Number(routeId)
+  const focusId = detail.value?.id ?? (Number.isFinite(fallbackId) ? fallbackId : null)
+  router.push({
+    path: '/memory-map',
+    query: focusId != null ? { focus: String(focusId) } : undefined,
+  })
 }
 
 function destroyMiniAmap() {

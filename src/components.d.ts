@@ -12,6 +12,7 @@ export {}
 declare module 'vue' {
   export interface GlobalComponents {
     ArticleCard: typeof import('./components/ArticleCard/ArticleCard.vue')['default']
+    CategoryIcon: typeof import('./components/CategoryIcon/CategoryIcon.vue')['default']
     CommentItem: typeof import('./components/Comment/CommentItem.vue')['default']
     CommentSection: typeof import('./components/Comment/CommentSection.vue')['default']
     ElAlert: typeof import('element-plus/es')['ElAlert']
@@ -69,7 +70,6 @@ declare module 'vue' {
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
     SakuraOverlay: typeof import('./components/SakuraOverlay/SakuraOverlay.vue')['default']
-    TravelMemoryManager: typeof import('./components/TravelMemoryManager/TravelMemoryManager.vue')['default']
     TravelMemoryMap: typeof import('./components/TravelMemoryMap/TravelMemoryMap.vue')['default']
     UserProfileCard: typeof import('./components/UserProfile/UserProfileCard.vue')['default']
     UserProfilePopover: typeof import('./components/UserProfile/UserProfilePopover.vue')['default']

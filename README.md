@@ -49,7 +49,7 @@ VITE_AMAP_SECURITY_CODE=
 说明：
 
 - `VITE_API_BASE_URL` 用于所有业务接口和 SDK 调用。
-- `VITE_AMAP_KEY` / `VITE_AMAP_SECURITY_CODE` 仅用于旅行纪念地图编辑态的高德底图、定位与逆地理编码；未配置时仍可使用本地 GeoJSON/SVG 回退地图。
+- `VITE_AMAP_KEY` / `VITE_AMAP_SECURITY_CODE` 同时用于旅行纪念地图展示态的真实高德底图，以及编辑态的选点、定位与逆地理编码；未配置或脚本加载失败时，展示态会回退到本地 GeoJSON/SVG 地图。
 - JWT 登录态默认保存在 `localStorage`：`token`、`refreshToken`、`user`。
 
 ## 当前页面与权限
@@ -70,7 +70,7 @@ VITE_AMAP_SECURITY_CODE=
 | `/trust-request` | 好友申请 | 公开 | 页面公开，提交申请时要求登录 |
 | `/admin` | 后台管理 | 管理员 | 分类、站点配置、AI、表情包、文件、好友申请 |
 | `/memory-map` | 旅行纪念地图 | 公开入口 | 页面可进入，具体内容仅管理员或知友可见 |
-| `/memory-map/detail/:id` | 旅行详情页 | 管理员或知友 | 独立照片详情页 |
+| `/memory-map/detail/:id` | 旅行详情页 | 管理员或知友 | 独立旅行游记页 |
 | `/memory-map/create` `/memory-map/edit/:id` | 旅行编辑工作台 | 管理员 | 地点创建/编辑 |
 | `/music` | Sakura Radio 音乐馆 | 公开 | 公开播放、歌单浏览、共享播放器 |
 | `/music/tracks/new` `/music/tracks/:id/edit` | 音乐编辑工作台 | 管理员 | 歌曲编辑、上传、AI 匹配 |
@@ -87,7 +87,7 @@ VITE_AMAP_SECURITY_CODE=
 - 文件管理：文件列表、详情、统计、引用状态筛选
 - 表情包：公开下发、后台维护、ZIP 导入
 - 好友申请：提交、查询、后台审批
-- 旅行纪念地图：受限查看、后台 CRUD、图片 EXIF 辅助定位
+- 旅行纪念地图：公开入口 + 访问封面、管理员/知友受限内容、三栏 atlas 浏览、独立旅行游记页、多片段编辑、图片 EXIF 辅助定位
 - Sakura Radio：公开歌曲/歌单、默认播放队列、后台歌曲/歌单维护、AI 曲目信息补全
 - Lyra：同步聊天、SSE 流式聊天、会话恢复、引用、相关推荐、建议按钮
 - AI 后台配置：模型参数、Lyra 人设、聊天检索、小气泡配置、连接测试
@@ -129,10 +129,11 @@ src/
 
 ### 旅行纪念地图
 
-- 页面：`src/views/MemoryMap/*`
+- 页面：`src/views/MemoryMap/MemoryMap.vue`、`TravelMemoryDetail.vue`、`TravelMemoryCreate.vue`
 - 地图组件：`src/components/TravelMemoryMap/TravelMemoryMap.vue`
-- 管理组件：`src/components/TravelMemoryManager/TravelMemoryManager.vue`
-- 数据来源：本地 GeoJSON + 高德地图能力（可选）+ 后端地点详情
+- 访问模型：`/memory-map` 公开进入，但内容仅管理员或知友可见；管理员可进入创建/编辑工作台
+- 展示地图：优先使用高德真实底图，缺少 Key 或脚本失败时回退到城市/省级 GeoJSON + 基础 SVG
+- 数据模型：地点 `location` + 旅途片段 `stop` + 照片条目 `entry`，编辑页优先提交 `stops`
 
 ### Sakura Radio
 

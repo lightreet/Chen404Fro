@@ -47,18 +47,18 @@
               class="meta-pill meta-pill--link"
               @click.stop
             >
-              <Icon
-                class="category-icon-iconify"
-                :icon="resolveCategoryIcon(article.category.icon)"
+              <CategoryIcon
+                icon-class="category-icon-iconify"
+                :icon="article.category.icon"
                 width="14"
                 height="14"
               />
               {{ article.category.name }}
             </router-link>
             <span v-else-if="article.category" class="meta-pill">
-              <Icon
-                class="category-icon-iconify"
-                :icon="resolveCategoryIcon(article.category.icon)"
+              <CategoryIcon
+                icon-class="category-icon-iconify"
+                :icon="article.category.icon"
                 width="14"
                 height="14"
               />
@@ -178,18 +178,18 @@
             class="stat-item category-tag"
             @click.stop
           >
-            <Icon
-              class="category-icon-iconify"
-              :icon="resolveCategoryIcon(article.category.icon)"
+            <CategoryIcon
+              icon-class="category-icon-iconify"
+              :icon="article.category.icon"
               width="14"
               height="14"
             />
             {{ article.category.name }}
           </router-link>
           <span v-else-if="article.category" class="stat-item category-tag">
-            <Icon
-              class="category-icon-iconify"
-              :icon="resolveCategoryIcon(article.category.icon)"
+            <CategoryIcon
+              icon-class="category-icon-iconify"
+              :icon="article.category.icon"
               width="14"
               height="14"
             />
@@ -263,9 +263,9 @@ import { computed, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { Icon } from '@iconify/vue';
 import { Calendar, View, ChatDotRound, ArrowRight, User } from '@element-plus/icons-vue';
+import CategoryIcon from '@/components/CategoryIcon/CategoryIcon.vue';
 import type { Article } from '@/types';
 import { formatDate, formatNumber } from '@/utils/format';
-import { resolveCategoryIcon } from '@/utils/categoryIcon';
 
 const router = useRouter();
 

@@ -35,11 +35,7 @@
           >
             <router-link :to="`/category/${category.id}`">
               <div class="category-icon">
-                <Icon
-                  :icon="resolveCategoryIcon(category.icon || 'mdi:folder-open')"
-                  width="28"
-                  height="28"
-                />
+                <CategoryIcon :icon="category.icon" width="28" height="28" />
               </div>
               <h3 class="category-name">{{ category.name }}</h3>
               <p class="category-desc">{{ category.description || '暂无描述' }}</p>
@@ -74,10 +70,9 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
 import { ElMessage } from 'element-plus';
-import { resolveCategoryIcon } from '@/utils/categoryIcon';
-import { Icon } from '@iconify/vue';
 import { Loading } from '@element-plus/icons-vue';
 import DefaultLayout from '@/layouts/DefaultLayout.vue';
+import CategoryIcon from '@/components/CategoryIcon/CategoryIcon.vue';
 import PageHero from '@/components/PageHero/PageHero.vue';
 import { useSiteConfig } from '@/composables/useSiteConfig';
 import type { Category } from '@/types';
