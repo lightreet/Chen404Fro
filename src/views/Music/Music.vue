@@ -655,8 +655,9 @@ const SPECTRUM_BAR_COUNT = 36
 const SPECTRUM_HALF_BAR_COUNT = SPECTRUM_BAR_COUNT / 2
 const SPECTRUM_MIN_HEIGHT = 8
 const SPECTRUM_MAX_HEIGHT = 46
-const SPECTRUM_DECORATIVE_BLEND = 0.28
-const SPECTRUM_CENTER_SOFTENING = 0.24
+const SPECTRUM_FLOOR_FOLLOW_RATE = 0.014
+const SPECTRUM_PEAK_FOLLOW_RATE = 0.022
+const SPECTRUM_IDLE_BLEND = 0.08
 
 const defaultHero = resolveFeatureHero(null, 'music')
 const heroBgImage = ref(defaultHero.bgImage)
@@ -689,7 +690,8 @@ const resolvingTrackDurationIds = new Set<number>()
 const spectrumBars = ref<number[]>(createIdleSpectrumBars())
 let spectrumFrameId: number | null = null
 let spectrumData: Uint8Array<ArrayBuffer> | null = null
-let spectrumDynamicPeak = 0.18
+let spectrumBandFloors = createSpectrumProfile(0.018)
+let spectrumBandPeaks = createSpectrumProfile(0.16)
 const { user } = storeToRefs(userStore)
 const { loadSiteConfig } = useSiteConfig()
 const canManage = computed(() => isAdminUser(user.value))
@@ -842,7 +844,7 @@ watch(activeAudioUrl, () => {
   if (!canAnalyzeAudioUrl(activeAudioUrl.value)) {
     disposeSpectrumRuntime()
   }
-  spectrumDynamicPeak = 0.18
+  resetSpectrumProfile()
   spectrumBars.value = createIdleSpectrumBars()
 })
 
@@ -904,7 +906,7 @@ function stopSpectrumLoop(resetBars: boolean) {
     spectrumFrameId = null
   }
   if (resetBars) {
-    spectrumDynamicPeak = 0.18
+    resetSpectrumProfile()
     spectrumBars.value = createIdleSpectrumBars()
   }
 }
@@ -975,60 +977,74 @@ function getSpectrumRuntime(audioUrl = activeAudioUrl.value): MusicSpectrumRunti
 function drawSpectrumFrame(analyser: AnalyserNode) {
   if (!spectrumData) return
   const currentSpectrumData = spectrumData
-  const time = player.audio.currentTime || performance.now() / 1000
   analyser.getByteFrequencyData(currentSpectrumData)
-  const centerBars = Array.from({ length: SPECTRUM_HALF_BAR_COUNT }, (_, distanceFromCenter) => {
-    const normalizedDistance = distanceFromCenter / Math.max(1, SPECTRUM_HALF_BAR_COUNT - 1)
 
-    const mainStartRatio = 0.055 + normalizedDistance ** 1.08 * 0.72
-    const mainEndRatio = mainStartRatio + 0.05 + normalizedDistance * 0.052
-    const [mainStartIndex, mainEndIndex] = resolveSpectrumRange(
-      currentSpectrumData.length,
-      mainStartRatio,
-      mainEndRatio,
-    )
-
-    const accentRatio = 0.11 + (Math.sin(time * 0.48 + (distanceFromCenter + 1) * 1.72) * 0.5 + 0.5) * 0.64
-    const [accentStartIndex, accentEndIndex] = resolveSpectrumRange(
-      currentSpectrumData.length,
-      accentRatio,
-      accentRatio + 0.045,
-    )
-
-    const primaryEnergy = readSpectrumAverage(currentSpectrumData, mainStartIndex, mainEndIndex)
-    const accentEnergy = readSpectrumAverage(currentSpectrumData, accentStartIndex, accentEndIndex)
-    const lowPulse = readSpectrumAverage(currentSpectrumData, 1, Math.min(5, currentSpectrumData.length - 1))
-    return primaryEnergy * 0.64 + accentEnergy * 0.28 + lowPulse * 0.08
-  })
-
-  const peak = Math.max(...centerBars)
+  const bandEnergies = readAdaptiveSpectrumBands(currentSpectrumData)
+  const peak = Math.max(...bandEnergies)
   if (peak < 0.025) {
     spectrumBars.value = createFallbackSpectrumBars()
     return
   }
 
-  spectrumDynamicPeak = Math.max(peak, spectrumDynamicPeak * 0.94)
-  const fallbackCenterBars = createFallbackCenterSpectrumBars()
-  const centerHeights = centerBars.map((energy, distanceFromCenter) => {
-    const normalizedDistance = distanceFromCenter / Math.max(1, SPECTRUM_HALF_BAR_COUNT - 1)
-    const normalizedEnergy = Math.min(1, energy / Math.max(0.08, spectrumDynamicPeak))
-    const compressedEnergy = Math.pow(normalizedEnergy, 0.74)
-    const centerSoftening = 1 - Math.max(0, 1 - normalizedDistance * 3.2) * SPECTRUM_CENTER_SOFTENING
-    const sideLift = Math.sin(normalizedDistance * Math.PI) * 0.12
-    const shimmer = 0.9
-      + Math.sin(time * 1.7 + distanceFromCenter * 2.13) * 0.07
-      + Math.sin(time * 3.1 + distanceFromCenter * 0.73) * 0.04
-    const contour = 0.46 + Math.pow(1 - normalizedDistance, 0.78) * 0.26 + sideLift
-    const decorativeHeight = fallbackCenterBars[distanceFromCenter] ?? SPECTRUM_MIN_HEIGHT
-    const decorativeEnergy = (decorativeHeight - SPECTRUM_MIN_HEIGHT) / (SPECTRUM_MAX_HEIGHT - SPECTRUM_MIN_HEIGHT)
-    const shapedEnergy = Math.min(1, compressedEnergy * centerSoftening * shimmer)
-    const blendedEnergy = shapedEnergy * (1 - SPECTRUM_DECORATIVE_BLEND) + decorativeEnergy * SPECTRUM_DECORATIVE_BLEND
-    const targetHeight = SPECTRUM_MIN_HEIGHT + blendedEnergy * (SPECTRUM_MAX_HEIGHT - SPECTRUM_MIN_HEIGHT) * contour
-    return Math.round(Math.min(SPECTRUM_MAX_HEIGHT, targetHeight))
+  updateSpectrumProfile(bandEnergies)
+  const idleBars = createFallbackCenterSpectrumBars()
+  const centerHeights = bandEnergies.map((energy, index) => {
+    const floor = spectrumBandFloors[index] ?? 0.018
+    const bandPeak = Math.max(floor + 0.05, spectrumBandPeaks[index] ?? 0.16)
+    const bandPosition = index / Math.max(1, SPECTRUM_HALF_BAR_COUNT - 1)
+    const relativeEnergy = clampNumber((energy - floor) / (bandPeak - floor), 0, 1)
+    const shapedEnergy = Math.pow(relativeEnergy, 0.72)
+    const presenceLift = Math.pow(clampNumber(energy / Math.max(0.08, peak), 0, 1), 0.95) * 0.34
+    const frequencyBalance = 0.88 + Math.sin(bandPosition * Math.PI) * 0.16
+    const idleEnergy = ((idleBars[index] ?? SPECTRUM_MIN_HEIGHT) - SPECTRUM_MIN_HEIGHT)
+      / (SPECTRUM_MAX_HEIGHT - SPECTRUM_MIN_HEIGHT)
+    const visualEnergy = shapedEnergy * (1 - SPECTRUM_IDLE_BLEND) + idleEnergy * SPECTRUM_IDLE_BLEND
+    const targetHeight = SPECTRUM_MIN_HEIGHT
+      + (visualEnergy * 0.72 + presenceLift) * (SPECTRUM_MAX_HEIGHT - SPECTRUM_MIN_HEIGHT) * frequencyBalance
+    return Math.round(clampNumber(targetHeight, SPECTRUM_MIN_HEIGHT, SPECTRUM_MAX_HEIGHT))
   })
-  const frameBars = createMirroredBarsFromCenter(softenDominantCenterBars(centerHeights))
+  const frameBars = createMirroredBarsFromCenter(centerHeights)
 
   spectrumBars.value = smoothSpectrumBars(frameBars)
+}
+
+function readAdaptiveSpectrumBands(currentSpectrumData: Uint8Array<ArrayBuffer>) {
+  return Array.from({ length: SPECTRUM_HALF_BAR_COUNT }, (_, index) => {
+    const bandStartRatio = index / SPECTRUM_HALF_BAR_COUNT
+    const bandEndRatio = (index + 1) / SPECTRUM_HALF_BAR_COUNT
+    const startRatio = 0.018 + bandStartRatio ** 1.55 * 0.84
+    const endRatio = 0.018 + bandEndRatio ** 1.55 * 0.84
+    const [startIndex, endIndex] = resolveSpectrumRange(currentSpectrumData.length, startRatio, endRatio)
+    const bandEnergy = readSpectrumAverage(currentSpectrumData, startIndex, endIndex)
+    const neighborEnergy = readSpectrumAverage(
+      currentSpectrumData,
+      Math.max(0, startIndex - 1),
+      Math.min(currentSpectrumData.length - 1, endIndex + 1),
+    )
+    return bandEnergy * 0.82 + neighborEnergy * 0.18
+  })
+}
+
+function updateSpectrumProfile(bandEnergies: number[]) {
+  spectrumBandFloors = bandEnergies.map((energy, index) => {
+    const currentFloor = spectrumBandFloors[index] ?? energy
+    const followRate = energy < currentFloor ? 0.18 : SPECTRUM_FLOOR_FOLLOW_RATE
+    return currentFloor + (energy - currentFloor) * followRate
+  })
+  spectrumBandPeaks = bandEnergies.map((energy, index) => {
+    const currentPeak = Math.max(spectrumBandPeaks[index] ?? energy, (spectrumBandFloors[index] ?? 0) + 0.05)
+    const followRate = energy > currentPeak ? 0.32 : SPECTRUM_PEAK_FOLLOW_RATE
+    return currentPeak + (energy - currentPeak) * followRate
+  })
+}
+
+function resetSpectrumProfile() {
+  spectrumBandFloors = createSpectrumProfile(0.018)
+  spectrumBandPeaks = createSpectrumProfile(0.16)
+}
+
+function createSpectrumProfile(initialValue: number) {
+  return Array.from({ length: SPECTRUM_HALF_BAR_COUNT }, () => initialValue)
 }
 
 function createIdleSpectrumBars() {
@@ -1069,15 +1085,6 @@ function smoothSpectrumBars(nextBars: number[]) {
   })
 }
 
-function softenDominantCenterBars(centerToEdgeBars: number[]) {
-  const surroundingPeak = Math.max(...centerToEdgeBars.slice(3), SPECTRUM_MIN_HEIGHT)
-  const centerCap = Math.max(28, surroundingPeak + 7)
-  return centerToEdgeBars.map((height, index) => {
-    if (index > 2) return height
-    return Math.round(Math.min(height, centerCap + index * 2))
-  })
-}
-
 function createMirroredSpectrumBars(
   createCenterBarHeight: (distanceFromCenter: number) => number,
 ) {
@@ -1106,6 +1113,10 @@ function readSpectrumAverage(spectrumValues: Uint8Array<ArrayBuffer>, startIndex
   }
   const sampleCount = endIndex - startIndex + 1
   return sampleCount > 0 ? total / sampleCount / 255 : 0
+}
+
+function clampNumber(value: number, min: number, max: number) {
+  return Math.min(max, Math.max(min, value))
 }
 
 async function loadMusic() {

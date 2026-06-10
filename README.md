@@ -131,7 +131,6 @@ src/
 
 - 页面：`src/views/MemoryMap/*`
 - 地图组件：`src/components/TravelMemoryMap/TravelMemoryMap.vue`
-- 管理组件：`src/components/TravelMemoryManager/TravelMemoryManager.vue`
 - 数据来源：本地 GeoJSON + 高德地图能力（可选）+ 后端地点详情
 
 ### Sakura Radio

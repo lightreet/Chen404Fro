@@ -15,6 +15,18 @@
         </div>
       </div>
 
+      <div v-if="editorLoadError" class="travel-memory-editor-error" role="alert">
+        <div class="travel-memory-editor-error__copy">
+          <strong>旅行地点加载失败</strong>
+          <p>{{ editorLoadError }}</p>
+        </div>
+        <div class="travel-memory-editor-error__actions">
+          <el-button type="primary" @click="retryPageLoad">重新加载</el-button>
+          <el-button @click="goToMemoryMap">返回地图</el-button>
+        </div>
+      </div>
+
+      <template v-else>
       <aside class="travel-memory-map-panel">
         <div class="map-panel__head">
           <div class="panel-title">
@@ -447,7 +459,7 @@
 
       <div class="travel-memory-create__footer">
         <div class="travel-memory-create__footer-inner">
-          <el-button class="footer-button footer-button--neutral" @click="router.push('/memory-map')">
+          <el-button class="footer-button footer-button--neutral" @click="goToMemoryMap">
             返回地图
           </el-button>
           <el-button
@@ -461,6 +473,7 @@
           </el-button>
         </div>
       </div>
+      </template>
     </section>
   </div>
 </template>
@@ -515,10 +528,14 @@ const advancedOpen = ref(false)
 const selectedStopIndex = ref(0)
 const expandedStopIndex = ref<number | null>(0)
 const editingDetail = ref<TravelMemoryLocationDetail | null>(null)
+const editorLoadError = ref('')
 const editingEntryRemark = ref<{ stopIndex: number; entryIndex: number } | null>(null)
 const activeEntryActions = ref<{ stopIndex: number; entryIndex: number } | null>(null)
 const draggingEntry = ref<{ stopIndex: number; entryIndex: number } | null>(null)
 let locationResolveRequestId = 0
+let listRequestVersion = 0
+let detailRequestVersion = 0
+let pageLoadVersion = 0
 
 const editingId = computed(() => {
   const rawId = Array.isArray(route.params.id) ? route.params.id[0] : route.params.id
@@ -602,7 +619,7 @@ function resetForm() {
   resolvingLocationMeta.value = false
   locationMetaNeedsManualConfirm.value = false
   lastResolvedAddress.value = ''
-  locationResolveRequestId = 0
+  locationResolveRequestId += 1
 }
 
 function stopDisplayTitle(stop?: Pick<TravelMemoryStopUpsertCommand, 'title'> | null, index = 0) {
@@ -740,24 +757,34 @@ async function focusCurrentMapTarget() {
 }
 
 async function loadList() {
+  const requestVersion = ++listRequestVersion
   try {
-    list.value = await getAdminTravelMemories()
+    const nextList = await getAdminTravelMemories()
+    if (requestVersion !== listRequestVersion) return
+    list.value = nextList
   } catch {
+    if (requestVersion !== listRequestVersion) return
     ElMessage.error('旅行地点列表加载失败')
   }
 }
 
 async function loadEditingDetail() {
+  const requestVersion = ++detailRequestVersion
   if (!isEditMode.value || editingId.value == null) {
-    editingDetail.value = null
-    resetForm()
-    applyEditorMeta()
+    if (requestVersion === detailRequestVersion) {
+      editingDetail.value = null
+      editorLoadError.value = ''
+      resetForm()
+      applyEditorMeta()
+    }
     return
   }
 
   try {
     const detail = await getAdminTravelMemoryDetail(editingId.value)
+    if (requestVersion !== detailRequestVersion) return
     editingDetail.value = detail
+    editorLoadError.value = ''
     fillFormFromDetail(detail)
     if ((!detail.province || !detail.city) && detail.latitude != null && detail.longitude != null) {
       await resolveLocationMetaFromCoordinate(Number(detail.latitude), Number(detail.longitude), { silent: true })
@@ -765,10 +792,11 @@ async function loadEditingDetail() {
     applyEditorMeta()
     await focusCurrentMapTarget()
   } catch {
+    if (requestVersion !== detailRequestVersion) return
     editingDetail.value = null
     resetForm()
+    editorLoadError.value = '这段旅行暂时没有加载出来，你可以重新试一次，或先返回地图。'
     ElMessage.error('地点详情加载失败')
-    router.push('/memory-map')
   }
 }
 
@@ -777,7 +805,7 @@ function goBack() {
     router.back()
     return
   }
-  router.push('/memory-map')
+  goToMemoryMap()
 }
 
 function beforeImageUpload(file: File) {
@@ -804,6 +832,40 @@ function resolveSaveErrorMessage(error: unknown) {
   if (responseMessage) return responseMessage
   if (error instanceof Error && error.message) return error.message
   return fallback
+}
+
+function buildMemoryMapRoute() {
+  const focusId = editingDetail.value?.id ?? editingId.value
+  return {
+    path: '/memory-map',
+    query: focusId != null ? { focus: String(focusId) } : undefined,
+  }
+}
+
+function goToMemoryMap() {
+  router.push(buildMemoryMapRoute())
+}
+
+async function syncEditorPage() {
+  const requestVersion = ++pageLoadVersion
+  loading.value = true
+  editorLoadError.value = ''
+  if (!siteConfig.value?.siteName) {
+    await loadSiteConfig().catch(() => null)
+  }
+  try {
+    await loadList()
+    if (requestVersion !== pageLoadVersion) return
+    await loadEditingDetail()
+  } finally {
+    if (requestVersion === pageLoadVersion) {
+      loading.value = false
+    }
+  }
+}
+
+function retryPageLoad() {
+  void syncEditorPage()
 }
 
 function selectStop(index: number) {
@@ -1262,7 +1324,6 @@ async function handleSave() {
       ? await updateTravelMemory(editingId.value, payload)
       : await createTravelMemory(payload)
     ElMessage.success(isEditMode.value ? '旅行地点更新成功' : '旅行地点创建成功')
-    await loadList()
     router.push({ name: 'TravelMemoryDetail', params: { id: saved.id } })
   } catch (error) {
     ElMessage.error(resolveSaveErrorMessage(error))
@@ -1271,30 +1332,14 @@ async function handleSave() {
   }
 }
 
-onMounted(async () => {
-  loading.value = true
-  await loadSiteConfig().catch(() => null)
-  try {
-    await loadList()
-    await loadEditingDetail()
-  } finally {
-    loading.value = false
-  }
+onMounted(() => {
+  void syncEditorPage()
 })
 
 watch(
   () => route.params.id,
-  async () => {
-    if (!siteConfig.value?.siteName) {
-      await loadSiteConfig().catch(() => null)
-    }
-    loading.value = true
-    try {
-      await loadList()
-      await loadEditingDetail()
-    } finally {
-      loading.value = false
-    }
+  () => {
+    void syncEditorPage()
   },
 )
 </script>
@@ -1306,6 +1351,47 @@ watch(
   margin: 0 auto;
   padding: 78px 0 calc(132px + env(safe-area-inset-bottom, 0));
   color: #43343c;
+}
+
+.travel-memory-editor-error {
+  display: grid;
+  gap: 16px;
+  width: min(720px, 100%);
+  margin: 56px auto 0;
+  padding: 28px;
+  border-radius: 28px;
+  background:
+    linear-gradient(180deg, rgba(255, 251, 252, 0.98), rgba(255, 245, 248, 0.94)),
+    radial-gradient(circle at top right, rgba(255, 213, 226, 0.24), transparent 34%);
+  border: 1px solid rgba(240, 210, 221, 0.92);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.92),
+    0 18px 36px rgba(223, 194, 205, 0.14);
+}
+
+.travel-memory-editor-error__copy {
+  display: grid;
+  gap: 8px;
+}
+
+.travel-memory-editor-error__copy strong {
+  color: #6c4252;
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.travel-memory-editor-error__copy p {
+  margin: 0;
+  color: #7a5a68;
+  font-size: 14px;
+  line-height: 1.8;
+}
+
+.travel-memory-editor-error__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
 }
 
 .travel-memory-editor {

@@ -16,7 +16,7 @@
       class="travel-map-canvas"
     />
 
-    <div v-else class="travel-map-stage">
+      <div v-else ref="stageRef" class="travel-map-stage">
       <div class="travel-map-haze travel-map-haze--left" />
       <div class="travel-map-haze travel-map-haze--right" />
       <div class="travel-map-controls">
@@ -93,7 +93,7 @@
                 :d="cityBoundary.path"
                 class="travel-map-city-boundary"
                 :class="getBoundaryStateClass(cityBoundary.id)"
-                @click.stop="handleBoundaryClick(cityBoundary.id)"
+                @click.stop="handleBoundaryClick(cityBoundary.id, $event)"
               />
             </g>
             <path
@@ -128,7 +128,7 @@
               class="travel-map-marker"
               :class="{ 'is-active': point.id === activeId }"
               :transform="`translate(${point.x}, ${point.y})`"
-              @click.stop="handleMarkerClick(point.id)"
+              @click.stop="handleMarkerClick(point.id, $event)"
             >
               <rect
                 class="travel-map-marker__hit-area"
@@ -154,7 +154,7 @@
                   'is-left': point.label.side === 'left',
                 }"
                 :transform="`translate(${point.label.left}, ${point.label.top})`"
-                @click.stop="handleMarkerClick(point.id)"
+                @click.stop="handleMarkerClick(point.id, $event)"
               >
                 <rect
                   class="travel-map-marker__label-bg"
@@ -200,7 +200,12 @@
         </div>
       </div>
 
-      <div v-if="boundaryChoiceLocations.length" class="travel-map-choice-card">
+      <div
+        v-if="boundaryChoiceLocations.length"
+        ref="choiceCardRef"
+        class="travel-map-choice-card"
+        :style="boundaryChoiceStyle"
+      >
         <div class="travel-map-choice-card__head">
           <strong>这里有几段旅行</strong>
           <button type="button" aria-label="关闭地点选择" @click="closeBoundaryChoice">×</button>
@@ -349,6 +354,11 @@ type MarkerVisualSpec = {
   rippleRadius: number
 }
 
+type ChoiceAnchor = {
+  x: number
+  y: number
+}
+
 const MAP_BOUNDS = {
   minLng: 73,
   maxLng: 135,
@@ -396,6 +406,8 @@ const emit = defineEmits<{
 const viewportRef = ref<HTMLDivElement | null>(null)
 const boardRef = ref<HTMLDivElement | null>(null)
 const containerRef = ref<HTMLDivElement | null>(null)
+const stageRef = ref<HTMLDivElement | null>(null)
+const choiceCardRef = ref<HTMLDivElement | null>(null)
 const loading = ref(true)
 const errorText = ref('')
 const cityMapData = shallowRef<ChinaCityMapGeoJson | null>(null)
@@ -408,6 +420,8 @@ const displayScale = ref(BASE_SCALE)
 const mapPan = ref({ x: 0, y: 0 })
 const isDragging = ref(false)
 const boundaryChoiceId = ref<string | null>(null)
+const boundaryChoiceAnchor = ref<ChoiceAnchor | null>(null)
+const boundaryChoicePosition = ref<ChoiceAnchor | null>(null)
 
 let map: any = null
 let AMapRef: any = null
@@ -569,6 +583,14 @@ const boundaryChoiceLocations = computed(() =>
     ? (boundaryLocationsMap.value.get(boundaryChoiceId.value) ?? [])
     : [],
 )
+const boundaryChoiceStyle = computed(() => {
+  const position = boundaryChoicePosition.value
+  if (!position) return undefined
+  return {
+    left: `${position.x}px`,
+    top: `${position.y}px`,
+  }
+})
 const routePath = computed(() =>
   baseProjectedPoints.value.length >= 2 ? buildSmoothRoute(baseProjectedPoints.value) : '',
 )
@@ -1093,7 +1115,7 @@ function findBoundaryFeatureByName(
   )
 }
 
-function handleBoundaryClick(id: string) {
+function handleBoundaryClick(id: string, event?: MouseEvent) {
   if (Date.now() - lastDragEndedAt < DRAG_SUPPRESS_DURATION) {
     return
   }
@@ -1105,11 +1127,18 @@ function handleBoundaryClick(id: string) {
     return
   }
 
-  boundaryChoiceId.value = targets.length > 1 ? id : null
+  if (targets.length > 1) {
+    openBoundaryChoice(id, resolveChoiceAnchorFromEvent(event) ?? resolveChoiceAnchorFromLocations(targets))
+    return
+  }
+
+  closeBoundaryChoice()
 }
 
 function closeBoundaryChoice() {
   boundaryChoiceId.value = null
+  boundaryChoiceAnchor.value = null
+  boundaryChoicePosition.value = null
 }
 
 function selectBoundaryChoice(id: number) {
@@ -1117,7 +1146,7 @@ function selectBoundaryChoice(id: number) {
   emit('select', id)
 }
 
-function selectBoundaryTarget(id: string, fallbackId: number) {
+function selectBoundaryTarget(id: string, fallbackId: number, anchor?: ChoiceAnchor | null) {
   const targets = boundaryLocationsMap.value.get(id) ?? []
   if (targets.length === 1) {
     closeBoundaryChoice()
@@ -1126,12 +1155,21 @@ function selectBoundaryTarget(id: string, fallbackId: number) {
   }
 
   if (targets.length > 1) {
-    boundaryChoiceId.value = id
+    openBoundaryChoice(id, anchor ?? resolveChoiceAnchorFromLocations(targets))
     return
   }
 
   closeBoundaryChoice()
   emit('select', fallbackId)
+}
+
+function openBoundaryChoice(id: string, anchor?: ChoiceAnchor | null) {
+  boundaryChoiceId.value = id
+  boundaryChoiceAnchor.value = anchor ?? null
+  boundaryChoicePosition.value = null
+  void nextTick(() => {
+    updateBoundaryChoicePosition()
+  })
 }
 
 function zoomIn() {
@@ -1294,7 +1332,7 @@ function handlePointerUp(event: PointerEvent) {
   isDragging.value = false
 }
 
-function handleMarkerClick(id: number) {
+function handleMarkerClick(id: number, trigger?: MouseEvent | HTMLElement | SVGElement | null) {
   if (Date.now() - lastDragEndedAt < DRAG_SUPPRESS_DURATION) {
     return
   }
@@ -1305,7 +1343,11 @@ function handleMarkerClick(id: number) {
       emit('select', id)
       return
     }
-    selectBoundaryTarget(choiceKey, id)
+    selectBoundaryTarget(
+      choiceKey,
+      id,
+      resolveChoiceAnchorFromTrigger(trigger) ?? resolveChoiceAnchorFromLocationId(id),
+    )
     return
   }
 
@@ -1549,15 +1591,135 @@ function bindDisplayMarkerButtons() {
     if (!Number.isFinite(id)) return
     button.addEventListener('click', (event) => {
       event.stopPropagation()
-      handleMarkerClick(id)
+      handleMarkerClick(id, button)
     })
     button.addEventListener('keydown', (event) => {
       if (event.key !== 'Enter' && event.key !== ' ') return
       event.preventDefault()
       event.stopPropagation()
-      handleMarkerClick(id)
+      handleMarkerClick(id, button)
     })
   })
+}
+
+function updateBoundaryChoicePosition() {
+  const stage = stageRef.value
+  const card = choiceCardRef.value
+  if (!stage || !card) return
+
+  const stageRect = stage.getBoundingClientRect()
+  const cardWidth = card.offsetWidth
+  const cardHeight = card.offsetHeight
+  const margin = 18
+  const gap = 18
+  const fallbackX = margin
+  const fallbackY = Math.max(margin, stageRect.height - cardHeight - margin)
+  const anchor = boundaryChoiceAnchor.value ?? { x: fallbackX, y: fallbackY }
+
+  let left = anchor.x - cardWidth / 2
+  let top = anchor.y + gap
+
+  if (top + cardHeight > stageRect.height - margin) {
+    top = anchor.y - cardHeight - gap
+  }
+
+  left = clamp(left, margin, Math.max(margin, stageRect.width - cardWidth - margin))
+  top = clamp(top, margin, Math.max(margin, stageRect.height - cardHeight - margin))
+
+  boundaryChoicePosition.value = { x: left, y: top }
+}
+
+function resolveChoiceAnchorFromTrigger(trigger?: MouseEvent | HTMLElement | SVGElement | null) {
+  if (!trigger) return null
+  if (trigger instanceof MouseEvent) {
+    return resolveChoiceAnchorFromClientPoint(trigger.clientX, trigger.clientY)
+  }
+  return resolveChoiceAnchorFromElement(trigger)
+}
+
+function resolveChoiceAnchorFromEvent(event?: MouseEvent) {
+  if (!event) return null
+  return resolveChoiceAnchorFromClientPoint(event.clientX, event.clientY)
+}
+
+function resolveChoiceAnchorFromClientPoint(clientX: number, clientY: number) {
+  const stage = stageRef.value
+  if (!stage) return null
+  const stageRect = stage.getBoundingClientRect()
+  return {
+    x: clientX - stageRect.left,
+    y: clientY - stageRect.top,
+  }
+}
+
+function resolveChoiceAnchorFromElement(element: HTMLElement | SVGElement) {
+  const stage = stageRef.value
+  if (!stage) return null
+  const stageRect = stage.getBoundingClientRect()
+  const rect = element.getBoundingClientRect()
+  return {
+    x: rect.left - stageRect.left + rect.width / 2,
+    y: rect.top - stageRect.top + rect.height / 2,
+  }
+}
+
+function resolveChoiceAnchorFromLocationId(id: number) {
+  if (isAmapDisplayReady.value) {
+    const amapAnchor = resolveAmapChoiceAnchor(id)
+    if (amapAnchor) return amapAnchor
+  }
+  return resolveSvgChoiceAnchor(id)
+}
+
+function resolveChoiceAnchorFromLocations(locations: TravelMemoryLocationListItem[]) {
+  if (!locations.length) return null
+  const anchors = locations
+    .map((location) => resolveChoiceAnchorFromLocationId(location.id))
+    .filter((anchor): anchor is ChoiceAnchor => !!anchor)
+  if (!anchors.length) return null
+  return {
+    x: anchors.reduce((sum, anchor) => sum + anchor.x, 0) / anchors.length,
+    y: anchors.reduce((sum, anchor) => sum + anchor.y, 0) / anchors.length,
+  }
+}
+
+function resolveSvgChoiceAnchor(id: number) {
+  const point = displayPoints.value.find((item) => item.id === id)
+  if (!point) return null
+  return projectBoardPointToStage(point.x, point.y)
+}
+
+function resolveAmapChoiceAnchor(id: number) {
+  const location = props.locations.find((item) => item.id === id)
+  if (!location || !isValidCoordinate(location.latitude, location.longitude)) return null
+  const displayPointMap = getAmapDisplayPointMap(props.locations.filter((item) => isValidCoordinate(item.latitude, item.longitude)))
+  const point = displayPointMap.get(id)
+  if (!point) return null
+  return projectContainerPointToStage(point.x, point.y)
+}
+
+function projectBoardPointToStage(x: number, y: number) {
+  const stage = stageRef.value
+  const board = boardRef.value
+  if (!stage || !board) return null
+  const stageRect = stage.getBoundingClientRect()
+  const boardRect = board.getBoundingClientRect()
+  return {
+    x: boardRect.left - stageRect.left + (x / SVG_VIEWBOX.width) * boardRect.width,
+    y: boardRect.top - stageRect.top + (y / SVG_VIEWBOX.height) * boardRect.height,
+  }
+}
+
+function projectContainerPointToStage(x: number, y: number) {
+  const stage = stageRef.value
+  const container = containerRef.value
+  if (!stage || !container) return null
+  const stageRect = stage.getBoundingClientRect()
+  const containerRect = container.getBoundingClientRect()
+  return {
+    x: containerRect.left - stageRect.left + x,
+    y: containerRect.top - stageRect.top + y,
+  }
 }
 
 function getHtmlMarkerPinBox(markerVisual: MarkerVisualSpec): MarkerPinBox {
@@ -1793,6 +1955,15 @@ watch(
 )
 
 watch(
+  () => boundaryChoiceLocations.value.length,
+  async (count) => {
+    if (!count) return
+    await nextTick()
+    updateBoundaryChoicePosition()
+  },
+)
+
+watch(
   () => [props.pickerLatitude, props.pickerLongitude] as const,
   () => {
     syncPickerMarker()
@@ -1807,6 +1978,9 @@ watch(
 )
 
 function handleResize() {
+  if (boundaryChoiceLocations.value.length) {
+    updateBoundaryChoicePosition()
+  }
   if (isAmapDisplayReady.value) {
     map?.resize?.()
     scheduleAmapMarkerRefresh()
@@ -2051,8 +2225,8 @@ defineExpose({
 
 .travel-map-choice-card {
   position: absolute;
-  left: 24px;
-  bottom: 24px;
+  top: 18px;
+  left: 18px;
   z-index: 4;
   width: min(280px, calc(100% - 48px));
   max-height: min(320px, calc(100% - 48px));

@@ -36,6 +36,13 @@
               </div>
 
               <div v-if="loading" class="gallery-state memory-rail__state">地点加载中...</div>
+              <div v-else-if="memoryLoadError" class="gallery-state memory-rail__state memory-rail__state--error">
+                <strong>旅行地点加载失败</strong>
+                <p>{{ memoryLoadError }}</p>
+                <el-button plain class="gallery-state__retry" @click="retryMemoryList">
+                  重新加载
+                </el-button>
+              </div>
               <div v-else-if="!locations.length" class="memory-rail__list memory-rail__list--placeholder">
                 <article
                   v-for="card in placeholderFilmCards"
@@ -53,40 +60,43 @@
                   :key="location.id"
                   class="rail-item"
                   :class="{ 'is-active': activeId === location.id }"
-                  role="button"
-                  tabindex="0"
                   :ref="(element) => setGalleryCardRef(location.id, element)"
-                  @click="selectGalleryLocation(location.id)"
-                  @keydown.enter.prevent="selectGalleryLocation(location.id)"
-                  @keydown.space.prevent="selectGalleryLocation(location.id)"
                 >
-                  <div class="rail-item__thumb-wrap">
-                    <img
-                      v-if="location.coverImage"
-                      class="rail-item__thumb"
-                      :src="location.coverImage"
-                      :alt="location.title"
-                    />
-                    <div v-else class="rail-item__thumb rail-item__thumb--empty">TRAVEL</div>
-
-                    <div v-if="canManage" class="rail-item__admin-overlay" @click.stop>
-                      <button
-                        type="button"
-                        class="rail-item__admin-button"
-                        aria-label="编辑地点"
-                        @click="editGalleryLocation(location.id)"
-                      >
-                        <el-icon><EditPen /></el-icon>
-                      </button>
-                      <button
-                        type="button"
-                        class="rail-item__admin-button rail-item__admin-button--danger"
-                        aria-label="删除地点"
-                        @click="deleteGalleryLocation(location)"
-                      >
-                        <el-icon><Delete /></el-icon>
-                      </button>
+                  <button
+                    type="button"
+                    class="rail-item__select"
+                    :class="{ 'is-active': activeId === location.id }"
+                    :aria-label="`查看 ${location.title}`"
+                    :aria-pressed="activeId === location.id"
+                    @click="selectGalleryLocation(location.id)"
+                  >
+                    <div class="rail-item__thumb-wrap">
+                      <img
+                        v-if="location.coverImage"
+                        class="rail-item__thumb"
+                        :src="location.coverImage"
+                        :alt="location.title"
+                      />
+                      <div v-else class="rail-item__thumb rail-item__thumb--empty">TRAVEL</div>
                     </div>
+                  </button>
+                  <div v-if="canManage" class="rail-item__admin-overlay">
+                    <button
+                      type="button"
+                      class="rail-item__admin-button"
+                      aria-label="编辑地点"
+                      @click.stop="editGalleryLocation(location.id)"
+                    >
+                      <el-icon><EditPen /></el-icon>
+                    </button>
+                    <button
+                      type="button"
+                      class="rail-item__admin-button rail-item__admin-button--danger"
+                      aria-label="删除地点"
+                      @click.stop="deleteGalleryLocation(location)"
+                    >
+                      <el-icon><Delete /></el-icon>
+                    </button>
                   </div>
                 </article>
               </div>
@@ -143,6 +153,7 @@
           <aside class="memory-spread__page memory-spread__page--detail">
             <template v-if="activeDetail">
               <div
+                :key="activeId ?? 'empty-journal'"
                 class="travel-journal"
                 :class="{ 'is-loading': loadingDetail }"
                 :aria-busy="loadingDetail"
@@ -173,13 +184,23 @@
                   </div>
                 </div>
 
+                <div v-if="detailLoadError" class="travel-journal__error" role="status" aria-live="polite">
+                  <div class="travel-journal__error-copy">
+                    <strong>地点详情加载失败</strong>
+                    <p>{{ detailLoadError }}</p>
+                  </div>
+                  <el-button plain class="journal-action journal-action--retry" @click="retryActiveDetail">
+                    重新加载
+                  </el-button>
+                </div>
+
                 <div class="travel-journal__media">
                   <div class="travel-journal__cover">
                     <img class="travel-journal__tape" :src="tapeCornerAsset" alt="" aria-hidden="true" />
                     <img
-                      v-if="coverEntry?.imageUrl"
-                      :src="coverEntry.imageUrl"
-                      :alt="coverEntry.remark || activeDetail.title"
+                      v-if="journalCoverImage"
+                      :src="journalCoverImage"
+                      :alt="journalCoverAlt"
                     />
                     <div v-else class="travel-journal__cover-empty">等待封面图片</div>
                   </div>
@@ -197,7 +218,6 @@
                       <div class="journal-note__body">
                         <h4>{{ note.title }}</h4>
                         <p>{{ note.copy }}</p>
-                        <span>{{ formatDate(note.date) || '留白的一天' }}</span>
                       </div>
                     </article>
                   </div>
@@ -263,8 +283,8 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, onMounted, ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { computed, nextTick, onMounted, ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import dayjs from 'dayjs'
 import { storeToRefs } from 'pinia'
 import { ElMessage, ElMessageBox } from 'element-plus'
@@ -287,6 +307,7 @@ const GALLERY_LOAD_MORE_STEP = 4
 const { siteConfig, loadSiteConfig } = useSiteConfig()
 const userStore = useUserStore()
 const { isLoggedIn, user } = storeToRefs(userStore)
+const route = useRoute()
 const router = useRouter()
 
 const defaultHero = resolveFeatureHero(null, 'memory-map')
@@ -299,8 +320,12 @@ const visibleGalleryCount = ref(INITIAL_GALLERY_VISIBLE_COUNT)
 const activeId = ref<number | null>(null)
 const activeDetail = ref<TravelMemoryLocationDetail | null>(null)
 const detailCache = ref<Record<number, TravelMemoryLocationDetail>>({})
+const detailLoadError = ref('')
+const memoryLoadError = ref('')
 const galleryCardRefs = new Map<number, HTMLElement>()
 let detailRequestVersion = 0
+let memoryLoadVersion = 0
+let hasInitializedAccessState = false
 const canManage = computed(() => isAdminUser(user.value))
 const canViewContent = computed(() => isAdminUser(user.value) || isFriendUser(user.value))
 const memoryMapCover = computed(() => buildMemoryMapCoverConfig(isLoggedIn.value))
@@ -371,6 +396,8 @@ const journalDateRange = computed(() =>
   formatDateRange(activeDetail.value?.visitedAt, activeDetail.value?.visitedEndAt),
 )
 const journalStampLabel = computed(() => currentLocationName.value)
+const journalCoverImage = computed(() => coverEntry.value?.imageUrl || activeDetail.value?.coverImage || '')
+const journalCoverAlt = computed(() => coverEntry.value?.remark || activeDetail.value?.title || '旅行封面')
 const journalQuote = computed(() => {
   const summary = activeDetail.value?.summaryNote?.trim()
   if (summary) return summary
@@ -424,9 +451,13 @@ const placeholderFilmCards = [
 ] as const
 
 async function loadMemories(preferredId?: number | null) {
+  const requestVersion = ++memoryLoadVersion
   loading.value = true
+  detailLoadError.value = ''
+  memoryLoadError.value = ''
   try {
     const list = await getTravelMemories()
+    if (requestVersion !== memoryLoadVersion || !canViewContent.value) return
     if (list?.length) {
       locations.value = list
       resetGalleryVisibleCount()
@@ -441,39 +472,34 @@ async function loadMemories(preferredId?: number | null) {
       }
       return
     }
-    detailRequestVersion += 1
-    detailCache.value = {}
-    locations.value = []
-    resetGalleryVisibleCount()
-    activeId.value = null
-    activeDetail.value = null
-    loadingDetail.value = false
+    resetMemoryState()
   } catch {
-    detailRequestVersion += 1
-    detailCache.value = {}
-    locations.value = []
-    resetGalleryVisibleCount()
-    activeId.value = null
-    activeDetail.value = null
-    loadingDetail.value = false
+    if (requestVersion !== memoryLoadVersion) return
+    resetMemoryState()
+    memoryLoadError.value = '请检查登录状态、接口连通性，或稍后再试。'
     ElMessage.error('旅行地点加载失败')
   } finally {
-    loading.value = false
+    if (requestVersion === memoryLoadVersion) {
+      loading.value = false
+    }
   }
 }
 
 async function handleSelectLocation(id: number, options: { syncGallery?: boolean } = {}) {
   const requestVersion = ++detailRequestVersion
+  const cachedDetail = detailCache.value[id]
+  const summary = locations.value.find((location) => location.id === id)
   activeId.value = id
+  detailLoadError.value = ''
+  activeDetail.value = cachedDetail || (summary ? buildPendingDetail(summary) : null)
   ensureGalleryLocationVisible(id)
   await nextTick()
   if (options.syncGallery !== false) {
     scrollGalleryCardIntoView(id)
   }
 
-  if (detailCache.value[id]) {
+  if (cachedDetail) {
     loadingDetail.value = false
-    activeDetail.value = detailCache.value[id]
     return
   }
 
@@ -487,6 +513,7 @@ async function handleSelectLocation(id: number, options: { syncGallery?: boolean
     activeDetail.value = detail
   } catch {
     if (requestVersion === detailRequestVersion && activeId.value === id) {
+      detailLoadError.value = '当前先展示基础摘要，你可以稍后重新加载完整游记。'
       ElMessage.error('地点详情加载失败')
     }
   } finally {
@@ -498,6 +525,15 @@ async function handleSelectLocation(id: number, options: { syncGallery?: boolean
 
 function openCreateDialog() {
   router.push({ name: 'TravelMemoryCreate' })
+}
+
+function retryActiveDetail() {
+  if (activeId.value == null) return
+  void handleSelectLocation(activeId.value, { syncGallery: false })
+}
+
+function retryMemoryList() {
+  void loadMemories(resolveRouteFocusId())
 }
 
 function openCurrentDetailPage() {
@@ -578,7 +614,7 @@ function selectGalleryLocation(id: number) {
 }
 
 function selectMapLocation(id: number) {
-  void handleSelectLocation(id, { syncGallery: false })
+  void handleSelectLocation(id)
 }
 
 function buildEntryJournalNote(
@@ -594,6 +630,28 @@ function buildEntryJournalNote(
     copy: entry.thanksNote?.trim() || '把这一刻写进记忆里，留给未来再次翻阅。',
     date: entry.shotAt || fallbackDate,
   }
+}
+
+function buildPendingDetail(location: TravelMemoryLocationListItem): TravelMemoryLocationDetail {
+  return {
+    ...location,
+    entries: [],
+    stops: [],
+  }
+}
+
+function resetMemoryState() {
+  memoryLoadVersion += 1
+  detailRequestVersion += 1
+  detailCache.value = {}
+  locations.value = []
+  resetGalleryVisibleCount()
+  activeId.value = null
+  activeDetail.value = null
+  loading.value = false
+  loadingDetail.value = false
+  detailLoadError.value = ''
+  memoryLoadError.value = ''
 }
 
 function resetGalleryVisibleCount() {
@@ -645,6 +703,12 @@ function resolveDefaultLocationId(
   return list[0]?.id ?? null
 }
 
+function resolveRouteFocusId() {
+  const rawValue = Array.isArray(route.query.focus) ? route.query.focus[0] : route.query.focus
+  const numericId = Number(rawValue)
+  return Number.isFinite(numericId) ? numericId : null
+}
+
 onMounted(async () => {
   await Promise.all([
     userStore.syncAuthState().catch(() => false),
@@ -654,11 +718,35 @@ onMounted(async () => {
   const hero = resolveFeatureHero(siteConfig.value, 'memory-map')
   heroBgImage.value = hero.bgImage
   heroBgPosition.value = hero.bgPosition
-
-  if (canViewContent.value) {
-    await loadMemories()
-  }
+  await syncMemoryContent()
+  hasInitializedAccessState = true
 })
+
+async function syncMemoryContent() {
+  if (!canViewContent.value) {
+    resetMemoryState()
+    return
+  }
+  await loadMemories(resolveRouteFocusId())
+}
+
+watch(
+  () => canViewContent.value,
+  async (next, previous) => {
+    if (!hasInitializedAccessState || next === previous) return
+    await syncMemoryContent()
+  },
+)
+
+watch(
+  () => route.query.focus,
+  (focus) => {
+    if (!hasInitializedAccessState || !canViewContent.value) return
+    const targetId = Array.isArray(focus) ? Number(focus[0]) : Number(focus)
+    if (!Number.isFinite(targetId) || targetId === activeId.value) return
+    void handleSelectLocation(targetId)
+  },
+)
 </script>
 
 <style scoped lang="scss">
@@ -780,7 +868,7 @@ onMounted(async () => {
   min-height: 0;
   display: grid;
   align-content: start;
-  gap: 18px;
+  gap: 12px;
   overflow: auto;
   padding-right: 8px;
 }
@@ -970,8 +1058,8 @@ onMounted(async () => {
   width: 100%;
   display: flex;
   flex-direction: column;
-  gap: 20px;
-  padding: clamp(16px, 1.4vw, 20px);
+  gap: 16px;
+  padding: clamp(14px, 1.1vw, 18px);
   border-radius: 32px;
   background:
     linear-gradient(180deg, rgba(255, 252, 250, 0.74), rgba(255, 247, 244, 0.58)),
@@ -1000,17 +1088,50 @@ onMounted(async () => {
   line-height: 1;
 }
 
+.travel-journal__error {
+  display: grid;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: 20px;
+  background:
+    linear-gradient(180deg, rgba(255, 249, 250, 0.98), rgba(255, 242, 245, 0.94)),
+    radial-gradient(circle at top right, rgba(255, 208, 220, 0.22), transparent 36%);
+  border: 1px solid rgba(238, 197, 209, 0.94);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    0 12px 24px rgba(226, 196, 206, 0.1);
+}
+
+.travel-journal__error-copy {
+  display: grid;
+  gap: 6px;
+}
+
+.travel-journal__error-copy strong {
+  color: #84495f;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.travel-journal__error-copy p {
+  margin: 0;
+  color: #7b5d6a;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
 .travel-journal__head {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: start;
-  gap: 20px;
+  gap: 16px;
   width: 100%;
 }
 
 .travel-journal__copy {
   display: grid;
-  gap: 11px;
+  gap: 9px;
   min-width: 0;
 }
 
@@ -1062,9 +1183,9 @@ onMounted(async () => {
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  min-width: 88px;
-  min-height: 88px;
-  padding: 7px;
+  min-width: 80px;
+  min-height: 80px;
+  padding: 6px;
   border-radius: 999px;
   color: #c1708b;
   text-align: center;
@@ -1075,15 +1196,15 @@ onMounted(async () => {
 }
 
 .travel-journal__stamp span {
-  font-size: 11px;
+  font-size: 10px;
   letter-spacing: 0.08em;
   opacity: 0.84;
 }
 
 .travel-journal__stamp strong {
-  margin-top: 4px;
+  margin-top: 3px;
   font-family: var(--memory-title-font);
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 700;
   line-height: 1.1;
 }
@@ -1099,15 +1220,15 @@ onMounted(async () => {
 
 .travel-journal__media {
   display: grid;
-  gap: 22px;
+  gap: 16px;
   width: 100%;
   margin-top: 0;
 }
 
 .travel-journal__cover {
   position: relative;
-  height: 156px;
-  padding: 9px;
+  height: 136px;
+  padding: 8px;
   border-radius: 18px;
   overflow: hidden;
   background:
@@ -1127,9 +1248,9 @@ onMounted(async () => {
 
 .travel-journal__tape {
   position: absolute;
-  top: 7px;
-  left: 12px;
-  width: 72px;
+  top: 6px;
+  left: 10px;
+  width: 64px;
   z-index: 2;
   pointer-events: none;
 }
@@ -1159,7 +1280,7 @@ onMounted(async () => {
 .travel-journal__entries {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 12px;
+  gap: 8px;
   align-items: stretch;
 }
 
@@ -1170,10 +1291,11 @@ onMounted(async () => {
 .journal-note {
   position: relative;
   display: grid;
-  grid-template-columns: 108px minmax(0, 1fr);
+  grid-template-columns: 78px minmax(0, 1fr);
   align-items: stretch;
-  min-height: 0;
-  border-radius: 18px;
+  height: 78px;
+  min-height: 78px;
+  border-radius: 15px;
   background: rgba(255, 255, 255, 0.82);
   overflow: hidden;
   box-shadow:
@@ -1182,11 +1304,13 @@ onMounted(async () => {
 }
 
 .journal-note__thumb {
+  height: 78px;
   background: rgba(249, 244, 247, 0.86);
-  min-height: 108px;
+  min-height: 78px;
 }
 
 .journal-note__thumb img {
+  display: block;
   width: 100%;
   height: 100%;
   object-fit: cover;
@@ -1206,39 +1330,33 @@ onMounted(async () => {
 
 .journal-note__body {
   display: grid;
-  gap: 5px;
-  align-content: start;
+  gap: 3px;
+  align-content: center;
   min-height: 0;
-  padding: 10px 10px 12px;
+  padding: 7px 10px;
   text-align: left;
 }
 
 .journal-note__body h4 {
   margin: 0;
   color: #5d3d4b;
-  font-size: 13px;
-  line-height: 1.42;
+  font-size: 12px;
+  line-height: 1.3;
   display: -webkit-box;
   overflow: hidden;
-  -webkit-line-clamp: 2;
+  -webkit-line-clamp: 1;
   -webkit-box-orient: vertical;
 }
 
 .journal-note__body p {
   margin: 0;
   color: var(--text-secondary);
-  font-size: 11px;
-  line-height: 1.68;
+  font-size: 10.5px;
+  line-height: 1.35;
   display: -webkit-box;
   overflow: hidden;
-  -webkit-line-clamp: 2;
+  -webkit-line-clamp: 1;
   -webkit-box-orient: vertical;
-}
-
-.journal-note__body span {
-  margin-top: 4px;
-  color: #c57f9a;
-  font-size: 11px;
 }
 
 .journal-note--placeholder {
@@ -1250,8 +1368,8 @@ onMounted(async () => {
 .travel-journal__quote {
   position: relative;
   display: grid;
-  gap: 10px;
-  padding: 18px 20px 18px 50px;
+  gap: 8px;
+  padding: 14px 16px 14px 40px;
   border-radius: 20px;
   background:
     linear-gradient(180deg, rgba(255, 252, 252, 0.98), rgba(255, 247, 248, 0.94)),
@@ -1264,34 +1382,34 @@ onMounted(async () => {
 
 .travel-journal__footer {
   display: grid;
-  gap: 18px;
-  margin-top: auto;
-  padding-top: 6px;
+  gap: 12px;
+  margin-top: 0;
+  padding-top: 0;
 }
 
 .travel-journal__quote::before {
   content: '“';
   position: absolute;
-  top: 16px;
-  left: 18px;
+  top: 12px;
+  left: 14px;
   color: #ff8fb1;
-  font-size: 18px;
+  font-size: 16px;
   line-height: 1;
 }
 
 .travel-journal__quote p {
   margin: 0;
   color: #6c4d5a;
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 600;
-  line-height: 1.75;
+  line-height: 1.62;
 }
 
 .travel-journal__actions--note {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   align-items: stretch;
-  gap: 18px;
+  gap: 14px;
   width: 100%;
 }
 
@@ -1305,7 +1423,7 @@ onMounted(async () => {
 
 .travel-journal__actions.travel-journal__actions--note {
   display: grid;
-  gap: 18px;
+  gap: 14px;
 }
 
 .travel-journal__actions--empty {
@@ -1320,7 +1438,7 @@ onMounted(async () => {
   --el-button-hover-bg-color: rgba(255, 246, 249, 0.96);
   --el-button-hover-border-color: rgba(230, 182, 198, 0.96);
   --el-button-hover-text-color: #704d5b;
-  min-height: 40px;
+  min-height: 38px;
   width: 156px;
   flex: 0 0 156px;
   padding-inline: 16px;
@@ -1359,6 +1477,12 @@ onMounted(async () => {
   color: #fff !important;
   border: none !important;
   background: linear-gradient(135deg, rgba(255, 145, 184, 1), rgba(248, 123, 166, 1)) !important;
+}
+
+.journal-action--retry {
+  width: 100%;
+  min-width: 0;
+  flex-basis: 100%;
 }
 
 .map-action {
@@ -1454,6 +1578,29 @@ onMounted(async () => {
   min-height: 220px;
 }
 
+.memory-rail__state--error {
+  gap: 10px;
+  align-content: center;
+}
+
+.memory-rail__state--error strong {
+  color: #84495f;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.memory-rail__state--error p {
+  margin: 0;
+  max-width: 18rem;
+  color: #7b5d6a;
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.gallery-state__retry {
+  min-width: 132px;
+}
+
 .panel-caption {
   display: flex;
   gap: 10px;
@@ -1466,75 +1613,67 @@ onMounted(async () => {
   display: block;
   width: 100%;
   min-height: 0;
-  padding: 0;
-  border-radius: 16px;
-  border: 1px solid rgba(239, 223, 229, 0.82);
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(255, 248, 250, 0.9)),
-    radial-gradient(circle at top left, rgba(255, 224, 233, 0.18), transparent 42%);
-  text-align: left;
-  cursor: pointer;
-  overflow: hidden;
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.92),
-    0 12px 24px rgba(220, 171, 188, 0.08);
+  overflow: visible;
+  box-shadow: none;
   transition:
-    transform 0.2s ease,
-    border-color 0.2s ease,
-    background 0.2s ease,
-    box-shadow 0.2s ease;
+    transform 0.22s ease,
+    box-shadow 0.22s ease;
 }
 
-.rail-item:hover,
-.rail-item.is-active,
-.rail-item:focus-visible {
-  transform: translateY(-1px);
-  border-color: rgba(235, 145, 180, 0.96);
-  background:
-    linear-gradient(180deg, rgba(255, 252, 253, 0.98), rgba(255, 243, 247, 0.92)),
-    radial-gradient(circle at top left, rgba(255, 214, 226, 0.28), transparent 44%);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.98),
-    0 20px 32px rgba(218, 158, 180, 0.18);
+.rail-item__select {
+  display: block;
+  width: 100%;
+  min-height: 0;
+  padding: 0;
+  border: none;
+  border-radius: 16px;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
 }
 
 .rail-item.is-active {
-  border-color: rgba(231, 119, 164, 0.98);
-  box-shadow:
-    inset 0 0 0 1px rgba(255, 245, 248, 0.9),
-    0 22px 36px rgba(220, 146, 175, 0.22);
+  transform: translateY(-3px);
 }
 
-.rail-item:focus-visible {
+.rail-item__select:focus-visible {
   outline: none;
 }
 
 .rail-item__thumb-wrap {
   position: relative;
   overflow: hidden;
-  border-radius: inherit;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow:
+    0 8px 14px rgba(195, 188, 192, 0.1),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.34);
+  transition:
+    box-shadow 0.22s ease;
+}
+
+.rail-item__thumb-wrap::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  background: radial-gradient(circle at 18% 20%, rgba(255, 255, 255, 0.22), transparent 36%);
+  pointer-events: none;
 }
 
 .rail-item__thumb-wrap::after {
-  content: '';
-  position: absolute;
-  inset: auto 0 0;
-  height: 36%;
-  background: linear-gradient(180deg, rgba(91, 58, 69, 0), rgba(91, 58, 69, 0.18));
-  pointer-events: none;
+  content: none;
 }
 
 .rail-item__thumb {
   width: 100%;
-  aspect-ratio: 12 / 5;
+  aspect-ratio: 18 / 5;
   display: block;
   object-fit: cover;
   object-position: center center;
   border-radius: inherit;
   background: linear-gradient(135deg, rgba(255, 240, 246, 0.98), rgba(245, 248, 254, 0.9));
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.82),
-    0 8px 18px rgba(219, 182, 194, 0.1);
+  transition: filter 0.22s ease;
 }
 
 .rail-item__thumb--empty,
@@ -1550,6 +1689,23 @@ onMounted(async () => {
   cursor: default;
 }
 
+.rail-item:hover .rail-item__thumb-wrap,
+.rail-item__select:focus-visible .rail-item__thumb-wrap {
+  box-shadow:
+    0 12px 18px rgba(201, 194, 198, 0.16),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.5);
+}
+
+.rail-item.is-active .rail-item__thumb-wrap {
+  box-shadow:
+    0 16px 18px rgba(146, 146, 146, 0.3),
+    0 5px 10px rgba(203, 197, 200, 0.2);
+}
+
+.rail-item.is-active .rail-item__thumb {
+  filter: saturate(1.02) brightness(1.01);
+}
+
 .rail-item__admin-overlay {
   position: absolute;
   inset: 0;
@@ -1558,23 +1714,23 @@ onMounted(async () => {
   align-items: flex-end;
   justify-content: center;
   gap: 6px;
-  padding: 14px 10px 12px;
+  padding: 10px 10px 10px;
   background: linear-gradient(180deg, rgba(40, 32, 38, 0.04), rgba(40, 32, 38, 0.58));
   opacity: 0;
+  visibility: hidden;
   pointer-events: none;
   transition: opacity 0.18s ease;
 }
 
 .rail-item:hover .rail-item__admin-overlay,
-.rail-item:focus-within .rail-item__admin-overlay,
-.rail-item.is-active .rail-item__admin-overlay {
+.rail-item:focus-within .rail-item__admin-overlay {
   opacity: 1;
-  pointer-events: auto;
+  visibility: visible;
 }
 
 .rail-item__admin-button {
-  width: 34px;
-  height: 34px;
+  width: 32px;
+  height: 32px;
   display: inline-grid;
   place-items: center;
   align-items: center;
@@ -1585,11 +1741,20 @@ onMounted(async () => {
   background: rgba(255, 255, 255, 0.18);
   backdrop-filter: blur(12px);
   cursor: pointer;
+  opacity: 0;
+  pointer-events: none;
   transition:
+    opacity 0.18s ease,
     color 0.18s ease,
     background 0.18s ease,
     border-color 0.18s ease,
     transform 0.18s ease;
+}
+
+.rail-item:hover .rail-item__admin-button,
+.rail-item:focus-within .rail-item__admin-button {
+  opacity: 1;
+  pointer-events: auto;
 }
 
 .rail-item__admin-button .el-icon {

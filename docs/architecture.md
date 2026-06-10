@@ -47,7 +47,6 @@ src/
 │  ├─ Live2D/
 │  ├─ PageHero/
 │  ├─ SakuraOverlay/
-│  ├─ TravelMemoryManager/
 │  ├─ TravelMemoryMap/
 │  └─ UserProfile/
 ├─ composables/
@@ -229,7 +228,6 @@ trust-request / home / archive / memory-map / music / category / about / guestbo
 - `views/MemoryMap/TravelMemoryDetail.vue`
 - `views/MemoryMap/TravelMemoryCreate.vue`
 - `components/TravelMemoryMap/TravelMemoryMap.vue`
-- `components/TravelMemoryManager/TravelMemoryManager.vue`
 - `api/travel-memory.ts`
 
 当前实现要点：
