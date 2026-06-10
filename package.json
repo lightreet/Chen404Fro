@@ -24,6 +24,7 @@
     "echarts": "^6.1.0",
     "element-plus": "^2.13.5",
     "md-editor-v3": "^6.4.0",
+    "music-metadata": "^11.13.0",
     "pinia": "^3.0.4",
     "sakura-js": "^1.1.1",
     "sass": "^1.98.0",

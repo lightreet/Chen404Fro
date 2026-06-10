@@ -232,11 +232,12 @@ trust-request / home / archive / memory-map / music / category / about / guestbo
 
 当前实现要点：
 
-- 主页面是“地图册页 + 地点详情 + 旅行胶片”组合页
-- 独立详情页保留大图、缩略图、照片切换与分段描述
-- 创建/编辑页支持地图点选、自动定位、地点搜索、图片上传、EXIF 辅助坐标回填
-- 地图组件优先加载本地城市/省份 GeoJSON；失败时回退基础 SVG 地图
-- 编辑态可接入高德地图能力，支持底图、定位与逆地理编码
+- `/memory-map` 是公开入口，但真实地点内容只对管理员或知友展示；无权限用户会先看到 `FeatureAccessCover`
+- 主页面已经收敛为“三栏 atlas 工作区”：左侧旅行索引、中间地图主画布、右侧当前地点详情
+- 展示态地图优先使用高德真实底图；缺少 Key、脚本失败或网络异常时，会回退到城市/省级 GeoJSON + 基础 SVG
+- 独立详情页提供照片 hero、片段列表、位置概览、迷你地图、相册和上一篇/下一篇导航，并在返回地图时带回当前 `focus`
+- 创建/编辑页采用 `location + stops + entries` 结构，支持地图点选、自动定位、地点搜索、图片上传、EXIF 辅助坐标回填
+- 当前前端主要维护地点级展示坐标；片段日期按 `stop.visitedAt` 保存，照片拍摄时间默认跟随片段日期，片段未填日期时回退到地点日期
 
 ### 7.3 Sakura Radio 音乐馆
 
@@ -299,8 +300,9 @@ trust-request / home / archive / memory-map / music / category / about / guestbo
 
 1. 管理员在 `TravelMemoryCreate.vue` 选择坐标或搜索地点
 2. 上传图片后拿到后端返回的 URL、拍摄时间和可能的 EXIF 坐标
-3. 页面整理成 `CreateTravelMemoryCommand`
-4. 调用 `/admin/travel-memories`
+3. 页面按 `CreateTravelMemoryCommand` 的 `stops` 结构整理旅途片段、封面、备注和时间
+4. 照片 `shotAt` 当前默认跟随片段日期，片段没填日期时回退到地点日期；片段级坐标字段在契约中保留，但当前前端主流程仍以地点级展示坐标为准
+5. 调用 `/admin/travel-memories`
 
 ### 歌曲维护
 
@@ -337,6 +339,8 @@ trust-request / home / archive / memory-map / music / category / about / guestbo
 - 音乐馆缺播放统计、用户互动、Media Session、断点恢复
 - 文件管理缺批量治理操作闭环
 - 旅行纪念地图仍需持续关注移动端性能和地图数据体积
+- 旅行纪念地图核心文件体量仍然偏大，后续宜继续拆分 `MemoryMap.vue`、`TravelMemoryCreate.vue`、`TravelMemoryMap.vue`
+- 旅行纪念地图相关自动化测试仍偏薄，权限态、加载失败、地图 fallback 和返回 focus 等链路主要依赖人工验证
 
 ## 11. 文档维护规则
 

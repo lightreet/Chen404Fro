@@ -138,7 +138,22 @@
                 <strong>媒体文件</strong>
               </div>
               <div class="media-grid">
-                <el-form-item label="音频文件">
+                <el-form-item>
+                  <template #label>
+                    <span class="form-label-with-help">
+                      音频文件
+                      <el-tooltip
+                        effect="light"
+                        placement="top"
+                        popper-class="music-metadata-tooltip"
+                        content="上传后自动识别歌名、歌手、专辑、年份、语言、流派；音频标签含歌词时同步填入；内嵌封面会自动上传；kuwo、???、unknown 等占位信息会被忽略。"
+                      >
+                        <button type="button" class="metadata-help-button" aria-label="查看音频识别说明">
+                          <el-icon><InfoFilled /></el-icon>
+                        </button>
+                      </el-tooltip>
+                    </span>
+                  </template>
                   <div class="media-resource-card" :class="{ 'has-value': Boolean(form.audioUrl) }">
                     <div class="media-resource-card__main">
                       <div class="media-resource-icon media-resource-icon--audio">
@@ -344,10 +359,11 @@
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from 'vue'
 import { ElMessage, type UploadRequestOptions } from 'element-plus'
-import { ArrowLeft, Upload } from '@element-plus/icons-vue'
+import { ArrowLeft, InfoFilled, Upload } from '@element-plus/icons-vue'
 import { useRoute, useRouter } from 'vue-router'
 import { createMusicTrack, getAdminMusicTrack, suggestMusicTrack, updateMusicTrack } from '@/api/music'
 import { uploadMusicAudio, uploadMusicCover, type UploadResult } from '@/api/upload'
+import type { ParsedMusicMetadata } from '@/modules/music-metadata/metadata'
 import type { MusicTrack, MusicTrackAiCandidate, MusicTrackStatus, MusicTrackUpsertCommand } from '@/types'
 
 const route = useRoute()
@@ -379,6 +395,7 @@ const saving = ref(false)
 const suggestingTrack = ref(false)
 const uploadingAudio = ref(false)
 const uploadingCover = ref(false)
+const readingAudioMetadata = ref(false)
 const aiCandidates = ref<MusicTrackAiCandidate[]>([])
 const aiSearchTouched = ref(false)
 const lastAiQuerySummary = ref('')
@@ -400,7 +417,7 @@ const editingId = computed<number | null>(() => {
 })
 const isEditMode = computed(() => editingId.value != null)
 const pageTitle = computed(() => (isEditMode.value ? '编辑歌曲' : '新增歌曲'))
-const uploadInProgress = computed(() => uploadingAudio.value || uploadingCover.value)
+const uploadInProgress = computed(() => uploadingAudio.value || uploadingCover.value || readingAudioMetadata.value)
 const canSaveTrack = computed(() => {
   return !saving.value
     && !uploadInProgress.value
@@ -418,6 +435,7 @@ const aiCandidateSummary = computed(() => {
 })
 
 const audioUploadHint = computed(() => {
+  if (readingAudioMetadata.value) return '正在识别歌曲信息'
   if (uploadingAudio.value) return '音频正在上传，完成后再保存'
   if (form.audioFileId) return audioUploadName.value ? `已绑定：${audioUploadName.value}` : '已绑定上传音频'
   if (form.audioUrl.trim()) return '使用手动填写的音频地址'
@@ -431,6 +449,7 @@ const coverUploadHint = computed(() => {
   return '可选，支持 JPG、PNG、WebP、GIF'
 })
 const audioResourceTitle = computed(() => {
+  if (readingAudioMetadata.value) return '识别歌曲信息'
   if (uploadingAudio.value) return '上传处理中'
   if (form.audioFileId) return audioUploadName.value || '已上传音频'
   if (form.audioUrl.trim()) return '已填写音频地址'
@@ -443,6 +462,7 @@ const coverResourceTitle = computed(() => {
   return '还没有封面图片'
 })
 const audioUploadButtonText = computed(() => {
+  if (readingAudioMetadata.value) return '识别中'
   if (uploadingAudio.value) return '上传中'
   return form.audioUrl.trim() ? '更换音频' : '上传音频'
 })
@@ -614,6 +634,7 @@ function resetForm() {
   uploadedCoverUrl.value = ''
   uploadingAudio.value = false
   uploadingCover.value = false
+  readingAudioMetadata.value = false
   saving.value = false
   aiCandidates.value = []
   aiSearchTouched.value = false
@@ -772,17 +793,32 @@ function beforeAudioUpload(file: File) {
 }
 
 async function handleAudioUpload(options: UploadRequestOptions) {
+  const audioFile = options.file as File
   uploadingAudio.value = true
+  readingAudioMetadata.value = true
+  const metadataPromise = parseAudioFileMetadata(audioFile)
   try {
-    const result = await uploadMusicAudio(options.file)
+    const [metadata, result] = await Promise.all([
+      metadataPromise.finally(() => {
+        readingAudioMetadata.value = false
+      }),
+      uploadMusicAudio(audioFile),
+    ])
+    const appliedCount = await applyParsedAudioMetadata(metadata)
     applyAudioUpload(result)
     options.onSuccess?.(result)
-    ElMessage.success('音频已上传')
+    ElMessage.success(appliedCount > 0 ? `音频已上传，已识别 ${appliedCount} 项信息` : '音频已上传')
   } catch (error) {
     options.onError?.(toUploadAjaxError(error))
   } finally {
+    readingAudioMetadata.value = false
     uploadingAudio.value = false
   }
+}
+
+async function parseAudioFileMetadata(file: File) {
+  const { parseMusicFileMetadata } = await import('@/modules/music-metadata/metadata')
+  return parseMusicFileMetadata(file)
 }
 
 async function handleCoverUpload(options: UploadRequestOptions) {
@@ -811,6 +847,57 @@ function applyCoverUpload(result: UploadResult) {
   form.coverUrl = result.url
   coverUploadName.value = result.name || result.url
   uploadedCoverUrl.value = result.url
+}
+
+async function applyParsedAudioMetadata(metadata: ParsedMusicMetadata) {
+  let appliedCount = 0
+  const applyText = (field: keyof MusicTrackUpsertCommand, value?: string) => {
+    if (!value?.trim()) return
+    if (String(form[field] || '').trim()) return
+    ;(form[field] as string | undefined) = value.trim()
+    appliedCount += 1
+  }
+
+  applyText('title', metadata.title)
+  applyText('artist', metadata.artist)
+  applyText('album', metadata.album)
+  applyText('language', metadata.language)
+  applyText('genre', metadata.genre)
+
+  if (!form.releaseYear && metadata.releaseYear) {
+    form.releaseYear = metadata.releaseYear
+    releaseYearPicker.value = String(metadata.releaseYear)
+    appliedCount += 1
+  }
+
+  if (!form.lyrics?.trim() && metadata.lyricText?.trim()) {
+    form.lyrics = metadata.lyricText.trim()
+    form.lyricType = looksLikeLrcLyrics(metadata.lyricText) ? 'lrc' : 'plain'
+    appliedCount += 1
+  }
+
+  if (!form.coverUrl?.trim() && metadata.cover?.file) {
+    const coverApplied = await uploadParsedCover(metadata.cover.file)
+    if (coverApplied) {
+      appliedCount += 1
+    }
+  }
+
+  return appliedCount
+}
+
+async function uploadParsedCover(file: File) {
+  uploadingCover.value = true
+  try {
+    const result = await uploadMusicCover(file)
+    applyCoverUpload(result)
+    return true
+  } catch (error) {
+    ElMessage.warning(error instanceof Error ? `封面识别成功但上传失败：${error.message}` : '封面识别成功但上传失败')
+    return false
+  } finally {
+    uploadingCover.value = false
+  }
 }
 
 function handleAudioUrlInput(value: string) {
@@ -1141,6 +1228,47 @@ function createEmptyTrackForm(): MusicTrackUpsertCommand {
   color: #3d333b;
   font-size: 16px;
   font-weight: 800;
+}
+
+.form-label-with-help {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+}
+
+.metadata-help-button {
+  width: 18px;
+  height: 18px;
+  display: inline-grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(255, 241, 247, 0.9);
+  color: #d9799d;
+  cursor: help;
+  line-height: 1;
+  transition: background 0.18s ease, color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.metadata-help-button:hover,
+.metadata-help-button:focus-visible {
+  background: rgba(255, 226, 239, 0.98);
+  color: #e44d78;
+  box-shadow: 0 0 0 3px rgba(255, 191, 214, 0.22);
+  outline: none;
+}
+
+.metadata-help-button :deep(.el-icon) {
+  font-size: 13px;
+}
+
+:global(.music-metadata-tooltip) {
+  max-width: 320px;
+  color: #5f515c;
+  font-size: 12px;
+  line-height: 1.65;
 }
 
 .form-grid,
