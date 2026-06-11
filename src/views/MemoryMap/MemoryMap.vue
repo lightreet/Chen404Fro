@@ -70,16 +70,31 @@
                     :aria-pressed="activeId === location.id"
                     @click="selectGalleryLocation(location.id)"
                   >
-                    <div class="rail-item__thumb-wrap">
-                      <span v-if="activeId === location.id" class="rail-item__active-badge">当前</span>
+                    <span class="rail-item__rule" aria-hidden="true" />
+                    <span class="rail-item__thumb-wrap">
                       <img
                         v-if="location.coverImage"
                         class="rail-item__thumb"
                         :src="location.coverImage"
                         :alt="location.title"
                       />
-                      <div v-else class="rail-item__thumb rail-item__thumb--empty">TRAVEL</div>
-                    </div>
+                      <span v-else class="rail-item__thumb rail-item__thumb--empty">TRAVEL</span>
+                    </span>
+                    <span class="rail-item__body">
+                      <span class="rail-item__title-row">
+                        <span class="rail-item__title">{{ location.title }}</span>
+                        <span v-if="activeId === location.id" class="rail-item__active-badge">当前</span>
+                      </span>
+                      <span class="rail-item__place">{{ formatLocation(location) }}</span>
+                      <span class="rail-item__meta">
+                        <span v-if="formatDateRange(location.visitedAt, location.visitedEndAt)">
+                          {{ formatDateRange(location.visitedAt, location.visitedEndAt) }}
+                        </span>
+                        <span v-if="location.entryCount" class="rail-item__count">
+                          {{ location.entryCount }} 张
+                        </span>
+                      </span>
+                    </span>
                   </button>
                 </article>
               </div>
@@ -743,7 +758,16 @@ watch(
 <style scoped lang="scss">
 .memory-map-page {
   --memory-gap: clamp(22px, 2vw, 30px);
-  --memory-card-radius: 34px;
+  --memory-radius-panel: 22px;
+  --memory-radius-card: 16px;
+  /* atlas accent line shared across marker / rail / title */
+  --atlas-route: #d75f87;
+  --atlas-ink: #4e353e;
+  --atlas-paper: #fff8f2;
+  /* neutral ground + solid surfaces, pink reserved as accent */
+  --memory-surface: #ffffff;
+  --memory-rail-fill: rgba(255, 252, 253, 0.55);
+  --memory-line: rgba(232, 214, 221, 0.72);
   --memory-title-font:
     'Microsoft YaHei UI',
     'PingFang SC',
@@ -817,14 +841,10 @@ watch(
   grid-template-rows: auto minmax(0, 1fr) auto;
   gap: 18px;
   padding: clamp(18px, 1.25vw, 24px);
-  border-radius: 32px;
-  background:
-    linear-gradient(180deg, rgba(255, 252, 250, 0.9), rgba(255, 247, 244, 0.76)),
-    radial-gradient(circle at top left, rgba(255, 224, 233, 0.18), transparent 34%);
-  border: 1px solid rgba(243, 227, 233, 0.9);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.88),
-    0 16px 34px rgba(220, 191, 199, 0.07);
+  border-radius: var(--memory-radius-panel);
+  background: var(--memory-rail-fill);
+  border: 1px solid var(--memory-line);
+  box-shadow: none;
 }
 
 .panel-heading {
@@ -844,7 +864,7 @@ watch(
 
 .panel-heading__copy h2 {
   margin: 0;
-  color: #4e353e;
+  color: var(--atlas-ink);
   font-family: var(--memory-title-font);
   font-size: clamp(24px, 1.7vw, 30px);
   font-weight: 700;
@@ -870,7 +890,7 @@ watch(
 
 .memory-rail__list::-webkit-scrollbar-thumb {
   border-radius: 999px;
-  background: rgba(216, 177, 193, 0.54);
+  background: rgba(196, 178, 160, 0.5);
 }
 
 .memory-rail__list--placeholder {
@@ -901,14 +921,12 @@ watch(
   grid-template-rows: auto 1fr auto;
   gap: 16px;
   padding: clamp(16px, 1.1vw, 20px);
-  border-radius: 28px;
-  background:
-    linear-gradient(180deg, rgba(255, 252, 250, 0.54), rgba(255, 247, 244, 0.34)),
-    radial-gradient(circle at top right, rgba(255, 224, 233, 0.08), transparent 28%);
-  border: 1px solid rgba(244, 228, 233, 0.38);
+  border-radius: var(--memory-radius-panel);
+  background: var(--memory-surface);
+  border: 1px solid var(--memory-line);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.78),
-    0 10px 24px rgba(219, 189, 194, 0.05);
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    0 18px 42px rgba(74, 43, 55, 0.13);
 }
 
 .spread-map-card__hero {
@@ -937,7 +955,7 @@ watch(
 
 .spread-heading__copy h2 {
   margin: 0;
-  color: #4e353e;
+  color: var(--atlas-ink);
   font-family: var(--memory-title-font);
   font-size: clamp(30px, 2.3vw, 40px);
   font-weight: 700;
@@ -945,7 +963,7 @@ watch(
 }
 
 .spread-heading__flower {
-  color: #ef88ab;
+  color: var(--atlas-route);
   font-size: 28px;
   line-height: 1;
   transform: translateY(4px);
@@ -957,13 +975,11 @@ watch(
   gap: 10px;
   flex-shrink: 0;
   min-width: 144px;
-  padding: 12px 16px;
-  border-radius: 22px;
-  background: rgba(255, 251, 252, 0.92);
-  border: 1px solid rgba(239, 220, 226, 0.94);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.92),
-    0 16px 28px rgba(223, 193, 202, 0.12);
+  padding: 10px 16px;
+  border-radius: var(--memory-radius-card);
+  background: var(--colors-surface-rose, #fff1f6);
+  border: 1px solid rgba(215, 95, 135, 0.24);
+  box-shadow: none;
   text-align: left;
   white-space: nowrap;
 }
@@ -985,7 +1001,7 @@ watch(
 }
 
 .spread-badge__body .el-icon {
-  color: #f07ca3;
+  color: var(--atlas-route);
   font-size: 16px;
 }
 
@@ -1009,7 +1025,7 @@ watch(
 
 :deep(.travel-map-shell) {
   min-height: 100%;
-  border-radius: 28px;
+  border-radius: var(--memory-radius-card);
   background: transparent;
   border: none;
   box-shadow: none;
@@ -1017,7 +1033,7 @@ watch(
 
 :deep(.travel-map-stage) {
   min-height: 640px;
-  padding: 6px 0 74px;
+  padding: 0 0 68px;
 }
 
 :deep(.travel-map-board) {
@@ -1050,13 +1066,11 @@ watch(
   display: flex;
   flex-direction: column;
   gap: 16px;
-  padding: clamp(14px, 1.1vw, 18px);
-  border-radius: 32px;
-  background:
-    linear-gradient(180deg, rgba(255, 252, 250, 0.74), rgba(255, 247, 244, 0.58)),
-    radial-gradient(circle at top right, rgba(255, 224, 233, 0.14), transparent 30%);
-  border: none;
-  box-shadow: 0 14px 30px rgba(219, 189, 194, 0.05);
+  padding: clamp(16px, 1.2vw, 20px);
+  border-radius: var(--memory-radius-panel);
+  background: var(--memory-rail-fill);
+  border: 1px solid var(--memory-line);
+  box-shadow: none;
 }
 
 .travel-journal.is-loading {
@@ -1133,7 +1147,7 @@ watch(
 }
 
 .travel-journal__flower {
-  color: #db7f9d;
+  color: var(--atlas-route);
   font-size: 20px;
   line-height: 1;
   transform: translateY(6px);
@@ -1141,7 +1155,7 @@ watch(
 
 .travel-journal__headline h2 {
   margin: 0;
-  color: #4c333d;
+  color: var(--atlas-ink);
   font-family: var(--memory-title-font);
   font-size: clamp(20px, 1.45vw, 26px);
   font-weight: 700;
@@ -1178,7 +1192,7 @@ watch(
   min-height: 80px;
   padding: 6px;
   border-radius: 999px;
-  color: #c1708b;
+  color: var(--atlas-route);
   text-align: center;
   background:
     rgba(255, 247, 244, 0.72)
@@ -1218,9 +1232,9 @@ watch(
 
 .travel-journal__cover {
   position: relative;
-  height: 136px;
+  height: 184px;
   padding: 8px;
-  border-radius: 18px;
+  border-radius: var(--memory-radius-card);
   overflow: hidden;
   background:
     linear-gradient(135deg, rgba(255, 255, 255, 0.98), rgba(252, 250, 247, 0.95)),
@@ -1282,22 +1296,20 @@ watch(
 .journal-note {
   position: relative;
   display: grid;
-  grid-template-columns: 78px minmax(0, 1fr);
+  grid-template-columns: 96px minmax(0, 1fr);
   align-items: stretch;
-  height: 78px;
-  min-height: 78px;
-  border-radius: 15px;
-  background: rgba(255, 255, 255, 0.82);
+  height: 96px;
+  border-radius: 14px;
+  background: var(--memory-surface);
+  border: 1px solid var(--memory-line);
   overflow: hidden;
-  box-shadow:
-    0 12px 22px rgba(220, 191, 200, 0.08),
-    inset 0 1px 0 rgba(255, 255, 255, 0.72);
+  box-shadow: none;
 }
 
 .journal-note__thumb {
-  height: 78px;
+  height: 100%;
+  min-height: 96px;
   background: rgba(249, 244, 247, 0.86);
-  min-height: 78px;
 }
 
 .journal-note__thumb img {
@@ -1321,18 +1333,19 @@ watch(
 
 .journal-note__body {
   display: grid;
-  gap: 3px;
+  gap: 4px;
   align-content: center;
   min-height: 0;
-  padding: 7px 10px;
+  padding: 10px 12px;
   text-align: left;
 }
 
 .journal-note__body h4 {
   margin: 0;
-  color: #5d3d4b;
-  font-size: 12px;
-  line-height: 1.3;
+  color: var(--atlas-ink);
+  font-size: 13.5px;
+  font-weight: 700;
+  line-height: 1.35;
   display: -webkit-box;
   overflow: hidden;
   -webkit-line-clamp: 1;
@@ -1341,12 +1354,12 @@ watch(
 
 .journal-note__body p {
   margin: 0;
-  color: var(--text-secondary);
-  font-size: 10.5px;
-  line-height: 1.35;
+  color: #7f626e;
+  font-size: 12.5px;
+  line-height: 1.5;
   display: -webkit-box;
   overflow: hidden;
-  -webkit-line-clamp: 1;
+  -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
 }
 
@@ -1361,14 +1374,10 @@ watch(
   display: grid;
   gap: 8px;
   padding: 14px 16px 14px 40px;
-  border-radius: 20px;
-  background:
-    linear-gradient(180deg, rgba(255, 252, 252, 0.98), rgba(255, 247, 248, 0.94)),
-    radial-gradient(circle at top right, rgba(255, 224, 233, 0.18), transparent 38%);
-  border: 1px solid rgba(240, 214, 220, 0.96);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.86),
-    0 12px 24px rgba(226, 196, 206, 0.12);
+  border-radius: 16px;
+  background: var(--memory-surface);
+  border: 1px solid var(--memory-line);
+  box-shadow: none;
 }
 
 .travel-journal__footer {
@@ -1383,14 +1392,14 @@ watch(
   position: absolute;
   top: 12px;
   left: 14px;
-  color: #ff8fb1;
+  color: var(--atlas-route);
   font-size: 16px;
   line-height: 1;
 }
 
 .travel-journal__quote p {
   margin: 0;
-  color: #6c4d5a;
+  color: var(--atlas-ink);
   font-size: 14px;
   font-weight: 600;
   line-height: 1.62;
@@ -1626,91 +1635,63 @@ watch(
   display: block;
   width: 100%;
   min-height: 0;
-  overflow: visible;
-  box-shadow: none;
-  transition:
-    transform 0.22s ease,
-    box-shadow 0.22s ease;
 }
 
 .rail-item__select {
-  display: block;
+  position: relative;
+  display: grid;
+  grid-template-columns: auto 72px minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
   width: 100%;
-  min-height: 0;
-  padding: 0;
-  border: none;
-  border-radius: 16px;
+  padding: 10px 12px 10px 0;
+  border: 1px solid transparent;
+  border-radius: var(--memory-radius-card);
   background: transparent;
   text-align: left;
   cursor: pointer;
+  transition:
+    background 0.2s ease,
+    border-color 0.2s ease;
 }
 
-.rail-item.is-active {
-  transform: translateY(-4px);
+.rail-item__select:hover {
+  background: rgba(255, 252, 253, 0.92);
+  border-color: var(--memory-line);
 }
 
 .rail-item__select:focus-visible {
   outline: none;
+  border-color: var(--atlas-route);
+  box-shadow: 0 0 0 3px rgba(215, 95, 135, 0.16);
+}
+
+/* shared atlas accent line — lights up only on the active row */
+.rail-item__rule {
+  width: 3px;
+  align-self: stretch;
+  margin: 2px 0;
+  border-radius: 999px;
+  background: transparent;
+  transition: background 0.2s ease;
 }
 
 .rail-item__thumb-wrap {
   position: relative;
   overflow: hidden;
-  border-radius: 16px;
-  background: rgba(255, 255, 255, 0.92);
-  box-shadow:
-    0 8px 14px rgba(195, 188, 192, 0.1),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.34);
-  transition:
-    transform 0.22s ease,
-    box-shadow 0.22s ease;
-}
-
-.rail-item__active-badge {
-  position: absolute;
-  top: 10px;
-  right: 10px;
-  z-index: 3;
-  display: inline-flex;
-  align-items: center;
-  min-height: 24px;
-  padding: 0 10px;
-  border-radius: 999px;
-  color: #fff;
-  background: linear-gradient(135deg, rgba(255, 141, 182, 0.98), rgba(237, 108, 154, 0.98));
-  box-shadow:
-    0 10px 18px rgba(235, 132, 169, 0.28),
-    inset 0 1px 0 rgba(255, 255, 255, 0.24);
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  pointer-events: none;
-}
-
-.rail-item__thumb-wrap::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  z-index: 2;
-  background: radial-gradient(circle at 18% 20%, rgba(255, 255, 255, 0.22), transparent 36%);
-  pointer-events: none;
-}
-
-.rail-item__thumb-wrap::after {
-  content: none;
+  border-radius: 12px;
+  background: var(--memory-surface);
+  box-shadow: inset 0 0 0 1px var(--memory-line);
 }
 
 .rail-item__thumb {
-  width: 100%;
-  aspect-ratio: 18 / 5;
+  width: 72px;
+  height: 54px;
   display: block;
   object-fit: cover;
   object-position: center center;
   border-radius: inherit;
   background: linear-gradient(135deg, rgba(255, 240, 246, 0.98), rgba(245, 248, 254, 0.9));
-  transition:
-    transform 0.22s ease,
-    filter 0.22s ease;
 }
 
 .rail-item__thumb--empty,
@@ -1718,37 +1699,101 @@ watch(
   display: grid;
   place-items: center;
   color: #c18ca3;
-  letter-spacing: 0.16em;
+  letter-spacing: 0.14em;
+  font-size: 10px;
+}
+
+.rail-item__body {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.rail-item__title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.rail-item__title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--atlas-ink);
+  font-family: var(--memory-title-font);
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.3;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.rail-item__active-badge {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  height: 20px;
+  padding: 0 9px;
+  border-radius: 999px;
+  color: #fff;
+  background: var(--atlas-route);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.rail-item__place {
+  overflow: hidden;
+  color: #8a6f79;
   font-size: 12px;
+  line-height: 1.35;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.rail-item__meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #a98f99;
+  font-size: 11.5px;
+  line-height: 1.3;
+}
+
+.rail-item__count {
+  position: relative;
+  padding-left: 9px;
+}
+
+.rail-item__count::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  width: 3px;
+  height: 3px;
+  border-radius: 999px;
+  background: currentColor;
+  transform: translateY(-50%);
+  opacity: 0.6;
 }
 
 .rail-item--placeholder {
   cursor: default;
 }
 
-.rail-item:hover .rail-item__thumb-wrap,
-.rail-item__select:focus-visible .rail-item__thumb-wrap {
-  transform: translateY(-3px);
-  box-shadow:
-    0 18px 24px rgba(194, 185, 191, 0.18),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.5);
+.rail-item.is-active .rail-item__select {
+  background: var(--colors-surface-rose, #fff1f6);
+  border-color: rgba(215, 95, 135, 0.28);
 }
 
-.rail-item:hover .rail-item__thumb,
-.rail-item__select:focus-visible .rail-item__thumb {
-  transform: scale(1.035);
+.rail-item.is-active .rail-item__rule {
+  background: var(--atlas-route);
 }
 
-.rail-item.is-active .rail-item__thumb-wrap {
-  box-shadow:
-    0 20px 28px rgba(188, 170, 179, 0.22),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.42),
-    0 0 0 2px rgba(239, 128, 168, 0.28);
-}
-
-.rail-item.is-active .rail-item__thumb {
-  transform: scale(1.03);
-  filter: saturate(1.04) brightness(1.02);
+.rail-item.is-active .rail-item__title {
+  color: var(--atlas-route);
 }
 
 .gallery-load-more {

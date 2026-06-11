@@ -230,8 +230,6 @@
 
       <div class="travel-map-petals">
         <span class="petal petal--one" />
-        <span class="petal petal--two" />
-        <span class="petal petal--three" />
       </div>
 
     </div>
@@ -2061,7 +2059,7 @@ defineExpose({
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.72),
     0 16px 36px rgba(201, 169, 180, 0.14);
-  filter: saturate(0.94) sepia(0.03);
+  filter: saturate(0.82) sepia(0.08) brightness(1.02) hue-rotate(-6deg);
 }
 
 .travel-map-stage {
