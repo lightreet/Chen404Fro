@@ -85,11 +85,11 @@
           <h2 class="panel-title">如果你也想留下痕迹，我们总会在这里相遇</h2>
           <div class="contact-list">
             <a v-if="siteEmail" :href="`mailto:${siteEmail}`" class="contact-item">
-              <el-icon><Message /></el-icon>
+              <UiIcon name="Message" />
               <span>{{ siteEmail }}</span>
             </a>
             <a v-if="githubLink" :href="githubLink" class="contact-item" target="_blank" rel="noreferrer">
-              <el-icon><Link /></el-icon>
+              <UiIcon name="Link" />
               <span>GitHub</span>
             </a>
             <div class="contact-item contact-item--muted">
@@ -113,12 +113,12 @@
 <script setup lang="ts">
 import dayjs from 'dayjs';
 import { computed, onMounted, ref, watch } from 'vue';
-import { Link, Message } from '@/compat/element-plus-icons';
 import type { SiteOwner } from '@/types';
 import { getSiteMembers, getSiteOwner, type SiteMember } from '@/api/home';
 import PageHero from '@/components/PageHero/PageHero.vue';
 import UserProfileCard from '@/components/UserProfile/UserProfileCard.vue';
 import UserProfilePopover from '@/components/UserProfile/UserProfilePopover.vue';
+import { UiIcon } from '@/components/ui';
 import { useSiteConfig } from '@/composables/useSiteConfig';
 import DefaultLayout from '@/layouts/DefaultLayout.vue';
 import { resolveHeroImagePosition } from '@/utils/siteConfig';

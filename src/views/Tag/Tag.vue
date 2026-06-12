@@ -20,7 +20,7 @@
 
     <div class="tag-page">
       <div v-if="loading" class="loading-state">
-        <el-icon class="loading-icon"><Loading /></el-icon>
+        <UiIcon class="loading-icon" name="Loading" />
         <p>加载中…</p>
       </div>
 
@@ -47,9 +47,9 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
 import { notify } from '@/lib/feedback';
-import { Loading } from '@/compat/element-plus-icons';
 import DefaultLayout from '@/layouts/DefaultLayout.vue';
 import PageHero from '@/components/PageHero/PageHero.vue';
+import { UiIcon } from '@/components/ui'
 import { useSiteConfig } from '@/composables/useSiteConfig';
 import type { Tag } from '@/types';
 import { resolveHeroImagePosition } from '@/utils/siteConfig';

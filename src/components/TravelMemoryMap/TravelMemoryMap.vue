@@ -21,13 +21,13 @@
       <div class="travel-map-haze travel-map-haze--right" />
       <div class="travel-map-controls">
         <button type="button" class="travel-map-control" title="放大地图" @click="zoomIn">
-          <el-icon><Plus /></el-icon>
+          <UiIcon name="Plus" />
         </button>
         <button type="button" class="travel-map-control" title="缩小地图" @click="zoomOut">
-          <el-icon><Minus /></el-icon>
+          <UiIcon name="Minus" />
         </button>
         <button type="button" class="travel-map-control travel-map-control--reset" title="恢复初始比例" @click="resetZoom">
-          <el-icon><Refresh /></el-icon>
+          <UiIcon name="Refresh" />
         </button>
       </div>
 
@@ -244,7 +244,7 @@
 
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue'
-import { Minus, Plus, Refresh } from '@/compat/element-plus-icons'
+import { UiIcon } from '@/components/ui'
 import { geoContains, geoMercator, geoPath } from 'd3-geo'
 import chinaMapData from '@svg-maps/china'
 import mdiMapMarkerOutline from '@iconify/icons-mdi/map-marker-outline'
@@ -2393,7 +2393,7 @@ defineExpose({
   transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
 }
 
-.travel-map-control .el-icon {
+.travel-map-control :deep(.ui-icon) {
   font-size: 18px;
   pointer-events: none;
 }

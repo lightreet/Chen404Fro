@@ -19,7 +19,7 @@
       <!-- Discovery 标题与搜索同一行 -->
       <div id="discovery" class="discovery-head">
         <div class="jp-section-title section-header discovery-head__title">
-          <el-icon class="jp-section-icon"><Compass /></el-icon>
+          <UiIcon class="jp-section-icon" name="Compass" />
           <h2 class="!m-0">Discovery</h2>
         </div>
         <HomeDiscoverySearch
@@ -80,9 +80,9 @@
       </div>
 
       <div class="no-more" v-else-if="articleList.length > 0">
-        <el-divider>
+        <UiDivider>
           <span class="no-more-text">已经到底啦 ~</span>
-        </el-divider>
+        </UiDivider>
       </div>
     </div>
   </DefaultLayout>
@@ -91,12 +91,11 @@
 <script setup lang="ts">
 import { computed, ref, onMounted, onUnmounted, watch, nextTick } from 'vue';
 import { notify } from '@/lib/feedback';
-import { Compass } from '@/compat/element-plus-icons';
 import DefaultLayout from '@/layouts/DefaultLayout.vue';
 import ArticleCard from '@/components/ArticleCard/ArticleCard.vue';
 import HomeDiscoverySearch from '@/components/HomeDiscoverySearch/HomeDiscoverySearch.vue';
 import PageHero from '@/components/PageHero/PageHero.vue';
-import { UiButton } from '@/components/ui'
+import { UiButton, UiDivider, UiIcon } from '@/components/ui'
 import { useSiteConfig } from '@/composables/useSiteConfig';
 import type { Article } from '@/types';
 import { getArticles } from '@/api/article';

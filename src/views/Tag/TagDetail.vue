@@ -11,7 +11,7 @@
       </div>
 
       <div v-if="loading && !articleList.length" class="loading-state">
-        <el-icon class="loading-icon"><Loading /></el-icon>
+        <UiIcon class="loading-icon" name="Loading" />
         <p>加载中…</p>
       </div>
 
@@ -36,9 +36,9 @@
         </div>
 
         <div v-else-if="articleList.length > 0" class="no-more">
-          <el-divider>
+          <UiDivider>
             <span class="no-more-text">已经到底啦 ~</span>
-          </el-divider>
+          </UiDivider>
         </div>
       </template>
     </div>
@@ -49,10 +49,9 @@
 import { computed, ref, onMounted, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import { notify } from '@/lib/feedback';
-import { Loading } from '@/compat/element-plus-icons';
 import DefaultLayout from '@/layouts/DefaultLayout.vue';
 import ArticleCard from '@/components/ArticleCard/ArticleCard.vue';
-import { UiButton } from '@/components/ui'
+import { UiButton, UiDivider, UiIcon } from '@/components/ui'
 import { useSiteConfig } from '@/composables/useSiteConfig';
 import type { Article, Tag } from '@/types';
 import { getArticlesByTag, getTagById } from '@/api/article';

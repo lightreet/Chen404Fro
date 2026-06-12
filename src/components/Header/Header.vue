@@ -16,9 +16,7 @@
             class="nav-item"
             :class="{ 'is-active': isNavItemActive(item) }"
           >
-            <el-icon class="nav-icon">
-              <component :is="item.icon" />
-            </el-icon>
+            <UiIcon class="nav-icon" :name="item.icon" />
             <span>{{ item.name }}</span>
           </router-link>
         </nav>
@@ -37,8 +35,7 @@
           </router-link>
 
           <button class="action-btn" @click="toggleTheme">
-            <el-icon v-if="isDark"><Sunny /></el-icon>
-            <el-icon v-else><Moon /></el-icon>
+            <UiIcon :name="isDark ? 'Sunny' : 'Moon'" />
           </button>
 
           <!-- 未登录显示登录按钮 -->
@@ -49,41 +46,41 @@
           </router-link>
 
           <!-- 已登录显示用户菜单 -->
-          <el-dropdown v-if="isLoggedIn && !isMobile" @command="handleUserCommand" class="user-menu">
+          <UiDropdown v-if="isLoggedIn && !isMobile" @command="handleUserCommand" class="user-menu">
             <div class="user-avatar-wrapper">
-              <el-avatar
+              <UiAvatar
                 :src="user?.avatar"
                 :size="32"
                 class="user-avatar"
               >
                 {{ user?.nickname?.charAt(0) || user?.username?.charAt(0) || 'U' }}
-              </el-avatar>
+              </UiAvatar>
             </div>
             <template #dropdown>
-              <el-dropdown-menu>
+              <UiDropdownMenu>
                 <div class="dropdown-user-info">
                   <span class="dropdown-nickname">{{ user?.nickname || user?.username }}</span>
                   <span class="dropdown-role">{{ roleText }}</span>
                 </div>
-                <el-dropdown-item divided command="profile">
-                  <el-icon><User /></el-icon>
+                <UiDropdownItem divided command="profile">
+                  <UiIcon name="User" />
                   个人中心
-                </el-dropdown-item>
-                <el-dropdown-item v-if="isAdmin" command="admin">
-                  <el-icon><Setting /></el-icon>
+                </UiDropdownItem>
+                <UiDropdownItem v-if="isAdmin" command="admin">
+                  <UiIcon name="Setting" />
                   后台管理
-                </el-dropdown-item>
-                <el-dropdown-item divided command="logout">
-                  <el-icon><SwitchButton /></el-icon>
+                </UiDropdownItem>
+                <UiDropdownItem divided command="logout">
+                  <UiIcon name="SwitchButton" />
                   退出登录
-                </el-dropdown-item>
-              </el-dropdown-menu>
+                </UiDropdownItem>
+              </UiDropdownMenu>
             </template>
-          </el-dropdown>
+          </UiDropdown>
 
           <!-- 移动端菜单按钮 -->
           <button class="action-btn menu-btn" v-if="isMobile" @click="toggleMobileMenu">
-            <el-icon><Menu /></el-icon>
+            <UiIcon name="Menu" />
           </button>
         </div>
       </div>
@@ -100,9 +97,7 @@
           class="mobile-nav-item"
           @click="closeMobileMenu"
         >
-          <el-icon>
-            <component :is="item.icon" />
-          </el-icon>
+          <UiIcon :name="item.icon" />
           <span>{{ item.name }}</span>
         </router-link>
 
@@ -119,7 +114,7 @@
             class="mobile-nav-item"
             @click="closeMobileMenu"
           >
-            <el-icon><User /></el-icon>
+            <UiIcon name="User" />
             <span>个人中心</span>
           </router-link>
           <router-link
@@ -128,7 +123,7 @@
             class="mobile-nav-item"
             @click="closeMobileMenu"
           >
-            <el-icon><Setting /></el-icon>
+            <UiIcon name="Setting" />
             <span>后台管理</span>
           </router-link>
           <router-link
@@ -137,12 +132,12 @@
             class="mobile-nav-item"
             @click="closeMobileMenu"
           >
-            <el-icon><EditPen /></el-icon>
+            <UiIcon name="EditPen" />
             <span>编写文章</span>
           </router-link>
           <div class="mobile-menu-divider"></div>
           <div class="mobile-nav-item" @click="handleLogout">
-            <el-icon><SwitchButton /></el-icon>
+            <UiIcon name="SwitchButton" />
             <span>退出登录</span>
           </div>
         </template>
@@ -154,7 +149,7 @@
             class="mobile-nav-item"
             @click="closeMobileMenu"
           >
-            <el-icon><User /></el-icon>
+            <UiIcon name="User" />
             <span>登录</span>
           </router-link>
 
@@ -163,7 +158,7 @@
             class="mobile-nav-item"
             @click="closeMobileMenu"
           >
-            <el-icon><UserFilled /></el-icon>
+            <UiIcon name="UserFilled" />
             <span>注册</span>
           </router-link>
         </template>
@@ -178,25 +173,7 @@ import { ref, onMounted, onUnmounted, computed, watch } from 'vue';
 import type { RouteLocationRaw } from 'vue-router';
 import { useRoute, useRouter } from 'vue-router';
 import { notify, confirmAction } from '@/lib/feedback';
-import { UiButton } from '@/components/ui'
-import {
-  HomeFilled,
-  Folder,
-  List,
-  ChatDotRound,
-  InfoFilled,
-  Sunny,
-  Moon,
-  User,
-  UserFilled,
-  Menu,
-  EditPen,
-  SwitchButton,
-  Setting,
-  Place,
-  Postcard,
-  Headset,
-} from '@/compat/element-plus-icons';
+import { UiAvatar, UiButton, UiDropdown, UiDropdownItem, UiDropdownMenu, UiIcon } from '@/components/ui'
 import { useUserStore } from '@/stores/user';
 import { storeToRefs } from 'pinia';
 import { logout as logoutApi } from '@/api/auth';
@@ -232,28 +209,28 @@ interface NavItem {
   name: string;
   path: string;
   to: RouteLocationRaw;
-  icon: object;
+  icon: string;
   activeWhen?: (currentPath: string, currentTab?: string | null) => boolean;
 }
 
 // 导航项
 const navItems = computed<NavItem[]>(() => [
-  { key: 'home', name: '首页', path: '/', to: '/', icon: HomeFilled },
-  { key: 'category', name: '分类', path: '/category', to: '/category', icon: List },
-  { key: 'archive', name: '时光轴', path: '/archive', to: '/archive', icon: Folder },
-  { key: 'memory-map', name: '旅行地图', path: '/memory-map', to: '/memory-map', icon: Place },
-  { key: 'music', name: '音乐馆', path: '/music', to: '/music', icon: Headset },
+  { key: 'home', name: '首页', path: '/', to: '/', icon: 'HomeFilled' },
+  { key: 'category', name: '分类', path: '/category', to: '/category', icon: 'List' },
+  { key: 'archive', name: '时光轴', path: '/archive', to: '/archive', icon: 'Folder' },
+  { key: 'memory-map', name: '旅行地图', path: '/memory-map', to: '/memory-map', icon: 'Place' },
+  { key: 'music', name: '音乐馆', path: '/music', to: '/music', icon: 'Headset' },
   {
     key: 'trust-request',
     name: '好友申请',
     path: '/trust-request',
     to: '/trust-request',
-    icon: Postcard,
+    icon: 'Postcard',
     activeWhen: (currentPath: string, currentTab?: string | null) =>
       currentPath === '/trust-request' || (currentPath === '/profile' && currentTab === 'trust'),
   },
-  { key: 'guestbook', name: '留言板', path: '/guestbook', to: '/guestbook', icon: ChatDotRound },
-  { key: 'about', name: '关于', path: '/about', to: '/about', icon: InfoFilled },
+  { key: 'guestbook', name: '留言板', path: '/guestbook', to: '/guestbook', icon: 'ChatDotRound' },
+  { key: 'about', name: '关于', path: '/about', to: '/about', icon: 'InfoFilled' },
 ]);
 
 const currentRouteTab = computed(() => {
@@ -332,7 +309,8 @@ watch(isMobileMenuOpen, (open) => {
 });
 
 // 用户菜单命令
-const handleUserCommand = (command: string) => {
+const handleUserCommand = (command: string | number | object) => {
+  if (typeof command !== 'string') return;
   switch (command) {
     case 'profile':
       router.push('/profile');

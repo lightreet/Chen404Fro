@@ -752,7 +752,7 @@ src/composables/useMotionPreset.ts
 
 ## 17. 迁移进度（持续更新）
 
-> 最近更新：2026-06-12（阶段 3 与阶段 4 页面层收口完成）
+> 最近更新：2026-06-12（阶段 3、4、5 页面层收口完成，阶段 6 第一批高频入口与高频业务组件收尾完成）
 
 ### 已完成
 
@@ -807,23 +807,23 @@ src/composables/useMotionPreset.ts
 ### 待办（按方案阶段推进）
 
 **阶段 5（展示型长页面）**
-- `Music.vue`：`ElMessageBox.confirm/prompt`（已收敛），已完成 `el-button`/`el-input`/`el-pagination`/`el-slider` → `Ui*`
-- `ArticleDetail.vue`：已完成 `el-button`/`el-skeleton` → `Ui*`；标签区域保留页面专属展示样式
-- `MemoryMap.vue`：`ElMessageBox.confirm`（已收敛），地图层保留，已完成详情区与索引区 `el-button` → `UiButton`
-- `TravelMemoryDetail.vue`：已完成 `el-button`/`el-skeleton` → `Ui*`
+- `Music.vue`：页面层已完成 `UiIcon` / `UiButton` / `UiInput` / `UiPagination` / `UiSlider` 收口
+- `ArticleDetail.vue`：页面层已完成 `UiIcon` / `UiButton` / `UiSkeleton` 收口；标签与内容区域保留页面专属展示样式
+- `MemoryMap.vue`：页面层已完成 `UiIcon` / `UiButton` 收口；地图层与旅行画布保留专题实现
+- `TravelMemoryDetail.vue`：页面层已完成 `UiIcon` / `UiTooltip` / `UiButton` / `UiSkeleton` 收口
 - `Archive.vue`、`Category.vue`、`CategoryDetail.vue`、`TagDetail.vue`、`Home.vue`、`NotFound.vue`：展示层和列表尾部动作已迁移到 `Ui*`
 
 **阶段 6（其余页面收尾）**
-- `Register.vue`、`Login.vue`、`Profile.vue`、`ProfileTrustRequestPanel.vue`、`FeatureAccessCover.vue`、`ArticleCard.vue`、`Header.vue` 等高频前台入口已完成 `Ui*` 迁移
+- 第一批高频入口与高频业务组件已完成：`Register.vue`、`Login.vue`、`Profile.vue`、`ProfileTrustRequestPanel.vue`、`FeatureAccessCover.vue`、`ArticleCard.vue`、`Header.vue`、`HomeDiscoverySearch.vue`、`Live2D.vue`、`Live2DMusicPanel.vue`、`UserProfileCard.vue`、`TravelMemoryMap.vue`
 - `AdminSiteSettings.vue`、`AiAssistantSettings.vue`、`AdminFiles.vue`、`AdminTrustRequests.vue`、`AdminEmojiManager.vue`、`AdminCategories.vue`、`MusicTrackEdit.vue`、`TravelMemoryCreate.vue`、`ArticleEdit.vue` 等后台/工作台页页面层已完成 `Ui*` / `App*` 收口
-- `Tag.vue`、`UserProfile.vue`、`About.vue`、`Guestbook.vue` 等少量页面仍可按收益继续做视觉层统一，但不再阻塞架构迁移主线
+- `Tag.vue`、`UserProfile.vue`、`About.vue`、`Guestbook.vue` 等少量页面已完成页面层收口，后续仍可按收益继续做视觉层统一，但不再阻塞架构迁移主线
 
-**中期组件待补建**
-- 已补建：`UiUpload`、`UiDateField`、`UiSlider`、`UiNumberField`、`UiSkeleton`
-- 可选后续：`UiTable`（薄包装 el-table，若后续希望进一步收敛后台表格 API 再评估）
-- 目前业务页残余的 `el-*` 已收口到 `components/ui/*` 薄封装内部；业务页面、后台页和阶段 4 目标页不再直接书写 `el-*`
+**中期组件待补建 / 待演进**
+- 已补建：`UiUpload`、`UiDateField`、`UiSlider`、`UiNumberField`、`UiSkeleton`、`UiForm`、`UiFormField`、`UiTable`、`UiTableColumn`、`UiDrawer`、`UiAvatar`、`UiRadioGroup`、`UiSegmented`、`UiDropdown*`、`UiDivider`
+- 可选后续：继续把 `components/ui/*` 薄封装内部的 Element Plus 依赖替换为更纯的项目实现，而不是继续在业务页面里做标签替换
+- 当前 `src/views` 下业务页面残余 `el-*` 为 `0`；高频业务组件的页面层 `el-*` 也已清空；`src/components` 下剩余的 `el-*` 已收口到 `components/ui/*` 薄封装内部
 
-> 最近更新：2026-06-12（阶段 3 全部完成；阶段 4 页面层全部完成；阶段 5/6 继续按收益优化；中期 primitive 已补齐 `UiSkeleton / UiUpload / UiDateField / UiSlider / UiNumberField / UiForm / UiFormField / UiTable / UiDrawer / UiAvatar / UiRadioGroup / UiSegmented`；剩余主要是设计系统内部薄封装继续依赖 Element Plus）
+> 最近更新：2026-06-12（阶段 3、4、5 页面层全部完成；阶段 6 第一批高频入口与高频业务组件收尾完成；`src/views` 下业务页面残余 `el-*` 为 `0`，高频业务组件页面层 `el-*` 为 `0`；中期 primitive 已补齐 `UiSkeleton / UiUpload / UiDateField / UiSlider / UiNumberField / UiForm / UiFormField / UiTable / UiTableColumn / UiDrawer / UiAvatar / UiRadioGroup / UiSegmented / UiDropdown* / UiDivider`；剩余主要是设计系统内部薄封装继续依赖 Element Plus，以及包体与测试等工程收尾）
 
 ## 后续依赖策略
 

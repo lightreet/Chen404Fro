@@ -18,14 +18,14 @@
         <div class="auth-form">
           <h3 class="form-title">创建账号</h3>
 
-          <el-form
+          <UiForm
             ref="formRef"
             :model="form"
             :rules="rules"
             class="register-form"
             @keyup.enter="handleRegister"
           >
-            <el-form-item prop="username">
+            <UiFormField prop="username">
               <UiInput
                 v-model="form.username"
                 placeholder="请输入用户名"
@@ -33,18 +33,18 @@
                 prefix-icon="user"
                 maxlength="20"
               />
-            </el-form-item>
+            </UiFormField>
 
-            <el-form-item prop="email">
+            <UiFormField prop="email">
               <UiInput
                 v-model="form.email"
                 placeholder="请输入邮箱"
                 size="lg"
                 prefix-icon="message"
               />
-            </el-form-item>
+            </UiFormField>
 
-            <el-form-item prop="code">
+            <UiFormField prop="code">
               <div class="verify-code-wrapper">
                 <UiInput
                   v-model="form.code"
@@ -57,9 +57,9 @@
                   {{ codeCountdown > 0 ? `${codeCountdown}s` : '获取验证码' }}
                 </UiButton>
               </div>
-            </el-form-item>
+            </UiFormField>
 
-            <el-form-item prop="password">
+            <UiFormField prop="password">
               <UiInput
                 v-model="form.password"
                 type="password"
@@ -67,9 +67,9 @@
                 size="lg"
                 prefix-icon="lock"
               />
-            </el-form-item>
+            </UiFormField>
 
-            <el-form-item prop="confirmPassword">
+            <UiFormField prop="confirmPassword">
               <UiInput
                 v-model="form.confirmPassword"
                 type="password"
@@ -77,7 +77,7 @@
                 size="lg"
                 prefix-icon="lock"
               />
-            </el-form-item>
+            </UiFormField>
 
             <div class="username-hint">
               用户名会作为默认昵称使用，注册后可在个人中心再改成更喜欢的名字。
@@ -92,7 +92,7 @@
               </UiCheckbox>
             </div>
 
-            <el-form-item>
+            <UiFormField>
               <UiButton
                 variant="primary"
                 size="lg"
@@ -103,8 +103,8 @@
               >
                 立即注册
               </UiButton>
-            </el-form-item>
-          </el-form>
+            </UiFormField>
+          </UiForm>
 
           <div class="auth-footer">
             <p>
@@ -120,12 +120,11 @@
       </div>
     </div>
 
-    <el-dialog
+    <UiDialog
       v-model="agreementDialogVisible"
       title="用户协议"
       width="720px"
       class="legal-modal legal-modal--agreement"
-      align-center
     >
       <div class="legal-dialog">
         <div class="legal-hero">
@@ -143,14 +142,13 @@
       <template #footer>
         <UiButton variant="secondary" @click="agreementDialogVisible = false">我知道了</UiButton>
       </template>
-    </el-dialog>
+    </UiDialog>
 
-    <el-dialog
+    <UiDialog
       v-model="privacyDialogVisible"
       title="隐私政策"
       width="720px"
       class="legal-modal legal-modal--privacy"
-      align-center
     >
       <div class="legal-dialog">
         <div class="legal-hero">
@@ -168,7 +166,7 @@
       <template #footer>
         <UiButton variant="secondary" @click="privacyDialogVisible = false">明白了</UiButton>
       </template>
-    </el-dialog>
+    </UiDialog>
   </div>
 </template>
 
@@ -176,7 +174,7 @@
 import { computed, onMounted, reactive, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { notify } from '@/lib/feedback';
-import { UiButton, UiCheckbox, UiIcon, UiInput } from '@/components/ui'
+import { UiButton, UiCheckbox, UiDialog, UiForm, UiFormField, UiIcon, UiInput } from '@/components/ui'
 import { login, register, sendVerifyCode as sendVerifyCodeApi } from '@/api/auth';
 import { useSiteConfig } from '@/composables/useSiteConfig';
 import { useUserStore } from '@/stores/user';

@@ -25,14 +25,14 @@
       <dl class="user-profile-card__facts">
         <div class="user-profile-card__fact">
           <dt>
-            <el-icon><UserFilled /></el-icon>
+            <UiIcon name="UserFilled" />
             身份
           </dt>
           <dd>{{ identityDescription }}</dd>
         </div>
         <div class="user-profile-card__fact">
           <dt>
-            <el-icon><Message /></el-icon>
+            <UiIcon name="Message" />
             邮箱
           </dt>
           <dd>
@@ -65,7 +65,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { notify } from '@/lib/feedback';
-import { Message, UserFilled } from '@/compat/element-plus-icons';
+import { UiIcon } from '@/components/ui';
 import type { SiteMember } from '@/api/home';
 
 const DEFAULT_MEMBER_AVATAR = '/default-member-avatar.svg';

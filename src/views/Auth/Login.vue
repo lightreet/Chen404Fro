@@ -18,23 +18,23 @@
         <div class="auth-form">
           <h3 class="form-title">账号登录</h3>
 
-          <el-form
+          <UiForm
             ref="formRef"
             :model="form"
             :rules="rules"
             class="login-form"
             @keyup.enter="handleLogin"
           >
-            <el-form-item prop="account">
+            <UiFormField prop="account">
               <UiInput
                 v-model="form.account"
                 placeholder="请输入用户名或邮箱"
                 size="lg"
                 prefix-icon="user"
               />
-            </el-form-item>
+            </UiFormField>
 
-            <el-form-item prop="password">
+            <UiFormField prop="password">
               <UiInput
                 v-model="form.password"
                 type="password"
@@ -42,19 +42,19 @@
                 size="lg"
                 prefix-icon="lock"
               />
-            </el-form-item>
+            </UiFormField>
 
             <div class="form-options">
               <UiCheckbox v-model="rememberMe">记住我</UiCheckbox>
               <a href="#" class="forgot-link">忘记密码？</a>
             </div>
 
-            <el-form-item>
+            <UiFormField>
               <UiButton variant="primary" size="lg" class="submit-btn" :loading="loading" @click="handleLogin">
                 立即登录
               </UiButton>
-            </el-form-item>
-          </el-form>
+            </UiFormField>
+          </UiForm>
 
           <div class="auth-footer">
             <p>
@@ -76,7 +76,7 @@
 import { computed, onMounted, reactive, ref } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { notify } from '@/lib/feedback';
-import { UiButton, UiCheckbox, UiIcon, UiInput } from '@/components/ui'
+import { UiButton, UiCheckbox, UiForm, UiFormField, UiIcon, UiInput } from '@/components/ui'
 import { login } from '@/api/auth';
 import { useSiteConfig } from '@/composables/useSiteConfig';
 import { useUserStore } from '@/stores/user';

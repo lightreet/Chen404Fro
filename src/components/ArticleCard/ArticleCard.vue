@@ -25,11 +25,11 @@
       <template v-if="isProfileLayout">
         <div class="profile-meta-row">
           <div class="article-meta article-meta--profile">
-            <el-icon class="meta-date-icon"><Calendar /></el-icon>
+            <UiIcon class="meta-date-icon" name="Calendar" />
             <span>{{ formatDate(article.publishTime ?? article.createTime ?? '') }}</span>
             <template v-if="authorName">
               <span class="meta-sep">·</span>
-              <el-icon class="author-icon"><User /></el-icon>
+              <UiIcon class="author-icon" name="User" />
               <router-link
                 v-if="authorProfileUrl"
                 :to="authorProfileUrl"
@@ -92,7 +92,7 @@
 
           <div class="article-stats article-stats--profile">
             <span class="stat-item">
-              <el-icon><View /></el-icon>
+              <UiIcon name="View" />
               {{ formatNumber(article.viewCount ?? 0) }}
             </span>
             <span class="stat-item">
@@ -100,7 +100,7 @@
               {{ formatNumber(article.likeCount ?? 0) }}
             </span>
             <span class="stat-item">
-              <el-icon><ChatDotRound /></el-icon>
+              <UiIcon name="ChatDotRound" />
               {{ article.commentCount ?? 0 }}
             </span>
           </div>
@@ -127,7 +127,7 @@
           </div>
           <router-link :to="articleDetailUrl" class="read-more read-more--profile" @click.stop>
             <span>阅读详情</span>
-            <el-icon><ArrowRight /></el-icon>
+            <UiIcon name="ArrowRight" />
           </router-link>
         </div>
       </template>
@@ -135,11 +135,11 @@
       <template v-else>
         <!-- 日期与作者 -->
         <div class="article-meta">
-          <el-icon class="meta-date-icon"><Calendar /></el-icon>
+          <UiIcon class="meta-date-icon" name="Calendar" />
           <span>{{ formatDate(article.publishTime ?? article.createTime ?? '') }}</span>
           <template v-if="authorName">
             <span class="meta-sep">·</span>
-            <el-icon class="author-icon"><User /></el-icon>
+            <UiIcon class="author-icon" name="User" />
             <router-link
               v-if="authorProfileUrl"
               :to="authorProfileUrl"
@@ -161,7 +161,7 @@
         <!-- 统计信息 -->
         <div class="article-stats">
           <span class="stat-item">
-            <el-icon><View /></el-icon>
+            <UiIcon name="View" />
             {{ formatNumber(article.viewCount ?? 0) }}
           </span>
           <span class="stat-item">
@@ -169,7 +169,7 @@
             {{ formatNumber(article.likeCount ?? 0) }}
           </span>
           <span class="stat-item">
-            <el-icon><ChatDotRound /></el-icon>
+            <UiIcon name="ChatDotRound" />
             {{ article.commentCount ?? 0 }}
           </span>
           <router-link
@@ -224,7 +224,7 @@
           </template>
           <router-link v-else :to="articleDetailUrl" class="read-more" @click.stop>
             <span>阅读详情</span>
-            <el-icon><ArrowRight /></el-icon>
+            <UiIcon name="ArrowRight" />
           </router-link>
         </div>
       </template>
@@ -262,8 +262,7 @@
 import { computed, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { Icon } from '@iconify/vue';
-import { Calendar, View, ChatDotRound, ArrowRight, User } from '@/compat/element-plus-icons';
-import { UiBadge, UiButton } from '@/components/ui'
+import { UiBadge, UiButton, UiIcon } from '@/components/ui'
 import CategoryIcon from '@/components/CategoryIcon/CategoryIcon.vue';
 import type { Article } from '@/types';
 import { formatDate, formatNumber } from '@/utils/format';
