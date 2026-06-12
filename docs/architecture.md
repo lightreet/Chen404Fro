@@ -1,6 +1,6 @@
 # Chen404 前端架构设计
 
-本文档描述 `Chen404Fro` 当前代码实现的前端结构，而不是历史规划稿。最近一次按代码校准时间：2026-06-03。
+本文档描述 `Chen404Fro` 当前代码实现的前端结构，而不是历史规划稿。最近一次按代码校准时间：2026-06-12。
 
 ## 1. 架构概览
 
@@ -50,13 +50,17 @@ src/
 │  ├─ TravelMemoryMap/
 │  └─ UserProfile/
 ├─ composables/
-│  └─ article-edit/
+│  ├─ article-edit/
+│  ├─ useLayoutMobile.ts
+│  └─ useSiteConfig.ts
 ├─ emoji/
 ├─ iconify/
 ├─ layouts/
 ├─ modules/
 │  ├─ article-edit/
-│  └─ feature-access/
+│  ├─ category-icons/
+│  ├─ feature-access/
+│  └─ music-metadata/
 ├─ router/
 ├─ sdk/
 │  └─ generated/
@@ -81,6 +85,7 @@ src/
 
 ```text
 /                         首页
+/home                     首页兼容路径（重定向到 /）
 /article/:id              文章详情
 /article/edit/:id?        文章编辑（管理员）
 /archive                  归档
@@ -145,7 +150,7 @@ src/
 
 `src/api/request.ts` 当前负责：
 
-- 读取 `VITE_API_BASE_URL`
+- 读取 `VITE_API_BASE_URL`，未配置时回退到 `/api`
 - 自动写入 `Authorization: Bearer <token>`
 - 统一解析后端 `{ code, message, data }`
 - 401 时串行刷新 `refreshToken`
@@ -166,7 +171,9 @@ src/
 - `useLayoutMobile`：布局侧的设备判断
 - `composables/article-edit/useArticleEdit.ts`：文章编辑页的页面编排
 - `modules/article-edit/*`：文章编辑提交模型、标签逻辑、常量
+- `modules/category-icons/service.ts`：后台分类图标搜索，走 Iconify 远程检索
 - `modules/feature-access/constants.ts`：知友/权限封面文案与 Hero 资源映射
+- `modules/music-metadata/metadata.ts`：音乐上传时读取本地音频 metadata、封面与歌词
 
 整体上，前端没有把所有业务数据推入 Pinia，而是保持“页面请求 + 局部状态”为主，仅把真正跨页面共享的状态收敛到 store。
 
@@ -280,7 +287,7 @@ trust-request / home / archive / memory-map / music / category / about / guestbo
 当前一级菜单：
 
 - 分类管理
-- 站点配置
+- 站点配置（内含基础信息、品牌资源、SEO、运行配置、页面封面、AI 助手 tab）
 - 表情包管理
 - 文件管理
 - 好友申请
@@ -328,7 +335,7 @@ trust-request / home / archive / memory-map / music / category / about / guestbo
 - `@` 指向 `src`
 - Element Plus 自动样式引入
 - UnoCSS
-- `manualChunks` 对布局壳、Vue 运行时和 `ArticleCard` 做了针对性拆分
+- `manualChunks` 对 Element Plus、Vue 运行时、布局壳和 `ArticleCard` 做了针对性拆分
 
 这样做的目的，是降低首页在弱网下动态 chunk 拉取过多导致白屏的概率。
 
