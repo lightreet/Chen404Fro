@@ -749,3 +749,79 @@ src/composables/useMotionPreset.ts
 - 本文档：仅维护迁移目标、阶段状态、组件映射与执行策略
 
 如果迁移完成，可将本文档从“进行中蓝图”改为“迁移复盘与最终架构说明”，并把长期有效内容收敛回 `architecture.md`。
+
+## 17. 迁移进度（持续更新）
+
+> 最近更新：2026-06-12（阶段 3 后台收尾完成）
+
+### 已完成
+
+**阶段 0 / 阶段 1（地基）**
+
+- 新增 `src/design/`：`tokens.ts`、`motion.ts`、`icon-map.ts`
+- 新增 `src/assets/styles/tokens.scss`：语义 token 层（`--color-* / --radius-* / --space-* / --font-size-* / --motion-* / --z-* / --control-height-*`），复用历史 `variables.scss` 不破坏旧值
+- 新增 `src/assets/styles/motion.scss`：统一进出场 transition（`m-fade / m-raise / m-panel / m-list / m-drawer / m-press`），含 reduced-motion 适配
+- 新增 `src/assets/styles/element-theme.scss`：**将 Element Plus 全部 CSS 变量映射到项目 token**，所有 `el-*` 组件无需改页面即获得品牌化外观（按钮渐变、圆角柔化、表格去重边框、分页/Tabs 品牌色等）—— 这是“对原有 UI 影响最小、视觉统一收益最大”的关键一步
+- 新增统一反馈服务 `src/lib/feedback/`：`notify.*`（包 `ElMessage`）、`confirmAction()` / `confirmDelete()`（包 `ElMessageBox`，取消不再抛错）
+
+**阶段 2（第一批 primitive）**
+
+- `components/ui/`：`UiIcon`、`UiButton`、`UiInput`、`UiTextarea`、`UiPanel`、`UiTabs`、`UiDialog`、`UiBadge`、`UiTooltip`、`UiPagination`、`UiEmpty`（共 11 个，超过验收要求的 10 个），统一 barrel 出口 `@/components/ui`
+- `components/app/`：`AppSection`、`AppActionBar`、`AppStatusPill`、`AppEmptyState`、`AppFilterBar`，出口 `@/components/app`
+- `UiIcon` 通过 `design/icon-map.ts` 支持「语义名 / 旧 Element 图标名 / 直接 Iconify 名」三种来源，迁移期平滑过渡
+
+**阶段 3（后台，部分）**
+
+- `AdminLayout.vue`：`el-menu` → 自定义品牌化侧边导航（`UiIcon` + token）
+- `AdminCategories.vue`：`el-card`→`UiPanel`、`el-button`→`UiButton`、`el-tag`→`AppStatusPill`、`el-pagination`→`UiPagination`、`el-dialog`→`UiDialog`、`ElMessage/ElMessageBox`→`notify/confirmDelete`
+- `AdminTrustRequests.vue`：同上模式 + `el-input`→`UiInput`
+
+**阶段 3（后台收尾，已全部完成）**
+
+- `AdminEmojiManager.vue`：`el-card`→`UiPanel`、`el-button`→`UiButton`、`el-tag`→`AppStatusPill`/`UiBadge`、`el-pagination`→`UiPagination`、`el-dialog`→`UiDialog`、`ElMessageBox`→`confirmDelete`、`ElMessage`→`notify`（保留 `el-upload`/`el-form`/`el-select` 等中期组件）
+- `AdminFiles.vue`：`el-card`→`UiPanel`、`el-button`→`UiButton`、`el-input`→`UiInput`、`el-tag`→`AppStatusPill`/`UiBadge`、`el-pagination`→`UiPagination`、状态色函数改为 `AccentTone`、`ElMessage`→`notify`（保留 `el-table`/`el-drawer`/`el-select`/图表）
+- `AdminSiteSettings.vue`：`el-card`→`UiPanel`、`el-tabs/el-tab-pane`→`UiTabs`（v-show 切换面板）、`el-button`→`UiButton`、`el-tag`→`UiBadge`、`ElMessage`→`notify`
+- `AiAssistantSettings.vue`：`el-tabs/el-tab-pane`→`UiTabs`、`el-button`→`UiButton`、`el-tooltip`→`UiTooltip`、`el-icon InfoFilled`→`UiIcon`、`el-alert`→自定义品牌化结果卡片、`ElMessage`→`notify`
+
+**中期 primitive 补建（2026-06-12）**
+
+- 新建 `UiSwitch`、`UiCheckbox`、`UiSelect`（薄包装 el-select，保留 filterable/多选能力）
+- `feedback` 层新增 `confirmInput`（替代 `ElMessageBox.prompt`）
+- 新增 `UiSelectOption` 类型到 `types.ts`
+
+**全站反馈层收敛（2026-06-12）**
+
+全仓 22 个文件 `ElMessage.*` → `notify.*`、`ElMessageBox.confirm/prompt` → `confirmDelete/confirmAction/confirmInput`，唯一底层出口收口到 `lib/feedback`。涉及文件：
+`request.ts`、`router/index.ts`、`stores/music-player.ts`、`composables/article-edit/useArticleEdit.ts`、`Header.vue`、`CommentSection.vue`、`Live2D.vue`、`UserProfileCard.vue`、`ArticleDetail.vue`、`Login.vue`、`Register.vue`、`Category.vue`、`CategoryDetail.vue`、`Home.vue`、`MemoryMap.vue`、`TravelMemoryCreate.vue`、`Music.vue`、`MusicTrackEdit.vue`、`Profile.vue`、`ProfileTrustRequestPanel.vue`、`Tag.vue`、`TagDetail.vue`、`UserProfile.vue`
+
+**阶段 4（表单与编辑页，已完成部分）**
+
+- `ArticleEdit.vue`：footer `el-button`→`UiButton`，移除 icons-vue 依赖
+- `ProfileTrustRequestPanel.vue`：`el-tag`→`UiBadge`（statusTone computed），`el-input textarea`→`UiInput`，`el-button`→`UiButton`，移除 icons-vue 依赖
+- `Profile.vue`：`el-card`→`UiPanel`，`el-menu/el-menu-item`→原生 `nav-menu-item` 按钮组（配合 `UiIcon`），`el-input`（搜索框）→`UiInput`，`el-button`→`UiButton`，`el-dialog`→`UiDialog`，`el-pagination×3`→`UiPagination`，panelIcon 改为字符串名，移除 icons-vue 依赖；el-form/el-form-item/el-input（表单校验绑定）保留
+- `MusicTrackEdit.vue`：`el-switch`→`UiSwitch`，`el-button`→`UiButton`，`el-tooltip`→`UiTooltip`，`el-icon`→`UiIcon`，`el-empty`→`UiEmpty`，移除 icons-vue 依赖；el-form/el-segmented/el-date-picker/el-input 保留
+
+构建验证：`vue-tsc -b` 通过（2026-06-12）。
+
+### 待办（按方案阶段推进）
+
+**阶段 4 剩余**
+- `TravelMemoryCreate.vue`：`el-switch`/`el-button`/`el-input(standalone)` → `Ui*`，`ElMessage` 已收敛，重点是 el-form 校验绑定保留
+
+**阶段 5（展示型长页面）**
+- `Music.vue`：`ElMessageBox.confirm/prompt`（已收敛），`el-button`/`el-pagination`/`el-empty`/`el-tag` → `Ui*`/`UiBadge`
+- `ArticleDetail.vue`：`el-button`/`el-tag`/`el-skeleton` → `Ui*`
+- `MemoryMap.vue`：`ElMessageBox.confirm`（已收敛），地图层保留，`el-button`/`el-pagination` → `Ui*`
+- `TravelMemoryDetail.vue`：`el-button`/`el-tag` → `Ui*`
+
+**阶段 6（其余页面收尾）**
+- `Category.vue`、`CategoryDetail.vue`、`Tag.vue`、`TagDetail.vue`、`UserProfile.vue`、`Register.vue`、`Login.vue` 等：`ElMessage` 已收敛，剩 `el-button`/`el-form`/`el-input`/`el-tag` 逐页替换
+- `About.vue`、`Guestbook.vue`、`NotFound.vue` 等小页面
+
+**中期组件待补建**
+- `UiUpload`（薄包装 el-upload，统一 before-upload/loading/accept API）
+- `UiDateField`（薄包装 el-date-picker）
+- `UiSlider`（薄包装 el-slider）
+- `UiTable`（薄包装 el-table，或等阶段 6 再评估）
+
+> 最近更新：2026-06-12（阶段 3 全部完成；中期 primitive 补建；全站反馈层收敛；阶段 4 完成 4/5 个文件）

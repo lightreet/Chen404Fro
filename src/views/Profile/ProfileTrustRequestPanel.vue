@@ -5,7 +5,7 @@
         <h3>好友申请</h3>
         <p>用于申请查看“知友可见”的内容，不包含文章发布权限。</p>
       </div>
-      <el-tag :type="statusTagType">{{ statusLabel }}</el-tag>
+      <UiBadge :tone="statusTone">{{ statusLabel }}</UiBadge>
     </section>
 
     <section v-if="isAdmin" class="trust-state trust-state--done">
@@ -45,13 +45,12 @@
       <section v-if="canSubmit" class="trust-form-shell">
         <el-form label-position="top">
           <el-form-item label="申请理由">
-            <el-input
+            <UiInput
               v-model="reason"
               type="textarea"
               :rows="6"
-              maxlength="1000"
+              :maxlength="1000"
               show-word-limit
-              resize="none"
               placeholder="简单说明你为什么希望申请知友权限，以及希望管理员了解的背景信息。"
             />
           </el-form-item>
@@ -63,9 +62,7 @@
                 :http-request="handleUploadAttachment"
                 :before-upload="beforeAttachmentUpload"
               >
-                <el-button plain :disabled="attachments.length >= 3">
-                  <el-icon class="btn-icon"><Upload /></el-icon>上传附件
-                </el-button>
+                <UiButton variant="secondary" icon="upload" :disabled="attachments.length >= 3">上传附件</UiButton>
               </el-upload>
               <span class="upload-hint">最多 3 个附件，支持图片、PDF、TXT、Word 和压缩包，单个不超过 15MB。</span>
             </div>
@@ -79,9 +76,9 @@
           </el-form-item>
 
           <div class="trust-actions">
-            <el-button type="primary" :loading="submitting" @click="handleSubmit">
+            <UiButton variant="primary" :loading="submitting" @click="handleSubmit">
               {{ latestRequest?.status === TrustRequestStatus.REJECTED ? '重新提交申请' : '提交申请' }}
-            </el-button>
+            </UiButton>
           </div>
         </el-form>
       </section>
@@ -92,8 +89,9 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import type { UploadRequestOptions } from 'element-plus'
-import { ElMessage } from 'element-plus'
-import { Upload } from '@element-plus/icons-vue'
+import { notify } from '@/lib/feedback';
+import { UiBadge, UiButton, UiInput } from '@/components/ui'
+import type { AccentTone } from '@/design/tokens'
 import { createTrustRequest, getMyLatestTrustRequest } from '@/api/trust-request'
 import { uploadTrustAttachment } from '@/api/upload'
 import type { TrustRequest, User } from '@/types'
@@ -129,7 +127,7 @@ const statusLabel = computed(() => {
   return '可重新申请'
 })
 
-const statusTagType = computed(() => {
+const statusTone = computed<AccentTone>(() => {
   if (isAdmin.value || isFriend.value) return 'success'
   if (latestRequest.value?.status === TrustRequestStatus.PENDING) return 'warning'
   if (latestRequest.value?.status === TrustRequestStatus.REJECTED) return 'danger'
@@ -149,11 +147,11 @@ const loadLatestRequest = async () => {
 
 const beforeAttachmentUpload = (file: File) => {
   if (attachments.value.length >= 3) {
-    ElMessage.warning('最多只能上传 3 个附件')
+    notify.warning('最多只能上传 3 个附件')
     return false
   }
   if (file.size > 15 * 1024 * 1024) {
-    ElMessage.warning('附件大小不能超过 15MB')
+    notify.warning('附件大小不能超过 15MB')
     return false
   }
   return true
@@ -164,7 +162,7 @@ const handleUploadAttachment = async (options: UploadRequestOptions) => {
     const uploaded = await uploadTrustAttachment(options.file)
     attachments.value = [...attachments.value, uploaded]
     options.onSuccess?.(uploaded as never)
-    ElMessage.success('附件上传成功')
+    notify.success('附件上传成功')
   } catch (error) {
     options.onError?.(error as any)
   }
@@ -177,7 +175,7 @@ const removeAttachment = (url: string) => {
 const handleSubmit = async () => {
   const normalizedReason = reason.value.trim()
   if (!normalizedReason) {
-    ElMessage.warning('申请理由不能为空')
+    notify.warning('申请理由不能为空')
     return
   }
 
@@ -190,7 +188,7 @@ const handleSubmit = async () => {
     latestRequest.value = created
     reason.value = ''
     attachments.value = []
-    ElMessage.success('申请已提交，管理员会收到邮件提醒')
+    notify.success('申请已提交，管理员会收到邮件提醒')
   } finally {
     submitting.value = false
   }

@@ -293,7 +293,7 @@ import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import dayjs from 'dayjs'
 import { storeToRefs } from 'pinia'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { notify, confirmDelete } from '@/lib/feedback'
 import { Calendar, Location, View } from '@element-plus/icons-vue'
 import DefaultLayout from '@/layouts/DefaultLayout.vue'
 import PageHero from '@/components/PageHero/PageHero.vue'
@@ -483,7 +483,7 @@ async function loadMemories(preferredId?: number | null) {
     if (requestVersion !== memoryLoadVersion) return
     resetMemoryState()
     memoryLoadError.value = '请检查登录状态、接口连通性，或稍后再试。'
-    ElMessage.error('旅行地点加载失败')
+    notify.error('旅行地点加载失败')
   } finally {
     if (requestVersion === memoryLoadVersion) {
       loading.value = false
@@ -520,7 +520,7 @@ async function handleSelectLocation(id: number, options: { syncGallery?: boolean
   } catch {
     if (requestVersion === detailRequestVersion && activeId.value === id) {
       detailLoadError.value = '当前先展示基础摘要，你可以稍后重新加载完整游记。'
-      ElMessage.error('地点详情加载失败')
+      notify.error('地点详情加载失败')
     }
   } finally {
     if (requestVersion === detailRequestVersion) {
@@ -544,7 +544,7 @@ function retryMemoryList() {
 
 function openCurrentDetailPage() {
   if (!activeDetail.value) {
-    ElMessage.info('先选择一个地点，再查看游记。')
+    notify.info('先选择一个地点，再查看游记。')
     return
   }
   router.push({ name: 'TravelMemoryDetail', params: { id: activeDetail.value.id } })
@@ -555,25 +555,17 @@ function editGalleryLocation(id: number) {
 }
 
 async function deleteGalleryLocation(location: Pick<TravelMemoryLocationListItem, 'id' | 'title'>) {
+  const confirmed = await confirmDelete(`确定要删除“${location.title}”吗？删除后将无法恢复。`, {
+    title: '删除旅行地点',
+  })
+  if (!confirmed) return
   try {
-    await ElMessageBox.confirm(
-      `确定要删除“${location.title}”吗？删除后将无法恢复。`,
-      '删除旅行地点',
-      {
-        confirmButtonText: '删除',
-        cancelButtonText: '取消',
-        type: 'warning',
-      },
-    )
     await deleteTravelMemory(location.id)
-    ElMessage.success('地点已删除')
+    notify.success('地点已删除')
     detailCache.value = {}
     await loadMemories()
-  } catch (error) {
-    if (error === 'cancel' || error === 'close') {
-      return
-    }
-    ElMessage.error('删除地点失败')
+  } catch {
+    notify.error('删除地点失败')
   }
 }
 

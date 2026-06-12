@@ -482,7 +482,7 @@
 import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue'
 import type { AxiosError } from 'axios'
 import type { UploadRequestOptions } from 'element-plus'
-import { ElMessage } from 'element-plus'
+import { notify } from '@/lib/feedback';
 import { ArrowDown, ArrowLeft, ArrowUp, Bottom, Close, Location, Plus, Rank, Search, Top } from '@element-plus/icons-vue'
 import { useRoute, useRouter } from 'vue-router'
 import TravelMemoryMap from '@/components/TravelMemoryMap/TravelMemoryMap.vue'
@@ -764,7 +764,7 @@ async function loadList() {
     list.value = nextList
   } catch {
     if (requestVersion !== listRequestVersion) return
-    ElMessage.error('旅行地点列表加载失败')
+    notify.error('旅行地点列表加载失败')
   }
 }
 
@@ -796,7 +796,7 @@ async function loadEditingDetail() {
     editingDetail.value = null
     resetForm()
     editorLoadError.value = '这段旅行暂时没有加载出来，你可以重新试一次，或先返回地图。'
-    ElMessage.error('地点详情加载失败')
+    notify.error('地点详情加载失败')
   }
 }
 
@@ -811,7 +811,7 @@ function goBack() {
 function beforeImageUpload(file: File) {
   const result = validateImageFile(file, DEFAULT_IMAGE_MAX_MB)
   if (!result.valid) {
-    ElMessage.error(result.message)
+    notify.error(result.message)
     return false
   }
   return true
@@ -968,10 +968,10 @@ async function handleUploadStopImage(stopIndex: number, options: UploadRequestOp
       await applyLocationCoordinateSelection(result.latitude, result.longitude, { silent: true })
     }
     options.onSuccess?.(result as never)
-    ElMessage.success('片段照片上传成功')
+    notify.success('片段照片上传成功')
   } catch (error) {
     options.onError?.(error as never)
-    ElMessage.error('照片上传失败')
+    notify.error('照片上传失败')
   } finally {
     uploading.value = false
   }
@@ -990,10 +990,10 @@ async function handleUploadCoverImage(options: UploadRequestOptions) {
       await applyLocationCoordinateSelection(result.latitude, result.longitude, { silent: true })
     }
     options.onSuccess?.(result as never)
-    ElMessage.success('封面图片上传成功')
+    notify.success('封面图片上传成功')
   } catch (error) {
     options.onError?.(error as never)
-    ElMessage.error('封面上传失败')
+    notify.error('封面上传失败')
   } finally {
     uploading.value = false
   }
@@ -1025,7 +1025,7 @@ async function resolveLocationMetaFromCoordinate(
     locationMetaNeedsManualConfirm.value = !result.province || !result.city
 
     if (!options.silent && (result.province || result.city)) {
-      ElMessage.success('已自动匹配省份和城市')
+      notify.success('已自动匹配省份和城市')
     }
   } catch {
     if (requestId !== locationResolveRequestId) return
@@ -1070,14 +1070,14 @@ async function handleExistingLocationSelect(id: number) {
 function handleLocationSearch() {
   const keyword = locationSearchKeyword.value.trim()
   if (!keyword) {
-    ElMessage.info('先输入一个地点关键词，或者直接在地图上点一下位置。')
+    notify.info('先输入一个地点关键词，或者直接在地图上点一下位置。')
     return
   }
   locationSearchRequest.value += 1
 }
 
 function handleLocationSearchError(message: string) {
-  ElMessage.warning(message)
+  notify.warning(message)
 }
 
 function zoomInPickerMap() {
@@ -1090,7 +1090,7 @@ function zoomOutPickerMap() {
 
 function locateCurrentPosition() {
   if (!navigator.geolocation) {
-    ElMessage.warning('当前浏览器不支持自动定位')
+    notify.warning('当前浏览器不支持自动定位')
     return
   }
 
@@ -1101,10 +1101,10 @@ function locateCurrentPosition() {
 
       await applyLocationCoordinateSelection(latitude, longitude)
       pickerMapRef.value?.focusPickerLocation(latitude, longitude)
-      ElMessage.success('已定位到当前位置')
+      notify.success('已定位到当前位置')
     },
     () => {
-      ElMessage.warning('自动定位失败，请手动搜索或点击地图选择')
+      notify.warning('自动定位失败，请手动搜索或点击地图选择')
     },
     {
       enableHighAccuracy: true,
@@ -1243,18 +1243,18 @@ function handleEntryDragEnd() {
 
 function validateStopsBeforeSave() {
   if (!form.stops.length) {
-    ElMessage.warning('至少需要保留一个旅途片段')
+    notify.warning('至少需要保留一个旅途片段')
     return false
   }
   for (let stopIndex = 0; stopIndex < form.stops.length; stopIndex += 1) {
     const stop = form.stops[stopIndex]
     if (!stop.title.trim()) {
-      ElMessage.warning(`请补充第 ${stopIndex + 1} 个片段的标题`)
+      notify.warning(`请补充第 ${stopIndex + 1} 个片段的标题`)
       selectStop(stopIndex)
       return false
     }
     if (!stop.entries.length) {
-      ElMessage.warning(`第 ${stopIndex + 1} 个片段还没有照片`)
+      notify.warning(`第 ${stopIndex + 1} 个片段还没有照片`)
       selectStop(stopIndex)
       return false
     }
@@ -1264,19 +1264,19 @@ function validateStopsBeforeSave() {
 
 async function handleSave() {
   if (uploading.value) {
-    ElMessage.warning('照片还在上传中，请等上传完成后再保存')
+    notify.warning('照片还在上传中，请等上传完成后再保存')
     return
   }
   if (!form.title.trim()) {
-    ElMessage.warning('请输入地点标题')
+    notify.warning('请输入地点标题')
     return
   }
   if (!hasPickedLocation.value) {
-    ElMessage.warning('请先在地图上选择主地点坐标')
+    notify.warning('请先在地图上选择主地点坐标')
     return
   }
   if (hasInvalidTravelDateRange.value) {
-    ElMessage.warning('旅行结束日期不能早于开始日期')
+    notify.warning('旅行结束日期不能早于开始日期')
     return
   }
   if (!validateStopsBeforeSave()) {
@@ -1323,10 +1323,10 @@ async function handleSave() {
     const saved = isEditMode.value && editingId.value != null
       ? await updateTravelMemory(editingId.value, payload)
       : await createTravelMemory(payload)
-    ElMessage.success(isEditMode.value ? '旅行地点更新成功' : '旅行地点创建成功')
+    notify.success(isEditMode.value ? '旅行地点更新成功' : '旅行地点创建成功')
     router.push({ name: 'TravelMemoryDetail', params: { id: saved.id } })
   } catch (error) {
-    ElMessage.error(resolveSaveErrorMessage(error))
+    notify.error(resolveSaveErrorMessage(error))
   } finally {
     saving.value = false
   }

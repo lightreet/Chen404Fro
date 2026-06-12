@@ -3,7 +3,7 @@
     <header class="track-edit-topbar">
       <div class="topbar-row">
         <button type="button" class="topbar-back" @click="goBack">
-          <el-icon><ArrowLeft /></el-icon>
+          <UiIcon name="ArrowLeft" />
           <span>返回音乐馆</span>
         </button>
         <div class="topbar-meta">
@@ -34,14 +34,14 @@
                 <el-form-item label="歌名">
                   <div class="title-field">
                     <el-input v-model="form.title" maxlength="120" placeholder="例如：夜に駆ける" />
-                    <el-button
+                    <UiButton
                       class="ai-suggest-button"
                       :loading="suggestingTrack"
                       :disabled="!form.title.trim() || suggestingTrack"
                       @click="suggestTrackInfo"
                     >
                       AI 匹配
-                    </el-button>
+                    </UiButton>
                   </div>
                 </el-form-item>
                 <el-form-item label="歌手">
@@ -93,7 +93,7 @@
                     <strong>AI 候选结果</strong>
                     <p>{{ aiCandidateSummary }}</p>
                   </div>
-                  <el-switch v-model="overwriteExistingFields" active-text="覆盖已有内容" inactive-text="只填空字段" />
+                  <UiSwitch v-model="overwriteExistingFields" active-text="覆盖已有内容" inactive-text="只填空字段" />
                 </div>
                 <div v-if="aiCandidates.length" class="ai-candidate-list">
                   <article
@@ -116,14 +116,13 @@
                       </div>
                       <small v-if="candidate.matchReason">{{ candidate.matchReason }}</small>
                     </div>
-                    <el-button class="candidate-apply-button" @click="applyTrackCandidate(candidate)">
+                    <UiButton class="candidate-apply-button" @click="applyTrackCandidate(candidate)">
                       应用
-                    </el-button>
+                    </UiButton>
                   </article>
                 </div>
-                <el-empty
+                <UiEmpty
                   v-else
-                  :image-size="72"
                   description="还没有找到合适版本，补充歌手、专辑或年份后再试一次。"
                 />
               </div>
@@ -142,16 +141,14 @@
                   <template #label>
                     <span class="form-label-with-help">
                       音频文件
-                      <el-tooltip
-                        effect="light"
+                      <UiTooltip
                         placement="top"
-                        popper-class="music-metadata-tooltip"
                         content="上传后自动识别歌名、歌手、专辑、年份、语言、流派；音频标签含歌词时同步填入；内嵌封面会自动上传；kuwo、???、unknown 等占位信息会被忽略。"
                       >
                         <button type="button" class="metadata-help-button" aria-label="查看音频识别说明">
-                          <el-icon><InfoFilled /></el-icon>
+                          <UiIcon name="InfoFilled" />
                         </button>
-                      </el-tooltip>
+                      </UiTooltip>
                     </span>
                   </template>
                   <div class="media-resource-card" :class="{ 'has-value': Boolean(form.audioUrl) }">
@@ -172,7 +169,7 @@
                         :accept="AUDIO_UPLOAD_ACCEPT"
                       >
                         <div class="media-upload-button" :class="{ 'is-uploading': uploadingAudio }">
-                          <el-icon v-if="!uploadingAudio"><Upload /></el-icon>
+                          <UiIcon v-if="!uploadingAudio" name="upload" />
                           <span>{{ audioUploadButtonText }}</span>
                         </div>
                       </el-upload>
@@ -208,7 +205,7 @@
                         accept="image/jpeg,image/png,image/webp,image/gif"
                       >
                         <div class="media-upload-button" :class="{ 'is-uploading': uploadingCover }">
-                          <el-icon v-if="!uploadingCover"><Upload /></el-icon>
+                          <UiIcon v-if="!uploadingCover" name="upload" />
                           <span>{{ coverUploadButtonText }}</span>
                         </div>
                       </el-upload>
@@ -253,18 +250,18 @@
                 </div>
 
                 <div class="lyrics-toolbar">
-                  <el-button
+                  <UiButton
                     v-if="form.lyricType === 'lrc'"
                     class="lrc-upload-button"
+                    icon="upload"
                     :loading="readingLrcFile"
                     @click="openLrcFilePicker"
                   >
-                    <el-icon><Upload /></el-icon>
-                    <span>上传 .lrc</span>
-                  </el-button>
-                  <el-button class="lyrics-clear-button" :disabled="!form.lyrics" @click="clearLyrics">
+                    上传 .lrc
+                  </UiButton>
+                  <UiButton class="lyrics-clear-button" :disabled="!form.lyrics" @click="clearLyrics">
                     清空歌词
-                  </el-button>
+                  </UiButton>
                   <input
                     ref="lrcFileInputRef"
                     class="lrc-file-input"
@@ -340,16 +337,16 @@
         <div class="footer-inner">
           <span>{{ canSaveTrack ? '准备好了就放进唱片架。' : '歌名、歌手和音频地址是必填项。' }}</span>
           <div>
-            <el-button class="footer-button footer-button--neutral" @click="goBack">取消</el-button>
-            <el-button
+            <UiButton class="footer-button footer-button--neutral" @click="goBack">取消</UiButton>
+            <UiButton
               class="footer-button footer-button--save"
-              type="primary"
+              variant="primary"
               :loading="saving"
               :disabled="!canSaveTrack"
               @click="saveTrack"
             >
               保存
-            </el-button>
+            </UiButton>
           </div>
         </div>
       </div>
@@ -358,8 +355,9 @@
 
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from 'vue'
-import { ElMessage, type UploadRequestOptions } from 'element-plus'
-import { ArrowLeft, InfoFilled, Upload } from '@element-plus/icons-vue'
+import type { UploadRequestOptions } from 'element-plus'
+import { notify } from '@/lib/feedback'
+import { UiButton, UiSwitch, UiEmpty, UiIcon, UiTooltip } from '@/components/ui'
 import { useRoute, useRouter } from 'vue-router'
 import { createMusicTrack, getAdminMusicTrack, suggestMusicTrack, updateMusicTrack } from '@/api/music'
 import { uploadMusicAudio, uploadMusicCover, type UploadResult } from '@/api/upload'
@@ -591,7 +589,7 @@ async function loadTrack(id: number) {
     const track = await getAdminMusicTrack(id)
     fillFormFromTrack(track)
   } catch (error) {
-    ElMessage.error(error instanceof Error ? error.message : '歌曲加载失败')
+    notify.error(error instanceof Error ? error.message : '歌曲加载失败')
     void router.replace('/music')
   } finally {
     loading.value = false
@@ -644,11 +642,11 @@ function resetForm() {
 
 async function saveTrack() {
   if (uploadInProgress.value) {
-    ElMessage.warning('文件还在上传，稍等一下再保存')
+    notify.warning('文件还在上传，稍等一下再保存')
     return
   }
   if (!form.title.trim() || !form.artist.trim() || !form.audioUrl.trim()) {
-    ElMessage.warning('歌名、歌手和音频地址都要填写')
+    notify.warning('歌名、歌手和音频地址都要填写')
     return
   }
   saving.value = true
@@ -659,10 +657,10 @@ async function saveTrack() {
     }
     if (isEditMode.value && editingId.value != null) {
       await updateMusicTrack(editingId.value, payload)
-      ElMessage.success('歌曲已更新')
+      notify.success('歌曲已更新')
     } else {
       await createMusicTrack(payload)
-      ElMessage.success('歌曲已创建')
+      notify.success('歌曲已创建')
     }
     void router.push('/music')
   } finally {
@@ -673,7 +671,7 @@ async function saveTrack() {
 async function suggestTrackInfo() {
   const title = form.title.trim()
   if (!title) {
-    ElMessage.warning('先输入歌名，Lyra 才能帮你补全信息')
+    notify.warning('先输入歌名，Lyra 才能帮你补全信息')
     return
   }
 
@@ -693,9 +691,9 @@ async function suggestTrackInfo() {
     })
     aiCandidates.value = (response.candidates || []).slice(0, 5)
     if (aiCandidates.value.length > 0) {
-      ElMessage.success(`AI 找到 ${aiCandidates.value.length} 个候选版本`)
+      notify.success(`AI 找到 ${aiCandidates.value.length} 个候选版本`)
     } else {
-      ElMessage.info('暂时没有找到合适版本，可以补充歌手或专辑后再匹配')
+      notify.info('暂时没有找到合适版本，可以补充歌手或专辑后再匹配')
     }
   } finally {
     suggestingTrack.value = false
@@ -705,9 +703,9 @@ async function suggestTrackInfo() {
 function applyTrackCandidate(candidate: MusicTrackAiCandidate) {
   const appliedCount = applyTrackSuggestion(candidate, overwriteExistingFields.value)
   if (appliedCount > 0) {
-    ElMessage.success(`已应用 ${appliedCount} 项候选信息`)
+    notify.success(`已应用 ${appliedCount} 项候选信息`)
   } else {
-    ElMessage.info('这个候选和当前表单内容差不多')
+    notify.info('这个候选和当前表单内容差不多')
   }
 }
 
@@ -782,11 +780,11 @@ function confidenceLabel(confidence?: string) {
 function beforeAudioUpload(file: File) {
   const extension = getFileExtension(file.name)
   if (!ALLOWED_AUDIO_EXTENSIONS.has(extension)) {
-    ElMessage.warning('请选择 MP3、WAV、FLAC、OGG、AAC 或 M4A 音频文件')
+    notify.warning('请选择 MP3、WAV、FLAC、OGG、AAC 或 M4A 音频文件')
     return false
   }
   if (file.size > MAX_AUDIO_UPLOAD_SIZE) {
-    ElMessage.warning(`音频文件不能超过 ${MAX_AUDIO_UPLOAD_SIZE_MB}MB`)
+    notify.warning(`音频文件不能超过 ${MAX_AUDIO_UPLOAD_SIZE_MB}MB`)
     return false
   }
   return true
@@ -807,7 +805,7 @@ async function handleAudioUpload(options: UploadRequestOptions) {
     const appliedCount = await applyParsedAudioMetadata(metadata)
     applyAudioUpload(result)
     options.onSuccess?.(result)
-    ElMessage.success(appliedCount > 0 ? `音频已上传，已识别 ${appliedCount} 项信息` : '音频已上传')
+    notify.success(appliedCount > 0 ? `音频已上传，已识别 ${appliedCount} 项信息` : '音频已上传')
   } catch (error) {
     options.onError?.(toUploadAjaxError(error))
   } finally {
@@ -827,7 +825,7 @@ async function handleCoverUpload(options: UploadRequestOptions) {
     const result = await uploadMusicCover(options.file)
     applyCoverUpload(result)
     options.onSuccess?.(result)
-    ElMessage.success('封面已上传')
+    notify.success('封面已上传')
   } catch (error) {
     options.onError?.(toUploadAjaxError(error))
   } finally {
@@ -893,7 +891,7 @@ async function uploadParsedCover(file: File) {
     applyCoverUpload(result)
     return true
   } catch (error) {
-    ElMessage.warning(error instanceof Error ? `封面识别成功但上传失败：${error.message}` : '封面识别成功但上传失败')
+    notify.warning(error instanceof Error ? `封面识别成功但上传失败：${error.message}` : '封面识别成功但上传失败')
     return false
   } finally {
     uploadingCover.value = false
@@ -923,7 +921,7 @@ async function handleLrcFileChange(event: Event) {
   const file = input.files?.[0]
   if (!file) return
   if (!file.name.toLowerCase().endsWith('.lrc')) {
-    ElMessage.warning('请选择 .lrc 歌词文件')
+    notify.warning('请选择 .lrc 歌词文件')
     input.value = ''
     return
   }
@@ -932,9 +930,9 @@ async function handleLrcFileChange(event: Event) {
   try {
     form.lyricType = 'lrc'
     form.lyrics = await file.text()
-    ElMessage.success(`已导入 ${file.name}`)
+    notify.success(`已导入 ${file.name}`)
   } catch (error) {
-    ElMessage.error(error instanceof Error ? error.message : 'LRC 文件读取失败')
+    notify.error(error instanceof Error ? error.message : 'LRC 文件读取失败')
   } finally {
     readingLrcFile.value = false
     input.value = ''

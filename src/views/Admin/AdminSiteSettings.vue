@@ -1,29 +1,20 @@
 <template>
-  <el-card class="settings-card" shadow="never">
-    <template #header>
-      <div class="settings-header">
-        <div class="settings-title">
-          <el-icon class="settings-title__icon"><Setting /></el-icon>
-          <div>
-            <h2>站点配置</h2>
-          </div>
-        </div>
-        <div v-if="activeTab !== 'ai'" class="settings-actions">
-          <el-button :icon="Refresh" :loading="loading" @click="loadConfig">刷新</el-button>
-          <el-button type="primary" :loading="saving" @click="saveConfig">保存配置</el-button>
-        </div>
+  <UiPanel icon="settings" title="站点配置" flush>
+    <template #actions>
+      <div v-if="activeTab !== 'ai'" class="settings-actions">
+        <UiButton icon="refresh" :loading="loading" @click="loadConfig">刷新</UiButton>
+        <UiButton variant="primary" :loading="saving" @click="saveConfig">保存配置</UiButton>
       </div>
     </template>
 
     <div v-loading="loading" class="settings-body">
-      <el-tabs v-model="activeTab" class="settings-tabs">
-        <el-tab-pane label="基础信息" name="basic">
-          <section class="settings-section">
+      <UiTabs v-model="activeTab" :items="tabItems" variant="line" class="settings-tabs">
+        <section v-show="activeTab === 'basic'" class="settings-section">
             <div class="section-head">
               <div>
                 <h3>站点基础信息</h3>
               </div>
-              <el-tag effect="plain">已接入</el-tag>
+              <UiBadge tone="success">已接入</UiBadge>
             </div>
 
             <el-form label-position="top" class="settings-form">
@@ -56,15 +47,13 @@
               </div>
             </el-form>
           </section>
-        </el-tab-pane>
 
-        <el-tab-pane label="品牌资源" name="brand">
-          <section class="settings-section">
+        <section v-show="activeTab === 'brand'" class="settings-section">
             <div class="section-head">
               <div>
                 <h3>Logo、图标与版权</h3>
               </div>
-              <el-tag type="warning" effect="plain">部分前台待接入</el-tag>
+              <UiBadge tone="warning">部分前台待接入</UiBadge>
             </div>
 
             <div class="brand-grid">
@@ -83,11 +72,11 @@
                       :http-request="(options) => handleAssetUpload('siteLogo', options)"
                       accept="image/*"
                     >
-                      <el-button :icon="UploadFilled" :loading="uploadingKey === 'siteLogo'">上传</el-button>
+                      <UiButton icon="upload" :loading="uploadingKey === 'siteLogo'">上传</UiButton>
                     </el-upload>
-                    <el-button v-if="form.siteLogo" text type="danger" :icon="Delete" @click="form.siteLogo = ''">
+                    <UiButton v-if="form.siteLogo" variant="text" icon="delete" @click="form.siteLogo = ''">
                       清除
-                    </el-button>
+                    </UiButton>
                   </div>
                   <el-input v-model="form.siteLogo" clearable placeholder="/logo.png 或图片 URL" />
                 </div>
@@ -108,11 +97,11 @@
                       :http-request="(options) => handleAssetUpload('siteFavicon', options)"
                       accept="image/*"
                     >
-                      <el-button :icon="UploadFilled" :loading="uploadingKey === 'siteFavicon'">上传</el-button>
+                      <UiButton icon="upload" :loading="uploadingKey === 'siteFavicon'">上传</UiButton>
                     </el-upload>
-                    <el-button v-if="form.siteFavicon" text type="danger" :icon="Delete" @click="form.siteFavicon = ''">
+                    <UiButton v-if="form.siteFavicon" variant="text" icon="delete" @click="form.siteFavicon = ''">
                       清除
-                    </el-button>
+                    </UiButton>
                   </div>
                   <el-input v-model="form.siteFavicon" clearable placeholder="/favicon.png 或图片 URL" />
                 </div>
@@ -125,15 +114,13 @@
               </el-form-item>
             </el-form>
           </section>
-        </el-tab-pane>
 
-        <el-tab-pane label="SEO" name="seo">
-          <section class="settings-section">
+        <section v-show="activeTab === 'seo'" class="settings-section">
             <div class="section-head">
               <div>
                 <h3>搜索展示信息</h3>
               </div>
-              <el-tag type="success" effect="plain">已接入</el-tag>
+              <UiBadge tone="success">已接入</UiBadge>
             </div>
 
             <el-form label-position="top" class="settings-form">
@@ -155,10 +142,8 @@
               </el-form-item>
             </el-form>
           </section>
-        </el-tab-pane>
 
-        <el-tab-pane label="运行配置" name="runtime">
-          <section class="settings-section">
+        <section v-show="activeTab === 'runtime'" class="settings-section">
             <div class="section-head">
               <div>
                 <h3>评论互动策略</h3>
@@ -211,15 +196,13 @@
               </section>
             </div>
           </section>
-        </el-tab-pane>
 
-        <el-tab-pane label="页面封面" name="hero">
-          <section class="settings-section">
+        <section v-show="activeTab === 'hero'" class="settings-section">
             <div class="section-head">
               <div>
                 <h3>页面封面</h3>
               </div>
-              <el-tag effect="plain">已接入</el-tag>
+              <UiBadge tone="success">已接入</UiBadge>
             </div>
 
             <div class="hero-grid">
@@ -243,17 +226,16 @@
                       :http-request="(options) => handleHeroUpload(item.key, options)"
                       accept="image/*"
                     >
-                      <el-button :icon="UploadFilled" :loading="uploadingKey === item.key">上传</el-button>
+                      <UiButton icon="upload" :loading="uploadingKey === item.key">上传</UiButton>
                     </el-upload>
-                    <el-button
+                    <UiButton
                       v-if="heroImages[item.key]"
-                      text
-                      type="danger"
-                      :icon="Delete"
+                      variant="text"
+                      icon="delete"
                       @click="clearHeroImage(item.key)"
                     >
                       清除
-                    </el-button>
+                    </UiButton>
                   </div>
                   <el-input
                     v-model="heroImages[item.key]"
@@ -264,25 +246,26 @@
               </section>
             </div>
           </section>
-        </el-tab-pane>
-        <el-tab-pane label="AI 助手" name="ai">
+
+        <div v-show="activeTab === 'ai'">
           <AiAssistantSettings />
-        </el-tab-pane>
-      </el-tabs>
+        </div>
+      </UiTabs>
 
       <div v-if="activeTab !== 'ai'" class="settings-footer">
-        <el-button @click="loadConfig">重置</el-button>
-        <el-button type="primary" :loading="saving" @click="saveConfig">保存配置</el-button>
+        <UiButton variant="text" @click="loadConfig">重置</UiButton>
+        <UiButton variant="primary" :loading="saving" @click="saveConfig">保存配置</UiButton>
       </div>
     </div>
-  </el-card>
+  </UiPanel>
 </template>
 
 <script setup lang="ts">
 import { onMounted, reactive, ref } from 'vue';
 import type { UploadRequestOptions } from 'element-plus';
-import { ElMessage } from 'element-plus';
-import { Delete, Refresh, Setting, UploadFilled } from '@element-plus/icons-vue';
+import { notify } from '@/lib/feedback';
+import { UiPanel, UiButton, UiTabs, UiBadge } from '@/components/ui';
+import type { UiTabItem } from '@/components/ui';
 import { getSiteConfig, updateSiteConfig } from '@/api/home';
 import { uploadSiteAsset } from '@/api/upload';
 import AiAssistantSettings from '@/views/Admin/components/AiAssistantSettings.vue';
@@ -290,6 +273,15 @@ import HeroImageFocusEditor from '@/components/HeroImageFocusEditor/HeroImageFoc
 import { useSiteConfig } from '@/composables/useSiteConfig';
 import type { SiteConfig } from '@/types';
 import { DEFAULT_IMAGE_MAX_MB, validateImageFile } from '@/utils/validation';
+
+const tabItems: UiTabItem[] = [
+  { label: '基础信息', value: 'basic' },
+  { label: '品牌资源', value: 'brand' },
+  { label: 'SEO', value: 'seo' },
+  { label: '运行配置', value: 'runtime' },
+  { label: '页面封面', value: 'hero' },
+  { label: 'AI 助手', value: 'ai' },
+];
 
 type HeroKey = 'home' | 'archive' | 'memory-map' | 'trust-request' | 'music' | 'category' | 'about' | 'guestbook';
 type AssetKey = 'siteLogo' | 'siteFavicon';
@@ -449,11 +441,11 @@ function validatePayload(payload: SiteConfig) {
   ];
   const invalidAsset = assetEntries.find(([, value]) => !isSafeAssetUrl(String(value ?? '')));
   if (invalidAsset) {
-    ElMessage.warning(`${invalidAsset[0]} 只支持本站相对路径或 http/https 图片链接`);
+    notify.warning(`${invalidAsset[0]} 只支持本站相对路径或 http/https 图片链接`);
     return false;
   }
   if (payload.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(payload.email)) {
-    ElMessage.warning('联系邮箱格式不正确');
+    notify.warning('联系邮箱格式不正确');
     return false;
   }
   return true;
@@ -465,7 +457,7 @@ async function loadConfig() {
     const config = await getSiteConfig();
     applyConfig(config);
   } catch {
-    ElMessage.error('加载站点配置失败');
+    notify.error('加载站点配置失败');
   } finally {
     loading.value = false;
   }
@@ -474,7 +466,7 @@ async function loadConfig() {
 function beforeImageUpload(file: File) {
   const result = validateImageFile(file, DEFAULT_IMAGE_MAX_MB);
   if (!result.valid) {
-    ElMessage.error(result.message);
+    notify.error(result.message);
     return false;
   }
   return true;
@@ -486,10 +478,10 @@ async function handleAssetUpload(key: AssetKey, options: UploadRequestOptions) {
     const res = await uploadSiteAsset(options.file);
     form[key] = res.url;
     options.onSuccess?.(res as any);
-    ElMessage.success('品牌图片上传成功');
+    notify.success('品牌图片上传成功');
   } catch (error) {
     options.onError?.(error as any);
-    ElMessage.error('上传失败');
+    notify.error('上传失败');
   } finally {
     uploadingKey.value = '';
   }
@@ -502,10 +494,10 @@ async function handleHeroUpload(key: HeroKey, options: UploadRequestOptions) {
     heroImages[key] = res.url;
     heroImagePositions[key] = HERO_DEFAULT_POSITIONS[key];
     options.onSuccess?.(res as any);
-    ElMessage.success(`${heroPages.find((item) => item.key === key)?.label ?? '页面'}封面上传成功`);
+    notify.success(`${heroPages.find((item) => item.key === key)?.label ?? '页面'}封面上传成功`);
   } catch (error) {
     options.onError?.(error as any);
-    ElMessage.error('上传失败');
+    notify.error('上传失败');
   } finally {
     uploadingKey.value = '';
   }
@@ -525,9 +517,9 @@ async function saveConfig() {
     const nextConfig = await updateSiteConfig(payload);
     applyConfig(nextConfig);
     setSiteConfig(nextConfig);
-    ElMessage.success('站点配置保存成功');
+    notify.success('站点配置保存成功');
   } catch {
-    ElMessage.error('保存失败');
+    notify.error('保存失败');
   } finally {
     saving.value = false;
   }
@@ -539,20 +531,6 @@ onMounted(() => {
 </script>
 
 <style scoped lang="scss">
-.settings-card {
-  border-radius: var(--radius-xl);
-  border: 1px solid var(--border-color);
-
-  :deep(.el-card__header) {
-    padding: var(--spacing-md) var(--spacing-lg);
-    border-bottom: 1px solid var(--border-light);
-  }
-
-  :deep(.el-card__body) {
-    padding: var(--spacing-lg);
-  }
-}
-
 .settings-header,
 .settings-actions,
 .section-head,
@@ -571,32 +549,10 @@ onMounted(() => {
   justify-content: space-between;
 }
 
-.settings-title {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  min-width: 0;
-
-  h2 {
-    margin: 0;
-    color: var(--text-primary);
-    font-size: 18px;
-  }
-}
-
-.settings-title__icon {
-  width: 38px;
-  height: 38px;
-  justify-content: center;
-  border-radius: 12px;
-  background: rgba(255, 229, 239, 0.72);
-  color: var(--primary);
-  font-size: 18px;
-}
-
 .settings-body {
   display: grid;
   gap: 18px;
+  padding: var(--space-lg);
 }
 
 .settings-section {
@@ -608,9 +564,7 @@ onMounted(() => {
 }
 
 .settings-tabs {
-  :deep(.el-tabs__header) {
-    margin-bottom: 14px;
-  }
+  margin-bottom: 4px;
 }
 
 .settings-section {

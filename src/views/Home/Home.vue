@@ -90,7 +90,7 @@
 
 <script setup lang="ts">
 import { computed, ref, onMounted, onUnmounted, watch, nextTick } from 'vue';
-import { ElMessage } from 'element-plus';
+import { notify } from '@/lib/feedback';
 import { Compass } from '@element-plus/icons-vue';
 import DefaultLayout from '@/layouts/DefaultLayout.vue';
 import ArticleCard from '@/components/ArticleCard/ArticleCard.vue';
@@ -235,7 +235,7 @@ const loadArticles = async (page: number = 1) => {
     hasMore.value = list.length > 0 && pageFilled && countSuggestsMore;
   } catch (err) {
     console.error('加载文章列表失败', err);
-    ElMessage.error('加载文章列表失败，请稍后重试');
+    notify.error('加载文章列表失败，请稍后重试');
     if (currentPage.value === 1) {
       hasMore.value = false;
     }

@@ -181,7 +181,7 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue';
 import { useRouter } from 'vue-router';
-import { ElMessage } from 'element-plus';
+import { notify } from '@/lib/feedback';
 import { ArrowLeft, Key, Lock, Message, User } from '@element-plus/icons-vue';
 import { login, register, sendVerifyCode as sendVerifyCodeApi } from '@/api/auth';
 import { useSiteConfig } from '@/composables/useSiteConfig';
@@ -322,20 +322,20 @@ const rules = {
 
 const sendVerifyCode = async () => {
   if (!form.email.trim()) {
-    ElMessage.warning('请先输入邮箱');
+    notify.warning('请先输入邮箱');
     return;
   }
 
   const emailReg = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   if (!emailReg.test(form.email)) {
-    ElMessage.warning('邮箱格式不正确');
+    notify.warning('邮箱格式不正确');
     return;
   }
 
   codeSending.value = true;
   try {
     await sendVerifyCodeApi({ email: form.email, type: 'register' });
-    ElMessage.success('验证码已发送到邮箱');
+    notify.success('验证码已发送到邮箱');
 
     codeCountdown.value = 60;
     const timer = window.setInterval(() => {
@@ -346,7 +346,7 @@ const sendVerifyCode = async () => {
     }, 1000);
   } catch (error) {
     console.error('发送验证码失败:', error);
-    ElMessage.error('发送验证码失败，请稍后重试');
+    notify.error('发送验证码失败，请稍后重试');
   } finally {
     codeSending.value = false;
   }
@@ -374,7 +374,7 @@ const handleRegister = async () => {
       refreshToken: loginRes.refreshToken,
     });
 
-    ElMessage.success('注册成功');
+    notify.success('注册成功');
     router.push('/');
   } catch (error) {
     console.error('注册失败:', error);

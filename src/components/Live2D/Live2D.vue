@@ -96,7 +96,7 @@
 import { computed, onMounted, onUnmounted, ref } from 'vue';
 import { useRoute } from 'vue-router';
 import { Camera, ChatDotRound, Close, Headset, Refresh } from '@element-plus/icons-vue';
-import { ElMessage } from 'element-plus';
+import { notify } from '@/lib/feedback';
 import Live2DChatPanel from './Live2DChatPanel.vue';
 import Live2DMusicPanel from './Live2DMusicPanel.vue';
 import maidImage from '@/assets/live2d/maid-witch.webp';
@@ -418,7 +418,7 @@ const applyStreamEvent = (event: AiChatStreamEvent) => {
       break;
     }
     case 'error':
-      ElMessage.warning(event.data.message || '这次我没接稳，再试一次呀。');
+      notify.warning(event.data.message || '这次我没接稳，再试一次呀。');
       break;
   }
 };

@@ -1,126 +1,122 @@
 ﻿<template>
   <div class="emoji-admin">
-    <el-card class="info-card" shadow="never">
-      <template #header>
-        <div class="header-row">
-        <span class="card-title">
-          <el-icon class="card-icon"><CollectionTag /></el-icon>
-          表情包管理
-        </span>
+    <UiPanel icon="image" title="表情包管理" flush>
+      <template #actions>
         <div class="header-actions">
-            <el-upload
-              :show-file-list="false"
-              accept=".zip,application/zip"
-              :before-upload="beforeImportUpload"
-              :http-request="handleImportZip"
-            >
-              <el-button :loading="importing" plain>导入 ZIP</el-button>
-            </el-upload>
-            <el-button type="primary" @click="openPackDialog()">新建表情包</el-button>
-            <el-button type="primary" plain @click="openItemDialog()">新建表情</el-button>
-          </div>
+          <el-upload
+            :show-file-list="false"
+            accept=".zip,application/zip"
+            :before-upload="beforeImportUpload"
+            :http-request="handleImportZip"
+          >
+            <UiButton :loading="importing" icon="upload">导入 ZIP</UiButton>
+          </el-upload>
+          <UiButton variant="primary" icon="add" @click="openPackDialog()">新建表情包</UiButton>
+          <UiButton variant="ghost" icon="add" @click="openItemDialog()">新建表情</UiButton>
         </div>
       </template>
 
-      <div class="section-block">
-        <div class="section-head">
-          <h3>表情包列表</h3>
-          <el-button text @click="loadPacks(packPage)">刷新</el-button>
-        </div>
-        <el-table :data="packs" v-loading="packsLoading" style="width: 100%">
-          <el-table-column prop="packCode" label="编码" min-width="140" />
-          <el-table-column prop="name" label="名称" min-width="160" />
-          <el-table-column prop="description" label="描述" min-width="220" show-overflow-tooltip />
-          <el-table-column prop="sort" label="排序" width="90" />
-          <el-table-column label="状态" width="100">
-            <template #default="{ row }">
-              <el-tag :type="row.enabled === 1 ? 'success' : 'info'">
-                {{ row.enabled === 1 ? '启用' : '停用' }}
-              </el-tag>
-            </template>
-          </el-table-column>
-          <el-table-column label="操作" width="180" fixed="right">
-            <template #default="{ row }">
-              <el-button type="primary" link @click="openPackDialog(row)">编辑</el-button>
-              <el-button type="danger" link @click="handleDeletePack(row)">删除</el-button>
-            </template>
-          </el-table-column>
-        </el-table>
-        <div class="table-footer">
-          <el-pagination
-            background
-            layout="total, prev, pager, next"
-            :current-page="packPage"
-            :page-size="packPageSize"
-            :total="packTotal"
-            @current-change="handlePackPageChange"
-          />
-        </div>
-      </div>
-
-      <div class="section-block">
-        <div class="section-head">
-          <h3>表情列表</h3>
-          <div class="section-tools">
-            <el-select v-model="itemFilterPack" clearable placeholder="按表情包筛选" style="width: 180px" @change="handleFilterPackChange">
-              <el-option
-                v-for="pack in enabledPacks"
-                :key="pack.id"
-                :label="pack.name"
-                :value="pack.packCode"
-              />
-            </el-select>
-            <el-button text @click="loadItems(itemPage)">刷新</el-button>
+      <div class="panel-inner">
+        <div class="section-block">
+          <div class="section-head">
+            <h3>表情包列表</h3>
+            <UiButton variant="text" size="sm" icon="refresh" @click="loadPacks(packPage)">刷新</UiButton>
+          </div>
+          <el-table :data="packs" v-loading="packsLoading" style="width: 100%">
+            <el-table-column prop="packCode" label="编码" min-width="140" />
+            <el-table-column prop="name" label="名称" min-width="160" />
+            <el-table-column prop="description" label="描述" min-width="220" show-overflow-tooltip />
+            <el-table-column prop="sort" label="排序" width="90" />
+            <el-table-column label="状态" width="100">
+              <template #default="{ row }">
+                <AppStatusPill :status="row.enabled === 1 ? 'enabled' : 'disabled'">
+                  {{ row.enabled === 1 ? '启用' : '停用' }}
+                </AppStatusPill>
+              </template>
+            </el-table-column>
+            <el-table-column label="操作" width="180" fixed="right">
+              <template #default="{ row }">
+                <div class="row-actions">
+                  <UiButton variant="text" size="sm" @click="openPackDialog(row)">编辑</UiButton>
+                  <UiButton variant="text" size="sm" @click="handleDeletePack(row)">删除</UiButton>
+                </div>
+              </template>
+            </el-table-column>
+          </el-table>
+          <div class="table-footer">
+            <UiPagination
+              :current="packPage"
+              :page-size="packPageSize"
+              :total="packTotal"
+              @change="handlePackPageChange"
+            />
           </div>
         </div>
-        <el-table :data="items" v-loading="itemsLoading" style="width: 100%">
-          <el-table-column prop="shortcode" label="短码" min-width="180" />
-          <el-table-column prop="label" label="名称" min-width="140" />
-          <el-table-column prop="packCode" label="所属表情包" min-width="120" />
-          <el-table-column label="预览" width="90">
-            <template #default="{ row }">
-              <span v-if="row.type === 0" class="emoji-preview">{{ row.unicode || '\u{1F642}' }}</span>
-              <img v-else-if="row.assetUrl" :src="row.assetUrl" alt="" class="emoji-preview__img" />
-              <span v-else class="emoji-preview">-</span>
-            </template>
-          </el-table-column>
-          <el-table-column label="类型" width="90">
-            <template #default="{ row }">
-              <el-tag size="small" :type="row.type === 1 ? 'warning' : 'success'">
-                {{ row.type === 1 ? '图片' : 'Unicode' }}
-              </el-tag>
-            </template>
-          </el-table-column>
-          <el-table-column prop="category" label="分类" width="120" />
-          <el-table-column prop="sort" label="排序" width="90" />
-          <el-table-column label="状态" width="100">
-            <template #default="{ row }">
-              <el-tag :type="row.enabled === 1 ? 'success' : 'info'">
-                {{ row.enabled === 1 ? '启用' : '停用' }}
-              </el-tag>
-            </template>
-          </el-table-column>
-          <el-table-column label="操作" width="180" fixed="right">
-            <template #default="{ row }">
-              <el-button type="primary" link @click="openItemDialog(row)">编辑</el-button>
-              <el-button type="danger" link @click="handleDeleteItem(row)">删除</el-button>
-            </template>
-          </el-table-column>
-        </el-table>
-        <div class="table-footer">
-          <el-pagination
-            background
-            layout="total, prev, pager, next"
-            :current-page="itemPage"
-            :page-size="itemPageSize"
-            :total="itemTotal"
-            @current-change="handleItemPageChange"
-          />
+
+        <div class="section-block">
+          <div class="section-head">
+            <h3>表情列表</h3>
+            <div class="section-tools">
+              <el-select v-model="itemFilterPack" clearable placeholder="按表情包筛选" style="width: 180px" @change="handleFilterPackChange">
+                <el-option
+                  v-for="pack in enabledPacks"
+                  :key="pack.id"
+                  :label="pack.name"
+                  :value="pack.packCode"
+                />
+              </el-select>
+              <UiButton variant="text" size="sm" icon="refresh" @click="loadItems(itemPage)">刷新</UiButton>
+            </div>
+          </div>
+          <el-table :data="items" v-loading="itemsLoading" style="width: 100%">
+            <el-table-column prop="shortcode" label="短码" min-width="180" />
+            <el-table-column prop="label" label="名称" min-width="140" />
+            <el-table-column prop="packCode" label="所属表情包" min-width="120" />
+            <el-table-column label="预览" width="90">
+              <template #default="{ row }">
+                <span v-if="row.type === 0" class="emoji-preview">{{ row.unicode || '\u{1F642}' }}</span>
+                <img v-else-if="row.assetUrl" :src="row.assetUrl" alt="" class="emoji-preview__img" />
+                <span v-else class="emoji-preview">-</span>
+              </template>
+            </el-table-column>
+            <el-table-column label="类型" width="90">
+              <template #default="{ row }">
+                <UiBadge :tone="row.type === 1 ? 'warning' : 'success'" size="sm">
+                  {{ row.type === 1 ? '图片' : 'Unicode' }}
+                </UiBadge>
+              </template>
+            </el-table-column>
+            <el-table-column prop="category" label="分类" width="120" />
+            <el-table-column prop="sort" label="排序" width="90" />
+            <el-table-column label="状态" width="100">
+              <template #default="{ row }">
+                <AppStatusPill :status="row.enabled === 1 ? 'enabled' : 'disabled'">
+                  {{ row.enabled === 1 ? '启用' : '停用' }}
+                </AppStatusPill>
+              </template>
+            </el-table-column>
+            <el-table-column label="操作" width="180" fixed="right">
+              <template #default="{ row }">
+                <div class="row-actions">
+                  <UiButton variant="text" size="sm" @click="openItemDialog(row)">编辑</UiButton>
+                  <UiButton variant="text" size="sm" @click="handleDeleteItem(row)">删除</UiButton>
+                </div>
+              </template>
+            </el-table-column>
+          </el-table>
+          <div class="table-footer">
+            <UiPagination
+              :current="itemPage"
+              :page-size="itemPageSize"
+              :total="itemTotal"
+              @change="handleItemPageChange"
+            />
+          </div>
         </div>
       </div>
-    </el-card>
+    </UiPanel>
 
-    <el-dialog v-model="packDialogVisible" :title="editingPackId ? '编辑表情包' : '新建表情包'" width="520px">
+    <UiDialog v-model="packDialogVisible" :title="editingPackId ? '编辑表情包' : '新建表情包'" width="520px">
       <el-form :model="packForm" label-width="88px">
         <el-form-item label="编码">
           <el-input v-model="packForm.packCode" :disabled="Boolean(editingPackId)" placeholder="例如：basic / mood" />
@@ -142,12 +138,12 @@
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="packDialogVisible = false">取消</el-button>
-        <el-button type="primary" :loading="packSaving" @click="handleSavePack">保存</el-button>
+        <UiButton variant="text" @click="packDialogVisible = false">取消</UiButton>
+        <UiButton variant="primary" :loading="packSaving" @click="handleSavePack">保存</UiButton>
       </template>
-    </el-dialog>
+    </UiDialog>
 
-    <el-dialog v-model="itemDialogVisible" :title="editingItemId ? '编辑表情' : '新建表情'" width="560px">
+    <UiDialog v-model="itemDialogVisible" :title="editingItemId ? '编辑表情' : '新建表情'" width="560px">
       <el-form :model="itemForm" label-width="88px">
         <el-form-item label="表情包">
           <el-select v-model="itemForm.packCode" placeholder="请选择表情包" style="width: 100%">
@@ -189,18 +185,19 @@
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="itemDialogVisible = false">取消</el-button>
-        <el-button type="primary" :loading="itemSaving" @click="handleSaveItem">保存</el-button>
+        <UiButton variant="text" @click="itemDialogVisible = false">取消</UiButton>
+        <UiButton variant="primary" :loading="itemSaving" @click="handleSaveItem">保存</UiButton>
       </template>
-    </el-dialog>
+    </UiDialog>
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
 import type { UploadRequestOptions } from 'element-plus'
-import { ElMessage, ElMessageBox } from 'element-plus'
-import { CollectionTag } from '@element-plus/icons-vue'
+import { notify, confirmDelete } from '@/lib/feedback'
+import { UiPanel, UiButton, UiBadge, UiDialog, UiPagination } from '@/components/ui'
+import { AppStatusPill } from '@/components/app'
 import {
   deleteEmojiItem,
   deleteEmojiPack,
@@ -267,7 +264,7 @@ const loadPacks = async (page = packPage.value) => {
     packTotal.value = res.total || 0
     packPage.value = res.page || page
   } catch {
-    ElMessage.error('表情包列表加载失败')
+    notify.error('表情包列表加载失败')
     packs.value = []
     packTotal.value = 0
   } finally {
@@ -283,7 +280,7 @@ const loadItems = async (page = itemPage.value) => {
     itemTotal.value = res.total || 0
     itemPage.value = res.page || page
   } catch {
-    ElMessage.error('表情列表加载失败')
+    notify.error('表情列表加载失败')
     items.value = []
     itemTotal.value = 0
   } finally {
@@ -322,7 +319,7 @@ const openPackDialog = (row?: AdminEmojiPack) => {
 
 const handleSavePack = async () => {
   if (!packForm.packCode.trim() || !packForm.name.trim()) {
-    ElMessage.warning('请填写表情包编码和名称')
+    notify.warning('请填写表情包编码和名称')
     return
   }
   packSaving.value = true
@@ -336,28 +333,23 @@ const handleSavePack = async () => {
       sort: packForm.sort,
     })
     packDialogVisible.value = false
-    ElMessage.success('表情包保存成功')
+    notify.success('表情包保存成功')
     await Promise.all([loadPacks(packPage.value), loadItems(itemPage.value), refreshRegistry()])
   } catch {
-    ElMessage.error('表情包保存失败')
+    notify.error('表情包保存失败')
   } finally {
     packSaving.value = false
   }
 }
 
 const handleDeletePack = async (row: AdminEmojiPack) => {
-  try {
-    await ElMessageBox.confirm(`确定删除表情包“${row.name}”吗？`, '提示', {
-      confirmButtonText: '删除',
-      cancelButtonText: '取消',
-      type: 'warning',
-    })
-  } catch {
+  const confirmed = await confirmDelete(`确定删除表情包“${row.name}”吗？`)
+  if (!confirmed) {
     return
   }
   try {
     await deleteEmojiPack(row.id)
-    ElMessage.success('表情包删除成功')
+    notify.success('表情包删除成功')
     if (itemFilterPack.value === row.packCode) {
       itemFilterPack.value = ''
       itemPage.value = 1
@@ -365,7 +357,7 @@ const handleDeletePack = async (row: AdminEmojiPack) => {
     const nextPackPage = packs.value.length === 1 && packPage.value > 1 ? packPage.value - 1 : packPage.value
     await Promise.all([loadPacks(nextPackPage), loadItems(itemPage.value), refreshRegistry()])
   } catch {
-    ElMessage.error('表情包删除失败')
+    notify.error('表情包删除失败')
   }
 }
 
@@ -406,15 +398,15 @@ const openItemDialog = (row?: AdminEmojiItem) => {
 
 const handleSaveItem = async () => {
   if (!itemForm.packCode.trim() || !itemForm.shortcode.trim() || !itemForm.label.trim()) {
-    ElMessage.warning('请填写表情包、短码和名称')
+    notify.warning('请填写表情包、短码和名称')
     return
   }
   if (itemForm.type === 0 && !itemForm.unicode.trim()) {
-    ElMessage.warning('Unicode 表情必须填写字符')
+    notify.warning('Unicode 表情必须填写字符')
     return
   }
   if (itemForm.type === 1 && !itemForm.assetUrl.trim()) {
-    ElMessage.warning('图片表情必须填写图片地址')
+    notify.warning('图片表情必须填写图片地址')
     return
   }
 
@@ -434,39 +426,34 @@ const handleSaveItem = async () => {
       sort: itemForm.sort,
     })
     itemDialogVisible.value = false
-    ElMessage.success('表情保存成功')
+    notify.success('表情保存成功')
     await Promise.all([loadItems(itemPage.value), refreshRegistry()])
   } catch {
-    ElMessage.error('表情保存失败')
+    notify.error('表情保存失败')
   } finally {
     itemSaving.value = false
   }
 }
 
 const handleDeleteItem = async (row: AdminEmojiItem) => {
-  try {
-    await ElMessageBox.confirm(`确定删除表情“${row.label}”吗？`, '提示', {
-      confirmButtonText: '删除',
-      cancelButtonText: '取消',
-      type: 'warning',
-    })
-  } catch {
+  const confirmed = await confirmDelete(`确定删除表情“${row.label}”吗？`)
+  if (!confirmed) {
     return
   }
   try {
     await deleteEmojiItem(row.id)
-    ElMessage.success('表情删除成功')
+    notify.success('表情删除成功')
     const nextItemPage = items.value.length === 1 && itemPage.value > 1 ? itemPage.value - 1 : itemPage.value
     await Promise.all([loadItems(nextItemPage), refreshRegistry()])
   } catch {
-    ElMessage.error('表情删除失败')
+    notify.error('表情删除失败')
   }
 }
 
 const beforeImportUpload = (file: File) => {
   const isZip = file.type === 'application/zip' || file.name.toLowerCase().endsWith('.zip')
   if (!isZip) {
-    ElMessage.warning('请上传 ZIP 文件')
+    notify.warning('请上传 ZIP 文件')
     return false
   }
   return true
@@ -477,11 +464,11 @@ const handleImportZip = async (options: UploadRequestOptions) => {
   try {
     const result = await importEmojiPack(options.file)
     options.onSuccess?.(result as never)
-    ElMessage.success(`导入完成：成功 ${result.successCount} 条，失败 ${result.failCount} 条`)
+    notify.success(`导入完成：成功 ${result.successCount} 条，失败 ${result.failCount} 条`)
     await Promise.all([loadPacks(packPage.value), loadItems(itemPage.value), refreshRegistry()])
   } catch (error) {
     options.onError?.(error as any)
-    ElMessage.error('导入表情包失败')
+    notify.error('导入表情包失败')
   } finally {
     importing.value = false
   }
@@ -509,19 +496,14 @@ onMounted(async () => {
 </script>
 
 <style scoped lang="scss">
-.info-card {
-  border-radius: var(--radius-xl);
-  border: 1px solid var(--border-color);
+.panel-inner {
+  padding: var(--space-lg);
+}
 
-  :deep(.el-card__header) {
-    padding: var(--spacing-md) var(--spacing-lg);
-    border-bottom: 1px solid var(--border-light);
-    font-weight: 600;
-  }
-
-  :deep(.el-card__body) {
-    padding: var(--spacing-lg);
-  }
+.row-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
 }
 
 .header-row,

@@ -179,7 +179,7 @@
 import { ref, onMounted, onUnmounted, computed, watch } from 'vue';
 import type { RouteLocationRaw } from 'vue-router';
 import { useRoute, useRouter } from 'vue-router';
-import { ElMessage, ElMessageBox } from 'element-plus';
+import { notify, confirmAction } from '@/lib/feedback';
 import {
   HomeFilled,
   Folder,
@@ -349,21 +349,23 @@ const handleUserCommand = (command: string) => {
 
 // 退出登录
 const handleLogout = async () => {
+  const confirmed = await confirmAction({
+    message: '确定要退出登录吗？',
+    title: '提示',
+    confirmText: '确定',
+    cancelText: '取消',
+  });
+  if (!confirmed) return;
   try {
-    await ElMessageBox.confirm('确定要退出登录吗？', '提示', {
-      confirmButtonText: '确定',
-      cancelButtonText: '取消',
-      type: 'warning',
-    });
     // 调用退出登录 API
     await logoutApi();
     // 清除本地用户状态
     userStore.logout();
-    ElMessage.success('已退出登录');
+    notify.success('已退出登录');
     closeMobileMenu();
     router.push('/');
   } catch {
-    // 用户取消或请求失败
+    // 请求失败
   }
 };
 </script>

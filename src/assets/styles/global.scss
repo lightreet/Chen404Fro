@@ -1,6 +1,9 @@
 // 全局样式
 
 @use './variables.scss' as *;
+@use './tokens.scss';
+@use './motion.scss';
+@use './element-theme.scss';
 
 * {
   margin: 0;

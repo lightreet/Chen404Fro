@@ -64,7 +64,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue';
-import { ElMessage } from 'element-plus';
+import { notify } from '@/lib/feedback';
 import { Message, UserFilled } from '@element-plus/icons-vue';
 import type { SiteMember } from '@/api/home';
 
@@ -108,9 +108,9 @@ async function copyEmail() {
   if (!props.user.email) return;
   try {
     await navigator.clipboard.writeText(props.user.email);
-    ElMessage.success('邮箱已复制');
+    notify.success('邮箱已复制');
   } catch {
-    ElMessage.warning('复制失败，可以手动选择邮箱');
+    notify.warning('复制失败，可以手动选择邮箱');
   }
 }
 

@@ -137,7 +137,7 @@ import { formatDate } from '@/utils/format';
 import { getArticleById, getArticleNeighbors, likeArticle, toggleArticleFavorite } from '@/api/article';
 import { renderArticleText } from '@/emoji/renderers/articleRenderer';
 import { useUserStore } from '@/stores/user';
-import { ElMessage } from 'element-plus';
+import { notify } from '@/lib/feedback';
 import { applySiteMeta, resolveSeoDescription } from '@/utils/siteConfig';
 
 const route = useRoute();
@@ -243,14 +243,14 @@ const handleArticleFavorite = async () => {
     const res = await toggleArticleFavorite(article.value.id);
     article.value.favorited = res.favorited;
   } catch {
-    ElMessage.error('收藏失败，请确认已登录');
+    notify.error('收藏失败，请确认已登录');
   } finally {
     favLoading.value = false;
   }
 };
 
 const promptLoginForFavorite = () => {
-  ElMessage.info('请先登录后再收藏');
+  notify.info('请先登录后再收藏');
   router.push({ path: '/login', query: { redirect: route.fullPath } });
 };
 

@@ -48,7 +48,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue';
 import { useRoute } from 'vue-router';
-import { ElMessage } from 'element-plus';
+import { notify } from '@/lib/feedback';
 import { Loading } from '@element-plus/icons-vue';
 import DefaultLayout from '@/layouts/DefaultLayout.vue';
 import ArticleCard from '@/components/ArticleCard/ArticleCard.vue';
@@ -101,7 +101,7 @@ const loadArticles = async (page: number = 1) => {
     total.value = totalCount;
   } catch (err) {
     console.error('加载文章失败', err);
-    ElMessage.error('加载文章失败，请稍后重试');
+    notify.error('加载文章失败，请稍后重试');
     if (currentPage.value === 1) articleList.value = [];
   } finally {
     loading.value = false;

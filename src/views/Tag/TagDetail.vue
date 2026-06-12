@@ -52,7 +52,7 @@
 <script setup lang="ts">
 import { computed, ref, onMounted, watch } from 'vue';
 import { useRoute } from 'vue-router';
-import { ElMessage } from 'element-plus';
+import { notify } from '@/lib/feedback';
 import { Loading } from '@element-plus/icons-vue';
 import DefaultLayout from '@/layouts/DefaultLayout.vue';
 import ArticleCard from '@/components/ArticleCard/ArticleCard.vue';
@@ -85,7 +85,7 @@ const loadTag = async () => {
   } catch (err) {
     console.error('加载标签详情失败', err);
     tag.value = null;
-    ElMessage.error('标签不存在或已被删除');
+    notify.error('标签不存在或已被删除');
   }
 };
 
@@ -107,7 +107,7 @@ const loadArticles = async (page: number = 1) => {
     total.value = totalCount;
   } catch (err) {
     console.error('加载标签文章失败', err);
-    ElMessage.error('加载标签文章失败，请稍后重试');
+    notify.error('加载标签文章失败，请稍后重试');
     if (page === 1) {
       articleList.value = [];
       total.value = 0;

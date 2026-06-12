@@ -6,9 +6,9 @@
         <h3>AI 助手配置</h3>
       </div>
       <div class="hero-actions">
-        <el-button :icon="Refresh" :loading="loading" @click="loadConfig">重新加载</el-button>
-        <el-button :icon="Connection" :loading="testing" @click="testConnection">测试连接</el-button>
-        <el-button type="primary" :loading="saving" @click="saveConfig">保存 AI 配置</el-button>
+        <UiButton icon="refresh" :loading="loading" @click="loadConfig">重新加载</UiButton>
+        <UiButton icon="connection" :loading="testing" @click="testConnection">测试连接</UiButton>
+        <UiButton variant="primary" :loading="saving" @click="saveConfig">保存 AI 配置</UiButton>
       </div>
     </div>
 
@@ -31,8 +31,8 @@
       </div>
     </div>
 
-    <el-tabs v-model="activePane" class="ai-tabs">
-      <el-tab-pane label="模型调用" name="llm">
+    <UiTabs v-model="activePane" :items="paneItems" variant="line" class="ai-tabs">
+      <div v-show="activePane === 'llm'">
         <div class="panel-grid">
           <el-form label-position="top" class="settings-form">
             <el-form-item label="启用模型调用">
@@ -86,9 +86,9 @@
             </el-form-item>
           </el-form>
         </div>
-      </el-tab-pane>
+      </div>
 
-      <el-tab-pane label="女仆人设" name="persona">
+      <div v-show="activePane === 'persona'">
         <div class="panel-grid panel-grid--single">
           <el-form label-position="top" class="settings-form">
             <div class="form-row">
@@ -103,12 +103,12 @@
               <template #label>
                 <span class="field-label">
                   系统提示词
-                  <el-tooltip
+                  <UiTooltip
                     content="控制 Lyra 的基础人设、语气、能力边界和回复长度规则。留空时使用后端 resources/prompts/ai 下的默认模板。"
                     placement="top"
                   >
-                    <el-icon class="field-help"><InfoFilled /></el-icon>
-                  </el-tooltip>
+                    <UiIcon name="info" class="field-help" />
+                  </UiTooltip>
                 </span>
               </template>
               <el-input
@@ -122,12 +122,12 @@
               <template #label>
                 <span class="field-label">
                   站内助手场景提示词
-                  <el-tooltip
+                  <UiTooltip
                     content="控制总结文章、站内检索、引用和推荐等 helper 场景行为。留空时使用默认模板。"
                     placement="top"
                   >
-                    <el-icon class="field-help"><InfoFilled /></el-icon>
-                  </el-tooltip>
+                    <UiIcon name="info" class="field-help" />
+                  </UiTooltip>
                 </span>
               </template>
               <el-input
@@ -141,12 +141,12 @@
               <template #label>
                 <span class="field-label">
                   陪聊场景提示词
-                  <el-tooltip
+                  <UiTooltip
                     content="控制轻量陪伴、闲聊和从陪聊切回内容帮助的 companion 场景行为。留空时使用默认模板。"
                     placement="top"
                   >
-                    <el-icon class="field-help"><InfoFilled /></el-icon>
-                  </el-tooltip>
+                    <UiIcon name="info" class="field-help" />
+                  </UiTooltip>
                 </span>
               </template>
               <el-input
@@ -157,13 +157,13 @@
               />
             </el-form-item>
             <div class="persona-actions">
-              <el-button type="primary" :loading="saving" @click="saveConfig">保存提示词设置</el-button>
+              <UiButton variant="primary" :loading="saving" @click="saveConfig">保存提示词设置</UiButton>
             </div>
           </el-form>
         </div>
-      </el-tab-pane>
+      </div>
 
-      <el-tab-pane label="聊天与检索" name="chat">
+      <div v-show="activePane === 'chat'">
         <div class="panel-grid">
           <el-form label-position="top" class="settings-form">
             <el-form-item label="启用聊天">
@@ -198,9 +198,9 @@
             </el-form-item>
           </el-form>
         </div>
-      </el-tab-pane>
+      </div>
 
-      <el-tab-pane label="小气泡" name="bubble">
+      <div v-show="activePane === 'bubble'">
         <el-form label-position="top" class="settings-form">
           <el-form-item label="小气泡最大字符数">
             <el-input-number v-model="form.chat.bubbleMaxChars" :min="12" :max="60" />
@@ -209,9 +209,9 @@
             <template #label>
               <span class="field-label">
                 长回复替代文案
-                <el-tooltip content="长回复仍然完整展示在聊天面板里，小气泡只负责情绪反馈和引导。" placement="top">
-                  <el-icon class="field-help"><InfoFilled /></el-icon>
-                </el-tooltip>
+                <UiTooltip content="长回复仍然完整展示在聊天面板里，小气泡只负责情绪反馈和引导。" placement="top">
+                  <UiIcon name="info" class="field-help" />
+                </UiTooltip>
               </span>
             </template>
             <el-input v-model="form.chat.bubbleLongReplyText" maxlength="40" show-word-limit />
@@ -220,39 +220,46 @@
             <template #label>
               <span class="field-label">
                 Web Search 工具
-                <el-tooltip content="当前为预留开关，后续接入真实搜索工具后可直接沿用。" placement="top">
-                  <el-icon class="field-help"><InfoFilled /></el-icon>
-                </el-tooltip>
+                <UiTooltip content="当前为预留开关，后续接入真实搜索工具后可直接沿用。" placement="top">
+                  <UiIcon name="info" class="field-help" />
+                </UiTooltip>
               </span>
             </template>
             <el-switch v-model="form.tools.webSearchEnabled" />
           </el-form-item>
         </el-form>
-      </el-tab-pane>
-    </el-tabs>
+      </div>
+    </UiTabs>
 
-    <el-alert
+    <div
       v-if="testResult"
       class="test-result"
-      :type="testResult.success ? 'success' : 'error'"
-      :closable="false"
-      show-icon
+      :class="testResult.success ? 'test-result--success' : 'test-result--error'"
     >
-      <template #title>
-        {{ testResult.message }}
-      </template>
+      <div class="test-result__head">
+        <UiIcon :name="testResult.success ? 'success' : 'error'" />
+        <strong>{{ testResult.message }}</strong>
+      </div>
       <p v-if="testResult.sampleText">{{ testResult.sampleText }}</p>
       <p v-if="testResult.latencyMs">耗时：{{ testResult.latencyMs }}ms</p>
-    </el-alert>
+    </div>
   </section>
 </template>
 
 <script setup lang="ts">
 import { onMounted, reactive, ref } from 'vue';
-import { ElMessage } from 'element-plus';
-import { Connection, InfoFilled, Refresh } from '@element-plus/icons-vue';
+import { notify } from '@/lib/feedback';
+import { UiButton, UiTabs, UiTooltip, UiIcon } from '@/components/ui';
+import type { UiTabItem } from '@/components/ui';
 import { getAiAdminConfig, testAiAdminConfig, updateAiAdminConfig } from '@/api/ai-admin';
 import type { AiAdminConfig, AiConfigTestResponse } from '@/types';
+
+const paneItems: UiTabItem[] = [
+  { label: '模型调用', value: 'llm' },
+  { label: '女仆人设', value: 'persona' },
+  { label: '聊天与检索', value: 'chat' },
+  { label: '小气泡', value: 'bubble' },
+];
 
 const activePane = ref('llm');
 const loading = ref(false);
@@ -330,7 +337,7 @@ async function loadConfig() {
   try {
     applyConfig(await getAiAdminConfig());
   } catch {
-    ElMessage.error('加载 AI 配置失败');
+    notify.error('加载 AI 配置失败');
   } finally {
     loading.value = false;
   }
@@ -340,9 +347,9 @@ async function saveConfig() {
   saving.value = true;
   try {
     applyConfig(await updateAiAdminConfig(toPayload()));
-    ElMessage.success('AI 配置已保存');
+    notify.success('AI 配置已保存');
   } catch {
-    ElMessage.error('保存 AI 配置失败');
+    notify.error('保存 AI 配置失败');
   } finally {
     saving.value = false;
   }
@@ -358,12 +365,12 @@ async function testConnection() {
       config: toPayload(),
     });
     if (testResult.value.success) {
-      ElMessage.success('模型连接测试成功');
+      notify.success('模型连接测试成功');
     } else {
-      ElMessage.warning(testResult.value.message || '模型连接测试失败');
+      notify.warning(testResult.value.message || '模型连接测试失败');
     }
   } catch {
-    ElMessage.error('模型连接测试失败');
+    notify.error('模型连接测试失败');
   } finally {
     testing.value = false;
   }
@@ -530,9 +537,34 @@ onMounted(() => {
 
 .test-result {
   border-radius: 14px;
+  padding: 14px 16px;
+  border: 1px solid var(--color-border-light);
 
   p {
     margin: 6px 0 0;
+    color: var(--color-text-secondary);
+    font-size: var(--font-size-sm);
+  }
+}
+
+.test-result__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--font-size-md);
+}
+
+.test-result--success {
+  background: var(--color-success-soft);
+  .test-result__head {
+    color: var(--color-success);
+  }
+}
+
+.test-result--error {
+  background: var(--color-danger-soft);
+  .test-result__head {
+    color: var(--color-danger);
   }
 }
 

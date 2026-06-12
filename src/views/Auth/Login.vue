@@ -82,7 +82,7 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
-import { ElMessage } from 'element-plus';
+import { notify } from '@/lib/feedback';
 import { User, Lock, ArrowLeft } from '@element-plus/icons-vue';
 import { login } from '@/api/auth';
 import { useSiteConfig } from '@/composables/useSiteConfig';
@@ -141,7 +141,7 @@ const handleLogin = async () => {
       refreshToken: res.refreshToken,
     });
 
-    ElMessage.success('登录成功');
+    notify.success('登录成功');
     const redirect = (route.query.redirect as string) || '/';
     router.push(redirect.startsWith('/') ? redirect : '/');
   } catch (error) {

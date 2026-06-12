@@ -35,8 +35,13 @@ src/
 ├─ assets/
 │  ├─ live2d/
 │  ├─ memory-map/
-│  └─ styles/
+│  └─ styles/         # variables.scss + tokens.scss + motion.scss + element-theme.scss + global.scss
+├─ design/            # 设计系统 TS 入口：tokens.ts / motion.ts / icon-map.ts
+├─ lib/
+│  └─ feedback/       # 统一反馈服务：notify.ts / confirm.ts
 ├─ components/
+│  ├─ ui/             # UI primitive 层（UiButton/UiInput/UiPanel/UiTabs/UiDialog/...）
+│  ├─ app/            # App 风格层（AppSection/AppActionBar/AppStatusPill/...）
 │  ├─ Comment/
 │  ├─ Editor/
 │  ├─ Emoji/
@@ -69,6 +74,22 @@ src/
 ├─ utils/
 └─ views/
 ```
+
+### UI 设计系统分层（迁移进行中）
+
+前端正按 `doc/前端 UI 架构迁移方案.md` 渐进迁移到自有设计系统，分层模型：
+
+```text
+Route / Page -> Feature -> components/app (App*) -> components/ui (Ui*) -> design/ tokens + motion + icon
+```
+
+- `design/tokens.ts`、`assets/styles/tokens.scss`：语义化 token（`--color-*` / `--radius-*` / `--space-*` / `--motion-*` 等），在不破坏历史 `variables.scss` 的前提下建立稳定命名。
+- `assets/styles/element-theme.scss`：把 Element Plus 的 CSS 变量整体映射到项目 token，使所有 `el-*` 组件在不改页面代码的情况下立即去掉「标准后台味」，与品牌语言统一（全站生效）。
+- `components/ui`：与库无关的 primitive，对外只暴露项目自己的 API（短期内部可复用 Element Plus）。
+- `components/app`：承接 Chen404 产品语义与品牌表达，消费 `ui` 层。
+- `lib/feedback`：`notify.*` 与 `confirmAction()` 收敛全站对 `ElMessage` / `ElMessageBox` 的直调。
+
+迁移以页面为单位推进，已完成基础设施 + 阶段 3 全部后台页（`AdminLayout` / `AdminCategories` / `AdminTrustRequests` / `AdminEmojiManager` / `AdminFiles` / `AdminSiteSettings` / `AiAssistantSettings`）。其余页面在全局主题层已获得视觉统一，后续按方案文档阶段 4 起逐步把 `el-*` 替换为 `Ui*` / `App*`。
 
 ## 3. 路由与访问控制
 

@@ -10,32 +10,19 @@
 
         <div class="admin-main">
           <aside class="admin-nav">
-            <el-menu
-              :default-active="activeMenu"
-              class="admin-menu"
-              @select="handleSelect"
-            >
-              <el-menu-item index="categories">
-                <el-icon><CollectionTag /></el-icon>
-                <span>分类管理</span>
-              </el-menu-item>
-              <el-menu-item index="site-settings">
-                <el-icon><Setting /></el-icon>
-                <span>站点配置</span>
-              </el-menu-item>
-              <el-menu-item index="emoji">
-                <el-icon><CollectionTag /></el-icon>
-                <span>表情包管理</span>
-              </el-menu-item>
-              <el-menu-item index="files">
-                <el-icon><Files /></el-icon>
-                <span>文件管理</span>
-              </el-menu-item>
-              <el-menu-item index="trust-requests">
-                <el-icon><Postcard /></el-icon>
-                <span>好友申请</span>
-              </el-menu-item>
-            </el-menu>
+            <nav class="admin-menu" aria-label="后台导航">
+              <button
+                v-for="item in menuItems"
+                :key="item.key"
+                type="button"
+                class="admin-menu__item"
+                :class="{ 'is-active': activeMenu === item.key }"
+                @click="handleSelect(item.key)"
+              >
+                <UiIcon :name="item.icon" class="admin-menu__icon" />
+                <span>{{ item.label }}</span>
+              </button>
+            </nav>
           </aside>
 
           <section class="admin-content">
@@ -54,8 +41,8 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { CollectionTag, Files, Postcard, Setting } from '@element-plus/icons-vue'
 import DefaultLayout from '@/layouts/DefaultLayout.vue'
+import { UiIcon } from '@/components/ui'
 import AdminCategories from './AdminCategories.vue'
 import AdminEmojiManager from './AdminEmojiManager.vue'
 import AdminFiles from './AdminFiles.vue'
@@ -64,6 +51,14 @@ import AdminTrustRequests from './AdminTrustRequests.vue'
 
 const route = useRoute()
 const router = useRouter()
+
+const menuItems = [
+  { key: 'categories', label: '分类管理', icon: 'category' },
+  { key: 'site-settings', label: '站点配置', icon: 'settings' },
+  { key: 'emoji', label: '表情包管理', icon: 'image' },
+  { key: 'files', label: '文件管理', icon: 'files' },
+  { key: 'trust-requests', label: '好友申请', icon: 'postcard' },
+] as const
 
 const normalizeTab = (tab?: string) => {
   if (tab === 'hero') return 'site-settings'
@@ -131,11 +126,51 @@ const handleSelect = (key: string) => {
 }
 
 .admin-menu {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px;
   border-radius: var(--radius-xl);
-  border: 1px solid var(--border-color);
-  background: var(--bg-secondary);
-  overflow: hidden;
+  border: 1px solid var(--color-border-light);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-sm);
   flex: 1;
+}
+
+.admin-menu__item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 12px;
+  border: none;
+  border-radius: var(--radius-lg);
+  background: transparent;
+  color: var(--color-text-secondary);
+  font: inherit;
+  font-size: var(--font-size-base);
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    background-color var(--motion-duration-fast) var(--motion-ease-standard),
+    color var(--motion-duration-fast) var(--motion-ease-standard);
+
+  &:hover:not(.is-active) {
+    background: var(--color-surface-muted);
+    color: var(--color-text-primary);
+  }
+
+  &.is-active {
+    background: var(--color-accent-soft);
+    color: var(--primary-dark);
+    font-weight: 600;
+  }
+}
+
+.admin-menu__icon {
+  font-size: 18px;
+  flex-shrink: 0;
 }
 
 .admin-content {

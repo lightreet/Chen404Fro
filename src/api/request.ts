@@ -1,7 +1,7 @@
 // Axios 请求封装
 
 import axios, { type AxiosInstance, type AxiosRequestConfig, type AxiosResponse } from 'axios';
-import { ElMessage } from 'element-plus';
+import { notify } from '@/lib/feedback';
 
 export interface RequestConfig extends AxiosRequestConfig {
   suppressErrorMessage?: boolean;
@@ -90,7 +90,7 @@ function installRequestInterceptors(client: AxiosInstance, options: InterceptorI
       const { code, message, data } = response.data;
       if (code !== 200) {
         if (!shouldSuppressError(response.config)) {
-          ElMessage.error(message || '请求失败');
+          notify.error(message || '请求失败');
         }
         return Promise.reject(new Error(message));
       }
@@ -101,7 +101,7 @@ function installRequestInterceptors(client: AxiosInstance, options: InterceptorI
       const { response } = error;
       if (isTimeoutError(error)) {
         if (!shouldSuppressError(error.config)) {
-          ElMessage.warning(resolveTimeoutErrorMessage(error.config));
+          notify.warning(resolveTimeoutErrorMessage(error.config));
         }
         return Promise.reject(error);
       }
@@ -121,7 +121,7 @@ function installRequestInterceptors(client: AxiosInstance, options: InterceptorI
                   return Promise.reject(error);
                 }
                 if (!shouldSuppressError(originalConfig)) {
-                  ElMessage.error('未授权，请重新登录');
+                  notify.error('未授权，请重新登录');
                 }
                 localStorage.removeItem('token');
                 localStorage.removeItem('refreshToken');
@@ -141,7 +141,7 @@ function installRequestInterceptors(client: AxiosInstance, options: InterceptorI
                     return Promise.reject(error);
                   }
                   if (!shouldSuppressError(originalConfig)) {
-                    ElMessage.error('登录已过期，请重新登录');
+                    notify.error('登录已过期，请重新登录');
                   }
                   localStorage.removeItem('token');
                   localStorage.removeItem('refreshToken');
@@ -173,7 +173,7 @@ function installRequestInterceptors(client: AxiosInstance, options: InterceptorI
                   return Promise.reject(error);
                 }
                 if (!shouldSuppressError(originalConfig)) {
-                  ElMessage.error('登录已过期，请重新登录');
+                  notify.error('登录已过期，请重新登录');
                 }
                 localStorage.removeItem('token');
                 localStorage.removeItem('refreshToken');
@@ -186,31 +186,31 @@ function installRequestInterceptors(client: AxiosInstance, options: InterceptorI
             })();
           case 403:
             if (!shouldSuppressError(error.config)) {
-              ElMessage.error('拒绝访问');
+              notify.error('拒绝访问');
             }
             break;
           case 404:
             if (!shouldSuppressError(error.config)) {
-              ElMessage.error('请求的资源不存在');
+              notify.error('请求的资源不存在');
             }
             break;
           case 429:
             if (!shouldSuppressError(error.config)) {
-              ElMessage.info(data?.message || '请稍后再试');
+              notify.info(data?.message || '请稍后再试');
             }
             break;
           case 500:
             if (!shouldSuppressError(error.config)) {
-              ElMessage.error('服务器内部错误');
+              notify.error('服务器内部错误');
             }
             break;
           default:
             if (!shouldSuppressError(error.config)) {
-              ElMessage.error(data?.message || '网络错误');
+              notify.error(data?.message || '网络错误');
             }
         }
       } else if (!shouldSuppressError(error.config)) {
-        ElMessage.error('网络连接失败');
+        notify.error('网络连接失败');
       }
 
       return Promise.reject(error);

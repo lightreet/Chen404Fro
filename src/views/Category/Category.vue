@@ -69,7 +69,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
-import { ElMessage } from 'element-plus';
+import { notify } from '@/lib/feedback';
 import { Loading } from '@element-plus/icons-vue';
 import DefaultLayout from '@/layouts/DefaultLayout.vue';
 import CategoryIcon from '@/components/CategoryIcon/CategoryIcon.vue';
@@ -110,7 +110,7 @@ const fetchCategories = async () => {
     categories.value = list ?? [];
   } catch (err) {
     console.error('加载分类失败', err);
-    ElMessage.error('加载分类失败，请稍后重试');
+    notify.error('加载分类失败，请稍后重试');
     categories.value = [];
   } finally {
     loading.value = false;

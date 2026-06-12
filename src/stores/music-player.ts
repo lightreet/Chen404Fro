@@ -1,6 +1,6 @@
 import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
-import { ElMessage } from 'element-plus'
+import { notify } from '@/lib/feedback';
 import { getPublicMusicTracks } from '@/api/music'
 import type { MusicPlaylist, MusicTrack } from '@/types'
 
@@ -63,7 +63,7 @@ export const useMusicPlayerStore = defineStore('music-player', () => {
 
   const handleError = () => {
     if (!currentTrack.value) return
-    ElMessage.warning('这首歌暂时播放不了，Lyra 帮你切到下一首')
+    notify.warning('这首歌暂时播放不了，Lyra 帮你切到下一首')
     void next()
   }
 
@@ -122,7 +122,7 @@ export const useMusicPlayerStore = defineStore('music-player', () => {
   async function playCurrent() {
     const track = currentTrack.value
     if (!track?.audioUrl) {
-      ElMessage.info('音乐馆还没有可以播放的歌曲')
+      notify.info('音乐馆还没有可以播放的歌曲')
       return
     }
     const nextAudioSrc = resolveAudioSrc(track.audioUrl)

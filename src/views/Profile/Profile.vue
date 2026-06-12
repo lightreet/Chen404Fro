@@ -22,26 +22,31 @@
             </section>
 
             <section class="profile-nav-card">
-              <el-menu :default-active="activeMenu" class="nav-menu" @select="handleMenuSelect">
-                <el-menu-item index="settings"><el-icon><User /></el-icon><span>个人中心</span></el-menu-item>
-                <el-menu-item index="articles"><el-icon><Document /></el-icon><span>我的文章</span></el-menu-item>
-                <el-menu-item index="likes"><el-icon><Medal /></el-icon><span>我的点赞</span></el-menu-item>
-                <el-menu-item index="favorites"><el-icon><Star /></el-icon><span>我的收藏</span></el-menu-item>
-              </el-menu>
+              <nav class="nav-menu" role="tablist">
+                <button
+                  v-for="item in navItems"
+                  :key="item.index"
+                  type="button"
+                  class="nav-menu-item"
+                  :class="{ 'is-active': activeMenu === item.index }"
+                  role="tab"
+                  :aria-selected="activeMenu === item.index"
+                  @click="handleMenuSelect(item.index)"
+                >
+                  <UiIcon :name="item.icon" />
+                  <span>{{ item.label }}</span>
+                </button>
+              </nav>
             </section>
           </aside>
 
           <section class="profile-main">
-            <el-card class="info-card content-panel" shadow="never">
-              <template #header>
-                <div class="panel-heading panel-heading--compact">
-                  <div class="panel-title-group">
-                    <div class="panel-title-inline">
-                      <el-icon class="panel-title-inline-icon"><component :is="panelIcon" /></el-icon>
-                      <h2 class="panel-title">{{ panelTitle }}</h2>
-                      <span class="article-total article-total--inline">{{ panelBadge }}</span>
-                    </div>
-                  </div>
+            <UiPanel class="info-card content-panel">
+              <template #title>
+                <div class="panel-title-inline">
+                  <UiIcon class="panel-title-inline-icon" :name="panelIcon" />
+                  <h2 class="panel-title">{{ panelTitle }}</h2>
+                  <span class="article-total article-total--inline">{{ panelBadge }}</span>
                 </div>
               </template>
 
@@ -54,18 +59,15 @@
                       <el-radio-button :value="1">已发布</el-radio-button>
                     </el-radio-group>
                     <div class="search-shell">
-                      <el-input
+                      <UiInput
                         v-model="articleKeyword"
                         placeholder="搜索文章..."
                         clearable
+                        prefix-icon="search"
                         class="keyword-input"
-                        @keyup.enter="loadMyArticles(1)"
-                      >
-                        <template #prefix>
-                          <el-icon><Search /></el-icon>
-                        </template>
-                      </el-input>
-                      <el-button class="search-button" @click="loadMyArticles(1)">搜索</el-button>
+                        @enter="loadMyArticles(1)"
+                      />
+                      <UiButton class="search-button" @click="loadMyArticles(1)">搜索</UiButton>
                     </div>
                   </div>
                 </div>
@@ -88,13 +90,11 @@
                     </div>
                   </div>
                   <div class="pager">
-                    <el-pagination
-                      background
-                      layout="prev, pager, next"
-                      :current-page="articlePage"
+                    <UiPagination
+                      :current="articlePage"
                       :page-size="articlePageSize"
                       :total="articleTotal"
-                      @current-change="loadMyArticles"
+                      @change="loadMyArticles"
                     />
                   </div>
                 </div>
@@ -118,13 +118,11 @@
                     </div>
                   </div>
                   <div class="pager">
-                    <el-pagination
-                      background
-                      layout="prev, pager, next"
-                      :current-page="likedPage"
+                    <UiPagination
+                      :current="likedPage"
                       :page-size="likedPageSize"
                       :total="likedTotal"
-                      @current-change="loadMyLikedArticles"
+                      @change="loadMyLikedArticles"
                     />
                   </div>
                 </div>
@@ -148,13 +146,11 @@
                     </div>
                   </div>
                   <div class="pager">
-                    <el-pagination
-                      background
-                      layout="prev, pager, next"
-                      :current-page="favPage"
+                    <UiPagination
+                      :current="favPage"
                       :page-size="favPageSize"
                       :total="favTotal"
-                      @current-change="loadMyFavoriteArticles"
+                      @change="loadMyFavoriteArticles"
                     />
                   </div>
                 </div>
@@ -177,7 +173,7 @@
                             :http-request="handleAvatarUpload"
                             class="avatar-upload-inline"
                           >
-                            <el-button type="primary"><el-icon class="btn-icon"><Upload /></el-icon>更新头像</el-button>
+                            <UiButton variant="primary" icon="upload">更新头像</UiButton>
                           </el-upload>
                         </div>
                       </div>
@@ -219,9 +215,9 @@
                     </el-form-item>
 
                     <div class="profile-form-actions">
-                      <el-button type="primary" :loading="profileSaving" @click="handleSaveProfile">保存资料</el-button>
-                      <el-button @click="resetProfileForm">重置</el-button>
-                      <el-button @click="openPasswordDialog"><el-icon><Lock /></el-icon>修改密码</el-button>
+                      <UiButton variant="primary" :loading="profileSaving" @click="handleSaveProfile">保存资料</UiButton>
+                      <UiButton variant="secondary" @click="resetProfileForm">重置</UiButton>
+                      <UiButton variant="secondary" icon="lock" @click="openPasswordDialog">修改密码</UiButton>
                     </div>
                   </el-form>
                 </div>
@@ -231,13 +227,13 @@
               <div v-else-if="activeMenu === 'trust'" class="settings-panel">
                 <ProfileTrustRequestPanel :user="user" />
               </div>
-            </el-card>
+            </UiPanel>
           </section>
         </div>
       </div>
     </div>
 
-    <el-dialog
+    <UiDialog
       v-model="passwordDialogVisible"
       title="修改密码"
       width="420px"
@@ -268,18 +264,18 @@
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="passwordDialogVisible = false">取消</el-button>
-        <el-button type="primary" :loading="passwordLoading" @click="handleChangePassword">确认修改</el-button>
+        <UiButton variant="text" @click="passwordDialogVisible = false">取消</UiButton>
+        <UiButton variant="primary" :loading="passwordLoading" @click="handleChangePassword">确认修改</UiButton>
       </template>
-    </el-dialog>
+    </UiDialog>
   </DefaultLayout>
 </template>
 
 <script setup lang="ts">
 import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { notify, confirmDelete } from '@/lib/feedback'
 import type { FormInstance, FormRules } from 'element-plus'
-import { Document, Lock, Medal, Postcard, Search, Star, Upload, User } from '@element-plus/icons-vue'
+import { UiPanel, UiButton, UiInput, UiDialog, UiPagination, UiIcon } from '@/components/ui'
 import { useRoute, useRouter } from 'vue-router'
 import DefaultLayout from '@/layouts/DefaultLayout.vue'
 import { useUserStore } from '@/stores/user'
@@ -327,12 +323,19 @@ const panelBadge = computed(() => {
 })
 
 const panelIcon = computed(() => {
-  if (activeMenu.value === 'articles') return Document
-  if (activeMenu.value === 'likes') return Medal
-  if (activeMenu.value === 'favorites') return Star
-  if (activeMenu.value === 'trust') return Postcard
-  return User
+  if (activeMenu.value === 'articles') return 'Document'
+  if (activeMenu.value === 'likes') return 'Medal'
+  if (activeMenu.value === 'favorites') return 'Star'
+  if (activeMenu.value === 'trust') return 'Postcard'
+  return 'User'
 })
+
+const navItems: Array<{ index: string; icon: string; label: string }> = [
+  { index: 'settings', icon: 'User', label: '个人中心' },
+  { index: 'articles', icon: 'Document', label: '我的文章' },
+  { index: 'likes', icon: 'Medal', label: '我的点赞' },
+  { index: 'favorites', icon: 'Star', label: '我的收藏' },
+]
 
 const profileFormRef = ref<FormInstance>()
 const profileSaving = ref(false)
@@ -403,7 +406,7 @@ const loadUser = async () => {
     user.value = data
     syncProfileForm(data)
   } catch {
-    ElMessage.error('获取用户信息失败')
+    notify.error('获取用户信息失败')
   }
 }
 
@@ -439,10 +442,10 @@ const handleSaveProfile = async () => {
     userStore.setUser(updated)
     user.value = updated
     syncProfileForm(updated)
-    ElMessage.success('个人资料已更新')
+    notify.success('个人资料已更新')
   } catch (err: unknown) {
     if (err && typeof err === 'object' && 'message' in err) {
-      ElMessage.error((err as { message?: string }).message ?? '保存失败')
+      notify.error((err as { message?: string }).message ?? '保存失败')
     }
   } finally {
     profileSaving.value = false
@@ -452,7 +455,7 @@ const handleSaveProfile = async () => {
 const beforeAvatarUpload = (file: File) => {
   const result = validateImageFile(file, AVATAR_MAX_MB)
   if (!result.valid) {
-    ElMessage.error(result.message)
+    notify.error(result.message)
     return false
   }
   return true
@@ -462,10 +465,10 @@ const handleAvatarUpload = async (options: { file: File }) => {
   try {
     const res = await uploadAvatar(options.file)
     profileForm.avatar = res.url
-    ElMessage.success('头像上传成功，记得保存资料')
+    notify.success('头像上传成功，记得保存资料')
   } catch (err: unknown) {
     if (err && typeof err === 'object' && 'message' in err) {
-      ElMessage.error((err as { message?: string }).message ?? '上传失败')
+      notify.error((err as { message?: string }).message ?? '上传失败')
     }
   }
 }
@@ -525,14 +528,11 @@ const loadMyFavoriteArticles = async (page = 1) => {
 const handleEditArticle = (id: number | string) => router.push(`/article/edit/${String(id)}`)
 
 const handleDeleteArticle = async (id: number | string) => {
+  const confirmed = await confirmDelete('确定要删除这篇文章吗？删除后将无法恢复。')
+  if (!confirmed) return
   try {
-    await ElMessageBox.confirm('确定要删除这篇文章吗？删除后将无法恢复。', '删除确认', {
-      type: 'warning',
-      confirmButtonText: '删除',
-      cancelButtonText: '取消',
-    })
     await deleteArticle(String(id))
-    ElMessage.success('删除成功')
+    notify.success('删除成功')
     loadMyArticles(articlePage.value)
   } catch {
     // noop
@@ -548,7 +548,7 @@ const handleChangePassword = async () => {
       oldPassword: passwordForm.oldPassword,
       newPassword: passwordForm.newPassword,
     })
-    ElMessage.success('密码修改成功')
+    notify.success('密码修改成功')
     passwordForm.oldPassword = ''
     passwordForm.newPassword = ''
     passwordForm.confirmPassword = ''
@@ -556,7 +556,7 @@ const handleChangePassword = async () => {
     passwordDialogVisible.value = false
   } catch (err: unknown) {
     if (err && typeof err === 'object' && 'message' in err) {
-      ElMessage.error((err as { message?: string }).message ?? '修改失败')
+      notify.error((err as { message?: string }).message ?? '修改失败')
     }
   } finally {
     passwordLoading.value = false
@@ -825,92 +825,64 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  border-right: none;
   background: transparent;
+  list-style: none;
+  margin: 0;
+  padding: 0;
 }
 
-.nav-menu :deep(.el-menu-item) {
+.nav-menu-item {
   position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
   height: 52px;
-  line-height: 52px;
-  margin-bottom: 0;
   padding: 0 20px 0 18px;
   border-radius: 16px;
   color: var(--profile-text);
   background: transparent;
   border: none;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+  width: 100%;
   overflow: hidden;
   transition:
     transform 0.22s ease,
     background 0.22s ease,
     box-shadow 0.22s ease,
     color 0.22s ease;
-}
 
-.nav-menu :deep(.el-menu-item::after) {
-  display: none;
-}
+  &:hover {
+    transform: translateX(6px);
+    background: rgba(245, 155, 188, 0.12);
+    box-shadow: 0 8px 20px rgba(245, 184, 204, 0.08);
+    color: var(--profile-sakura);
+  }
 
-.nav-menu :deep(.el-menu-item:hover) {
-  transform: translateX(6px);
-  background: rgba(245, 155, 188, 0.12);
-  box-shadow: 0 8px 20px rgba(245, 184, 204, 0.08);
-}
-
-.nav-menu :deep(.el-menu-item .el-icon) {
-  position: relative;
-  z-index: 1;
-  width: 18px;
-  margin-right: 10px;
-  color: var(--profile-text);
-  font-size: 18px;
-  transition: color 0.22s ease, transform 0.22s ease;
-}
-
-.nav-menu :deep(.el-menu-item span) {
-  position: relative;
-  z-index: 1;
-  font-size: 15px;
-  font-weight: 600;
-  letter-spacing: 0.01em;
-  color: var(--profile-text);
-  transition: color 0.22s ease;
-}
-
-.nav-menu :deep(.el-menu-item.is-active) {
-  background: linear-gradient(135deg, #fff1f6, rgba(255, 255, 255, 0.98));
-  color: var(--profile-sakura);
-  box-shadow:
-    0 6px 18px rgba(245, 155, 188, 0.15),
-    inset 0 0 10px rgba(245, 155, 188, 0.08);
-  transform: scale(1.02);
-}
-
-.nav-menu :deep(.el-menu-item.is-active .el-icon) {
-  color: var(--profile-sakura);
-  transform: translateX(1px);
-}
-
-.nav-menu :deep(.el-menu-item.is-active span) {
-  color: var(--profile-sakura);
-}
-
-.nav-menu :deep(.el-menu-item:hover .el-icon),
-.nav-menu :deep(.el-menu-item:hover span) {
-  color: var(--profile-sakura);
+  &.is-active {
+    background: linear-gradient(135deg, #fff1f6, rgba(255, 255, 255, 0.98));
+    color: var(--profile-sakura);
+    box-shadow:
+      0 6px 18px rgba(245, 155, 188, 0.15),
+      inset 0 0 10px rgba(245, 155, 188, 0.08);
+    transform: scale(1.02);
+  }
 }
 
 .profile-main {
   min-width: 0;
 }
 
-.info-card :deep(.el-card__header) {
-  padding: 22px 28px 18px;
-  border-bottom: 1px solid rgba(226, 232, 240, 0.9);
-}
-
-.info-card :deep(.el-card__body) {
-  padding: 24px 28px 26px;
+.info-card {
+  :deep(.ui-panel__header) {
+    padding: 22px 28px 18px;
+    border-bottom: 1px solid rgba(226, 232, 240, 0.9);
+  }
+  :deep(.ui-panel__body) {
+    padding: 24px 28px 26px;
+  }
 }
 
 .article-panel {

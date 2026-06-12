@@ -46,7 +46,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
-import { ElMessage } from 'element-plus';
+import { notify } from '@/lib/feedback';
 import { Loading } from '@element-plus/icons-vue';
 import DefaultLayout from '@/layouts/DefaultLayout.vue';
 import PageHero from '@/components/PageHero/PageHero.vue';
@@ -70,7 +70,7 @@ const fetchTags = async () => {
     tags.value = (await getTags(true)) ?? [];
   } catch (err) {
     console.error('加载标签失败', err);
-    ElMessage.error('加载标签失败，请稍后重试');
+    notify.error('加载标签失败，请稍后重试');
     tags.value = [];
   } finally {
     loading.value = false;

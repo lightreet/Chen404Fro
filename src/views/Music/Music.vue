@@ -606,7 +606,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { notify, confirmDelete, confirmInput } from '@/lib/feedback'
 import { Back, Close, Delete, Edit, Folder, Grid, List, Plus, Refresh, Right, Search, Sort, VideoPause, VideoPlay } from '@element-plus/icons-vue'
 import { Icon } from '@iconify/vue'
 import { useRouter } from 'vue-router'
@@ -1341,12 +1341,12 @@ function openEditTrack(track: MusicTrack) {
 }
 
 async function removeTrack(track: MusicTrack) {
+  const confirmed = await confirmDelete(
+    `确定删除《${track.title}》吗？删除时会自动从所有分类中移除。`,
+    { title: '删除歌曲' },
+  )
+  if (!confirmed) return
   try {
-    await ElMessageBox.confirm(`确定删除《${track.title}》吗？删除时会自动从所有分类中移除。`, '删除歌曲', {
-      confirmButtonText: '删除',
-      cancelButtonText: '取消',
-      type: 'warning',
-    })
     await deleteMusicTrack(track.id)
     if (player.queue.some((item) => item.id === track.id)) {
       player.setQueue(player.queue.filter((item) => item.id !== track.id), player.currentPlaylist)
@@ -1354,11 +1354,10 @@ async function removeTrack(track: MusicTrack) {
     if (activeTrack.value?.id === track.id) {
       player.pause()
     }
-    ElMessage.success('歌曲已删除')
+    notify.success('歌曲已删除')
     await loadMusic()
   } catch (error) {
-    if (error === 'cancel' || error === 'close') return
-    ElMessage.error(error instanceof Error ? error.message : '删除失败')
+    notify.error(error instanceof Error ? error.message : '删除失败')
   }
 }
 
@@ -1384,7 +1383,7 @@ async function saveCategory() {
   try {
     const saved = await createMusicPlaylist({ name })
     if (saved.id) selectedCategoryId.value = saved.id
-    ElMessage.success('分类已新增')
+    notify.success('分类已新增')
     cancelCreateCategory()
     await loadMusic()
   } finally {
@@ -1396,28 +1395,30 @@ async function renameCategory() {
   const category = selectedCategory.value
   if (!category?.id || playlistSaving.value) return
 
+  const value = await confirmInput({
+    message: '修改当前分类名称，歌曲归属不会受影响。',
+    title: '编辑分类',
+    confirmText: '保存',
+    cancelText: '取消',
+    inputValue: category.name,
+    placeholder: '分类名称，例如 夜读',
+    validator: (input) => Boolean(input.trim()) || '分类名称不能为空',
+  })
+  if (value === null) return
+
+  const name = value.trim()
+  if (!name || name === category.name.trim()) return
+
   try {
-    const { value } = await ElMessageBox.prompt('修改当前分类名称，歌曲归属不会受影响。', '编辑分类', {
-      confirmButtonText: '保存',
-      cancelButtonText: '取消',
-      inputValue: category.name,
-      inputPlaceholder: '分类名称，例如 夜读',
-      inputValidator: (input) => Boolean(input.trim()) || '分类名称不能为空',
-    })
-
-    const name = value.trim()
-    if (!name || name === category.name.trim()) return
-
     playlistSaving.value = true
     const saved = await updateMusicPlaylist(category.id, buildCategoryPayload(category, name))
     if (player.currentPlaylist?.id === saved.id) {
       player.setQueue(player.queue, saved)
     }
-    ElMessage.success('分类已更新')
+    notify.success('分类已更新')
     await loadMusic()
   } catch (error) {
-    if (error === 'cancel' || error === 'close') return
-    ElMessage.error(error instanceof Error ? error.message : '分类更新失败')
+    notify.error(error instanceof Error ? error.message : '分类更新失败')
   } finally {
     playlistSaving.value = false
   }
@@ -1427,28 +1428,23 @@ async function removeCategory() {
   const category = selectedCategory.value
   if (!category?.id || playlistSaving.value) return
 
-  try {
-    await ElMessageBox.confirm(
-      `确定删除分类“${category.name}”吗？这只会移除分类和歌曲归属，不会删除歌曲本身。`,
-      '删除分类',
-      {
-        confirmButtonText: '删除',
-        cancelButtonText: '取消',
-        type: 'warning',
-      },
-    )
+  const confirmed = await confirmDelete(
+    `确定删除分类“${category.name}”吗？这只会移除分类和歌曲归属，不会删除歌曲本身。`,
+    { title: '删除分类' },
+  )
+  if (!confirmed) return
 
+  try {
     playlistSaving.value = true
     await deleteMusicPlaylist(category.id)
     if (player.currentPlaylist?.id === category.id) {
       player.setQueue(player.queue, null)
     }
     selectedCategoryId.value = null
-    ElMessage.success('分类已删除')
+    notify.success('分类已删除')
     await loadMusic()
   } catch (error) {
-    if (error === 'cancel' || error === 'close') return
-    ElMessage.error(error instanceof Error ? error.message : '分类删除失败')
+    notify.error(error instanceof Error ? error.message : '分类删除失败')
   } finally {
     playlistSaving.value = false
   }
@@ -1565,7 +1561,7 @@ async function handleCategoryDrop(event: DragEvent, category: MusicPlaylist) {
     return
   }
   if (isTrackInCategory(trackId, category)) {
-    ElMessage.info('歌曲已在该分类中')
+    notify.info('歌曲已在该分类中')
     clearTrackDragState()
     return
   }
@@ -1600,7 +1596,7 @@ async function persistCategoryTracks(category: MusicPlaylist, trackIds: number[]
     const saved = await saveMusicPlaylistTracks(category.id, { trackIds })
     replaceAdminPlaylist(saved)
     syncCurrentPlaylist(saved)
-    ElMessage.success(successMessage)
+    notify.success(successMessage)
   } finally {
     playlistSaving.value = false
   }
