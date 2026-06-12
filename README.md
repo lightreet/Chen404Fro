@@ -162,8 +162,8 @@ src/
 
 ## 文档
 
-- 文档索引：[`docs/文档索引.md`](./docs/文档索引.md)
-- 架构主文档：[`docs/architecture.md`](./docs/architecture.md)
-- 阶段快照：[`docs/前端功能审查与优化清单.md`](./docs/前端功能审查与优化清单.md)
+- 文档索引：[`docs/文档索引.md`](doc/文档索引.md)
+- 架构主文档：[`docs/architecture.md`](doc/architecture.md)
+- 阶段快照：[`docs/前端功能审查与优化清单.md`](doc/前端功能审查与优化清单.md)
 - 表情模块：[`src/emoji/README.md`](./src/emoji/README.md)
 - SDK 说明：[`src/sdk/README.md`](./src/sdk/README.md)
