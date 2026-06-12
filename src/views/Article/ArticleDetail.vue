@@ -1,40 +1,37 @@
 <template>
   <DefaultLayout>
     <div class="article-detail-page">
-      <el-skeleton :rows="10" animated v-if="loading" />
+      <UiSkeleton v-if="loading" :rows="10" size="lg" />
 
       <div class="article-content-wrapper" v-else-if="article">
         <!-- 文章头部 -->
         <div class="article-header">
           <div class="header-actions">
-            <el-button text @click="$router.back()" class="back-btn">
-              <el-icon><ArrowLeft /></el-icon>
-              返回
-            </el-button>
-            <el-button
+            <UiButton variant="text" icon="arrow-left" @click="$router.back()" class="back-btn">返回</UiButton>
+            <UiButton
               v-if="article.canEdit"
-              text
-              type="primary"
+              variant="text"
+              icon="edit"
               @click="router.push(`/article/edit/${article.id}`)"
               class="edit-btn"
             >
               编辑文章
-            </el-button>
+            </UiButton>
           </div>
 
           <h1 class="article-title">{{ renderedArticleTitle }}</h1>
 
           <div class="article-meta">
             <span class="meta-item">
-              <el-icon><Calendar /></el-icon>
+              <UiIcon name="Calendar" />
               {{ formatDate(article.publishTime ?? article.createTime ?? '') }}
             </span>
             <span class="meta-item">
-              <el-icon><View /></el-icon>
+              <UiIcon name="View" />
               {{ article.viewCount ?? 0 }} 阅读
             </span>
             <span class="meta-item">
-              <el-icon><ChatDotRound /></el-icon>
+              <UiIcon name="ChatDotRound" />
               {{ article.commentCount ?? 0 }} 评论
             </span>
           </div>
@@ -58,7 +55,7 @@
               :disabled="favLoading"
               @click="handleArticleFavorite"
             >
-              <el-icon><StarFilled v-if="article.favorited" /><Star v-else /></el-icon>
+              <UiIcon :name="article.favorited ? 'StarFilled' : 'Star'" />
               <span>{{ article.favorited ? '已收藏' : '收藏' }}</span>
             </button>
             <button
@@ -67,7 +64,7 @@
               class="interaction-btn fav-btn"
               @click="promptLoginForFavorite"
             >
-              <el-icon><Star /></el-icon>
+              <UiIcon name="Star" />
               <span>收藏</span>
             </button>
           </div>
@@ -117,7 +114,7 @@
       <!-- 文章不存在 -->
       <div v-else class="article-not-found">
         <p>{{ errorMessage }}</p>
-        <el-button type="primary" @click="$router.push('/')">返回首页</el-button>
+        <UiButton variant="primary" @click="$router.push('/')">返回首页</UiButton>
       </div>
     </div>
   </DefaultLayout>
@@ -126,11 +123,11 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { ArrowLeft, Calendar, View, ChatDotRound, Star, StarFilled } from '@element-plus/icons-vue';
 import { MdPreview } from 'md-editor-v3';
 import 'md-editor-v3/lib/preview.css';
 import DefaultLayout from '@/layouts/DefaultLayout.vue';
 import CommentSection from '@/components/Comment/CommentSection.vue';
+import { UiButton, UiIcon, UiSkeleton } from '@/components/ui'
 import { useSiteConfig } from '@/composables/useSiteConfig';
 import type { Article } from '@/types';
 import { formatDate } from '@/utils/format';

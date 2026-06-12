@@ -63,22 +63,19 @@
 
           <div class="player-controls">
             <button type="button" class="control-btn" title="上一首" @click="handlePreviousTrack">
-              <el-icon><Back /></el-icon>
+              <UiIcon name="Back" />
             </button>
             <button type="button" class="control-btn control-btn--primary" title="播放/暂停" @click="handleTogglePlayback">
-              <el-icon>
-                <VideoPause v-if="player.playing" />
-                <VideoPlay v-else />
-              </el-icon>
+              <UiIcon :name="player.playing ? 'VideoPause' : 'VideoPlay'" />
             </button>
             <button type="button" class="control-btn" title="下一首" @click="handleNextTrack">
-              <el-icon><Right /></el-icon>
+              <UiIcon name="Right" />
             </button>
           </div>
 
           <div class="progress-row">
             <span>{{ formatTime(player.playbackTime) }}</span>
-            <el-slider
+            <UiSlider
               class="progress-slider"
               :model-value="player.playbackTime"
               :max="Math.max(player.duration, 1)"
@@ -91,7 +88,7 @@
 
           <div class="player-subcontrols">
             <span>音量</span>
-            <el-slider
+            <UiSlider
               class="volume-slider"
               :model-value="Math.round(player.volume * 100)"
               :max="100"
@@ -114,18 +111,15 @@
         <div class="shelf-heading">
           <div class="shelf-heading__actions">
             <div class="shelf-search-shell">
-              <el-input
+              <UiInput
                 v-model="playlistSearch"
                 class="playlist-manager__search"
                 clearable
+                prefix-icon="search"
                 placeholder="搜索歌曲、歌手、专辑或标签"
                 @keyup.enter="handlePlaylistSearchSubmit"
-              >
-                <template #prefix>
-                  <el-icon><Search /></el-icon>
-                </template>
-              </el-input>
-              <el-button class="shelf-search-button" @click="handlePlaylistSearchSubmit">搜索</el-button>
+              />
+              <UiButton class="shelf-search-button" @click="handlePlaylistSearchSubmit">搜索</UiButton>
             </div>
             <div v-if="canManage" class="playlist-status-filter" aria-label="歌曲状态筛选">
               <button
@@ -140,8 +134,8 @@
               </button>
             </div>
             <div v-if="canManage" class="shelf-heading__buttons">
-              <el-button class="shelf-heading__add" type="primary" :icon="Plus" @click="openCreateTrack">新增歌曲</el-button>
-              <el-button class="shelf-heading__refresh" :icon="Refresh" @click="loadMusic">刷新</el-button>
+              <UiButton class="shelf-heading__add" variant="primary" icon="add" @click="openCreateTrack">新增歌曲</UiButton>
+              <UiButton class="shelf-heading__refresh" variant="secondary" icon="refresh" @click="loadMusic">刷新</UiButton>
             </div>
           </div>
         </div>
@@ -150,11 +144,11 @@
         <div v-else-if="loadError" class="music-state music-state--error">
           <strong>音乐内容加载失败</strong>
           <span>{{ loadError }}</span>
-          <el-button class="shelf-heading__refresh" :icon="Refresh" @click="loadMusic">重新加载</el-button>
+          <UiButton class="shelf-heading__refresh" variant="secondary" icon="refresh" @click="loadMusic">重新加载</UiButton>
         </div>
         <div v-else-if="tracks.length === 0" class="music-state">
           这里还没有公开歌曲。
-          <el-button v-if="canManage" type="primary" link @click="openCreateTrack">现在新增</el-button>
+          <UiButton v-if="canManage" variant="text" @click="openCreateTrack">现在新增</UiButton>
         </div>
         <div v-else class="music-category-workbench">
           <aside class="playlist-categories">
@@ -165,7 +159,7 @@
               @click="selectCategory(null)"
             >
               <span class="playlist-category-card__marker">
-                <el-icon><Folder /></el-icon>
+                <UiIcon name="Folder" />
               </span>
               <span class="playlist-category-card__copy">
                 <strong>全部分类</strong>
@@ -192,7 +186,7 @@
               @drop="handleCategoryDrop($event, playlist)"
             >
               <span class="playlist-category-card__marker">
-                <el-icon><Folder /></el-icon>
+                <UiIcon name="Folder" />
               </span>
               <span class="playlist-category-card__copy">
                 <strong>{{ playlist.name }}</strong>
@@ -202,16 +196,16 @@
 
             <div v-if="canManage" class="playlist-categories__create">
               <template v-if="creatingCategory">
-                <el-input v-model="categoryDraft" maxlength="120" placeholder="分类名称，例如 夜读" @keyup.enter="saveCategory" />
+                <UiInput v-model="categoryDraft" maxlength="120" placeholder="分类名称，例如 夜读" @keyup.enter="saveCategory" />
                 <div class="playlist-categories__create-actions">
-                  <el-button text @click="cancelCreateCategory">取消</el-button>
-                  <el-button type="primary" :loading="playlistSaving" :disabled="!categoryDraft.trim()" @click="saveCategory">
+                  <UiButton variant="text" @click="cancelCreateCategory">取消</UiButton>
+                  <UiButton variant="primary" :loading="playlistSaving" :disabled="!categoryDraft.trim()" @click="saveCategory">
                     保存
-                  </el-button>
+                  </UiButton>
                 </div>
               </template>
               <button v-else type="button" class="playlist-categories__new" @click="startCreateCategory">
-                <el-icon><Plus /></el-icon>
+                <UiIcon name="Plus" />
                 新增分类
               </button>
             </div>
@@ -232,7 +226,7 @@
                       :title="player.mode === 'single' ? '当前为单曲循环，点击切回顺序播放' : '顺序播放'"
                       @click="setPlayMode('sequence')"
                     >
-                      <el-icon><Sort /></el-icon>
+                      <UiIcon name="Sort" />
                     </button>
                     <button
                       type="button"
@@ -249,11 +243,11 @@
                     aria-label="分类管理"
                   >
                     <button type="button" @click="renameCategory">
-                      <el-icon><Edit /></el-icon>
+                      <UiIcon name="Edit" />
                       编辑分类
                     </button>
                     <button type="button" class="is-danger" @click="removeCategory">
-                      <el-icon><Delete /></el-icon>
+                      <UiIcon name="Delete" />
                       删除分类
                     </button>
                   </div>
@@ -264,7 +258,7 @@
                       title="卡片展示"
                       @click="setMusicDisplayMode('cards')"
                     >
-                      <el-icon><Grid /></el-icon>
+                      <UiIcon name="Grid" />
                       卡片
                     </button>
                     <button
@@ -273,7 +267,7 @@
                       title="列表展示"
                       @click="setMusicDisplayMode('rows')"
                     >
-                      <el-icon><List /></el-icon>
+                      <UiIcon name="List" />
                       列表
                     </button>
                   </div>
@@ -302,7 +296,7 @@
                         <span class="music-track-card__duration">{{ getTrackDurationLabel(track) }}</span>
                         <span v-if="canManage" class="music-track-card__status">{{ statusLabel(track.status) }}</span>
                         <button type="button" class="music-track-card__play" title="播放" @click="playTrack(track)">
-                          <el-icon><VideoPlay /></el-icon>
+                          <UiIcon name="VideoPlay" />
                         </button>
                       </div>
 
@@ -332,10 +326,10 @@
                         </span>
                         <div class="music-track-card__actions">
                           <button type="button" title="播放" @click="playTrack(track)">
-                            <el-icon><VideoPlay /></el-icon>
+                            <UiIcon name="VideoPlay" />
                           </button>
                           <button v-if="canManage" type="button" title="编辑歌曲" @click="openEditTrack(track)">
-                            <el-icon><Edit /></el-icon>
+                            <UiIcon name="Edit" />
                           </button>
                           <button
                             v-if="canManage && selectedCategory && !isTrackInSelectedCategory(track.id)"
@@ -344,7 +338,7 @@
                             :disabled="playlistSaving"
                             @click="addTrackToSelectedCategory(track.id)"
                           >
-                            <el-icon><Plus /></el-icon>
+                            <UiIcon name="Plus" />
                           </button>
                           <button
                             v-if="canManage && selectedCategory && isTrackInSelectedCategory(track.id)"
@@ -353,7 +347,7 @@
                             :disabled="playlistSaving"
                             @click="removeTrackFromSelectedCategory(track.id)"
                           >
-                            <el-icon><Close /></el-icon>
+                            <UiIcon name="Close" />
                           </button>
                           <button
                             v-if="canManage"
@@ -362,20 +356,19 @@
                             title="删除歌曲"
                             @click="removeTrack(track)"
                           >
-                            <el-icon><Delete /></el-icon>
+                            <UiIcon name="Delete" />
                           </button>
                         </div>
                       </div>
                       </article>
                     </div>
                     <div v-if="filteredCategoryTracks.length > musicCardPageSize" class="music-card-pagination">
-                      <el-pagination
-                        v-model:current-page="musicCardPage"
+                      <UiPagination
+                        :current="musicCardPage"
                         :page-size="musicCardPageSize"
                         :total="filteredCategoryTracks.length"
-                        background
-                        layout="prev, pager, next"
-                        @current-change="handleMusicCardPageChange"
+                        :show-total="false"
+                        @change="handleMusicCardPageChange"
                       />
                     </div>
                   </div>
@@ -433,7 +426,7 @@
                             title="播放"
                             @click.stop="playTrack(track, false)"
                           >
-                            <el-icon><VideoPlay /></el-icon>
+                            <UiIcon name="VideoPlay" />
                           </button>
                           <button
                             type="button"
@@ -443,7 +436,7 @@
                             title="暂停"
                             @click.stop="pauseTrack(track)"
                           >
-                            <el-icon><VideoPause /></el-icon>
+                            <UiIcon name="VideoPause" />
                           </button>
                         </span>
                         <span class="category-track-row__expand">
@@ -455,7 +448,7 @@
                         <div v-if="expandedManagedTrackId === track.id" class="track-detail category-track-detail-card">
                           <div class="track-detail__action-bar">
                             <button v-if="canManage" type="button" class="track-detail__icon-btn" title="编辑歌曲" @click="openEditTrack(track)">
-                              <el-icon><Edit /></el-icon>
+                              <UiIcon name="Edit" />
                             </button>
                             <button
                               v-if="canManage && selectedCategory && !isTrackInSelectedCategory(track.id)"
@@ -465,7 +458,7 @@
                               :disabled="playlistSaving"
                               @click="addTrackToSelectedCategory(track.id)"
                             >
-                              <el-icon><Plus /></el-icon>
+                              <UiIcon name="Plus" />
                             </button>
                             <button
                               v-if="canManage && selectedCategory && isTrackInSelectedCategory(track.id)"
@@ -475,7 +468,7 @@
                               :disabled="playlistSaving"
                               @click="removeTrackFromSelectedCategory(track.id)"
                             >
-                              <el-icon><Close /></el-icon>
+                              <UiIcon name="Close" />
                             </button>
                             <button
                               v-if="canManage"
@@ -484,7 +477,7 @@
                               title="删除歌曲"
                               @click="removeTrack(track)"
                             >
-                              <el-icon><Delete /></el-icon>
+                              <UiIcon name="Delete" />
                             </button>
                           </div>
 
@@ -584,13 +577,12 @@
                     </article>
                   </div>
                   <div v-if="filteredCategoryTracks.length > musicRowPageSize" class="music-list-pagination">
-                    <el-pagination
-                      v-model:current-page="musicRowPage"
+                    <UiPagination
+                      :current="musicRowPage"
                       :page-size="musicRowPageSize"
                       :total="filteredCategoryTracks.length"
-                      background
-                      layout="prev, pager, next"
-                      @current-change="handleMusicRowPageChange"
+                      :show-total="false"
+                      @change="handleMusicRowPageChange"
                     />
                   </div>
                 </div>
@@ -607,11 +599,11 @@
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { notify, confirmDelete, confirmInput } from '@/lib/feedback'
-import { Back, Close, Delete, Edit, Folder, Grid, List, Plus, Refresh, Right, Search, Sort, VideoPause, VideoPlay } from '@element-plus/icons-vue'
 import { Icon } from '@iconify/vue'
 import { useRouter } from 'vue-router'
 import DefaultLayout from '@/layouts/DefaultLayout.vue'
 import PageHero from '@/components/PageHero/PageHero.vue'
+import { UiButton, UiIcon, UiInput, UiPagination, UiSlider } from '@/components/ui'
 import {
   createMusicPlaylist,
   deleteMusicPlaylist,

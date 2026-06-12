@@ -38,16 +38,16 @@
 
           <div v-if="hasQuickFilters" class="quick-filter-bar">
             <span class="quick-filter-bar__label">当前快捷筛选</span>
-            <el-tag
+            <UiBadge
               v-for="item in quickFilterTags"
               :key="item.key"
-              effect="plain"
-              round
-              closable
-              @close="clearQuickFilter(item.key)"
+              tone="neutral"
+              size="sm"
+              class="quick-filter-tag"
+              @click="clearQuickFilter(item.key)"
             >
               {{ item.label }}
-            </el-tag>
+            </UiBadge>
           </div>
 
           <div ref="refTypeChartRef" class="chart-shell chart-shell--bar"></div>
@@ -70,22 +70,11 @@
               @enter="loadFiles(1)"
             />
 
-            <el-select v-model="query.status" clearable placeholder="文件状态">
-              <el-option v-for="option in statusOptions" :key="option.value" :label="option.label" :value="option.value" />
-            </el-select>
+            <UiSelect v-model="query.status" clearable placeholder="文件状态" :options="statusOptions" />
 
-            <el-select v-model="query.refType" clearable filterable placeholder="上传归属类型">
-              <el-option v-for="option in refTypeOptions" :key="option.value" :label="option.label" :value="option.value" />
-            </el-select>
+            <UiSelect v-model="query.refType" clearable filterable placeholder="上传归属类型" :options="refTypeOptions" />
 
-            <el-select v-model="query.referenceStatus" clearable placeholder="引用状态">
-              <el-option
-                v-for="option in referenceStatusOptions"
-                :key="option.value"
-                :label="option.label"
-                :value="option.value"
-              />
-            </el-select>
+            <UiSelect v-model="query.referenceStatus" clearable placeholder="引用状态" :options="referenceStatusOptions" />
 
             <div class="filter-actions">
               <UiButton variant="primary" @click="loadFiles(1)">查询</UiButton>
@@ -103,59 +92,59 @@
 
           <div class="files-table-panel">
             <div class="files-table-shell">
-              <el-table :data="files" v-loading="loading" style="width: 100%" table-layout="fixed">
-                <el-table-column label="预览" width="108">
+              <UiTable :data="files" :loading="loading" style="width: 100%" table-layout="fixed">
+                <UiTableColumn label="预览" width="108">
                   <template #default="{ row }">
                     <button class="asset-thumb" type="button" @click="openDetail(row)">
                       <img v-if="isImage(row)" :src="row.fileUrl" :alt="displayName(row)" />
                       <span v-else>{{ fileKindLabel(row) }}</span>
                     </button>
                   </template>
-                </el-table-column>
+                </UiTableColumn>
 
-                <el-table-column label="文件" min-width="320" show-overflow-tooltip>
+                <UiTableColumn label="文件" min-width="320" show-overflow-tooltip>
                   <template #default="{ row }">
                     <div class="file-main">
                       <strong>{{ displayName(row) }}</strong>
                       <span>{{ row.fileOriginalName || row.fileName || row.objectName || '-' }}</span>
                     </div>
                   </template>
-                </el-table-column>
+                </UiTableColumn>
 
-                <el-table-column label="归属类型" min-width="128">
+                <UiTableColumn label="归属类型" min-width="128">
                   <template #default="{ row }">
                     <UiBadge tone="neutral">{{ refTypeLabel(row.refType) }}</UiBadge>
                   </template>
-                </el-table-column>
+                </UiTableColumn>
 
-                <el-table-column label="引用状态" min-width="128">
+                <UiTableColumn label="引用状态" min-width="128">
                   <template #default="{ row }">
                     <AppStatusPill :tone="referenceStatusTone(row.referenceStatus)">
                       {{ referenceStatusLabel(row.referenceStatus) }}
                     </AppStatusPill>
                     <span class="reference-count">{{ row.referenceCount }} 次</span>
                   </template>
-                </el-table-column>
+                </UiTableColumn>
 
-                <el-table-column label="上传者" min-width="112" show-overflow-tooltip>
+                <UiTableColumn label="上传者" min-width="112" show-overflow-tooltip>
                   <template #default="{ row }">
                     <span>{{ row.username || '-' }}</span>
                   </template>
-                </el-table-column>
+                </UiTableColumn>
 
-                <el-table-column label="大小" min-width="104">
+                <UiTableColumn label="大小" min-width="104">
                   <template #default="{ row }">
                     <span>{{ formatFileSize(row.fileSize) }}</span>
                   </template>
-                </el-table-column>
+                </UiTableColumn>
 
-                <el-table-column label="上传时间" min-width="156">
+                <UiTableColumn label="上传时间" min-width="156">
                   <template #default="{ row }">
                     <span>{{ formatDateTime(row.createTime) }}</span>
                   </template>
-                </el-table-column>
+                </UiTableColumn>
 
-                <el-table-column label="操作" width="92" align="center">
+                <UiTableColumn label="操作" width="92" align="center">
                   <template #default="{ row }">
                     <div class="table-actions">
                       <UiButton
@@ -178,8 +167,8 @@
                       />
                     </div>
                   </template>
-                </el-table-column>
-              </el-table>
+                </UiTableColumn>
+              </UiTable>
             </div>
 
             <div class="table-footer">
@@ -195,7 +184,7 @@
       </div>
     </UiPanel>
 
-    <el-drawer v-model="detailVisible" size="560px" destroy-on-close>
+    <UiDrawer v-model="detailVisible" size="560px" destroy-on-close>
       <template #header>
         <div class="drawer-title">
           <h3>{{ detail ? displayName(detail) : '文件详情' }}</h3>
@@ -239,7 +228,7 @@
             </div>
           </div>
 
-          <el-input :model-value="detail.fileUrl" readonly type="textarea" :rows="3" />
+          <UiTextarea :model-value="detail.fileUrl" readonly :rows="3" />
           <div class="drawer-inline-actions">
             <UiButton icon="copy" @click="copyUrl(detail.fileUrl)">复制链接</UiButton>
             <UiButton v-if="isImage(detail)" variant="secondary" icon="external" @click="windowOpen(detail.fileUrl)">新标签预览</UiButton>
@@ -272,7 +261,7 @@
           </div>
         </div>
       </div>
-    </el-drawer>
+    </UiDrawer>
   </div>
 </template>
 
@@ -280,7 +269,7 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import * as echarts from 'echarts'
 import { notify } from '@/lib/feedback'
-import { UiPanel, UiButton, UiInput, UiBadge, UiPagination } from '@/components/ui'
+import { UiPanel, UiButton, UiBadge, UiDrawer, UiInput, UiPagination, UiSelect, UiTable, UiTableColumn, UiTextarea } from '@/components/ui'
 import { AppStatusPill } from '@/components/app'
 import type { AccentTone } from '@/design/tokens'
 import {

@@ -752,7 +752,7 @@ src/composables/useMotionPreset.ts
 
 ## 17. 迁移进度（持续更新）
 
-> 最近更新：2026-06-12（阶段 3 后台收尾完成）
+> 最近更新：2026-06-12（阶段 3 与阶段 4 页面层收口完成）
 
 ### 已完成
 
@@ -794,34 +794,41 @@ src/composables/useMotionPreset.ts
 全仓 22 个文件 `ElMessage.*` → `notify.*`、`ElMessageBox.confirm/prompt` → `confirmDelete/confirmAction/confirmInput`，唯一底层出口收口到 `lib/feedback`。涉及文件：
 `request.ts`、`router/index.ts`、`stores/music-player.ts`、`composables/article-edit/useArticleEdit.ts`、`Header.vue`、`CommentSection.vue`、`Live2D.vue`、`UserProfileCard.vue`、`ArticleDetail.vue`、`Login.vue`、`Register.vue`、`Category.vue`、`CategoryDetail.vue`、`Home.vue`、`MemoryMap.vue`、`TravelMemoryCreate.vue`、`Music.vue`、`MusicTrackEdit.vue`、`Profile.vue`、`ProfileTrustRequestPanel.vue`、`Tag.vue`、`TagDetail.vue`、`UserProfile.vue`
 
-**阶段 4（表单与编辑页，已完成部分）**
+**阶段 4（表单与编辑页，页面层已完成）**
 
-- `ArticleEdit.vue`：footer `el-button`→`UiButton`，移除 icons-vue 依赖
-- `ProfileTrustRequestPanel.vue`：`el-tag`→`UiBadge`（statusTone computed），`el-input textarea`→`UiInput`，`el-button`→`UiButton`，移除 icons-vue 依赖
-- `Profile.vue`：`el-card`→`UiPanel`，`el-menu/el-menu-item`→原生 `nav-menu-item` 按钮组（配合 `UiIcon`），`el-input`（搜索框）→`UiInput`，`el-button`→`UiButton`，`el-dialog`→`UiDialog`，`el-pagination×3`→`UiPagination`，panelIcon 改为字符串名，移除 icons-vue 依赖；el-form/el-form-item/el-input（表单校验绑定）保留
-- `MusicTrackEdit.vue`：`el-switch`→`UiSwitch`，`el-button`→`UiButton`，`el-tooltip`→`UiTooltip`，`el-icon`→`UiIcon`，`el-empty`→`UiEmpty`，移除 icons-vue 依赖；el-form/el-segmented/el-date-picker/el-input 保留
+- `ArticleEdit.vue`：页面层已完成 `Ui*` 收口
+- `ProfileTrustRequestPanel.vue`：`UiBadge` / `UiForm` / `UiFormField` / `UiUpload` 已收口，页面层无 `el-*`
+- `Profile.vue`：`UiPanel` / `UiAvatar` / `UiRadioGroup` / `UiForm` / `UiFormField` / `UiDialog` / `UiPagination` 已收口，页面层无 `el-*`
+- `MusicTrackEdit.vue`：`UiForm` / `UiFormField` / `UiSegmented` / `UiSwitch` / `UiTooltip` / `UiUpload` / `UiDateField` 已收口，页面层无 `el-*`
+- `TravelMemoryCreate.vue`：`UiForm` / `UiFormField` / `UiIcon` / `UiUpload` / `UiDateField` / `UiSwitch` 已收口，页面层无 `el-*`
 
 构建验证：`vue-tsc -b` 通过（2026-06-12）。
 
 ### 待办（按方案阶段推进）
 
-**阶段 4 剩余**
-- `TravelMemoryCreate.vue`：`el-switch`/`el-button`/`el-input(standalone)` → `Ui*`，`ElMessage` 已收敛，重点是 el-form 校验绑定保留
-
 **阶段 5（展示型长页面）**
-- `Music.vue`：`ElMessageBox.confirm/prompt`（已收敛），`el-button`/`el-pagination`/`el-empty`/`el-tag` → `Ui*`/`UiBadge`
-- `ArticleDetail.vue`：`el-button`/`el-tag`/`el-skeleton` → `Ui*`
-- `MemoryMap.vue`：`ElMessageBox.confirm`（已收敛），地图层保留，`el-button`/`el-pagination` → `Ui*`
-- `TravelMemoryDetail.vue`：`el-button`/`el-tag` → `Ui*`
+- `Music.vue`：`ElMessageBox.confirm/prompt`（已收敛），已完成 `el-button`/`el-input`/`el-pagination`/`el-slider` → `Ui*`
+- `ArticleDetail.vue`：已完成 `el-button`/`el-skeleton` → `Ui*`；标签区域保留页面专属展示样式
+- `MemoryMap.vue`：`ElMessageBox.confirm`（已收敛），地图层保留，已完成详情区与索引区 `el-button` → `UiButton`
+- `TravelMemoryDetail.vue`：已完成 `el-button`/`el-skeleton` → `Ui*`
+- `Archive.vue`、`Category.vue`、`CategoryDetail.vue`、`TagDetail.vue`、`Home.vue`、`NotFound.vue`：展示层和列表尾部动作已迁移到 `Ui*`
 
 **阶段 6（其余页面收尾）**
-- `Category.vue`、`CategoryDetail.vue`、`Tag.vue`、`TagDetail.vue`、`UserProfile.vue`、`Register.vue`、`Login.vue` 等：`ElMessage` 已收敛，剩 `el-button`/`el-form`/`el-input`/`el-tag` 逐页替换
-- `About.vue`、`Guestbook.vue`、`NotFound.vue` 等小页面
+- `Register.vue`、`Login.vue`、`Profile.vue`、`ProfileTrustRequestPanel.vue`、`FeatureAccessCover.vue`、`ArticleCard.vue`、`Header.vue` 等高频前台入口已完成 `Ui*` 迁移
+- `AdminSiteSettings.vue`、`AiAssistantSettings.vue`、`AdminFiles.vue`、`AdminTrustRequests.vue`、`AdminEmojiManager.vue`、`AdminCategories.vue`、`MusicTrackEdit.vue`、`TravelMemoryCreate.vue`、`ArticleEdit.vue` 等后台/工作台页页面层已完成 `Ui*` / `App*` 收口
+- `Tag.vue`、`UserProfile.vue`、`About.vue`、`Guestbook.vue` 等少量页面仍可按收益继续做视觉层统一，但不再阻塞架构迁移主线
 
 **中期组件待补建**
-- `UiUpload`（薄包装 el-upload，统一 before-upload/loading/accept API）
-- `UiDateField`（薄包装 el-date-picker）
-- `UiSlider`（薄包装 el-slider）
-- `UiTable`（薄包装 el-table，或等阶段 6 再评估）
+- 已补建：`UiUpload`、`UiDateField`、`UiSlider`、`UiNumberField`、`UiSkeleton`
+- 可选后续：`UiTable`（薄包装 el-table，若后续希望进一步收敛后台表格 API 再评估）
+- 目前业务页残余的 `el-*` 已收口到 `components/ui/*` 薄封装内部；业务页面、后台页和阶段 4 目标页不再直接书写 `el-*`
 
-> 最近更新：2026-06-12（阶段 3 全部完成；中期 primitive 补建；全站反馈层收敛；阶段 4 完成 4/5 个文件）
+> 最近更新：2026-06-12（阶段 3 全部完成；阶段 4 页面层全部完成；阶段 5/6 继续按收益优化；中期 primitive 已补齐 `UiSkeleton / UiUpload / UiDateField / UiSlider / UiNumberField / UiForm / UiFormField / UiTable / UiDrawer / UiAvatar / UiRadioGroup / UiSegmented`；剩余主要是设计系统内部薄封装继续依赖 Element Plus）
+
+## 后续依赖策略
+
+- 不再把“彻底删除 `element-plus` 主依赖”作为当前阶段硬目标。
+- 当前推荐策略是：业务页与业务组件不再直接引用 `element-plus` / `@element-plus/icons-vue`，仅允许 `components/ui`、`lib/feedback`、兼容层、或必要的基础结构适配层内部保留依赖。
+- `@element-plus/icons-vue` 优先继续收敛到本地兼容层，再逐步替换为 `UiIcon` 语义名。
+- 只有在 `UiForm / UiTable / UiDialog / UiAvatar / UiDropdown / UiDivider / UiDrawer` 等基础设施齐备后，才重新评估是否彻底移除 `element-plus` 主依赖。
+- 已补充边界检查脚本：`npm run check:element-boundary`。后续新增代码若在业务层直接引入 `element-plus` 或 `@element-plus/icons-vue`，应视为架构回流并优先修正。

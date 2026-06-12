@@ -108,22 +108,22 @@
 
         <div class="article-action article-action--profile">
           <div v-if="mode === 'manage'" class="profile-manage-actions">
-            <el-button
+            <UiButton
               v-if="article.canEdit"
-              text
+              variant="text"
               class="action-link action-link--edit"
               @click.stop="$emit('edit', article.id)"
             >
               编辑
-            </el-button>
-            <el-button
+            </UiButton>
+            <UiButton
               v-if="article.canDelete"
-              text
+              variant="text"
               class="action-link action-link--delete"
               @click.stop="$emit('delete', article.id)"
             >
               删除
-            </el-button>
+            </UiButton>
           </div>
           <router-link :to="articleDetailUrl" class="read-more read-more--profile" @click.stop>
             <span>阅读详情</span>
@@ -196,9 +196,9 @@
             {{ article.category.name }}
           </span>
           <template v-if="mode === 'manage'">
-            <el-tag v-if="article.status === 0" type="info" size="small">草稿</el-tag>
-            <el-tag v-else-if="article.status === 1" type="success" size="small">已发布</el-tag>
-            <el-tag v-else type="warning" size="small">其他</el-tag>
+            <UiBadge v-if="article.status === 0" tone="neutral" size="sm">草稿</UiBadge>
+            <UiBadge v-else-if="article.status === 1" tone="success" size="sm">已发布</UiBadge>
+            <UiBadge v-else tone="warning" size="sm">其他</UiBadge>
           </template>
         </div>
 
@@ -219,8 +219,8 @@
         <!-- 阅读详情 / 管理操作 -->
         <div class="article-action">
           <template v-if="mode === 'manage'">
-            <el-button v-if="article.canEdit" text type="primary" @click="$emit('edit', article.id)">编辑</el-button>
-            <el-button v-if="article.canDelete" text type="danger" @click="$emit('delete', article.id)">删除</el-button>
+            <UiButton v-if="article.canEdit" variant="text" @click="$emit('edit', article.id)">编辑</UiButton>
+            <UiButton v-if="article.canDelete" variant="text" @click="$emit('delete', article.id)">删除</UiButton>
           </template>
           <router-link v-else :to="articleDetailUrl" class="read-more" @click.stop>
             <span>阅读详情</span>
@@ -262,7 +262,8 @@
 import { computed, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { Icon } from '@iconify/vue';
-import { Calendar, View, ChatDotRound, ArrowRight, User } from '@element-plus/icons-vue';
+import { Calendar, View, ChatDotRound, ArrowRight, User } from '@/compat/element-plus-icons';
+import { UiBadge, UiButton } from '@/components/ui'
 import CategoryIcon from '@/components/CategoryIcon/CategoryIcon.vue';
 import type { Article } from '@/types';
 import { formatDate, formatNumber } from '@/utils/format';

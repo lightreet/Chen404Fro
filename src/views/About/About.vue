@@ -113,7 +113,7 @@
 <script setup lang="ts">
 import dayjs from 'dayjs';
 import { computed, onMounted, ref, watch } from 'vue';
-import { Link, Message } from '@element-plus/icons-vue';
+import { Link, Message } from '@/compat/element-plus-icons';
 import type { SiteOwner } from '@/types';
 import { getSiteMembers, getSiteOwner, type SiteMember } from '@/api/home';
 import PageHero from '@/components/PageHero/PageHero.vue';

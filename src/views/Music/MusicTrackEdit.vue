@@ -24,16 +24,16 @@
             <p>把音频、封面、歌词和推荐语整理成一张可以被播放的唱片。</p>
           </div>
 
-          <el-form label-position="top" class="track-form">
+          <UiForm label-position="top" class="track-form">
             <section class="editor-panel">
               <div class="section-title">
                 <span></span>
                 <strong>基本信息</strong>
               </div>
               <div class="form-grid">
-                <el-form-item label="歌名">
+                <UiFormField label="歌名">
                   <div class="title-field">
-                    <el-input v-model="form.title" maxlength="120" placeholder="例如：夜に駆ける" />
+                    <UiInput v-model="form.title" maxlength="120" placeholder="例如：夜に駆ける" />
                     <UiButton
                       class="ai-suggest-button"
                       :loading="suggestingTrack"
@@ -43,15 +43,15 @@
                       AI 匹配
                     </UiButton>
                   </div>
-                </el-form-item>
-                <el-form-item label="歌手">
-                  <el-input v-model="form.artist" maxlength="120" placeholder="例如：YOASOBI" />
-                </el-form-item>
-                <el-form-item label="专辑">
-                  <el-input v-model="form.album" maxlength="120" placeholder="可选" />
-                </el-form-item>
-                <el-form-item label="发行年份">
-                  <el-date-picker
+                </UiFormField>
+                <UiFormField label="歌手">
+                  <UiInput v-model="form.artist" maxlength="120" placeholder="例如：YOASOBI" />
+                </UiFormField>
+                <UiFormField label="专辑">
+                  <UiInput v-model="form.album" maxlength="120" placeholder="可选" />
+                </UiFormField>
+                <UiFormField label="发行年份">
+                  <UiDateField
                     v-model="releaseYearPicker"
                     type="year"
                     value-format="YYYY"
@@ -59,14 +59,14 @@
                     :disabled-date="disabledReleaseYear"
                     clearable
                   />
-                </el-form-item>
-                <el-form-item label="语言">
-                  <el-input v-model="form.language" maxlength="40" placeholder="日语 / 中文 / English" />
-                </el-form-item>
-                <el-form-item label="风格">
-                  <el-input v-model="form.genre" maxlength="80" placeholder="City Pop / Indie / J-pop" />
-                </el-form-item>
-                <el-form-item class="form-grid__wide" label="上架状态">
+                </UiFormField>
+                <UiFormField label="语言">
+                  <UiInput v-model="form.language" maxlength="40" placeholder="日语 / 中文 / English" />
+                </UiFormField>
+                <UiFormField label="风格">
+                  <UiInput v-model="form.genre" maxlength="80" placeholder="City Pop / Indie / J-pop" />
+                </UiFormField>
+                <UiFormField class="form-grid__wide" label="上架状态">
                   <div class="track-status-selector" role="radiogroup" aria-label="歌曲上架状态">
                     <button
                       v-for="option in trackStatusOptions"
@@ -85,7 +85,7 @@
                       </span>
                     </button>
                   </div>
-                </el-form-item>
+                </UiFormField>
               </div>
               <div v-if="aiSearchTouched || aiCandidates.length" class="ai-candidate-panel">
                 <div class="ai-candidate-head">
@@ -126,9 +126,9 @@
                   description="还没有找到合适版本，补充歌手、专辑或年份后再试一次。"
                 />
               </div>
-              <el-form-item label="标签">
-                <el-input v-model="tagDraft" placeholder="用逗号分隔，如 夜读, 日系, 温柔" />
-              </el-form-item>
+              <UiFormField label="标签">
+                <UiInput v-model="tagDraft" placeholder="用逗号分隔，如 夜读, 日系, 温柔" />
+              </UiFormField>
             </section>
 
             <section class="editor-panel">
@@ -137,7 +137,7 @@
                 <strong>媒体文件</strong>
               </div>
               <div class="media-grid">
-                <el-form-item>
+                <UiFormField>
                   <template #label>
                     <span class="form-label-with-help">
                       音频文件
@@ -162,7 +162,7 @@
                       </div>
                     </div>
                     <div class="media-resource-card__actions">
-                      <el-upload
+                      <UiUpload
                         :show-file-list="false"
                         :http-request="handleAudioUpload"
                         :before-upload="beforeAudioUpload"
@@ -172,21 +172,21 @@
                           <UiIcon v-if="!uploadingAudio" name="upload" />
                           <span>{{ audioUploadButtonText }}</span>
                         </div>
-                      </el-upload>
+                      </UiUpload>
                     </div>
                     <audio v-if="form.audioUrl" class="media-resource-audio" :src="form.audioUrl" controls />
                     <div class="upload-input-stack">
-                      <el-input
+                      <UiInput
                         v-model="form.audioUrl"
                         clearable
                         placeholder="上传后自动填入，也可手动填写 https://..."
-                        @input="handleAudioUrlInput"
+                        @update:model-value="handleAudioUrlInput"
                       />
                       <span class="upload-hint">{{ audioUploadHint }}</span>
                     </div>
                   </div>
-                </el-form-item>
-                <el-form-item label="封面图片">
+                </UiFormField>
+                <UiFormField label="封面图片">
                   <div class="media-resource-card" :class="{ 'has-value': Boolean(form.coverUrl) }">
                     <div class="media-resource-card__main">
                       <div class="media-resource-cover">
@@ -199,7 +199,7 @@
                       </div>
                     </div>
                     <div class="media-resource-card__actions">
-                      <el-upload
+                      <UiUpload
                         :show-file-list="false"
                         :http-request="handleCoverUpload"
                         accept="image/jpeg,image/png,image/webp,image/gif"
@@ -208,19 +208,19 @@
                           <UiIcon v-if="!uploadingCover" name="upload" />
                           <span>{{ coverUploadButtonText }}</span>
                         </div>
-                      </el-upload>
+                      </UiUpload>
                     </div>
                     <div class="upload-input-stack">
-                      <el-input
+                      <UiInput
                         v-model="form.coverUrl"
                         clearable
                         placeholder="上传后自动填入，也可手动填写 https://..."
-                        @input="handleCoverUrlInput"
+                        @update:model-value="handleCoverUrlInput"
                       />
                       <span class="upload-hint">{{ coverUploadHint }}</span>
                     </div>
                   </div>
-                </el-form-item>
+                </UiFormField>
               </div>
             </section>
 
@@ -229,16 +229,16 @@
                 <span></span>
                 <strong>推荐与歌词</strong>
               </div>
-              <el-form-item label="推荐语">
-                <el-input v-model="form.recommendation" type="textarea" :rows="3" maxlength="500" />
-              </el-form-item>
-              <el-form-item label="氛围短句">
-                <el-input
+              <UiFormField label="推荐语">
+                <UiTextarea v-model="form.recommendation" :rows="3" maxlength="500" />
+              </UiFormField>
+              <UiFormField label="氛围短句">
+                <UiInput
                   v-model="form.moodText"
                   maxlength="160"
                   placeholder="AI 匹配后会优先摘取歌词里的记忆点句子，最多 3 句。"
                 />
-              </el-form-item>
+              </UiFormField>
               <section class="lyrics-editor">
                 <div class="lyrics-editor-head">
                   <div>
@@ -246,7 +246,7 @@
                     <strong>歌词内容</strong>
                     <p>{{ lyricModeHint }}</p>
                   </div>
-                  <el-segmented v-model="form.lyricType" :options="lyricTypeOptions" />
+                  <UiSegmented v-model="form.lyricType" :options="lyricTypeOptions" />
                 </div>
 
                 <div class="lyrics-toolbar">
@@ -271,25 +271,24 @@
                   />
                 </div>
 
-                <el-form-item label="歌词">
-                  <el-input
+                <UiFormField label="歌词">
+                  <UiTextarea
                     v-model="form.lyrics"
-                    type="textarea"
                     :rows="form.lyricType === 'lrc' ? 12 : 9"
                     :placeholder="lyricsPlaceholder"
                   />
-                </el-form-item>
+                </UiFormField>
 
                 <div class="lyrics-status" :class="`is-${lyricsSummary.tone}`">
                   <strong>{{ lyricsSummary.title }}</strong>
                   <span>{{ lyricsSummary.detail }}</span>
                 </div>
               </section>
-              <el-form-item label="歌词来源">
-                <el-input v-model="form.lyricSource" maxlength="160" placeholder="例如：官方歌词 / 网易云音乐 / 手动校对" />
-              </el-form-item>
+              <UiFormField label="歌词来源">
+                <UiInput v-model="form.lyricSource" maxlength="160" placeholder="例如：官方歌词 / 网易云音乐 / 手动校对" />
+              </UiFormField>
             </section>
-          </el-form>
+          </UiForm>
         </section>
 
         <aside class="track-preview-panel">
@@ -355,9 +354,9 @@
 
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from 'vue'
-import type { UploadRequestOptions } from 'element-plus'
 import { notify } from '@/lib/feedback'
-import { UiButton, UiSwitch, UiEmpty, UiIcon, UiTooltip } from '@/components/ui'
+import { UiButton, UiDateField, UiEmpty, UiForm, UiIcon, UiInput, UiSegmented, UiSwitch, UiTextarea, UiTooltip, UiUpload } from '@/components/ui'
+import type { UploadRequestOptions } from '@/components/ui'
 import { useRoute, useRouter } from 'vue-router'
 import { createMusicTrack, getAdminMusicTrack, suggestMusicTrack, updateMusicTrack } from '@/api/music'
 import { uploadMusicAudio, uploadMusicCover, type UploadResult } from '@/api/upload'

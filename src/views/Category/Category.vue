@@ -51,9 +51,9 @@
 
         <!-- 加载更多 -->
         <div v-else-if="hasMore" class="load-more">
-          <el-button class="jp-btn-primary !border-0" @click="loadMore">
+          <UiButton variant="primary" class="jp-btn-primary !border-0" @click="loadMore">
             加载更多
-          </el-button>
+          </UiButton>
         </div>
 
         <!-- 没有更多了 -->
@@ -70,10 +70,11 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
 import { notify } from '@/lib/feedback';
-import { Loading } from '@element-plus/icons-vue';
+import { Loading } from '@/compat/element-plus-icons';
 import DefaultLayout from '@/layouts/DefaultLayout.vue';
 import CategoryIcon from '@/components/CategoryIcon/CategoryIcon.vue';
 import PageHero from '@/components/PageHero/PageHero.vue';
+import { UiButton } from '@/components/ui'
 import { useSiteConfig } from '@/composables/useSiteConfig';
 import type { Category } from '@/types';
 import { resolveHeroImagePosition } from '@/utils/siteConfig';

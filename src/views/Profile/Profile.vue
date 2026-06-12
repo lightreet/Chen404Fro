@@ -7,9 +7,9 @@
             <section class="sidebar-user-card">
               <div class="sidebar-user-main">
                 <div class="sidebar-avatar-shell">
-                  <el-avatar :size="78" :src="bannerProfile.avatar" class="sidebar-avatar">
+                  <UiAvatar :size="78" :src="bannerProfile.avatar" class="sidebar-avatar">
                     {{ String(bannerProfile.nickname || bannerProfile.username || 'U').charAt(0) }}
-                  </el-avatar>
+                  </UiAvatar>
                 </div>
                 <div class="sidebar-user-copy">
                   <h1 class="sidebar-name">{{ bannerProfile.nickname || '未登录' }}</h1>
@@ -53,11 +53,13 @@
               <div v-if="activeMenu === 'articles'" class="article-panel">
                 <div class="section-toolbar section-toolbar--controls">
                   <div class="content-actions content-actions--stacked">
-                    <el-radio-group v-model="articleStatus" class="status-radio" @change="loadMyArticles(1)">
-                      <el-radio-button :value="-1">全部</el-radio-button>
-                      <el-radio-button :value="0">草稿</el-radio-button>
-                      <el-radio-button :value="1">已发布</el-radio-button>
-                    </el-radio-group>
+                    <UiRadioGroup
+                      v-model="articleStatus"
+                      class="status-radio"
+                      variant="button"
+                      :options="articleStatusOptions"
+                      @change="loadMyArticles(1)"
+                    />
                     <div class="search-shell">
                       <UiInput
                         v-model="articleKeyword"
@@ -72,7 +74,7 @@
                   </div>
                 </div>
 
-                <el-skeleton v-if="articleLoading" :rows="6" animated />
+                <UiSkeleton v-if="articleLoading" :rows="6" />
                 <div v-else-if="myArticles.length === 0" class="empty-state">还没有文章，去写下第一篇吧。</div>
                 <div v-else class="article-list-shell">
                   <div class="article-scroll-area">
@@ -101,7 +103,7 @@
               </div>
 
               <div v-else-if="activeMenu === 'likes'" class="article-panel">
-                <el-skeleton v-if="likedLoading" :rows="6" animated />
+                <UiSkeleton v-if="likedLoading" :rows="6" />
                 <div v-else-if="myLikedArticles.length === 0" class="empty-state">还没有点赞过文章。</div>
                 <div v-else class="article-list-shell">
                   <div class="article-scroll-area">
@@ -129,7 +131,7 @@
               </div>
 
               <div v-else-if="activeMenu === 'favorites'" class="article-panel">
-                <el-skeleton v-if="favLoading" :rows="6" animated />
+                <UiSkeleton v-if="favLoading" :rows="6" />
                 <div v-else-if="myFavoriteArticles.length === 0" class="empty-state">还没有收藏的文章。</div>
                 <div v-else class="article-list-shell">
                   <div class="article-scroll-area">
@@ -158,70 +160,69 @@
 
               <div v-else-if="activeMenu === 'settings'" class="settings-panel">
                 <div v-if="user" class="profile-edit">
-                  <el-form ref="profileFormRef" :model="profileForm" :rules="profileRules" label-position="top" class="profile-form">
-                    <el-form-item label="头像" prop="avatar">
+                  <UiForm ref="profileFormRef" :model="profileForm" :rules="profileRules" label-position="top" class="profile-form">
+                    <UiFormField label="头像" prop="avatar">
                       <div class="avatar-edit-row">
-                        <el-avatar :size="88" :src="profileForm.avatar" class="form-avatar">
+                        <UiAvatar :size="88" :src="profileForm.avatar" class="form-avatar">
                           {{ String(profileForm.nickname || user.username || 'U').charAt(0) }}
-                        </el-avatar>
+                        </UiAvatar>
                         <div class="avatar-edit-copy">
                           <div class="avatar-edit-title">上传新的头像</div>
                           <div class="avatar-edit-hint">建议使用清晰的正方形图片，最大支持 10MB，上传后会自动压缩。</div>
-                          <el-upload
+                          <UiUpload
                             :show-file-list="false"
                             :before-upload="beforeAvatarUpload"
                             :http-request="handleAvatarUpload"
                             class="avatar-upload-inline"
                           >
                             <UiButton variant="primary" icon="upload">更新头像</UiButton>
-                          </el-upload>
+                          </UiUpload>
                         </div>
                       </div>
-                    </el-form-item>
+                    </UiFormField>
 
                     <div class="form-grid">
-                      <el-form-item label="昵称" prop="nickname">
-                        <el-input
+                      <UiFormField label="昵称" prop="nickname">
+                        <UiInput
                           v-model="profileForm.nickname"
                           maxlength="20"
                           show-word-limit
                           placeholder="给自己起一个更有辨识度的名字"
                         />
-                      </el-form-item>
-                      <el-form-item label="用户名">
-                        <el-input :model-value="user.username || '--'" disabled />
-                      </el-form-item>
+                      </UiFormField>
+                      <UiFormField label="用户名">
+                        <UiInput :model-value="user.username || '--'" disabled />
+                      </UiFormField>
                     </div>
 
                     <div class="form-grid">
-                      <el-form-item label="邮箱">
-                        <el-input :model-value="user.email || '未绑定'" disabled />
-                      </el-form-item>
-                      <el-form-item label="手机号">
-                        <el-input :model-value="user.phone || '未绑定'" disabled />
-                      </el-form-item>
+                      <UiFormField label="邮箱">
+                        <UiInput :model-value="user.email || '未绑定'" disabled />
+                      </UiFormField>
+                      <UiFormField label="手机号">
+                        <UiInput :model-value="user.phone || '未绑定'" disabled />
+                      </UiFormField>
                     </div>
 
-                    <el-form-item label="个人介绍" prop="bio">
-                      <el-input
+                    <UiFormField label="个人介绍" prop="bio">
+                      <UiTextarea
                         v-model="profileForm.bio"
-                        type="textarea"
                         :rows="5"
                         maxlength="160"
-                        show-word-limit
+                        show-count
                         resize="none"
                         placeholder="写一句能代表你的话，比如喜欢的方向、日常状态，或者一句有你味道的签名。"
                       />
-                    </el-form-item>
+                    </UiFormField>
 
                     <div class="profile-form-actions">
                       <UiButton variant="primary" :loading="profileSaving" @click="handleSaveProfile">保存资料</UiButton>
                       <UiButton variant="secondary" @click="resetProfileForm">重置</UiButton>
                       <UiButton variant="secondary" icon="lock" @click="openPasswordDialog">修改密码</UiButton>
                     </div>
-                  </el-form>
+                  </UiForm>
                 </div>
-                <el-skeleton v-else :rows="6" animated />
+                <UiSkeleton v-else :rows="6" />
               </div>
 
               <div v-else-if="activeMenu === 'trust'" class="settings-panel">
@@ -240,29 +241,27 @@
       :close-on-click-modal="false"
       class="password-dialog"
     >
-      <el-form ref="passwordFormRef" :model="passwordForm" :rules="passwordRules" label-position="top" class="password-form">
-        <el-form-item label="当前密码" prop="oldPassword">
-          <el-input v-model="passwordForm.oldPassword" type="password" placeholder="请输入当前密码" show-password clearable />
-        </el-form-item>
-        <el-form-item label="新密码" prop="newPassword">
-          <el-input
+      <UiForm ref="passwordFormRef" :model="passwordForm" :rules="passwordRules" label-position="top" class="password-form">
+        <UiFormField label="当前密码" prop="oldPassword">
+          <UiInput v-model="passwordForm.oldPassword" type="password" placeholder="请输入当前密码" clearable />
+        </UiFormField>
+        <UiFormField label="新密码" prop="newPassword">
+          <UiInput
             v-model="passwordForm.newPassword"
             type="password"
             placeholder="请输入新密码，至少 6 位"
-            show-password
             clearable
           />
-        </el-form-item>
-        <el-form-item label="确认新密码" prop="confirmPassword">
-          <el-input
+        </UiFormField>
+        <UiFormField label="确认新密码" prop="confirmPassword">
+          <UiInput
             v-model="passwordForm.confirmPassword"
             type="password"
             placeholder="请再次输入新密码"
-            show-password
             clearable
           />
-        </el-form-item>
-      </el-form>
+        </UiFormField>
+      </UiForm>
       <template #footer>
         <UiButton variant="text" @click="passwordDialogVisible = false">取消</UiButton>
         <UiButton variant="primary" :loading="passwordLoading" @click="handleChangePassword">确认修改</UiButton>
@@ -274,8 +273,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue'
 import { notify, confirmDelete } from '@/lib/feedback'
-import type { FormInstance, FormRules } from 'element-plus'
-import { UiPanel, UiButton, UiInput, UiDialog, UiPagination, UiIcon } from '@/components/ui'
+import { UiPanel, UiAvatar, UiButton, UiDialog, UiForm, UiFormField, UiIcon, UiInput, UiPagination, UiRadioGroup, UiSkeleton, UiTextarea, UiUpload } from '@/components/ui'
 import { useRoute, useRouter } from 'vue-router'
 import DefaultLayout from '@/layouts/DefaultLayout.vue'
 import { useUserStore } from '@/stores/user'
@@ -283,6 +281,7 @@ import { changePassword, getUserInfo, updateProfile } from '@/api/auth'
 import { uploadAvatar } from '@/api/upload'
 import { getTrustLevelLabel } from '@/utils/permission'
 import { AVATAR_MAX_MB, createConfirmPasswordRule, validateImageFile } from '@/utils/validation'
+import type { FormItemRule } from '@/utils/validation'
 import { deleteArticle, getMyArticles, getMyFavoriteArticles, getMyLikedArticles } from '@/api/article'
 import ArticleCard from '@/components/ArticleCard/ArticleCard.vue'
 import ProfileTrustRequestPanel from './ProfileTrustRequestPanel.vue'
@@ -337,10 +336,15 @@ const navItems: Array<{ index: string; icon: string; label: string }> = [
   { index: 'favorites', icon: 'Star', label: '我的收藏' },
 ]
 
-const profileFormRef = ref<FormInstance>()
+type SimpleFormInstance = {
+  validate: () => Promise<boolean>
+  clearValidate: (props?: string | string[]) => void
+}
+
+const profileFormRef = ref<SimpleFormInstance>()
 const profileSaving = ref(false)
 const profileForm = reactive({ nickname: '', avatar: '', bio: '' })
-const profileRules: FormRules = {
+const profileRules: Record<string, FormItemRule[]> = {
   nickname: [
     { required: true, message: '请输入昵称', trigger: 'blur' },
     { min: 2, max: 20, message: '昵称长度需在 2 到 20 个字符之间', trigger: 'blur' },
@@ -349,11 +353,11 @@ const profileRules: FormRules = {
   bio: [{ max: 160, message: '个人介绍最多 160 个字符', trigger: 'blur' }],
 }
 
-const passwordFormRef = ref<FormInstance>()
+const passwordFormRef = ref<SimpleFormInstance & { resetFields: () => void }>()
 const passwordLoading = ref(false)
 const passwordDialogVisible = ref(false)
 const passwordForm = reactive({ oldPassword: '', newPassword: '', confirmPassword: '' })
-const passwordRules: FormRules = {
+const passwordRules: Record<string, FormItemRule[]> = {
   oldPassword: [{ required: true, message: '请输入当前密码', trigger: 'blur' }],
   newPassword: [
     { required: true, message: '请输入新密码', trigger: 'blur' },
@@ -372,6 +376,11 @@ const myArticles = ref<any[]>([])
 const articlePage = ref(1)
 const articlePageSize = 2
 const articleTotal = ref(0)
+const articleStatusOptions = [
+  { label: '全部', value: -1 },
+  { label: '草稿', value: 0 },
+  { label: '已发布', value: 1 },
+]
 
 const likedLoading = ref(false)
 const myLikedArticles = ref<any[]>([])

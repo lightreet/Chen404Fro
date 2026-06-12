@@ -47,7 +47,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
 import { notify } from '@/lib/feedback';
-import { Loading } from '@element-plus/icons-vue';
+import { Loading } from '@/compat/element-plus-icons';
 import DefaultLayout from '@/layouts/DefaultLayout.vue';
 import PageHero from '@/components/PageHero/PageHero.vue';
 import { useSiteConfig } from '@/composables/useSiteConfig';

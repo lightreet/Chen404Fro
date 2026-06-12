@@ -3,14 +3,14 @@
     <header class="detail-top-dock">
       <div class="detail-dock-row">
         <button type="button" class="detail-back-link" @click="goToMap">
-          <el-icon><ArrowLeft /></el-icon>
+          <UiIcon name="ArrowLeft" />
           <span>返回</span>
         </button>
       </div>
     </header>
 
     <div v-if="loading" class="detail-loading">
-      <el-skeleton :rows="14" animated />
+      <UiSkeleton :rows="14" size="lg" />
     </div>
 
     <section v-else-if="detail" class="travel-detail-shell">
@@ -21,11 +21,11 @@
         <div class="detail-hero-cover__content">
           <div class="detail-hero-cover__meta">
             <span v-if="locationText">
-              <el-icon><Location /></el-icon>
+              <UiIcon name="Location" />
               {{ locationText }}
             </span>
             <span v-if="visitDate">
-              <el-icon><Calendar /></el-icon>
+              <UiIcon name="Calendar" />
               {{ visitDate }}
             </span>
           </div>
@@ -55,7 +55,7 @@
               <div>
                 <h3>{{ stop.title }}</h3>
                 <p>
-                  <el-icon><Calendar /></el-icon>
+                  <UiIcon name="Calendar" />
                   {{ stopDateText(stop) || visitDate || '旅行片段' }}
                   <template v-if="stop.entries.length"> · {{ stop.entries.length }} 张照片</template>
                 </p>
@@ -64,11 +64,10 @@
 
             <p class="detail-story-card__note">{{ stop.storyNote?.trim() || stopSceneSummary(stop) }}</p>
 
-            <el-tooltip
+            <UiTooltip
               effect="light"
               placement="top"
               :show-after="120"
-              popper-class="travel-photo-tooltip"
               :disabled="!hasPhotoDescription(stopCoverEntry(stop))"
             >
               <figure class="detail-story-card__cover">
@@ -87,16 +86,15 @@
                   {{ photoTooltipNote(stopCoverEntry(stop)) }}
                 </p>
               </template>
-            </el-tooltip>
+            </UiTooltip>
 
             <div v-if="stopThumbnailEntries(stop).length" class="detail-story-card__thumbs">
-              <el-tooltip
+              <UiTooltip
                 v-for="entry in stopThumbnailEntries(stop).slice(0, 4)"
                 :key="entry.id || entry.imageUrl"
                 effect="light"
                 placement="top"
                 :show-after="120"
-                popper-class="travel-photo-tooltip"
                 :disabled="!hasPhotoDescription(entry)"
               >
                 <button
@@ -111,7 +109,7 @@
                   <div class="travel-photo-tooltip__title">{{ photoTooltipTitle(entry, stop.title) }}</div>
                   <p v-if="photoTooltipNote(entry)" class="travel-photo-tooltip__note">{{ photoTooltipNote(entry) }}</p>
                 </template>
-              </el-tooltip>
+              </UiTooltip>
             </div>
           </article>
         </section>
@@ -169,7 +167,7 @@
         <section class="detail-card mini-map-card">
           <div class="detail-card__head">
             <h2>地图位置</h2>
-            <el-icon><MapLocation /></el-icon>
+            <UiIcon name="MapLocation" />
           </div>
           <div
             class="mini-map-card__canvas"
@@ -178,7 +176,7 @@
           >
             <div ref="amapContainerRef" class="mini-map-card__amap"></div>
             <div v-if="amapErrorText" class="mini-map-card__fallback">
-              <el-icon><MapLocation /></el-icon>
+              <UiIcon name="MapLocation" />
               <strong>{{ detail.city || detail.province || '旅行坐标' }}</strong>
               <small>{{ amapErrorText }}</small>
             </div>
@@ -195,13 +193,12 @@
             <span>共 {{ allEntries.length }} 张</span>
           </div>
           <div v-if="allEntries.length" class="album-grid">
-            <el-tooltip
+            <UiTooltip
               v-for="entry in allEntries.slice(0, 9)"
               :key="entry.id || entry.imageUrl"
               effect="light"
               placement="top"
               :show-after="120"
-              popper-class="travel-photo-tooltip"
               :disabled="!hasPhotoDescription(entry)"
             >
               <button
@@ -216,7 +213,7 @@
                 <div class="travel-photo-tooltip__title">{{ photoTooltipTitle(entry, detail.title) }}</div>
                 <p v-if="photoTooltipNote(entry)" class="travel-photo-tooltip__note">{{ photoTooltipNote(entry) }}</p>
               </template>
-            </el-tooltip>
+            </UiTooltip>
           </div>
           <p v-else class="album-card__empty">这篇游记还没有公开照片。</p>
         </section>
@@ -230,7 +227,7 @@
           @click="previousMemory && goToMemory(previousMemory.id)"
         >
           <span>
-            <el-icon><ArrowLeft /></el-icon>
+            <UiIcon name="ArrowLeft" />
             上一篇游记
           </span>
           <strong>{{ previousMemory?.title || '已经是第一篇' }}</strong>
@@ -243,7 +240,7 @@
         >
           <span>
             下一篇游记
-            <el-icon><ArrowRight /></el-icon>
+            <UiIcon name="ArrowRight" />
           </span>
           <strong>{{ nextMemory?.title || '已经是最后一篇' }}</strong>
         </button>
@@ -252,7 +249,7 @@
 
     <section v-else class="travel-detail-empty">
       <p>{{ errorMessage }}</p>
-      <el-button type="primary" @click="goToMap">返回旅行地图</el-button>
+      <UiButton variant="primary" @click="goToMap">返回旅行地图</UiButton>
     </section>
   </div>
 </template>
@@ -261,9 +258,9 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue'
 import dayjs from 'dayjs'
 import { useRoute, useRouter } from 'vue-router'
-import { ArrowLeft, ArrowRight, Calendar, Location, MapLocation } from '@element-plus/icons-vue'
 import { getTravelMemories, getTravelMemoryDetail } from '@/api/travel-memory'
 import { useSiteConfig } from '@/composables/useSiteConfig'
+import { UiButton, UiIcon, UiSkeleton, UiTooltip } from '@/components/ui'
 import type { TravelMemoryEntry, TravelMemoryLocationDetail, TravelMemoryLocationListItem, TravelMemoryStop } from '@/types'
 import { getAmapUnavailableReason, loadAmap } from '@/utils/amap'
 import { wgs84ToGcj02 } from '@/utils/coordinate'

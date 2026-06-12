@@ -65,7 +65,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { notify } from '@/lib/feedback';
-import { Message, UserFilled } from '@element-plus/icons-vue';
+import { Message, UserFilled } from '@/compat/element-plus-icons';
 import type { SiteMember } from '@/api/home';
 
 const DEFAULT_MEMBER_AVATAR = '/default-member-avatar.svg';

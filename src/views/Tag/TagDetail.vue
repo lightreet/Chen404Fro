@@ -30,13 +30,9 @@
         </div>
 
         <div v-if="hasMore" class="load-more">
-          <el-button
-            class="jp-btn-primary !border-0"
-            :loading="loading"
-            @click="loadMore"
-          >
+          <UiButton class="jp-btn-primary !border-0" variant="primary" :loading="loading" @click="loadMore">
             {{ loading ? '加载中...' : '加载更多' }}
-          </el-button>
+          </UiButton>
         </div>
 
         <div v-else-if="articleList.length > 0" class="no-more">
@@ -53,9 +49,10 @@
 import { computed, ref, onMounted, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import { notify } from '@/lib/feedback';
-import { Loading } from '@element-plus/icons-vue';
+import { Loading } from '@/compat/element-plus-icons';
 import DefaultLayout from '@/layouts/DefaultLayout.vue';
 import ArticleCard from '@/components/ArticleCard/ArticleCard.vue';
+import { UiButton } from '@/components/ui'
 import { useSiteConfig } from '@/composables/useSiteConfig';
 import type { Article, Tag } from '@/types';
 import { getArticlesByTag, getTagById } from '@/api/article';

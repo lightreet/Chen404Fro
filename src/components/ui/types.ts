@@ -23,3 +23,18 @@ export interface UiSelectOption {
   value: string | number | boolean
   disabled?: boolean
 }
+
+export interface UiRadioOption {
+  label: string
+  value: string | number | boolean
+  disabled?: boolean
+}
+
+export type UiSegmentedOption =
+  | string
+  | number
+  | {
+      label: string
+      value: string | number | boolean
+      disabled?: boolean
+    }

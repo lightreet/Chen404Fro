@@ -244,7 +244,7 @@
 
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue'
-import { Minus, Plus, Refresh } from '@element-plus/icons-vue'
+import { Minus, Plus, Refresh } from '@/compat/element-plus-icons'
 import { geoContains, geoMercator, geoPath } from 'd3-geo'
 import chinaMapData from '@svg-maps/china'
 import mdiMapMarkerOutline from '@iconify/icons-mdi/map-marker-outline'

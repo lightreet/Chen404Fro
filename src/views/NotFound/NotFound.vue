@@ -7,7 +7,7 @@
       <h1 class="error-title">页面不存在</h1>
       <p class="error-desc">抱歉，您访问的页面找不到了</p>
       <router-link to="/" class="back-home">
-        <el-button type="primary" size="large">返回首页</el-button>
+        <UiButton variant="primary" size="lg">返回首页</UiButton>
       </router-link>
     </div>
   </div>
@@ -15,6 +15,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted } from 'vue';
+import { UiButton } from '@/components/ui'
 import { useSiteConfig } from '@/composables/useSiteConfig';
 import { resolveSiteLogo, resolveSiteName } from '@/utils/siteConfig';
 

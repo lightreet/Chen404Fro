@@ -88,8 +88,10 @@ Route / Page -> Feature -> components/app (App*) -> components/ui (Ui*) -> desig
 - `components/ui`：与库无关的 primitive，对外只暴露项目自己的 API（短期内部可复用 Element Plus）。
 - `components/app`：承接 Chen404 产品语义与品牌表达，消费 `ui` 层。
 - `lib/feedback`：`notify.*` 与 `confirmAction()` 收敛全站对 `ElMessage` / `ElMessageBox` 的直调。
+- 依赖边界：业务页面、业务组件、views、modules、composables 不应再直接引用 `element-plus` 或 `@element-plus/icons-vue`；如仍需使用，只允许保留在 `components/ui` 薄封装、`lib/feedback`、或专门的兼容层内部。
+- 检查命令：`npm run check:element-boundary`。它会阻止业务层新增 `element-plus` / `@element-plus/icons-vue` 直接依赖，允许名单仅包含 `components/ui`、`lib/feedback`、`compat` 以及极少数基础运行时文件。
 
-迁移以页面为单位推进，已完成基础设施 + 阶段 3 全部后台页（`AdminLayout` / `AdminCategories` / `AdminTrustRequests` / `AdminEmojiManager` / `AdminFiles` / `AdminSiteSettings` / `AiAssistantSettings`）。其余页面在全局主题层已获得视觉统一，后续按方案文档阶段 4 起逐步把 `el-*` 替换为 `Ui*` / `App*`。
+迁移以页面为单位推进，已完成基础设施、阶段 3 全部后台页，以及阶段 4 目标页的页面层收口（`AdminLayout` / `AdminCategories` / `AdminTrustRequests` / `AdminEmojiManager` / `AdminFiles` / `AdminSiteSettings` / `AiAssistantSettings` / `Profile` / `ProfileTrustRequestPanel` / `MusicTrackEdit` / `TravelMemoryCreate` / `ArticleEdit`）。当前业务页中的 `element-plus` 直接依赖已收口到 `components/ui`、`lib/feedback`、`compat` 与少量运行时工具；后续阶段 5/6 主要按收益继续做展示型页面和专题页的视觉、交互与 API 统一，而不是继续在页面层保留 `el-*`。
 
 ## 3. 路由与访问控制
 

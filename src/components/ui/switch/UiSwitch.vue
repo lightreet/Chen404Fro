@@ -26,7 +26,7 @@ import { computed } from 'vue'
  */
 const props = withDefaults(
   defineProps<{
-    modelValue: boolean | string | number
+    modelValue?: boolean | string | number | null
     activeValue?: boolean | string | number
     inactiveValue?: boolean | string | number
     activeText?: string
@@ -45,8 +45,8 @@ const props = withDefaults(
 )
 
 const emit = defineEmits<{
-  (e: 'update:modelValue', v: boolean | string | number): void
-  (e: 'change', v: boolean | string | number): void
+  (e: 'update:modelValue', v: boolean | string | number | null | undefined): void
+  (e: 'change', v: boolean | string | number | null | undefined): void
 }>()
 
 const isChecked = computed(() => props.modelValue === props.activeValue)

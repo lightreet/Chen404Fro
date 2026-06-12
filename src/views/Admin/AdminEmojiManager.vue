@@ -3,14 +3,14 @@
     <UiPanel icon="image" title="表情包管理" flush>
       <template #actions>
         <div class="header-actions">
-          <el-upload
+          <UiUpload
             :show-file-list="false"
             accept=".zip,application/zip"
             :before-upload="beforeImportUpload"
             :http-request="handleImportZip"
           >
             <UiButton :loading="importing" icon="upload">导入 ZIP</UiButton>
-          </el-upload>
+          </UiUpload>
           <UiButton variant="primary" icon="add" @click="openPackDialog()">新建表情包</UiButton>
           <UiButton variant="ghost" icon="add" @click="openItemDialog()">新建表情</UiButton>
         </div>
@@ -22,27 +22,27 @@
             <h3>表情包列表</h3>
             <UiButton variant="text" size="sm" icon="refresh" @click="loadPacks(packPage)">刷新</UiButton>
           </div>
-          <el-table :data="packs" v-loading="packsLoading" style="width: 100%">
-            <el-table-column prop="packCode" label="编码" min-width="140" />
-            <el-table-column prop="name" label="名称" min-width="160" />
-            <el-table-column prop="description" label="描述" min-width="220" show-overflow-tooltip />
-            <el-table-column prop="sort" label="排序" width="90" />
-            <el-table-column label="状态" width="100">
+          <UiTable :data="packs" :loading="packsLoading" style="width: 100%">
+            <UiTableColumn prop="packCode" label="编码" min-width="140" />
+            <UiTableColumn prop="name" label="名称" min-width="160" />
+            <UiTableColumn prop="description" label="描述" min-width="220" show-overflow-tooltip />
+            <UiTableColumn prop="sort" label="排序" width="90" />
+            <UiTableColumn label="状态" width="100">
               <template #default="{ row }">
                 <AppStatusPill :status="row.enabled === 1 ? 'enabled' : 'disabled'">
                   {{ row.enabled === 1 ? '启用' : '停用' }}
                 </AppStatusPill>
               </template>
-            </el-table-column>
-            <el-table-column label="操作" width="180" fixed="right">
+            </UiTableColumn>
+            <UiTableColumn label="操作" width="180" fixed="right">
               <template #default="{ row }">
                 <div class="row-actions">
                   <UiButton variant="text" size="sm" @click="openPackDialog(row)">编辑</UiButton>
                   <UiButton variant="text" size="sm" @click="handleDeletePack(row)">删除</UiButton>
                 </div>
               </template>
-            </el-table-column>
-          </el-table>
+            </UiTableColumn>
+          </UiTable>
           <div class="table-footer">
             <UiPagination
               :current="packPage"
@@ -57,53 +57,53 @@
           <div class="section-head">
             <h3>表情列表</h3>
             <div class="section-tools">
-              <el-select v-model="itemFilterPack" clearable placeholder="按表情包筛选" style="width: 180px" @change="handleFilterPackChange">
-                <el-option
-                  v-for="pack in enabledPacks"
-                  :key="pack.id"
-                  :label="pack.name"
-                  :value="pack.packCode"
-                />
-              </el-select>
+              <UiSelect
+                v-model="itemFilterPack"
+                clearable
+                placeholder="按表情包筛选"
+                style="width: 180px"
+                :options="enabledPacks.map((pack) => ({ label: pack.name, value: pack.packCode }))"
+                @change="handleFilterPackChange"
+              />
               <UiButton variant="text" size="sm" icon="refresh" @click="loadItems(itemPage)">刷新</UiButton>
             </div>
           </div>
-          <el-table :data="items" v-loading="itemsLoading" style="width: 100%">
-            <el-table-column prop="shortcode" label="短码" min-width="180" />
-            <el-table-column prop="label" label="名称" min-width="140" />
-            <el-table-column prop="packCode" label="所属表情包" min-width="120" />
-            <el-table-column label="预览" width="90">
+          <UiTable :data="items" :loading="itemsLoading" style="width: 100%">
+            <UiTableColumn prop="shortcode" label="短码" min-width="180" />
+            <UiTableColumn prop="label" label="名称" min-width="140" />
+            <UiTableColumn prop="packCode" label="所属表情包" min-width="120" />
+            <UiTableColumn label="预览" width="90">
               <template #default="{ row }">
                 <span v-if="row.type === 0" class="emoji-preview">{{ row.unicode || '\u{1F642}' }}</span>
                 <img v-else-if="row.assetUrl" :src="row.assetUrl" alt="" class="emoji-preview__img" />
                 <span v-else class="emoji-preview">-</span>
               </template>
-            </el-table-column>
-            <el-table-column label="类型" width="90">
+            </UiTableColumn>
+            <UiTableColumn label="类型" width="90">
               <template #default="{ row }">
                 <UiBadge :tone="row.type === 1 ? 'warning' : 'success'" size="sm">
                   {{ row.type === 1 ? '图片' : 'Unicode' }}
                 </UiBadge>
               </template>
-            </el-table-column>
-            <el-table-column prop="category" label="分类" width="120" />
-            <el-table-column prop="sort" label="排序" width="90" />
-            <el-table-column label="状态" width="100">
+            </UiTableColumn>
+            <UiTableColumn prop="category" label="分类" width="120" />
+            <UiTableColumn prop="sort" label="排序" width="90" />
+            <UiTableColumn label="状态" width="100">
               <template #default="{ row }">
                 <AppStatusPill :status="row.enabled === 1 ? 'enabled' : 'disabled'">
                   {{ row.enabled === 1 ? '启用' : '停用' }}
                 </AppStatusPill>
               </template>
-            </el-table-column>
-            <el-table-column label="操作" width="180" fixed="right">
+            </UiTableColumn>
+            <UiTableColumn label="操作" width="180" fixed="right">
               <template #default="{ row }">
                 <div class="row-actions">
                   <UiButton variant="text" size="sm" @click="openItemDialog(row)">编辑</UiButton>
                   <UiButton variant="text" size="sm" @click="handleDeleteItem(row)">删除</UiButton>
                 </div>
               </template>
-            </el-table-column>
-          </el-table>
+            </UiTableColumn>
+          </UiTable>
           <div class="table-footer">
             <UiPagination
               :current="itemPage"
@@ -117,26 +117,26 @@
     </UiPanel>
 
     <UiDialog v-model="packDialogVisible" :title="editingPackId ? '编辑表情包' : '新建表情包'" width="520px">
-      <el-form :model="packForm" label-width="88px">
-        <el-form-item label="编码">
-          <el-input v-model="packForm.packCode" :disabled="Boolean(editingPackId)" placeholder="例如：basic / mood" />
-        </el-form-item>
-        <el-form-item label="名称">
-          <el-input v-model="packForm.name" placeholder="请输入表情包名称" />
-        </el-form-item>
-        <el-form-item label="描述">
-          <el-input v-model="packForm.description" type="textarea" :rows="3" placeholder="请输入表情包描述" />
-        </el-form-item>
-        <el-form-item label="图标 URL">
-          <el-input v-model="packForm.iconUrl" placeholder="可选" />
-        </el-form-item>
-        <el-form-item label="排序">
-          <el-input-number v-model="packForm.sort" :min="0" :max="9999" />
-        </el-form-item>
-        <el-form-item label="启用">
-          <el-switch v-model="packForm.enabled" :active-value="1" :inactive-value="0" />
-        </el-form-item>
-      </el-form>
+      <UiForm :model="packForm" label-width="88px">
+        <UiFormField label="编码">
+          <UiInput v-model="packForm.packCode" :disabled="Boolean(editingPackId)" placeholder="例如：basic / mood" />
+        </UiFormField>
+        <UiFormField label="名称">
+          <UiInput v-model="packForm.name" placeholder="请输入表情包名称" />
+        </UiFormField>
+        <UiFormField label="描述">
+          <UiTextarea v-model="packForm.description" :rows="3" placeholder="请输入表情包描述" />
+        </UiFormField>
+        <UiFormField label="图标 URL">
+          <UiInput v-model="packForm.iconUrl" placeholder="可选" />
+        </UiFormField>
+        <UiFormField label="排序">
+          <UiNumberField v-model="packForm.sort" :min="0" :max="9999" />
+        </UiFormField>
+        <UiFormField label="启用">
+          <UiSwitch v-model="packForm.enabled" :active-value="1" :inactive-value="0" />
+        </UiFormField>
+      </UiForm>
       <template #footer>
         <UiButton variant="text" @click="packDialogVisible = false">取消</UiButton>
         <UiButton variant="primary" :loading="packSaving" @click="handleSavePack">保存</UiButton>
@@ -144,46 +144,46 @@
     </UiDialog>
 
     <UiDialog v-model="itemDialogVisible" :title="editingItemId ? '编辑表情' : '新建表情'" width="560px">
-      <el-form :model="itemForm" label-width="88px">
-        <el-form-item label="表情包">
-          <el-select v-model="itemForm.packCode" placeholder="请选择表情包" style="width: 100%">
-            <el-option v-for="pack in enabledPacks" :key="pack.id" :label="pack.name" :value="pack.packCode" />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="短码">
-          <el-input v-model="itemForm.shortcode" :disabled="Boolean(editingItemId)" placeholder="例如：mood_peek" />
-        </el-form-item>
-        <el-form-item label="名称">
-          <el-input v-model="itemForm.label" placeholder="请输入展示名称" />
-        </el-form-item>
-        <el-form-item label="分类">
-          <el-input v-model="itemForm.category" placeholder="例如：emotion / social / daily" />
-        </el-form-item>
-        <el-form-item label="类型">
-          <el-radio-group v-model="itemForm.type">
-            <el-radio :value="0">Unicode</el-radio>
-            <el-radio :value="1">图片</el-radio>
-          </el-radio-group>
-        </el-form-item>
-        <el-form-item v-if="itemForm.type === 0" label="Unicode">
-          <el-input v-model="itemForm.unicode" placeholder="请输入 Unicode 表情，例如：🙂" />
-        </el-form-item>
-        <el-form-item v-else label="图片 URL">
-          <el-input v-model="itemForm.assetUrl" placeholder="请输入图片地址" />
-        </el-form-item>
-        <el-form-item label="尺寸">
+      <UiForm :model="itemForm" label-width="88px">
+        <UiFormField label="表情包">
+          <UiSelect
+            v-model="itemForm.packCode"
+            placeholder="请选择表情包"
+            style="width: 100%"
+            :options="enabledPacks.map((pack) => ({ label: pack.name, value: pack.packCode }))"
+          />
+        </UiFormField>
+        <UiFormField label="短码">
+          <UiInput v-model="itemForm.shortcode" :disabled="Boolean(editingItemId)" placeholder="例如：mood_peek" />
+        </UiFormField>
+        <UiFormField label="名称">
+          <UiInput v-model="itemForm.label" placeholder="请输入展示名称" />
+        </UiFormField>
+        <UiFormField label="分类">
+          <UiInput v-model="itemForm.category" placeholder="例如：emotion / social / daily" />
+        </UiFormField>
+        <UiFormField label="类型">
+          <UiRadioGroup v-model="itemForm.type" :options="emojiTypeOptions" />
+        </UiFormField>
+        <UiFormField v-if="itemForm.type === 0" label="Unicode">
+          <UiInput v-model="itemForm.unicode" placeholder="请输入 Unicode 表情，例如：🙂" />
+        </UiFormField>
+        <UiFormField v-else label="图片 URL">
+          <UiInput v-model="itemForm.assetUrl" placeholder="请输入图片地址" />
+        </UiFormField>
+        <UiFormField label="尺寸">
           <div class="size-row">
-            <el-input-number v-model="itemForm.width" :min="0" :max="512" placeholder="宽度" />
-            <el-input-number v-model="itemForm.height" :min="0" :max="512" placeholder="高度" />
+            <UiNumberField v-model="itemForm.width" :min="0" :max="512" placeholder="宽度" />
+            <UiNumberField v-model="itemForm.height" :min="0" :max="512" placeholder="高度" />
           </div>
-        </el-form-item>
-        <el-form-item label="排序">
-          <el-input-number v-model="itemForm.sort" :min="0" :max="9999" />
-        </el-form-item>
-        <el-form-item label="启用">
-          <el-switch v-model="itemForm.enabled" :active-value="1" :inactive-value="0" />
-        </el-form-item>
-      </el-form>
+        </UiFormField>
+        <UiFormField label="排序">
+          <UiNumberField v-model="itemForm.sort" :min="0" :max="9999" />
+        </UiFormField>
+        <UiFormField label="启用">
+          <UiSwitch v-model="itemForm.enabled" :active-value="1" :inactive-value="0" />
+        </UiFormField>
+      </UiForm>
       <template #footer>
         <UiButton variant="text" @click="itemDialogVisible = false">取消</UiButton>
         <UiButton variant="primary" :loading="itemSaving" @click="handleSaveItem">保存</UiButton>
@@ -194,9 +194,9 @@
 
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
-import type { UploadRequestOptions } from 'element-plus'
 import { notify, confirmDelete } from '@/lib/feedback'
-import { UiPanel, UiButton, UiBadge, UiDialog, UiPagination } from '@/components/ui'
+import { UiPanel, UiButton, UiBadge, UiDialog, UiForm, UiFormField, UiInput, UiNumberField, UiPagination, UiRadioGroup, UiSelect, UiSwitch, UiTable, UiTableColumn, UiTextarea, UiUpload } from '@/components/ui'
+import type { UploadRequestOptions } from '@/components/ui'
 import { AppStatusPill } from '@/components/app'
 import {
   deleteEmojiItem,
@@ -255,6 +255,10 @@ const itemForm = reactive({
 })
 
 const enabledPacks = computed(() => packs.value.filter((pack) => pack.enabled === 1))
+const emojiTypeOptions = [
+  { label: 'Unicode', value: 0 },
+  { label: '图片', value: 1 },
+]
 
 const loadPacks = async (page = packPage.value) => {
   packsLoading.value = true

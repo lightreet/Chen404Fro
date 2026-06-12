@@ -2,6 +2,7 @@
  * Form validation helpers aligned with backend rules.
  */
 import type { FormItemRule } from 'element-plus';
+export type { FormItemRule } from 'element-plus';
 
 export const DEFAULT_IMAGE_MAX_MB = 12;
 export const AVATAR_MAX_MB = 10;

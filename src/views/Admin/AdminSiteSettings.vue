@@ -17,35 +17,34 @@
               <UiBadge tone="success">已接入</UiBadge>
             </div>
 
-            <el-form label-position="top" class="settings-form">
+            <UiForm label-position="top" class="settings-form">
               <div class="form-grid">
-                <el-form-item label="站点名称">
-                  <el-input v-model="form.siteName" maxlength="40" show-word-limit placeholder="Chen404 Blog" />
-                </el-form-item>
-                <el-form-item label="联系邮箱">
-                  <el-input v-model="form.email" placeholder="helychen@outlook.com" />
-                </el-form-item>
-                <el-form-item label="ICP备案号">
-                  <el-input v-model="form.icp" placeholder="湘ICP备..." />
-                </el-form-item>
-                <el-form-item label="公安备案号">
-                  <el-input v-model="form.beian" placeholder="可选" />
-                </el-form-item>
-                <el-form-item label="GitHub 链接" class="form-item--wide">
-                  <el-input v-model="form.github" placeholder="https://github.com/..." />
-                </el-form-item>
-                <el-form-item label="站点描述" class="form-item--wide">
-                  <el-input
+                <UiFormField label="站点名称">
+                  <UiInput v-model="form.siteName" maxlength="40" show-word-limit placeholder="Chen404 Blog" />
+                </UiFormField>
+                <UiFormField label="联系邮箱">
+                  <UiInput v-model="form.email" placeholder="helychen@outlook.com" />
+                </UiFormField>
+                <UiFormField label="ICP备案号">
+                  <UiInput v-model="form.icp" placeholder="湘ICP备..." />
+                </UiFormField>
+                <UiFormField label="公安备案号">
+                  <UiInput v-model="form.beian" placeholder="可选" />
+                </UiFormField>
+                <UiFormField label="GitHub 链接" class="form-item--wide">
+                  <UiInput v-model="form.github" placeholder="https://github.com/..." />
+                </UiFormField>
+                <UiFormField label="站点描述" class="form-item--wide">
+                  <UiTextarea
                     v-model="form.siteDescription"
-                    type="textarea"
                     :rows="3"
                     maxlength="120"
-                    show-word-limit
+                    show-count
                     placeholder="一个写下技术，也收藏温柔日常的小小角落"
                   />
-                </el-form-item>
+                </UiFormField>
               </div>
-            </el-form>
+            </UiForm>
           </section>
 
         <section v-show="activeTab === 'brand'" class="settings-section">
@@ -66,19 +65,19 @@
                   <h4>站点 Logo</h4>
                   <p>建议使用透明 PNG，适配导航与页脚展示。</p>
                   <div class="asset-actions">
-                    <el-upload
+                    <UiUpload
                       :show-file-list="false"
                       :before-upload="beforeImageUpload"
                       :http-request="(options) => handleAssetUpload('siteLogo', options)"
                       accept="image/*"
                     >
                       <UiButton icon="upload" :loading="uploadingKey === 'siteLogo'">上传</UiButton>
-                    </el-upload>
+                    </UiUpload>
                     <UiButton v-if="form.siteLogo" variant="text" icon="delete" @click="form.siteLogo = ''">
                       清除
                     </UiButton>
                   </div>
-                  <el-input v-model="form.siteLogo" clearable placeholder="/logo.png 或图片 URL" />
+                  <UiInput v-model="form.siteLogo" clearable placeholder="/logo.png 或图片 URL" />
                 </div>
               </section>
 
@@ -91,28 +90,28 @@
                   <h4>站点图标</h4>
                   <p>用于浏览器标签页，当前入口页还会继续使用默认图标。</p>
                   <div class="asset-actions">
-                    <el-upload
+                    <UiUpload
                       :show-file-list="false"
                       :before-upload="beforeImageUpload"
                       :http-request="(options) => handleAssetUpload('siteFavicon', options)"
                       accept="image/*"
                     >
                       <UiButton icon="upload" :loading="uploadingKey === 'siteFavicon'">上传</UiButton>
-                    </el-upload>
+                    </UiUpload>
                     <UiButton v-if="form.siteFavicon" variant="text" icon="delete" @click="form.siteFavicon = ''">
                       清除
                     </UiButton>
                   </div>
-                  <el-input v-model="form.siteFavicon" clearable placeholder="/favicon.png 或图片 URL" />
+                  <UiInput v-model="form.siteFavicon" clearable placeholder="/favicon.png 或图片 URL" />
                 </div>
               </section>
             </div>
 
-            <el-form label-position="top" class="settings-form settings-form--single">
-              <el-form-item label="版权文案">
-                <el-input v-model="form.copyright" placeholder="Copyright 2024 Chen404" />
-              </el-form-item>
-            </el-form>
+            <UiForm label-position="top" class="settings-form settings-form--single">
+              <UiFormField label="版权文案">
+                <UiInput v-model="form.copyright" placeholder="Copyright 2024 Chen404" />
+              </UiFormField>
+            </UiForm>
           </section>
 
         <section v-show="activeTab === 'seo'" class="settings-section">
@@ -123,24 +122,23 @@
               <UiBadge tone="success">已接入</UiBadge>
             </div>
 
-            <el-form label-position="top" class="settings-form">
-              <el-form-item label="SEO 关键词">
-                <el-input
+            <UiForm label-position="top" class="settings-form">
+              <UiFormField label="SEO 关键词">
+                <UiInput
                   v-model="form.seoKeywords"
                   placeholder="博客,技术,前端,后端,Java,Vue"
                 />
-              </el-form-item>
-              <el-form-item label="SEO 描述">
-                <el-input
+              </UiFormField>
+              <UiFormField label="SEO 描述">
+                <UiTextarea
                   v-model="form.seoDescription"
-                  type="textarea"
                   :rows="4"
                   maxlength="180"
-                  show-word-limit
+                  show-count
                   placeholder="用于搜索引擎摘要展示"
                 />
-              </el-form-item>
-            </el-form>
+              </UiFormField>
+            </UiForm>
           </section>
 
         <section v-show="activeTab === 'runtime'" class="settings-section">
@@ -159,9 +157,8 @@
                       <h4>评论审核</h4>
                       <p>控制新评论是否先进入待审核状态。</p>
                     </div>
-                    <el-switch
+                    <UiSwitch
                       v-model="form.commentAudit"
-                      inline-prompt
                       active-text="开启"
                       inactive-text="关闭"
                     />
@@ -181,9 +178,8 @@
                       <h4>游客评论</h4>
                       <p>决定未登录用户能否在文章和留言板发言。</p>
                     </div>
-                    <el-switch
+                    <UiSwitch
                       v-model="form.commentGuest"
-                      inline-prompt
                       active-text="允许"
                       inactive-text="关闭"
                     />
@@ -220,14 +216,14 @@
                     <p>{{ item.desc }}</p>
                   </div>
                   <div class="hero-actions">
-                    <el-upload
+                    <UiUpload
                       :show-file-list="false"
                       :before-upload="beforeImageUpload"
                       :http-request="(options) => handleHeroUpload(item.key, options)"
                       accept="image/*"
                     >
                       <UiButton icon="upload" :loading="uploadingKey === item.key">上传</UiButton>
-                    </el-upload>
+                    </UiUpload>
                     <UiButton
                       v-if="heroImages[item.key]"
                       variant="text"
@@ -237,7 +233,7 @@
                       清除
                     </UiButton>
                   </div>
-                  <el-input
+                  <UiInput
                     v-model="heroImages[item.key]"
                     clearable
                     placeholder="粘贴图片 URL，支持 GIF"
@@ -262,10 +258,10 @@
 
 <script setup lang="ts">
 import { onMounted, reactive, ref } from 'vue';
-import type { UploadRequestOptions } from 'element-plus';
 import { notify } from '@/lib/feedback';
-import { UiPanel, UiButton, UiTabs, UiBadge } from '@/components/ui';
+import { UiPanel, UiButton, UiTabs, UiBadge, UiForm, UiFormField, UiInput, UiSwitch, UiTextarea, UiUpload } from '@/components/ui';
 import type { UiTabItem } from '@/components/ui';
+import type { UploadRequestOptions } from '@/components/ui';
 import { getSiteConfig, updateSiteConfig } from '@/api/home';
 import { uploadSiteAsset } from '@/api/upload';
 import AiAssistantSettings from '@/views/Admin/components/AiAssistantSettings.vue';

@@ -16,7 +16,7 @@
       <FeatureAccessCover
         v-if="!canViewContent"
         v-bind="memoryMapCover"
-        :icon="Location"
+        icon="Location"
       />
 
       <template v-else>
@@ -39,9 +39,7 @@
               <div v-else-if="memoryLoadError" class="gallery-state memory-rail__state memory-rail__state--error">
                 <strong>旅行地点加载失败</strong>
                 <p>{{ memoryLoadError }}</p>
-                <el-button plain class="gallery-state__retry" @click="retryMemoryList">
-                  重新加载
-                </el-button>
+                <UiButton variant="secondary" class="gallery-state__retry" @click="retryMemoryList">重新加载</UiButton>
               </div>
               <div v-else-if="!locations.length" class="memory-rail__list memory-rail__list--placeholder">
                 <article
@@ -100,10 +98,10 @@
               </div>
 
               <div v-if="canLoadMoreGallery" class="gallery-load-more memory-rail__load-more">
-                <el-button plain class="gallery-load-more__button" @click="loadMoreGallery">
+                <UiButton variant="secondary" class="gallery-load-more__button" @click="loadMoreGallery">
                   加载更多
                   <span class="gallery-load-more__count">剩余 {{ remainingGalleryCount }} 个地点</span>
-                </el-button>
+                </UiButton>
               </div>
             </div>
           </aside>
@@ -124,7 +122,7 @@
                 <div class="spread-badge">
                   <span class="spread-badge__label">当前地点</span>
                   <div class="spread-badge__body">
-                    <el-icon><Location /></el-icon>
+                    <UiIcon name="Location" />
                     <strong>{{ currentLocationName }}</strong>
                   </div>
                 </div>
@@ -137,13 +135,12 @@
               />
 
               <div v-if="canManage" class="spread-map-actions">
-                <el-button type="primary" plain class="journal-action journal-action--primary map-action" @click="openCreateDialog">
+                <UiButton variant="ghost" icon="location" class="journal-action journal-action--primary map-action" @click="openCreateDialog">
                   <span class="map-action__lead">
-                    <el-icon><Location /></el-icon>
                     <span>新增旅游地点</span>
                   </span>
                   <span class="map-action__arrow" aria-hidden="true">→</span>
-                </el-button>
+                </UiButton>
               </div>
             </div>
           </article>
@@ -166,11 +163,11 @@
                     </div>
                     <div class="travel-journal__facts">
                       <span v-if="journalLocationText" class="travel-journal__fact travel-journal__fact--location">
-                        <el-icon><Location /></el-icon>
+                        <UiIcon name="Location" />
                         <span>{{ journalLocationText }}</span>
                       </span>
                       <span v-if="journalDateRange" class="travel-journal__fact travel-journal__fact--date">
-                        <el-icon><Calendar /></el-icon>
+                        <UiIcon name="Calendar" />
                         <span>{{ journalDateRange }}</span>
                       </span>
                     </div>
@@ -187,9 +184,7 @@
                     <strong>地点详情加载失败</strong>
                     <p>{{ detailLoadError }}</p>
                   </div>
-                  <el-button plain class="journal-action journal-action--retry" @click="retryActiveDetail">
-                    重新加载
-                  </el-button>
+                  <UiButton variant="secondary" class="journal-action journal-action--retry" @click="retryActiveDetail">重新加载</UiButton>
                 </div>
 
                 <div class="travel-journal__media">
@@ -227,17 +222,16 @@
                   </div>
 
                   <div v-if="activeDetail" class="travel-journal__actions travel-journal__actions--note">
-                    <el-button type="primary" class="journal-action journal-action--detail-view" @click="openCurrentDetailPage">
-                      <el-icon><View /></el-icon>
+                    <UiButton variant="primary" icon="eye" class="journal-action journal-action--detail-view" @click="openCurrentDetailPage">
                       查看游记
-                    </el-button>
+                    </UiButton>
                     <div v-if="canManage" class="travel-journal__manage">
-                      <el-button plain class="journal-action journal-action--manage" @click="editGalleryLocation(activeDetail.id)">
+                      <UiButton variant="secondary" icon="edit" class="journal-action journal-action--manage" @click="editGalleryLocation(activeDetail.id)">
                         编辑地点
-                      </el-button>
-                      <el-button plain class="journal-action journal-action--danger" @click="deleteGalleryLocation(activeDetail)">
+                      </UiButton>
+                      <UiButton variant="danger" icon="delete" class="journal-action journal-action--danger" @click="deleteGalleryLocation(activeDetail)">
                         删除地点
-                      </el-button>
+                      </UiButton>
                     </div>
                   </div>
                 </div>
@@ -294,11 +288,11 @@ import { useRoute, useRouter } from 'vue-router'
 import dayjs from 'dayjs'
 import { storeToRefs } from 'pinia'
 import { notify, confirmDelete } from '@/lib/feedback'
-import { Calendar, Location, View } from '@element-plus/icons-vue'
 import DefaultLayout from '@/layouts/DefaultLayout.vue'
 import PageHero from '@/components/PageHero/PageHero.vue'
 import FeatureAccessCover from '@/components/FeatureAccessCover.vue'
 import TravelMemoryMap from '@/components/TravelMemoryMap/TravelMemoryMap.vue'
+import { UiButton, UiIcon } from '@/components/ui'
 import { deleteTravelMemory, getTravelMemories, getTravelMemoryDetail } from '@/api/travel-memory'
 import { useSiteConfig } from '@/composables/useSiteConfig'
 import { buildMemoryMapCoverConfig, resolveFeatureHero } from '@/modules/feature-access/constants'
@@ -1401,14 +1395,15 @@ watch(
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   align-items: stretch;
-  gap: 12px;
+  gap: 14px;
   width: 100%;
 }
 
 .travel-journal__manage {
-  display: flex;
-  justify-content: flex-end;
-  align-items: center;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  justify-content: stretch;
+  align-items: stretch;
   gap: 10px;
   width: 100%;
 }
@@ -1432,71 +1427,37 @@ watch(
 }
 
 .journal-action {
-  --el-button-bg-color: rgba(255, 251, 252, 0.92);
-  --el-button-border-color: rgba(235, 214, 223, 0.96);
-  --el-button-text-color: #7c5b68;
-  --el-button-hover-bg-color: rgba(255, 246, 249, 0.96);
-  --el-button-hover-border-color: rgba(230, 182, 198, 0.96);
-  --el-button-hover-text-color: #704d5b;
   min-height: 38px;
-  width: 156px;
-  flex: 0 0 156px;
+  width: 100%;
+  min-width: 0;
   padding-inline: 16px;
   border-radius: 999px;
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 700;
   line-height: 1.2;
-  box-shadow: 0 10px 20px rgba(225, 190, 202, 0.1);
+  justify-content: center;
+  white-space: nowrap;
 }
 
 .journal-action--primary {
-  --el-button-bg-color: rgba(255, 243, 247, 0.96);
-  --el-button-border-color: rgba(231, 187, 201, 0.96);
-  --el-button-text-color: #cb6f8e;
+  color: #cb6f8e;
 }
 
 .journal-action--danger {
-  --el-button-text-color: #d07a8f;
-}
-
-.journal-action--manage,
-.journal-action--danger {
-  width: auto;
-  min-width: 0;
-  flex: 0 0 auto;
-  padding-inline: 14px;
+  color: #d07a8f;
 }
 
 .journal-action--manage {
-  --el-button-bg-color: rgba(255, 251, 252, 0.9);
-  --el-button-border-color: rgba(232, 212, 222, 0.96);
-  --el-button-text-color: #7a5f6d;
+  color: #7a5f6d;
 }
 
 .journal-action--detail-view {
-  --el-button-text-color: #ffffff;
-  --el-button-hover-text-color: #ffffff;
   width: 100%;
-  min-width: 0;
-  flex-basis: 100%;
   padding-inline: 16px;
-  color: #fff !important;
-  border: none !important;
-  background: linear-gradient(135deg, rgba(255, 133, 176, 0.98), rgba(247, 113, 158, 0.98)) !important;
-  box-shadow: 0 12px 22px rgba(243, 136, 171, 0.28) !important;
-}
-
-:deep(.journal-action--detail-view:hover),
-:deep(.journal-action--detail-view:focus-visible) {
-  color: #fff !important;
-  border: none !important;
-  background: linear-gradient(135deg, rgba(255, 145, 184, 1), rgba(248, 123, 166, 1)) !important;
 }
 
 .journal-action--retry {
   width: 100%;
-  min-width: 0;
-  flex-basis: 100%;
 }
 
 .map-action {
@@ -1529,9 +1490,11 @@ watch(
     inset 0 1px 0 rgba(255, 255, 255, 0.96) !important;
 }
 
-:deep(.map-action > span) {
+.map-action :deep(.ui-button__label) {
   width: auto;
   min-width: 0;
+  display: inline-flex;
+  align-items: center;
   justify-content: space-between;
   gap: 18px;
   padding: 10px 16px;
@@ -1543,45 +1506,27 @@ watch(
   gap: 10px;
 }
 
-.map-action__lead .el-icon {
-  display: inline-grid;
-  place-items: center;
-  width: 22px;
-  height: 22px;
-  border-radius: 999px;
-  color: #ef7fa4;
-  background: rgba(255, 236, 243, 0.9);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.95);
-}
-
 .map-action__arrow {
   color: #d982a0;
   font-size: 16px;
   line-height: 1;
 }
 
-:deep(.journal-action > span) {
-  width: 100%;
+.journal-action :deep(.ui-button__icon) {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+}
+
+.journal-action :deep(.ui-button__label) {
+  flex: 1 1 auto;
+  min-width: 0;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
   line-height: 1.2;
   white-space: nowrap;
-}
-
-:deep(.journal-action .el-icon) {
-  flex: 0 0 auto;
-  font-size: 14px;
-  line-height: 1;
-}
-
-:deep(.journal-action .el-icon svg) {
-  display: block;
-}
-
-:deep(.travel-journal__actions .el-button + .el-button) {
-  margin-left: 0;
 }
 
 .journal-state {
@@ -1999,6 +1944,10 @@ watch(
   }
 
   .travel-journal__actions--note {
+    grid-template-columns: 1fr;
+  }
+
+  .travel-journal__manage {
     grid-template-columns: 1fr;
   }
 

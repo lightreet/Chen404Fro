@@ -29,8 +29,8 @@ withDefaults(
     placeholder?: string
     disabled?: boolean
     readonly?: boolean
-    rows?: number
-    maxlength?: number
+    rows?: number | string
+    maxlength?: number | string
     showCount?: boolean
     resize?: 'none' | 'both' | 'horizontal' | 'vertical'
   }>(),

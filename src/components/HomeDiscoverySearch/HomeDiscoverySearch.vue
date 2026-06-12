@@ -35,7 +35,7 @@
 
 <script setup lang="ts">
 import { ref, watch, computed } from 'vue';
-import { Search } from '@element-plus/icons-vue';
+import { Search } from '@/compat/element-plus-icons';
 
 const props = withDefaults(
   defineProps<{

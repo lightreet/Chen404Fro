@@ -64,14 +64,14 @@
 
       <!-- 加载更多 -->
       <div class="load-more" v-if="false && hasMore">
-        <el-button
-          type="primary"
+        <UiButton
+          variant="primary"
           :loading="loading"
           @click="loadMore"
           class="jp-btn-primary !border-0"
         >
           {{ loading ? '加载中...' : '加载更多' }}
-        </el-button>
+        </UiButton>
       </div>
 
       <!-- 没有更多了 -->
@@ -91,11 +91,12 @@
 <script setup lang="ts">
 import { computed, ref, onMounted, onUnmounted, watch, nextTick } from 'vue';
 import { notify } from '@/lib/feedback';
-import { Compass } from '@element-plus/icons-vue';
+import { Compass } from '@/compat/element-plus-icons';
 import DefaultLayout from '@/layouts/DefaultLayout.vue';
 import ArticleCard from '@/components/ArticleCard/ArticleCard.vue';
 import HomeDiscoverySearch from '@/components/HomeDiscoverySearch/HomeDiscoverySearch.vue';
 import PageHero from '@/components/PageHero/PageHero.vue';
+import { UiButton } from '@/components/ui'
 import { useSiteConfig } from '@/composables/useSiteConfig';
 import type { Article } from '@/types';
 import { getArticles } from '@/api/article';

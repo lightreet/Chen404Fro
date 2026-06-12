@@ -1,7 +1,7 @@
 <template>
   <section class="feature-cover">
     <div class="feature-cover__badge">
-      <el-icon><component :is="icon" /></el-icon>
+      <UiIcon :name="icon" />
       <span>{{ eyebrow }}</span>
     </div>
 
@@ -19,20 +19,21 @@
 
     <div class="feature-cover__actions">
       <router-link v-if="primaryTo" :to="primaryTo" class="feature-cover__link">
-        <el-button type="primary" class="feature-cover__button">{{ primaryText }}</el-button>
+        <UiButton variant="primary" class="feature-cover__button">{{ primaryText }}</UiButton>
       </router-link>
       <router-link v-if="secondaryTo" :to="secondaryTo" class="feature-cover__link feature-cover__link--secondary">
-        <el-button plain class="feature-cover__button feature-cover__button--ghost">{{ secondaryText }}</el-button>
+        <UiButton variant="secondary" class="feature-cover__button feature-cover__button--ghost">{{ secondaryText }}</UiButton>
       </router-link>
     </div>
   </section>
 </template>
 
 <script setup lang="ts">
+import { UiButton, UiIcon } from '@/components/ui'
 import type { FeatureAccessCoverConfig } from '@/modules/feature-access/constants'
 
 defineProps<FeatureAccessCoverConfig & {
-  icon: object
+  icon: string
 }>()
 </script>
 

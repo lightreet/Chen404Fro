@@ -31,10 +31,9 @@
             to="/article/edit"
             class="write-btn"
           >
-            <el-button size="small" class="write-link rounded-full">
-              <el-icon><EditPen /></el-icon>
+            <UiButton size="sm" variant="ghost" icon="edit" class="write-link rounded-full">
               <span>编写</span>
-            </el-button>
+            </UiButton>
           </router-link>
 
           <button class="action-btn" @click="toggleTheme">
@@ -44,10 +43,9 @@
 
           <!-- 未登录显示登录按钮 -->
           <router-link v-if="!isLoggedIn && !isMobile" to="/login" class="login-link">
-            <el-button type="primary" size="small" class="login-btn rounded-full">
-              <el-icon><User /></el-icon>
+            <UiButton variant="primary" size="sm" icon="user" class="login-btn rounded-full">
               <span>登录</span>
-            </el-button>
+            </UiButton>
           </router-link>
 
           <!-- 已登录显示用户菜单 -->
@@ -180,6 +178,7 @@ import { ref, onMounted, onUnmounted, computed, watch } from 'vue';
 import type { RouteLocationRaw } from 'vue-router';
 import { useRoute, useRouter } from 'vue-router';
 import { notify, confirmAction } from '@/lib/feedback';
+import { UiButton } from '@/components/ui'
 import {
   HomeFilled,
   Folder,
@@ -197,7 +196,7 @@ import {
   Place,
   Postcard,
   Headset,
-} from '@element-plus/icons-vue';
+} from '@/compat/element-plus-icons';
 import { useUserStore } from '@/stores/user';
 import { storeToRefs } from 'pinia';
 import { logout as logoutApi } from '@/api/auth';
@@ -573,8 +572,8 @@ const handleLogout = async () => {
   }
 }
 
-.write-link.el-button:hover,
-.write-link.el-button:focus {
+.write-link:hover,
+.write-link:focus {
   border: none;
   color: #ff7faa;
   background: rgba(255, 255, 255, 0.38);

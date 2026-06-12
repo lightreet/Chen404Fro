@@ -5,34 +5,34 @@
     </template>
 
     <div class="panel-inner">
-      <el-table :data="categoriesList" style="width: 100%" v-loading="categoriesLoading">
-        <el-table-column prop="id" label="ID" width="120" />
-        <el-table-column prop="name" label="分类名称" min-width="180" />
-        <el-table-column label="图标" width="92">
+      <UiTable :data="categoriesList" style="width: 100%" :loading="categoriesLoading">
+        <UiTableColumn prop="id" label="ID" width="120" />
+        <UiTableColumn prop="name" label="分类名称" min-width="180" />
+        <UiTableColumn label="图标" width="92">
           <template #default="{ row }">
             <span class="table-icon-cell">
               <CategoryIcon :icon="row.icon" width="18" height="18" />
             </span>
           </template>
-        </el-table-column>
-        <el-table-column prop="slug" label="别名" min-width="180" />
-        <el-table-column prop="sortOrder" label="排序" width="90" />
-        <el-table-column prop="status" label="状态" width="100">
+        </UiTableColumn>
+        <UiTableColumn prop="slug" label="别名" min-width="180" />
+        <UiTableColumn prop="sortOrder" label="排序" width="90" />
+        <UiTableColumn prop="status" label="状态" width="100">
           <template #default="{ row }">
             <AppStatusPill :status="row.status === 1 ? 'enabled' : 'disabled'">
               {{ row.status === 1 ? '启用' : '停用' }}
             </AppStatusPill>
           </template>
-        </el-table-column>
-        <el-table-column label="操作" width="180" fixed="right">
+        </UiTableColumn>
+        <UiTableColumn label="操作" width="180" fixed="right">
           <template #default="{ row }">
             <div class="row-actions">
               <UiButton variant="text" size="sm" @click="openCategoryDialog(row)">编辑</UiButton>
               <UiButton variant="text" size="sm" @click="handleDeleteCategory(row)">删除</UiButton>
             </div>
           </template>
-        </el-table-column>
-      </el-table>
+        </UiTableColumn>
+      </UiTable>
 
       <div class="table-footer">
         <UiPagination
@@ -45,17 +45,17 @@
     </div>
 
     <UiDialog v-model="categoryDialogVisible" :title="categoryDialogTitle" width="720px">
-      <el-form :model="categoryForm" label-width="90px">
-        <el-form-item label="名称">
-          <el-input v-model="categoryForm.name" placeholder="请输入分类名称" />
-        </el-form-item>
-        <el-form-item label="别名">
-          <el-input v-model="categoryForm.slug" placeholder="可选，用于 URL 标识" />
-        </el-form-item>
-        <el-form-item label="描述">
-          <el-input v-model="categoryForm.description" type="textarea" :rows="3" placeholder="请输入分类描述" />
-        </el-form-item>
-        <el-form-item label="图标">
+      <UiForm :model="categoryForm" label-width="90px">
+        <UiFormField label="名称">
+          <UiInput v-model="categoryForm.name" placeholder="请输入分类名称" />
+        </UiFormField>
+        <UiFormField label="别名">
+          <UiInput v-model="categoryForm.slug" placeholder="可选，用于 URL 标识" />
+        </UiFormField>
+        <UiFormField label="描述">
+          <UiTextarea v-model="categoryForm.description" :rows="3" placeholder="请输入分类描述" />
+        </UiFormField>
+        <UiFormField label="图标">
           <div class="icon-field">
             <div class="icon-preview-card">
               <div class="icon-preview-main">
@@ -78,13 +78,13 @@
               </div>
             </div>
 
-            <el-input
+            <UiInput
               v-model="categoryForm.icon"
               clearable
               placeholder="例如 mdi:folder-open 或 solar:music-note-bold"
             />
 
-            <el-input
+            <UiInput
               v-model="iconSearchKeyword"
               clearable
               placeholder="搜索图标关键词，例如 music、robot、server"
@@ -117,14 +117,14 @@
               </button>
             </div>
           </div>
-        </el-form-item>
-        <el-form-item label="排序">
-          <el-input-number v-model="categoryForm.sortOrder" :min="0" :max="9999" />
-        </el-form-item>
-        <el-form-item label="状态">
-          <el-switch v-model="categoryForm.status" :active-value="1" :inactive-value="0" />
-        </el-form-item>
-      </el-form>
+        </UiFormField>
+        <UiFormField label="排序">
+          <UiNumberField v-model="categoryForm.sortOrder" :min="0" :max="9999" />
+        </UiFormField>
+        <UiFormField label="状态">
+          <UiSwitch v-model="categoryForm.status" :active-value="1" :inactive-value="0" />
+        </UiFormField>
+      </UiForm>
       <template #footer>
         <UiButton variant="text" @click="categoryDialogVisible = false">取消</UiButton>
         <UiButton variant="primary" :loading="categorySaving" @click="handleSaveCategory">保存</UiButton>
@@ -136,7 +136,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
 import { notify, confirmDelete } from '@/lib/feedback'
-import { UiPanel, UiButton, UiDialog, UiPagination } from '@/components/ui'
+import { UiPanel, UiButton, UiDialog, UiForm, UiFormField, UiInput, UiNumberField, UiPagination, UiSwitch, UiTable, UiTableColumn, UiTextarea } from '@/components/ui'
 import { AppStatusPill } from '@/components/app'
 import CategoryIcon from '@/components/CategoryIcon/CategoryIcon.vue'
 import type { Category, CreateCategoryCommand } from '@/types'

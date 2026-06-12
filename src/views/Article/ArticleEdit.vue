@@ -65,7 +65,7 @@
             <!-- 封面 -->
             <section class="sidebar-section cover-section">
               <div class="section-label">文章封面</div>
-              <el-upload
+              <UiUpload
                 class="cover-uploader"
                 :http-request="handleCoverUpload"
                 :show-file-list="false"
@@ -78,7 +78,7 @@
                   <span>点击上传封面</span>
                   <span class="cover-tip">建议尺寸 1200×630，支持 GIF 动图</span>
                 </div>
-              </el-upload>
+              </UiUpload>
               <UiButton
                 v-if="form.coverImage"
                 variant="text"
@@ -274,7 +274,7 @@ import { h } from 'vue';
 import { MdEditor } from 'md-editor-v3';
 import 'md-editor-v3/lib/style.css';
 import { ArticleStatus } from '@/types';
-import { UiButton, UiInput, UiSelect, UiCheckbox, UiIcon } from '@/components/ui';
+import { UiButton, UiInput, UiSelect, UiCheckbox, UiIcon, UiUpload } from '@/components/ui';
 import CategoryIcon from '@/components/CategoryIcon/CategoryIcon.vue';
 import MdEditorEmojiToolbar from '@/components/Editor/MdEditorEmojiToolbar.vue';
 import MdEditorUnorderedListToolbar from '@/components/Editor/MdEditorUnorderedListToolbar.vue';

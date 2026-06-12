@@ -29,6 +29,7 @@
       :maxlength="maxlength"
       :name="name"
       :rows="rows"
+      :autofocus="autofocus"
       @input="onInput"
       @focus="onFocus"
       @blur="onBlur"
@@ -45,6 +46,7 @@
       :maxlength="maxlength"
       :name="name"
       :autocomplete="autocomplete"
+      :autofocus="autofocus"
       @input="onInput"
       @focus="onFocus"
       @blur="onBlur"
@@ -92,11 +94,12 @@ withDefaults(
     size?: 'sm' | 'md' | 'lg'
     prefixIcon?: string
     suffixIcon?: string
-    maxlength?: number
+    maxlength?: number | string
     name?: string
     autocomplete?: string
-    rows?: number
+    rows?: number | string
     showWordLimit?: boolean
+    autofocus?: boolean
   }>(),
   {
     modelValue: '',
@@ -113,6 +116,7 @@ withDefaults(
     autocomplete: undefined,
     rows: 3,
     showWordLimit: false,
+    autofocus: false,
   },
 )
 
@@ -121,6 +125,7 @@ const emit = defineEmits<{
   (e: 'focus', ev: FocusEvent): void
   (e: 'blur', ev: FocusEvent): void
   (e: 'enter', ev: KeyboardEvent): void
+  (e: 'input', ev: Event): void
   (e: 'clear'): void
 }>()
 
@@ -130,6 +135,7 @@ const focused = ref(false)
 
 const onInput = (ev: Event) => {
   emit('update:modelValue', (ev.target as HTMLInputElement | HTMLTextAreaElement).value)
+  emit('input', ev)
 }
 const onFocus = (ev: FocusEvent) => {
   focused.value = true

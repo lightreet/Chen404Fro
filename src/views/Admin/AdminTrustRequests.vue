@@ -3,11 +3,18 @@
     <UiPanel icon="postcard" title="好友申请" flush>
       <template #actions>
         <div class="header-actions">
-          <el-select v-model="statusFilter" clearable placeholder="全部状态" style="width: 160px" @change="loadRequests(1)">
-            <el-option label="待处理" :value="TrustRequestStatus.PENDING" />
-            <el-option label="已通过" :value="TrustRequestStatus.APPROVED" />
-            <el-option label="已拒绝" :value="TrustRequestStatus.REJECTED" />
-          </el-select>
+          <UiSelect
+            v-model="statusFilter"
+            clearable
+            placeholder="全部状态"
+            style="width: 160px"
+            :options="[
+              { label: '待处理', value: TrustRequestStatus.PENDING },
+              { label: '已通过', value: TrustRequestStatus.APPROVED },
+              { label: '已拒绝', value: TrustRequestStatus.REJECTED },
+            ]"
+            @change="loadRequests(1)"
+          />
           <UiInput
             v-model="keyword"
             placeholder="搜索用户名 / 昵称 / 邮箱"
@@ -21,8 +28,8 @@
       </template>
 
       <div class="panel-inner">
-        <el-table :data="requests" v-loading="loading" style="width: 100%">
-          <el-table-column label="申请人" min-width="180">
+        <UiTable :data="requests" :loading="loading" style="width: 100%">
+          <UiTableColumn label="申请人" min-width="180">
             <template #default="{ row }">
               <div class="user-cell">
                 <button
@@ -35,40 +42,40 @@
                 <div class="user-sub">{{ row.username || '--' }}</div>
               </div>
             </template>
-          </el-table-column>
-          <el-table-column label="邮箱" min-width="200">
+          </UiTableColumn>
+          <UiTableColumn label="邮箱" min-width="200">
             <template #default="{ row }">
               {{ row.userEmail || row.contactEmail || '--' }}
             </template>
-          </el-table-column>
-          <el-table-column label="申请理由" min-width="280" show-overflow-tooltip>
+          </UiTableColumn>
+          <UiTableColumn label="申请理由" min-width="280" show-overflow-tooltip>
             <template #default="{ row }">
               {{ row.reason }}
             </template>
-          </el-table-column>
-          <el-table-column label="附件" width="90">
+          </UiTableColumn>
+          <UiTableColumn label="附件" width="90">
             <template #default="{ row }">
               {{ row.attachments?.length || 0 }}
             </template>
-          </el-table-column>
-          <el-table-column label="状态" width="110">
+          </UiTableColumn>
+          <UiTableColumn label="状态" width="110">
             <template #default="{ row }">
               <AppStatusPill :tone="getStatusTone(row.status)">
                 {{ getStatusLabel(row.status) }}
               </AppStatusPill>
             </template>
-          </el-table-column>
-          <el-table-column label="提交时间" min-width="170">
+          </UiTableColumn>
+          <UiTableColumn label="提交时间" min-width="170">
             <template #default="{ row }">
               {{ formatDate(row.createTime) }}
             </template>
-          </el-table-column>
-          <el-table-column label="操作" width="140" fixed="right">
+          </UiTableColumn>
+          <UiTableColumn label="操作" width="140" fixed="right">
             <template #default="{ row }">
               <UiButton variant="text" size="sm" @click="openDialog(row)">查看</UiButton>
             </template>
-          </el-table-column>
-        </el-table>
+          </UiTableColumn>
+        </UiTable>
 
         <div class="table-footer">
           <UiPagination
@@ -140,18 +147,17 @@
           <div class="detail-content">{{ activeRequest.reviewNote }}</div>
         </div>
 
-        <el-form v-if="activeRequest.status === TrustRequestStatus.PENDING" label-position="top">
-          <el-form-item label="审核说明">
-            <el-input
+        <UiForm v-if="activeRequest.status === TrustRequestStatus.PENDING" label-position="top">
+          <UiFormField label="审核说明">
+            <UiTextarea
               v-model="reviewNote"
-              type="textarea"
               :rows="4"
               maxlength="500"
-              show-word-limit
+              show-count
               placeholder="通过时可选填；拒绝时建议说明原因。"
             />
-          </el-form-item>
-        </el-form>
+          </UiFormField>
+        </UiForm>
       </template>
 
       <template #footer>
@@ -169,7 +175,7 @@
 import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { notify } from '@/lib/feedback'
-import { UiPanel, UiButton, UiInput, UiDialog, UiPagination } from '@/components/ui'
+import { UiPanel, UiButton, UiDialog, UiForm, UiFormField, UiInput, UiPagination, UiSelect, UiTable, UiTableColumn, UiTextarea } from '@/components/ui'
 import { AppStatusPill } from '@/components/app'
 import type { AccentTone } from '@/design/tokens'
 import { approveTrustRequest, getAdminTrustRequests, rejectTrustRequest } from '@/api/trust-request'

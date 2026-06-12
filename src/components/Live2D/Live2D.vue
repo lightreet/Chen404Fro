@@ -95,7 +95,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue';
 import { useRoute } from 'vue-router';
-import { Camera, ChatDotRound, Close, Headset, Refresh } from '@element-plus/icons-vue';
+import { Camera, ChatDotRound, Close, Headset, Refresh } from '@/compat/element-plus-icons';
 import { notify } from '@/lib/feedback';
 import Live2DChatPanel from './Live2DChatPanel.vue';
 import Live2DMusicPanel from './Live2DMusicPanel.vue';

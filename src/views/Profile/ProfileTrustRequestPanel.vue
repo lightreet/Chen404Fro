@@ -43,8 +43,8 @@
       </section>
 
       <section v-if="canSubmit" class="trust-form-shell">
-        <el-form label-position="top">
-          <el-form-item label="申请理由">
+        <UiForm label-position="top">
+          <UiFormField label="申请理由">
             <UiInput
               v-model="reason"
               type="textarea"
@@ -53,17 +53,17 @@
               show-word-limit
               placeholder="简单说明你为什么希望申请知友权限，以及希望管理员了解的背景信息。"
             />
-          </el-form-item>
+          </UiFormField>
 
-          <el-form-item label="相关附件">
+          <UiFormField label="相关附件">
             <div class="upload-block">
-              <el-upload
+              <UiUpload
                 :show-file-list="false"
                 :http-request="handleUploadAttachment"
                 :before-upload="beforeAttachmentUpload"
               >
                 <UiButton variant="secondary" icon="upload" :disabled="attachments.length >= 3">上传附件</UiButton>
-              </el-upload>
+              </UiUpload>
               <span class="upload-hint">最多 3 个附件，支持图片、PDF、TXT、Word 和压缩包，单个不超过 15MB。</span>
             </div>
 
@@ -73,14 +73,14 @@
                 <button type="button" class="attachment-remove" @click="removeAttachment(item.url)">移除</button>
               </div>
             </div>
-          </el-form-item>
+          </UiFormField>
 
           <div class="trust-actions">
             <UiButton variant="primary" :loading="submitting" @click="handleSubmit">
               {{ latestRequest?.status === TrustRequestStatus.REJECTED ? '重新提交申请' : '提交申请' }}
             </UiButton>
           </div>
-        </el-form>
+        </UiForm>
       </section>
     </template>
   </div>
@@ -88,9 +88,9 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import type { UploadRequestOptions } from 'element-plus'
 import { notify } from '@/lib/feedback';
-import { UiBadge, UiButton, UiInput } from '@/components/ui'
+import { UiBadge, UiButton, UiForm, UiFormField, UiInput, UiUpload } from '@/components/ui'
+import type { UploadRequestOptions } from '@/components/ui'
 import type { AccentTone } from '@/design/tokens'
 import { createTrustRequest, getMyLatestTrustRequest } from '@/api/trust-request'
 import { uploadTrustAttachment } from '@/api/upload'

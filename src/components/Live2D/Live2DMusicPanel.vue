@@ -38,11 +38,10 @@
 
     <div class="music-panel__progress">
       <span>{{ formatTime(player.playbackTime) }}</span>
-      <el-slider
+      <UiSlider
         :model-value="player.playbackTime"
         :max="Math.max(player.duration, 1)"
         :show-tooltip="false"
-        size="small"
         @input="handleSeekPreview"
         @change="handleSeek"
       />
@@ -71,7 +70,8 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { Back, Close, Right, VideoPause, VideoPlay } from '@element-plus/icons-vue'
+import { Back, Close, Right, VideoPause, VideoPlay } from '@/compat/element-plus-icons'
+import { UiSlider } from '@/components/ui'
 import { useMusicPlayerStore } from '@/stores/music-player'
 import type { MusicTrack } from '@/types'
 

@@ -26,62 +26,56 @@
             @keyup.enter="handleRegister"
           >
             <el-form-item prop="username">
-              <el-input
+              <UiInput
                 v-model="form.username"
                 placeholder="请输入用户名"
-                size="large"
-                :prefix-icon="User"
+                size="lg"
+                prefix-icon="user"
                 maxlength="20"
               />
             </el-form-item>
 
             <el-form-item prop="email">
-              <el-input
+              <UiInput
                 v-model="form.email"
                 placeholder="请输入邮箱"
-                size="large"
-                :prefix-icon="Message"
+                size="lg"
+                prefix-icon="message"
               />
             </el-form-item>
 
             <el-form-item prop="code">
               <div class="verify-code-wrapper">
-                <el-input
+                <UiInput
                   v-model="form.code"
                   placeholder="请输入邮箱验证码"
-                  size="large"
-                  :prefix-icon="Key"
+                  size="lg"
+                  prefix-icon="key"
                   maxlength="6"
                 />
-                <el-button
-                  type="primary"
-                  :disabled="codeSending || codeCountdown > 0"
-                  @click="sendVerifyCode"
-                >
+                <UiButton variant="primary" :disabled="codeSending || codeCountdown > 0" @click="sendVerifyCode">
                   {{ codeCountdown > 0 ? `${codeCountdown}s` : '获取验证码' }}
-                </el-button>
+                </UiButton>
               </div>
             </el-form-item>
 
             <el-form-item prop="password">
-              <el-input
+              <UiInput
                 v-model="form.password"
                 type="password"
                 placeholder="请输入密码"
-                size="large"
-                :prefix-icon="Lock"
-                show-password
+                size="lg"
+                prefix-icon="lock"
               />
             </el-form-item>
 
             <el-form-item prop="confirmPassword">
-              <el-input
+              <UiInput
                 v-model="form.confirmPassword"
                 type="password"
                 placeholder="请确认密码"
-                size="large"
-                :prefix-icon="Lock"
-                show-password
+                size="lg"
+                prefix-icon="lock"
               />
             </el-form-item>
 
@@ -90,25 +84,25 @@
             </div>
 
             <div class="form-agreement">
-              <el-checkbox v-model="agreement">
+              <UiCheckbox v-model="agreement">
                 我已阅读并同意
                 <a href="#" @click.prevent="agreementDialogVisible = true">《用户协议》</a>
                 和
                 <a href="#" @click.prevent="privacyDialogVisible = true">《隐私政策》</a>
-              </el-checkbox>
+              </UiCheckbox>
             </div>
 
             <el-form-item>
-              <el-button
-                type="primary"
-                size="large"
+              <UiButton
+                variant="primary"
+                size="lg"
                 class="submit-btn"
                 :loading="loading"
                 :disabled="!agreement"
                 @click="handleRegister"
               >
                 立即注册
-              </el-button>
+              </UiButton>
             </el-form-item>
           </el-form>
 
@@ -118,7 +112,7 @@
               <router-link to="/login" class="link">立即登录</router-link>
             </p>
             <router-link to="/" class="back-link">
-              <el-icon><ArrowLeft /></el-icon>
+              <UiIcon name="arrow-left" />
               返回首页
             </router-link>
           </div>
@@ -147,7 +141,7 @@
         </section>
       </div>
       <template #footer>
-        <el-button @click="agreementDialogVisible = false">我知道了</el-button>
+        <UiButton variant="secondary" @click="agreementDialogVisible = false">我知道了</UiButton>
       </template>
     </el-dialog>
 
@@ -172,7 +166,7 @@
         </section>
       </div>
       <template #footer>
-        <el-button @click="privacyDialogVisible = false">明白了</el-button>
+        <UiButton variant="secondary" @click="privacyDialogVisible = false">明白了</UiButton>
       </template>
     </el-dialog>
   </div>
@@ -182,7 +176,7 @@
 import { computed, onMounted, reactive, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { notify } from '@/lib/feedback';
-import { ArrowLeft, Key, Lock, Message, User } from '@element-plus/icons-vue';
+import { UiButton, UiCheckbox, UiIcon, UiInput } from '@/components/ui'
 import { login, register, sendVerifyCode as sendVerifyCodeApi } from '@/api/auth';
 import { useSiteConfig } from '@/composables/useSiteConfig';
 import { useUserStore } from '@/stores/user';
@@ -502,7 +496,7 @@ onMounted(() => {
 }
 
 .register-form {
-  :deep(.el-input__wrapper) {
+  :deep(.ui-input) {
     border-radius: var(--radius-md);
   }
 }
@@ -515,19 +509,14 @@ onMounted(() => {
   --code-input-height: 40px;
   --code-btn-height: 36px;
 
-  :deep(.el-input) {
+  :deep(.ui-input) {
     flex: 1;
     min-width: 0;
     height: var(--code-input-height);
-  }
-
-  :deep(.el-input__wrapper) {
-    height: var(--code-input-height);
-    min-height: var(--code-input-height);
     box-sizing: border-box;
   }
 
-  :deep(.el-button) {
+  :deep(.ui-button) {
     flex-shrink: 0;
     min-width: 120px;
     height: var(--code-btn-height);
@@ -783,10 +772,9 @@ onMounted(() => {
     padding: 0 24px 24px;
   }
 
-  :deep(.el-button) {
+  :deep(.ui-button) {
     min-width: 116px;
     border-radius: 999px;
-    border-color: rgba(251, 114, 153, 0.18);
   }
 }
 
