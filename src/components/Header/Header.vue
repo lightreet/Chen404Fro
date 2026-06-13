@@ -375,9 +375,10 @@ const handleLogout = async () => {
 }
 
 .header-content {
+  position: relative;
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
   gap: 16px;
   min-height: 64px;
   min-width: 0;
@@ -386,6 +387,10 @@ const handleLogout = async () => {
 // Logo
 .logo {
   flex: 0 0 auto;
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
   display: flex;
   align-items: center;
   text-decoration: none;
@@ -404,13 +409,14 @@ const handleLogout = async () => {
 
 // 导航菜单
 .desktop-toolbar {
-  flex: 1 1 auto;
+  flex: 0 1 auto;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
   min-width: 0;
-  max-width: max-content;
+  width: max-content;
+  max-width: calc(100% - 200px);
   min-height: 54px;
   padding: 8px 12px;
   border-radius: 999px;
@@ -819,6 +825,7 @@ const handleLogout = async () => {
 
   .desktop-toolbar {
     padding-inline: 10px;
+    max-width: calc(100% - 170px);
   }
 
   .nav-menu {
@@ -831,13 +838,37 @@ const handleLogout = async () => {
   }
 }
 
+/* 中等宽度：导航项较多时隐藏文字旁图标、进一步压缩间距，保证一行排开不被截断 */
+@media (max-width: 1180px) {
+  .desktop-toolbar {
+    gap: 4px;
+    padding-inline: 8px;
+  }
+
+  .nav-item {
+    gap: 0;
+    padding-inline: 9px;
+    font-size: 13px;
+  }
+
+  .nav-item .nav-icon {
+    display: none;
+  }
+}
+
 @media (max-width: 768px) {
   .header {
     padding-top: 8px;
   }
 
   .header-content {
+    justify-content: space-between;
     min-height: 56px;
+  }
+
+  .logo {
+    position: static;
+    transform: none;
   }
 
   .action-btn {
