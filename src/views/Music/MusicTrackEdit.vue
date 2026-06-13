@@ -16,7 +16,7 @@
       </div>
     </header>
 
-      <main v-loading="loading" class="track-edit-layout">
+      <UiLoadingState :loading="loading" message="正在加载歌曲工作台..." class="track-edit-layout">
         <section class="track-edit-main">
           <div class="editor-panel editor-panel--title">
             <span class="panel-kicker">Track Studio</span>
@@ -330,7 +330,7 @@
             <span :class="{ done: Boolean(form.audioUrl.trim()) }">音频</span>
           </div>
         </aside>
-      </main>
+      </UiLoadingState>
 
       <div class="track-edit-footer">
         <div class="footer-inner">
@@ -355,7 +355,7 @@
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from 'vue'
 import { notify } from '@/lib/feedback'
-import { UiButton, UiDateField, UiEmpty, UiForm, UiIcon, UiInput, UiSegmented, UiSwitch, UiTextarea, UiTooltip, UiUpload } from '@/components/ui'
+import { UiButton, UiDateField, UiEmpty, UiForm, UiFormField, UiIcon, UiInput, UiLoadingState, UiSegmented, UiSwitch, UiTextarea, UiTooltip, UiUpload } from '@/components/ui'
 import type { UploadRequestOptions } from '@/components/ui'
 import { useRoute, useRouter } from 'vue-router'
 import { createMusicTrack, getAdminMusicTrack, suggestMusicTrack, updateMusicTrack } from '@/api/music'

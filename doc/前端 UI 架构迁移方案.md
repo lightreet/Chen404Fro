@@ -634,7 +634,7 @@ src/composables/useMotionPreset.ts
 | `el-slider` | `UiSlider` | 先包后换 |
 | `el-tooltip` | `UiTooltip` | 中期统一 |
 | `el-empty` | `UiEmpty` | 中期统一 |
-| `v-loading` | `UiLoadingState` | 中期统一 |
+| `v-loading` | `UiLoadingState` | 已完成统一 |
 | `ElMessage` | `notify.*` | 立即收敛 |
 | `ElMessageBox` | `confirmAction()` | 立即收敛 |
 
@@ -752,7 +752,7 @@ src/composables/useMotionPreset.ts
 
 ## 17. 迁移进度（持续更新）
 
-> 最近更新：2026-06-12（阶段 3、4、5 页面层收口完成，阶段 6 第一批高频入口与高频业务组件收尾完成）
+> 最近更新：2026-06-12（阶段 3、4、5 页面层收口完成，阶段 6 第一批高频入口与高频业务组件收尾完成；`UiLoadingState` 落地、业务页 `v-loading` 完成收口；边界脚本已扩展为同时检查模板 `<el-*>` 与 `v-loading`）
 
 ### 已完成
 
@@ -819,16 +819,17 @@ src/composables/useMotionPreset.ts
 - `Tag.vue`、`UserProfile.vue`、`About.vue`、`Guestbook.vue` 等少量页面已完成页面层收口，后续仍可按收益继续做视觉层统一，但不再阻塞架构迁移主线
 
 **中期组件待补建 / 待演进**
-- 已补建：`UiUpload`、`UiDateField`、`UiSlider`、`UiNumberField`、`UiSkeleton`、`UiForm`、`UiFormField`、`UiTable`、`UiTableColumn`、`UiDrawer`、`UiAvatar`、`UiRadioGroup`、`UiSegmented`、`UiDropdown*`、`UiDivider`
+- 已补建：`UiUpload`、`UiDateField`、`UiSlider`、`UiNumberField`、`UiSkeleton`、`UiForm`、`UiFormField`、`UiTable`、`UiTableColumn`、`UiDrawer`、`UiAvatar`、`UiRadioGroup`、`UiSegmented`、`UiDropdown*`、`UiDivider`、`UiLoadingState`
+- `UiLoadingState` 为项目自有实现（`UiIcon` + token，不再依赖 `el-*`），业务页 `v-loading` 已统一收口到该组件；模板侧仅 `UiTable` 薄封装内部保留 `v-loading`
 - 可选后续：继续把 `components/ui/*` 薄封装内部的 Element Plus 依赖替换为更纯的项目实现，而不是继续在业务页面里做标签替换
-- 当前 `src/views` 下业务页面残余 `el-*` 为 `0`；高频业务组件的页面层 `el-*` 也已清空；`src/components` 下剩余的 `el-*` 已收口到 `components/ui/*` 薄封装内部
+- 当前 `src/views` 下业务页面残余 `el-*` 与 `v-loading` 均为 `0`；高频业务组件的页面层 `el-*` 也已清空；`src/components` 下剩余的 `el-*` / `v-loading` 已收口到 `components/ui/*` 薄封装内部
 
-> 最近更新：2026-06-12（阶段 3、4、5 页面层全部完成；阶段 6 第一批高频入口与高频业务组件收尾完成；`src/views` 下业务页面残余 `el-*` 为 `0`，高频业务组件页面层 `el-*` 为 `0`；中期 primitive 已补齐 `UiSkeleton / UiUpload / UiDateField / UiSlider / UiNumberField / UiForm / UiFormField / UiTable / UiTableColumn / UiDrawer / UiAvatar / UiRadioGroup / UiSegmented / UiDropdown* / UiDivider`；剩余主要是设计系统内部薄封装继续依赖 Element Plus，以及包体与测试等工程收尾）
+> 最近更新：2026-06-12（阶段 3、4、5 页面层全部完成；阶段 6 第一批高频入口与高频业务组件收尾完成；`src/views` 下业务页面残余 `el-*` 为 `0`、业务页 `v-loading` 为 `0`，高频业务组件页面层 `el-*` 为 `0`；中期 primitive 已补齐 `UiSkeleton / UiUpload / UiDateField / UiSlider / UiNumberField / UiForm / UiFormField / UiTable / UiTableColumn / UiDrawer / UiAvatar / UiRadioGroup / UiSegmented / UiDropdown* / UiDivider / UiLoadingState`；剩余主要是设计系统内部薄封装继续依赖 Element Plus，以及包体与测试等工程收尾）
 
 ## 后续依赖策略
 
 - 不再把“彻底删除 `element-plus` 主依赖”作为当前阶段硬目标。
-- 当前推荐策略是：业务页与业务组件不再直接引用 `element-plus` / `@element-plus/icons-vue`，仅允许 `components/ui`、`lib/feedback`、兼容层、或必要的基础结构适配层内部保留依赖。
+- 当前推荐策略是：业务页与业务组件不再直接引用 `element-plus` / `@element-plus/icons-vue`，仅允许 `components/ui`、`lib/feedback`、兼容层、或必要的基础结构适配层内部保留依赖；`v-loading` 统一改走 `UiLoadingState`。
 - `@element-plus/icons-vue` 优先继续收敛到本地兼容层，再逐步替换为 `UiIcon` 语义名。
-- 只有在 `UiForm / UiTable / UiDialog / UiAvatar / UiDropdown / UiDivider / UiDrawer` 等基础设施齐备后，才重新评估是否彻底移除 `element-plus` 主依赖。
-- 已补充边界检查脚本：`npm run check:element-boundary`。后续新增代码若在业务层直接引入 `element-plus` 或 `@element-plus/icons-vue`，应视为架构回流并优先修正。
+- 只有在 `UiForm / UiTable / UiDialog / UiAvatar / UiDropdown / UiDivider / UiDrawer / UiLoadingState` 等基础设施齐备后，才重新评估是否彻底移除 `element-plus` 主依赖。
+- 已补充边界检查脚本：`npm run check:element-boundary`。它当前同时检查业务层 direct import、模板里的 `<el-*>` 与 `v-loading`。后续新增代码若在业务层直接引入 `element-plus` 或 `@element-plus/icons-vue`，或重新出现 `<el-*>`、`v-loading`，应视为架构回流并优先修正。

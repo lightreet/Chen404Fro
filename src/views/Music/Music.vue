@@ -110,17 +110,12 @@
       <section class="music-shelf">
         <div class="shelf-heading">
           <div class="shelf-heading__actions">
-            <div class="shelf-search-shell">
-              <UiInput
-                v-model="playlistSearch"
-                class="playlist-manager__search"
-                clearable
-                prefix-icon="search"
-                placeholder="搜索歌曲、歌手、专辑或标签"
-                @keyup.enter="handlePlaylistSearchSubmit"
-              />
-              <UiButton class="shelf-search-button" @click="handlePlaylistSearchSubmit">搜索</UiButton>
-            </div>
+            <UiSearchBar
+              v-model="playlistSearch"
+              class="shelf-search-shell"
+              placeholder="搜索歌曲、歌手、专辑或标签"
+              @search="handlePlaylistSearchSubmit"
+            />
             <div v-if="canManage" class="playlist-status-filter" aria-label="歌曲状态筛选">
               <button
                 v-for="option in playlistStatusOptions"
@@ -1856,12 +1851,17 @@ function handlePlaylistSearchSubmit() {
 }
 
 .shelf-heading__actions {
+  display: flex;
   flex: 1 1 auto;
   min-width: 0;
   align-items: center;
-  gap: clamp(18px, 3vw, 56px);
-  flex-wrap: wrap;
+  gap: 16px;
   justify-content: flex-start;
+}
+
+.shelf-search-shell {
+  flex: 0 1 320px;
+  min-width: 180px;
 }
 
 .shelf-search-shell {
@@ -3142,12 +3142,12 @@ function handlePlaylistSearchSubmit() {
 }
 
 .playlist-status-filter {
-  flex: 0 1 auto;
+  flex: 1;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: clamp(28px, 3.2vw, 56px);
-  min-width: 292px;
+  gap: clamp(20px, 2.4vw, 40px);
+  min-width: 0;
   padding: 0;
   border: 0;
   border-radius: 0;
@@ -3158,6 +3158,8 @@ function handlePlaylistSearchSubmit() {
 .playlist-status-filter__option {
   position: relative;
   flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
   min-width: 48px;
   height: 36px;
   padding: 0 2px;
@@ -3198,6 +3200,10 @@ function handlePlaylistSearchSubmit() {
   min-height: 38px;
   border-radius: 999px;
   font-weight: 800;
+}
+
+.shelf-heading__refresh {
+  color: var(--color-text-secondary);
 }
 
 .shelf-heading__add.el-button {

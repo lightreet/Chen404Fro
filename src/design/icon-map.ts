@@ -92,7 +92,11 @@ export const iconMap = {
   compass: 'mdi:compass-outline',
   connection: 'mdi:transit-connection-variant',
   medal: 'mdi:medal-outline',
-  postcard: 'mdi:postage-stamp',
+  postcard: 'mdi:account-plus-outline',
+
+  // 主题
+  sun: 'mdi:white-balance-sunny',
+  moon: 'mdi:weather-night',
 } as const
 
 /** Element Plus 组件名 -> 语义名，用于迁移时把旧的 EP 图标平滑换掉 */
@@ -145,6 +149,8 @@ export const elementIconAlias: Record<string, IconName> = {
   Loading: 'loading',
   Camera: 'image',
   Minus: 'close',
+  Sunny: 'sun',
+  Moon: 'moon',
 }
 
 /** 解析任意输入到最终 Iconify 名（找不到时原样返回，方便直接传 iconify 名） */

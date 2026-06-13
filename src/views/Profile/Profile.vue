@@ -60,17 +60,12 @@
                       :options="articleStatusOptions"
                       @change="loadMyArticles(1)"
                     />
-                    <div class="search-shell">
-                      <UiInput
-                        v-model="articleKeyword"
-                        placeholder="搜索文章..."
-                        clearable
-                        prefix-icon="search"
-                        class="keyword-input"
-                        @enter="loadMyArticles(1)"
-                      />
-                      <UiButton class="search-button" @click="loadMyArticles(1)">搜索</UiButton>
-                    </div>
+                    <UiSearchBar
+                      v-model="articleKeyword"
+                      class="article-search"
+                      placeholder="搜索文章..."
+                      @search="loadMyArticles(1)"
+                    />
                   </div>
                 </div>
 
@@ -273,7 +268,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue'
 import { notify, confirmDelete } from '@/lib/feedback'
-import { UiPanel, UiAvatar, UiButton, UiDialog, UiForm, UiFormField, UiIcon, UiInput, UiPagination, UiRadioGroup, UiSkeleton, UiTextarea, UiUpload } from '@/components/ui'
+import { UiPanel, UiAvatar, UiButton, UiDialog, UiForm, UiFormField, UiIcon, UiInput, UiPagination, UiRadioGroup, UiSearchBar, UiSkeleton, UiTextarea, UiUpload } from '@/components/ui'
 import { useRoute, useRouter } from 'vue-router'
 import DefaultLayout from '@/layouts/DefaultLayout.vue'
 import { useUserStore } from '@/stores/user'
@@ -1052,95 +1047,9 @@ onMounted(() => {
   background: rgba(255, 241, 246, 0.72);
 }
 
-.search-shell {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  min-width: 0;
-  padding: 0;
-  width: min(100%, 248px);
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.94);
-  border: 1px solid rgba(245, 155, 188, 0.12);
-  box-shadow:
-    0 8px 18px rgba(245, 155, 188, 0.05),
-    inset 0 1px 0 rgba(255, 255, 255, 0.88);
-}
-
-.keyword-input {
-  flex: 1;
-  width: auto;
-}
-
-.keyword-input :deep(.el-input__wrapper) {
-  min-height: 36px;
-  padding-left: 12px;
-  padding-right: 2px;
-  border-radius: 999px;
-  box-shadow: none;
-  background: transparent;
-  display: flex;
-  align-items: center;
-}
-
-.keyword-input :deep(.el-input__prefix) {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  height: 100%;
-}
-
-.keyword-input :deep(.el-input__prefix-inner) {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  height: 100%;
-  color: var(--profile-muted);
-}
-
-.keyword-input :deep(.el-input__inner) {
-  height: 100%;
-  color: var(--profile-text);
-  font-size: 13px;
-  line-height: 36px;
-}
-
-.keyword-input :deep(.el-input__inner::placeholder) {
-  color: #a3a6bb;
-}
-
-.search-button {
-  min-width: 76px;
-  height: 36px;
-  padding: 0 12px;
-  border: none;
-  border-radius: 999px;
-  background: linear-gradient(135deg, rgba(245, 155, 188, 0.96), rgba(255, 198, 220, 0.96));
-  color: #fff;
-  font-size: 13px;
-  font-weight: 600;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  line-height: 1;
-  box-shadow: 0 10px 22px rgba(245, 155, 188, 0.18);
-  transition:
-    transform 0.22s ease,
-    box-shadow 0.22s ease,
-    filter 0.22s ease;
-}
-
-.search-button :deep(span) {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  line-height: 1;
-}
-
-.search-button:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 14px 26px rgba(245, 155, 188, 0.22);
-  filter: saturate(1.04);
+.article-search {
+  flex: 0 1 280px;
+  min-width: 180px;
 }
 
 .article-list-shell,
@@ -1297,22 +1206,9 @@ onMounted(() => {
   }
 
   .status-radio,
-  .search-shell {
+  .article-search {
     width: 100%;
-  }
-
-  .keyword-input {
-    width: 100%;
-  }
-
-  .search-shell {
-    flex-direction: column;
-    align-items: stretch;
-    border-radius: 24px;
-  }
-
-  .search-button {
-    width: 100%;
+    flex-basis: auto;
   }
 }
 </style>

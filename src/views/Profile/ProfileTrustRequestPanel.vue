@@ -1,5 +1,5 @@
 <template>
-  <div class="trust-panel" v-loading="loading">
+  <UiLoadingState :loading="loading" message="正在加载好友申请状态..." class="trust-panel">
     <section class="trust-hero">
       <div>
         <h3>好友申请</h3>
@@ -83,13 +83,13 @@
         </UiForm>
       </section>
     </template>
-  </div>
+  </UiLoadingState>
 </template>
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { notify } from '@/lib/feedback';
-import { UiBadge, UiButton, UiForm, UiFormField, UiInput, UiUpload } from '@/components/ui'
+import { UiBadge, UiButton, UiForm, UiFormField, UiInput, UiLoadingState, UiUpload } from '@/components/ui'
 import type { UploadRequestOptions } from '@/components/ui'
 import type { AccentTone } from '@/design/tokens'
 import { createTrustRequest, getMyLatestTrustRequest } from '@/api/trust-request'

@@ -8,7 +8,8 @@
       </template>
 
       <div class="files-body">
-        <section v-loading="statsLoading" class="stats-hero">
+        <UiLoadingState :loading="statsLoading" message="正在加载统计..." class="stats-loading-shell">
+        <section class="stats-hero">
           <button
             v-for="item in summaryCards"
             :key="item.key"
@@ -23,6 +24,7 @@
             <em class="stats-card__action">{{ item.key === 'total' ? '查看全部文件' : '点击筛选列表' }}</em>
           </button>
         </section>
+        </UiLoadingState>
 
         <section class="files-section stats-panel">
           <div class="section-head section-head--panel">
@@ -191,7 +193,7 @@
         </div>
       </template>
 
-      <div v-if="detail" v-loading="detailLoading" class="drawer-body">
+      <UiLoadingState v-if="detail" :loading="detailLoading" message="正在加载文件详情..." class="drawer-body">
         <div class="drawer-preview">
           <img v-if="isImage(detail)" :src="detail.fileUrl" :alt="displayName(detail)" />
           <div v-else class="drawer-fallback">
@@ -260,7 +262,7 @@
             </article>
           </div>
         </div>
-      </div>
+      </UiLoadingState>
     </UiDrawer>
   </div>
 </template>
@@ -269,7 +271,7 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import * as echarts from 'echarts'
 import { notify } from '@/lib/feedback'
-import { UiPanel, UiButton, UiBadge, UiDrawer, UiInput, UiPagination, UiSelect, UiTable, UiTableColumn, UiTextarea } from '@/components/ui'
+import { UiPanel, UiButton, UiBadge, UiDrawer, UiInput, UiLoadingState, UiPagination, UiSelect, UiTable, UiTableColumn, UiTextarea } from '@/components/ui'
 import { AppStatusPill } from '@/components/app'
 import type { AccentTone } from '@/design/tokens'
 import {

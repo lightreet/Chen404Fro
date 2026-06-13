@@ -1444,7 +1444,7 @@ watch(
 }
 
 .journal-action--danger {
-  color: #d07a8f;
+  color: #fff;
 }
 
 .journal-action--manage {

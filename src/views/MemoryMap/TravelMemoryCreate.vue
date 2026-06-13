@@ -1,6 +1,6 @@
 ﻿<template>
   <div class="travel-memory-create-page">
-    <section v-loading="loading" class="travel-memory-editor">
+    <UiLoadingState :loading="loading" message="正在加载旅行编辑器..." class="travel-memory-editor">
       <div class="travel-memory-create__topbar">
         <div class="travel-memory-create__topbar-inner">
           <UiButton variant="text" icon="arrow-left" class="travel-memory-create__back" @click="goBack">返回</UiButton>
@@ -462,7 +462,7 @@
         </div>
       </div>
       </template>
-    </section>
+    </UiLoadingState>
   </div>
 </template>
 
@@ -470,7 +470,7 @@
 import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue'
 import type { AxiosError } from 'axios'
 import { notify } from '@/lib/feedback'
-import { UiButton, UiDateField, UiForm, UiFormField, UiIcon, UiInput, UiSwitch, UiTextarea, UiUpload } from '@/components/ui'
+import { UiButton, UiDateField, UiForm, UiFormField, UiIcon, UiInput, UiLoadingState, UiSwitch, UiTextarea, UiUpload } from '@/components/ui'
 import type { UploadRequestOptions } from '@/components/ui'
 import { useRoute, useRouter } from 'vue-router'
 import TravelMemoryMap from '@/components/TravelMemoryMap/TravelMemoryMap.vue'

@@ -7,79 +7,86 @@
           <img :src="siteLogo" :alt="siteName" class="logo-img" />
         </router-link>
 
-        <!-- 导航菜单 -->
-        <nav class="nav-menu" v-if="!isMobile">
-          <router-link
-            v-for="item in navItems"
-            :key="item.key"
-            :to="item.to"
-            class="nav-item"
-            :class="{ 'is-active': isNavItemActive(item) }"
-          >
-            <UiIcon class="nav-icon" :name="item.icon" />
-            <span>{{ item.name }}</span>
-          </router-link>
-        </nav>
+        <div class="desktop-toolbar" v-if="!isMobile">
+          <!-- 导航菜单 -->
+          <nav class="nav-menu">
+            <router-link
+              v-for="item in navItems"
+              :key="item.key"
+              :to="item.to"
+              class="nav-item"
+              :class="{ 'is-active': isNavItemActive(item) }"
+            >
+              <UiIcon class="nav-icon" :name="item.icon" />
+              <span>{{ item.name }}</span>
+            </router-link>
+          </nav>
 
-        <!-- 右侧操作区 -->
-        <div class="header-actions">
-          <!-- 编写文章按钮（仅管理员显示） -->
-          <router-link
-            v-if="isLoggedIn && canCreateArticle && !isMobile"
-            to="/article/edit"
-            class="write-btn"
-          >
-            <UiButton size="sm" variant="ghost" icon="edit" class="write-link rounded-full">
-              <span>编写</span>
-            </UiButton>
-          </router-link>
+          <!-- 右侧操作区 -->
+          <div class="header-actions">
+            <!-- 编写文章按钮（仅管理员显示） -->
+            <router-link
+              v-if="isLoggedIn && canCreateArticle"
+              to="/article/edit"
+              class="write-btn"
+            >
+              <UiButton size="sm" variant="ghost" icon="edit" class="write-link rounded-full">
+                <span>编写</span>
+              </UiButton>
+            </router-link>
 
+            <button class="action-btn" @click="toggleTheme">
+              <UiIcon :name="isDark ? 'Sunny' : 'Moon'" />
+            </button>
+
+            <!-- 未登录显示登录按钮 -->
+            <router-link v-if="!isLoggedIn" to="/login" class="login-link">
+              <UiButton variant="primary" size="sm" icon="user" class="login-btn rounded-full">
+                <span>登录</span>
+              </UiButton>
+            </router-link>
+
+            <!-- 已登录显示用户菜单 -->
+            <UiDropdown v-if="isLoggedIn" @command="handleUserCommand" class="user-menu">
+              <div class="user-avatar-wrapper">
+                <UiAvatar
+                  :src="user?.avatar"
+                  :size="32"
+                  class="user-avatar"
+                >
+                  {{ user?.nickname?.charAt(0) || user?.username?.charAt(0) || 'U' }}
+                </UiAvatar>
+              </div>
+              <template #dropdown>
+                <UiDropdownMenu>
+                  <div class="dropdown-user-info">
+                    <span class="dropdown-nickname">{{ user?.nickname || user?.username }}</span>
+                    <span class="dropdown-role">{{ roleText }}</span>
+                  </div>
+                  <UiDropdownItem divided command="profile">
+                    <UiIcon name="User" />
+                    个人中心
+                  </UiDropdownItem>
+                  <UiDropdownItem v-if="isAdmin" command="admin">
+                    <UiIcon name="Setting" />
+                    后台管理
+                  </UiDropdownItem>
+                  <UiDropdownItem divided command="logout">
+                    <UiIcon name="SwitchButton" />
+                    退出登录
+                  </UiDropdownItem>
+                </UiDropdownMenu>
+              </template>
+            </UiDropdown>
+          </div>
+        </div>
+
+        <div class="header-actions mobile-actions" v-if="isMobile">
           <button class="action-btn" @click="toggleTheme">
             <UiIcon :name="isDark ? 'Sunny' : 'Moon'" />
           </button>
 
-          <!-- 未登录显示登录按钮 -->
-          <router-link v-if="!isLoggedIn && !isMobile" to="/login" class="login-link">
-            <UiButton variant="primary" size="sm" icon="user" class="login-btn rounded-full">
-              <span>登录</span>
-            </UiButton>
-          </router-link>
-
-          <!-- 已登录显示用户菜单 -->
-          <UiDropdown v-if="isLoggedIn && !isMobile" @command="handleUserCommand" class="user-menu">
-            <div class="user-avatar-wrapper">
-              <UiAvatar
-                :src="user?.avatar"
-                :size="32"
-                class="user-avatar"
-              >
-                {{ user?.nickname?.charAt(0) || user?.username?.charAt(0) || 'U' }}
-              </UiAvatar>
-            </div>
-            <template #dropdown>
-              <UiDropdownMenu>
-                <div class="dropdown-user-info">
-                  <span class="dropdown-nickname">{{ user?.nickname || user?.username }}</span>
-                  <span class="dropdown-role">{{ roleText }}</span>
-                </div>
-                <UiDropdownItem divided command="profile">
-                  <UiIcon name="User" />
-                  个人中心
-                </UiDropdownItem>
-                <UiDropdownItem v-if="isAdmin" command="admin">
-                  <UiIcon name="Setting" />
-                  后台管理
-                </UiDropdownItem>
-                <UiDropdownItem divided command="logout">
-                  <UiIcon name="SwitchButton" />
-                  退出登录
-                </UiDropdownItem>
-              </UiDropdownMenu>
-            </template>
-          </UiDropdown>
-
-          <!-- 移动端菜单按钮 -->
-          <button class="action-btn menu-btn" v-if="isMobile" @click="toggleMobileMenu">
+          <button class="action-btn menu-btn" @click="toggleMobileMenu">
             <UiIcon name="Menu" />
           </button>
         </div>
@@ -396,6 +403,25 @@ const handleLogout = async () => {
 }
 
 // 导航菜单
+.desktop-toolbar {
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-width: 0;
+  max-width: max-content;
+  min-height: 54px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: rgba(255, 251, 253, 0.22);
+  border: 1px solid rgba(255, 235, 242, 0.42);
+  box-shadow:
+    0 14px 30px rgba(120, 88, 104, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.54);
+  backdrop-filter: blur(20px) saturate(1.12);
+}
+
 .nav-menu {
   flex: 1 1 auto;
   display: flex;
@@ -405,15 +431,6 @@ const handleLogout = async () => {
   max-width: max-content;
   overflow-x: auto;
   overflow-y: hidden;
-  min-height: 54px;
-  padding: 8px 14px;
-  border-radius: 999px;
-  background: rgba(255, 251, 253, 0.22);
-  border: 1px solid rgba(255, 235, 242, 0.42);
-  box-shadow:
-    0 14px 30px rgba(120, 88, 104, 0.1),
-    inset 0 1px 0 rgba(255, 255, 255, 0.54);
-  backdrop-filter: blur(20px) saturate(1.12);
   scrollbar-width: none;
 
   &::-webkit-scrollbar {
@@ -467,13 +484,22 @@ const handleLogout = async () => {
   display: flex;
   align-items: center;
   gap: 8px;
-  min-height: 54px;
-  padding: 8px 14px;
+  min-height: 38px;
+  padding-left: 10px;
+  margin-left: 4px;
+  border-left: 1px solid rgba(114, 88, 101, 0.14);
+}
+
+.mobile-actions {
+  min-height: 50px;
+  padding: 6px 8px;
+  margin-left: 0;
+  border-left: 0;
   border-radius: 999px;
-  background: rgba(255, 251, 253, 0.18);
+  background: rgba(255, 251, 253, 0.22);
   border: 1px solid rgba(255, 235, 242, 0.42);
   box-shadow:
-    0 14px 30px rgba(120, 88, 104, 0.08),
+    0 14px 30px rgba(120, 88, 104, 0.1),
     inset 0 1px 0 rgba(255, 255, 255, 0.54);
   backdrop-filter: blur(20px) saturate(1.12);
 }
@@ -751,13 +777,17 @@ const handleLogout = async () => {
   background: rgba(78, 82, 90, 0.78);
 }
 
-[data-theme="dark"] .nav-menu,
-[data-theme="dark"] .header-actions {
+[data-theme="dark"] .desktop-toolbar,
+[data-theme="dark"] .mobile-actions {
   background: rgba(32, 28, 34, 0.34);
   border-color: rgba(100, 89, 100, 0.38);
   box-shadow:
     0 18px 34px rgba(0, 0, 0, 0.24),
     inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+[data-theme="dark"] .header-actions {
+  border-left-color: rgba(255, 255, 255, 0.08);
 }
 
 [data-theme="dark"] .nav-item {
@@ -787,9 +817,12 @@ const handleLogout = async () => {
     gap: 10px;
   }
 
+  .desktop-toolbar {
+    padding-inline: 10px;
+  }
+
   .nav-menu {
     gap: 4px;
-    padding-inline: 10px;
   }
 
   .nav-item {
@@ -805,10 +838,6 @@ const handleLogout = async () => {
 
   .header-content {
     min-height: 56px;
-  }
-
-  .header-actions {
-    padding: 6px 8px;
   }
 
   .action-btn {

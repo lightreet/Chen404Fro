@@ -7,7 +7,7 @@
       </div>
     </template>
 
-    <div v-loading="loading" class="settings-body">
+    <UiLoadingState :loading="loading" message="正在加载站点配置..." class="settings-body">
       <UiTabs v-model="activeTab" :items="tabItems" variant="line" class="settings-tabs">
         <section v-show="activeTab === 'basic'" class="settings-section">
             <div class="section-head">
@@ -252,14 +252,14 @@
         <UiButton variant="text" @click="loadConfig">重置</UiButton>
         <UiButton variant="primary" :loading="saving" @click="saveConfig">保存配置</UiButton>
       </div>
-    </div>
+    </UiLoadingState>
   </UiPanel>
 </template>
 
 <script setup lang="ts">
 import { onMounted, reactive, ref } from 'vue';
 import { notify } from '@/lib/feedback';
-import { UiPanel, UiButton, UiTabs, UiBadge, UiForm, UiFormField, UiInput, UiSwitch, UiTextarea, UiUpload } from '@/components/ui';
+import { UiPanel, UiButton, UiTabs, UiBadge, UiForm, UiFormField, UiInput, UiLoadingState, UiSwitch, UiTextarea, UiUpload } from '@/components/ui';
 import type { UiTabItem } from '@/components/ui';
 import type { UploadRequestOptions } from '@/components/ui';
 import { getSiteConfig, updateSiteConfig } from '@/api/home';

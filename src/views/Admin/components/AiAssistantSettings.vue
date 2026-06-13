@@ -1,5 +1,5 @@
 <template>
-  <section class="ai-settings" v-loading="loading">
+  <UiLoadingState :loading="loading" message="正在加载 AI 配置..." class="ai-settings">
     <div class="ai-settings__hero">
       <div>
         <p class="eyebrow">Lyra Control Room</p>
@@ -242,13 +242,13 @@
       <p v-if="testResult.sampleText">{{ testResult.sampleText }}</p>
       <p v-if="testResult.latencyMs">耗时：{{ testResult.latencyMs }}ms</p>
     </div>
-  </section>
+  </UiLoadingState>
 </template>
 
 <script setup lang="ts">
 import { onMounted, reactive, ref } from 'vue';
 import { notify } from '@/lib/feedback';
-import { UiButton, UiTabs, UiTooltip, UiForm, UiFormField, UiIcon, UiInput, UiSwitch, UiSelect, UiSlider, UiNumberField, UiTextarea } from '@/components/ui';
+import { UiButton, UiTabs, UiTooltip, UiForm, UiFormField, UiIcon, UiInput, UiLoadingState, UiSwitch, UiSelect, UiSlider, UiNumberField, UiTextarea } from '@/components/ui';
 import type { UiTabItem } from '@/components/ui';
 import { getAiAdminConfig, testAiAdminConfig, updateAiAdminConfig } from '@/api/ai-admin';
 import type { AiAdminConfig, AiConfigTestResponse } from '@/types';

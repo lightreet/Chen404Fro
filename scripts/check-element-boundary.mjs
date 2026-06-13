@@ -17,6 +17,10 @@ const allowedElementRuntimeFiles = new Set([
   'src/utils/validation.ts',
 ])
 
+const allowedElementTemplatePrefixes = [
+  'src/components/ui/',
+]
+
 const violations = []
 
 async function collectFiles(dir, result = []) {
@@ -39,17 +43,31 @@ function isAllowed(relativePath) {
   return allowedImportPrefixes.some((prefix) => relativePath.startsWith(prefix))
 }
 
+function isAllowedTemplate(relativePath) {
+  return allowedElementTemplatePrefixes.some((prefix) => relativePath.startsWith(prefix))
+}
+
 function checkContent(relativePath, content) {
   const importPattern = /from\s+['"](@element-plus\/icons-vue|element-plus)['"]/g
-  let matched = false
   for (const match of content.matchAll(importPattern)) {
-    matched = true
     if (!isAllowed(relativePath)) {
       violations.push(`${relativePath}: direct import ${match[1]}`)
     }
   }
 
-  if (!matched) return
+  const templateElementPattern = /<el-[a-z0-9-]+/gi
+  for (const match of content.matchAll(templateElementPattern)) {
+    if (!isAllowedTemplate(relativePath)) {
+      violations.push(`${relativePath}: template element ${match[0]}`)
+    }
+  }
+
+  const loadingDirectivePattern = /\bv-loading(?=[\s=>])/g
+  for (const match of content.matchAll(loadingDirectivePattern)) {
+    if (!isAllowedTemplate(relativePath)) {
+      violations.push(`${relativePath}: loading directive ${match[0]}`)
+    }
+  }
 }
 
 const files = await collectFiles(srcRoot)
