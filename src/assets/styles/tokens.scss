@@ -1,0 +1,91 @@
+// Chen404 设计系统 - 语义 Token 层
+//
+// 这一层在不破坏历史变量 (variables.scss) 的前提下，建立稳定的语义命名。
+// 新组件 (Ui* / App*) 一律使用本文件的 --color-* / --radius-* / --space-* 等，
+// 历史页面仍可继续使用旧变量，二者通过下方别名保持一致。
+
+:root {
+  // ---- 颜色：品牌 / 强调 ----
+  --color-accent: var(--primary);
+  --color-accent-soft: color-mix(in srgb, var(--primary) 14%, transparent);
+  --color-accent-strong: var(--primary-dark);
+
+  // ---- 颜色：表面 ----
+  --color-surface: var(--bg-secondary);
+  --color-surface-muted: var(--bg-hover);
+  --color-surface-elevated: var(--bg-elevated);
+  --color-surface-glass: var(--bg-glass);
+
+  // ---- 颜色：边框 ----
+  --color-border: var(--border-color);
+  --color-border-light: var(--border-light);
+  --color-border-strong: var(--border-strong);
+
+  // ---- 颜色：文字 ----
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-tertiary: var(--text-tertiary);
+  --color-text-link: var(--text-link);
+
+  // ---- 颜色：语义状态 ----
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-danger: var(--danger);
+  --color-info: var(--info);
+
+  // 状态柔光底色，用于 Badge / StatusPill 背景
+  --color-success-soft: color-mix(in srgb, var(--success) 16%, transparent);
+  --color-warning-soft: color-mix(in srgb, var(--warning) 16%, transparent);
+  --color-danger-soft: color-mix(in srgb, var(--danger) 16%, transparent);
+  --color-info-soft: color-mix(in srgb, var(--info) 16%, transparent);
+  --color-neutral-soft: color-mix(in srgb, var(--text-secondary) 12%, transparent);
+
+  // ---- 圆角 ----
+  // 复用历史值，并补一个 pill
+  --radius-pill: 999px;
+
+  // ---- 间距（语义别名，沿用历史 spacing 比例）----
+  --space-xs: var(--spacing-xs);
+  --space-sm: var(--spacing-sm);
+  --space-md: var(--spacing-md);
+  --space-lg: var(--spacing-lg);
+  --space-xl: var(--spacing-xl);
+  --space-2xl: var(--spacing-2xl);
+
+  // ---- 字号 ----
+  --font-size-xs: 12px;
+  --font-size-sm: 13px;
+  --font-size-base: 14px;
+  --font-size-md: 15px;
+  --font-size-lg: 17px;
+  --font-size-xl: 20px;
+  --font-size-2xl: 24px;
+
+  // ---- 行高 ----
+  --line-height-tight: 1.25;
+  --line-height-base: 1.6;
+  --line-height-loose: 1.8;
+
+  // ---- 动效 ----
+  --motion-duration-fast: 160ms;
+  --motion-duration-base: 240ms;
+  --motion-duration-slow: 360ms;
+  --motion-ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+  --motion-ease-entrance: cubic-bezier(0.16, 1, 0.3, 1);
+  --motion-ease-exit: cubic-bezier(0.4, 0, 1, 1);
+  --motion-ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  // ---- 层级 ----
+  --z-base: 1;
+  --z-sticky: 100;
+  --z-dropdown: 1000;
+  --z-overlay: 2000;
+  --z-dialog: 2100;
+  --z-popover: 2200;
+  --z-toast: 3000;
+
+  // ---- 控件尺寸（输入 / 按钮统一高度）----
+  --control-height-sm: 32px;
+  --control-height-md: 38px;
+  --control-height-lg: 44px;
+}

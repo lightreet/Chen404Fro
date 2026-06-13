@@ -16,7 +16,7 @@
       <FeatureAccessCover
         v-if="!authReady || !isLoggedIn"
         v-bind="trustRequestLoginCover"
-        :icon="Postcard"
+        icon="Postcard"
       />
 
       <section v-else class="trust-request-shell">
@@ -29,7 +29,6 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { storeToRefs } from 'pinia'
-import { Postcard } from '@element-plus/icons-vue'
 import DefaultLayout from '@/layouts/DefaultLayout.vue'
 import PageHero from '@/components/PageHero/PageHero.vue'
 import FeatureAccessCover from '@/components/FeatureAccessCover.vue'

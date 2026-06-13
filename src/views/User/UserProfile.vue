@@ -110,7 +110,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue';
-import { ElMessage } from 'element-plus';
+import { notify } from '@/lib/feedback';
 import { useRoute } from 'vue-router';
 import DefaultLayout from '@/layouts/DefaultLayout.vue';
 import PageHero from '@/components/PageHero/PageHero.vue';
@@ -217,9 +217,9 @@ async function copyEmail() {
   if (!profile.value?.email) return;
   try {
     await navigator.clipboard.writeText(profile.value.email);
-    ElMessage.success('邮箱已复制');
+    notify.success('邮箱已复制');
   } catch {
-    ElMessage.warning('复制失败，可以手动选择邮箱');
+    notify.warning('复制失败，可以手动选择邮箱');
   }
 }
 

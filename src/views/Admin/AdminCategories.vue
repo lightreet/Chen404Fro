@@ -1,68 +1,61 @@
 <template>
-  <el-card class="info-card" shadow="never">
-    <template #header>
-      <div class="header-row">
-        <span class="card-title">
-          <el-icon class="card-icon"><CollectionTag /></el-icon>
-          分类管理
-        </span>
-        <el-button type="primary" @click="openCategoryDialog()">
-          <el-icon><Plus /></el-icon>
-          新建分类
-        </el-button>
-      </div>
+  <UiPanel icon="category" title="分类管理" flush>
+    <template #actions>
+      <UiButton variant="primary" icon="add" @click="openCategoryDialog()">新建分类</UiButton>
     </template>
 
-    <el-table :data="categoriesList" style="width: 100%" v-loading="categoriesLoading">
-      <el-table-column prop="id" label="ID" width="120" />
-      <el-table-column prop="name" label="分类名称" min-width="180" />
-      <el-table-column label="图标" width="92">
-        <template #default="{ row }">
-          <span class="table-icon-cell">
-            <CategoryIcon :icon="row.icon" width="18" height="18" />
-          </span>
-        </template>
-      </el-table-column>
-      <el-table-column prop="slug" label="别名" min-width="180" />
-      <el-table-column prop="sortOrder" label="排序" width="90" />
-      <el-table-column prop="status" label="状态" width="100">
-        <template #default="{ row }">
-          <el-tag :type="row.status === 1 ? 'success' : 'info'">
-            {{ row.status === 1 ? '启用' : '停用' }}
-          </el-tag>
-        </template>
-      </el-table-column>
-      <el-table-column label="操作" width="180" fixed="right">
-        <template #default="{ row }">
-          <el-button type="primary" link @click="openCategoryDialog(row)">编辑</el-button>
-          <el-button type="danger" link @click="handleDeleteCategory(row)">删除</el-button>
-        </template>
-      </el-table-column>
-    </el-table>
+    <div class="panel-inner">
+      <UiTable :data="categoriesList" style="width: 100%" :loading="categoriesLoading">
+        <UiTableColumn prop="id" label="ID" width="120" />
+        <UiTableColumn prop="name" label="分类名称" min-width="180" />
+        <UiTableColumn label="图标" width="92">
+          <template #default="{ row }">
+            <span class="table-icon-cell">
+              <CategoryIcon :icon="row.icon" width="18" height="18" />
+            </span>
+          </template>
+        </UiTableColumn>
+        <UiTableColumn prop="slug" label="别名" min-width="180" />
+        <UiTableColumn prop="sortOrder" label="排序" width="90" />
+        <UiTableColumn prop="status" label="状态" width="100">
+          <template #default="{ row }">
+            <AppStatusPill :status="row.status === 1 ? 'enabled' : 'disabled'">
+              {{ row.status === 1 ? '启用' : '停用' }}
+            </AppStatusPill>
+          </template>
+        </UiTableColumn>
+        <UiTableColumn label="操作" width="180" fixed="right">
+          <template #default="{ row }">
+            <div class="row-actions">
+              <UiButton variant="text" size="sm" @click="openCategoryDialog(row)">编辑</UiButton>
+              <UiButton variant="text" size="sm" @click="handleDeleteCategory(row)">删除</UiButton>
+            </div>
+          </template>
+        </UiTableColumn>
+      </UiTable>
 
-    <div class="table-footer">
-      <el-pagination
-        background
-        layout="total, prev, pager, next"
-        :current-page="currentPage"
-        :page-size="pageSize"
-        :total="total"
-        @current-change="handlePageChange"
-      />
+      <div class="table-footer">
+        <UiPagination
+          :current="currentPage"
+          :page-size="pageSize"
+          :total="total"
+          @change="handlePageChange"
+        />
+      </div>
     </div>
 
-    <el-dialog v-model="categoryDialogVisible" :title="categoryDialogTitle" width="720px">
-      <el-form :model="categoryForm" label-width="90px">
-        <el-form-item label="名称">
-          <el-input v-model="categoryForm.name" placeholder="请输入分类名称" />
-        </el-form-item>
-        <el-form-item label="别名">
-          <el-input v-model="categoryForm.slug" placeholder="可选，用于 URL 标识" />
-        </el-form-item>
-        <el-form-item label="描述">
-          <el-input v-model="categoryForm.description" type="textarea" :rows="3" placeholder="请输入分类描述" />
-        </el-form-item>
-        <el-form-item label="图标">
+    <UiDialog v-model="categoryDialogVisible" :title="categoryDialogTitle" width="720px">
+      <UiForm :model="categoryForm" label-width="90px">
+        <UiFormField label="名称">
+          <UiInput v-model="categoryForm.name" placeholder="请输入分类名称" />
+        </UiFormField>
+        <UiFormField label="别名">
+          <UiInput v-model="categoryForm.slug" placeholder="可选，用于 URL 标识" />
+        </UiFormField>
+        <UiFormField label="描述">
+          <UiTextarea v-model="categoryForm.description" :rows="3" placeholder="请输入分类描述" />
+        </UiFormField>
+        <UiFormField label="图标">
           <div class="icon-field">
             <div class="icon-preview-card">
               <div class="icon-preview-main">
@@ -80,18 +73,18 @@
                 </div>
               </div>
               <div class="icon-preview-actions">
-                <el-button size="small" @click="setDefaultCategoryIcon">默认图标</el-button>
-                <el-button size="small" @click="clearCategoryIcon">清空</el-button>
+                <UiButton size="sm" @click="setDefaultCategoryIcon">默认图标</UiButton>
+                <UiButton size="sm" variant="text" @click="clearCategoryIcon">清空</UiButton>
               </div>
             </div>
 
-            <el-input
+            <UiInput
               v-model="categoryForm.icon"
               clearable
               placeholder="例如 mdi:folder-open 或 solar:music-note-bold"
             />
 
-            <el-input
+            <UiInput
               v-model="iconSearchKeyword"
               clearable
               placeholder="搜索图标关键词，例如 music、robot、server"
@@ -124,26 +117,27 @@
               </button>
             </div>
           </div>
-        </el-form-item>
-        <el-form-item label="排序">
-          <el-input-number v-model="categoryForm.sortOrder" :min="0" :max="9999" />
-        </el-form-item>
-        <el-form-item label="状态">
-          <el-switch v-model="categoryForm.status" :active-value="1" :inactive-value="0" />
-        </el-form-item>
-      </el-form>
+        </UiFormField>
+        <UiFormField label="排序">
+          <UiNumberField v-model="categoryForm.sortOrder" :min="0" :max="9999" />
+        </UiFormField>
+        <UiFormField label="状态">
+          <UiSwitch v-model="categoryForm.status" :active-value="1" :inactive-value="0" />
+        </UiFormField>
+      </UiForm>
       <template #footer>
-        <el-button @click="categoryDialogVisible = false">取消</el-button>
-        <el-button type="primary" :loading="categorySaving" @click="handleSaveCategory">保存</el-button>
+        <UiButton variant="text" @click="categoryDialogVisible = false">取消</UiButton>
+        <UiButton variant="primary" :loading="categorySaving" @click="handleSaveCategory">保存</UiButton>
       </template>
-    </el-dialog>
-  </el-card>
+    </UiDialog>
+  </UiPanel>
 </template>
 
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
-import { CollectionTag, Plus } from '@element-plus/icons-vue'
+import { notify, confirmDelete } from '@/lib/feedback'
+import { UiPanel, UiButton, UiDialog, UiForm, UiFormField, UiInput, UiNumberField, UiPagination, UiSwitch, UiTable, UiTableColumn, UiTextarea } from '@/components/ui'
+import { AppStatusPill } from '@/components/app'
 import CategoryIcon from '@/components/CategoryIcon/CategoryIcon.vue'
 import type { Category, CreateCategoryCommand } from '@/types'
 import { createCategory, deleteCategory, getAdminCategories, updateCategory } from '@/api/article'
@@ -197,7 +191,7 @@ const loadCategories = async (page = currentPage.value) => {
   } catch {
     categoriesList.value = []
     total.value = 0
-    ElMessage.error('分类列表加载失败')
+    notify.error('分类列表加载失败')
   } finally {
     categoriesLoading.value = false
   }
@@ -267,7 +261,7 @@ const buildCategoryPayload = (): CreateCategoryCommand => {
 
 const handleSaveCategory = async () => {
   if (!categoryForm.name?.trim()) {
-    ElMessage.warning('请输入分类名称')
+    notify.warning('请输入分类名称')
     return
   }
   categorySaving.value = true
@@ -275,38 +269,33 @@ const handleSaveCategory = async () => {
     const payload = buildCategoryPayload()
     if (editingCategoryId.value) {
       await updateCategory(editingCategoryId.value, payload)
-      ElMessage.success('分类更新成功')
+      notify.success('分类更新成功')
     } else {
       await createCategory(payload)
-      ElMessage.success('分类创建成功')
+      notify.success('分类创建成功')
     }
     categoryDialogVisible.value = false
     await loadCategories(currentPage.value)
   } catch {
-    ElMessage.error('操作失败')
+    notify.error('操作失败')
   } finally {
     categorySaving.value = false
   }
 }
 
 const handleDeleteCategory = async (row: Category) => {
-  try {
-    await ElMessageBox.confirm(`确定删除分类“${row.name}”吗？`, '提示', {
-      confirmButtonText: '删除',
-      cancelButtonText: '取消',
-      type: 'warning',
-    })
-  } catch {
+  const confirmed = await confirmDelete(`确定删除分类“${row.name}”吗？`)
+  if (!confirmed) {
     return
   }
 
   try {
     await deleteCategory(Number(row.id))
-    ElMessage.success('分类删除成功')
+    notify.success('分类删除成功')
     const nextPage = categoriesList.value.length === 1 && currentPage.value > 1 ? currentPage.value - 1 : currentPage.value
     await loadCategories(nextPage)
   } catch {
-    ElMessage.error('删除失败')
+    notify.error('删除失败')
   }
 }
 
@@ -376,19 +365,14 @@ onUnmounted(() => {
 </script>
 
 <style scoped lang="scss">
-.info-card {
-  border-radius: var(--radius-xl);
-  border: 1px solid var(--border-color);
+.panel-inner {
+  padding: var(--space-lg);
+}
 
-  :deep(.el-card__header) {
-    padding: var(--spacing-md) var(--spacing-lg);
-    border-bottom: 1px solid var(--border-light);
-    font-weight: 600;
-  }
-
-  :deep(.el-card__body) {
-    padding: var(--spacing-lg);
-  }
+.row-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
 }
 
 .header-row {

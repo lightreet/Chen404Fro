@@ -133,7 +133,7 @@ import type { Comment, CreateCommentParams } from '@/types'
 import { getComments, getGuestbookComments, createComment, deleteComment, deleteCommentAsGuest } from '@/api/comment'
 import { useSiteConfig } from '@/composables/useSiteConfig'
 import { useUserStore } from '@/stores/user'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { notify, confirmDelete } from '@/lib/feedback'
 import CommentItem from './CommentItem.vue'
 import EmojiPickerPanel from '@/components/Emoji/EmojiPickerPanel.vue'
 import type { EmojiItem } from '@/emoji/types'
@@ -235,7 +235,7 @@ async function fetchComments() {
     comments.value = result.list
     total.value = result.total
   } catch {
-    ElMessage.error('加载评论失败')
+    notify.error('加载评论失败')
   } finally {
     loading.value = false
   }
@@ -245,7 +245,7 @@ async function submitComment() {
   if (!canSubmit.value || submitting.value) return
   const emojiCount = countEmojiTokens(form.value.content)
   if (emojiCount > scenePolicies.comment.maxEmoji) {
-    ElMessage.warning(`单条评论最多 ${scenePolicies.comment.maxEmoji} 个表情`)
+    notify.warning(`单条评论最多 ${scenePolicies.comment.maxEmoji} 个表情`)
     return
   }
   submitting.value = true
@@ -253,7 +253,7 @@ async function submitComment() {
   try {
     const normalizedWebsite = normalizeExternalUrl(form.value.authorWebsite)
     if (form.value.authorWebsite.trim() && !normalizedWebsite) {
-      ElMessage.warning('个人网站仅支持 http/https 链接')
+      notify.warning('个人网站仅支持 http/https 链接')
       return
     }
 
@@ -285,10 +285,10 @@ async function submitComment() {
     form.value.authorWebsite = ''
     replyTarget.value = null
 
-    ElMessage.success(result.status === 0 ? '评论已提交，审核后展示' : '评论发表成功')
+    notify.success(result.status === 0 ? '评论已提交，审核后展示' : '评论发表成功')
     await fetchComments()
   } catch {
-    ElMessage.error('评论发表失败')
+    notify.error('评论发表失败')
   } finally {
     submitting.value = false
   }
@@ -342,34 +342,28 @@ watch(
 )
 
 async function handleDelete(comment: Comment) {
+  const confirmed = await confirmDelete('确定要删除这条评论吗？')
+  if (!confirmed) return
   try {
-    await ElMessageBox.confirm('确定要删除这条评论吗？', '删除确认', {
-      confirmButtonText: '删除',
-      cancelButtonText: '取消',
-      type: 'warning',
-    })
     await deleteComment(comment.id)
-    ElMessage.success('评论已删除')
+    notify.success('评论已删除')
     await fetchComments()
   } catch {
-    // cancelled or error
+    // error
   }
 }
 
 async function handleGuestDelete(comment: Comment, deleteKey: string) {
+  const confirmed = await confirmDelete('确定要删除这条评论吗？')
+  if (!confirmed) return
   try {
-    await ElMessageBox.confirm('确定要删除这条评论吗？', '删除确认', {
-      confirmButtonText: '删除',
-      cancelButtonText: '取消',
-      type: 'warning',
-    })
     await deleteCommentAsGuest(comment.id, deleteKey)
     // 删除成功后移除本地存储的 key
     removeGuestDeleteKey(comment.id)
-    ElMessage.success('评论已删除')
+    notify.success('评论已删除')
     await fetchComments()
   } catch {
-    // cancelled or error
+    // error
   }
 }
 

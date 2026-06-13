@@ -1,14 +1,14 @@
 <template>
-  <section class="ai-settings" v-loading="loading">
+  <UiLoadingState :loading="loading" message="正在加载 AI 配置..." class="ai-settings">
     <div class="ai-settings__hero">
       <div>
         <p class="eyebrow">Lyra Control Room</p>
         <h3>AI 助手配置</h3>
       </div>
       <div class="hero-actions">
-        <el-button :icon="Refresh" :loading="loading" @click="loadConfig">重新加载</el-button>
-        <el-button :icon="Connection" :loading="testing" @click="testConnection">测试连接</el-button>
-        <el-button type="primary" :loading="saving" @click="saveConfig">保存 AI 配置</el-button>
+        <UiButton icon="refresh" :loading="loading" @click="loadConfig">重新加载</UiButton>
+        <UiButton icon="connection" :loading="testing" @click="testConnection">测试连接</UiButton>
+        <UiButton variant="primary" :loading="saving" @click="saveConfig">保存 AI 配置</UiButton>
       </div>
     </div>
 
@@ -31,228 +31,234 @@
       </div>
     </div>
 
-    <el-tabs v-model="activePane" class="ai-tabs">
-      <el-tab-pane label="模型调用" name="llm">
+    <UiTabs v-model="activePane" :items="paneItems" variant="line" class="ai-tabs">
+      <div v-show="activePane === 'llm'">
         <div class="panel-grid">
-          <el-form label-position="top" class="settings-form">
-            <el-form-item label="启用模型调用">
-              <el-switch v-model="form.llm.enabled" />
-            </el-form-item>
-            <el-form-item label="Base URL">
-              <el-input v-model="form.llm.baseUrl" placeholder="https://api.openai.com/v1" />
-            </el-form-item>
-            <el-form-item label="模型名称">
-              <el-input v-model="form.llm.model" placeholder="例如 gpt-5.4-mini、gpt-4.1-mini" />
-            </el-form-item>
-            <el-form-item label="API 风格">
-              <el-select v-model="form.llm.apiStyle" class="full-width">
-                <el-option label="Chat Completions" value="chat-completions" />
-                <el-option label="Responses" value="responses" />
-              </el-select>
-            </el-form-item>
-            <el-form-item label="API Key">
-              <el-input
+          <UiForm label-position="top" class="settings-form">
+            <UiFormField label="启用模型调用">
+              <UiSwitch v-model="form.llm.enabled" />
+            </UiFormField>
+            <UiFormField label="Base URL">
+              <UiInput v-model="form.llm.baseUrl" placeholder="https://api.openai.com/v1" />
+            </UiFormField>
+            <UiFormField label="模型名称">
+              <UiInput v-model="form.llm.model" placeholder="例如 gpt-5.4-mini、gpt-4.1-mini" />
+            </UiFormField>
+            <UiFormField label="API 风格">
+              <UiSelect
+                v-model="form.llm.apiStyle"
+                class="full-width"
+                :options="[
+                  { label: 'Chat Completions', value: 'chat-completions' },
+                  { label: 'Responses', value: 'responses' },
+                ]"
+              />
+            </UiFormField>
+            <UiFormField label="API Key">
+              <UiInput
                 v-model="form.llm.apiKey"
                 type="password"
-                show-password
                 clearable
                 placeholder="留空表示不修改已保存的 Key"
               />
               <p class="field-hint">
                 {{ form.llm.apiKeyConfigured ? `当前已保存：${form.llm.apiKeyPreview || '已脱敏'}` : '当前还没有保存 API Key' }}
               </p>
-            </el-form-item>
-          </el-form>
+            </UiFormField>
+          </UiForm>
 
-          <el-form label-position="top" class="settings-form">
-            <el-form-item label="Temperature">
-              <el-slider v-model="form.llm.temperature" :min="0" :max="2" :step="0.1" show-input />
-            </el-form-item>
-            <el-form-item label="Max Tokens">
-              <el-input-number v-model="form.llm.maxTokens" :min="128" :max="8192" :step="128" />
-            </el-form-item>
-            <el-form-item label="超时时间（秒）">
-              <el-input-number v-model="form.llm.timeoutSeconds" :min="5" :max="120" />
-            </el-form-item>
-            <el-form-item label="测试消息">
-              <el-input
+          <UiForm label-position="top" class="settings-form">
+            <UiFormField label="Temperature">
+              <UiSlider v-model="form.llm.temperature" :min="0" :max="2" :step="0.1" show-input />
+            </UiFormField>
+            <UiFormField label="Max Tokens">
+              <UiNumberField v-model="form.llm.maxTokens" :min="128" :max="8192" :step="128" />
+            </UiFormField>
+            <UiFormField label="超时时间（秒）">
+              <UiNumberField v-model="form.llm.timeoutSeconds" :min="5" :max="120" />
+            </UiFormField>
+            <UiFormField label="测试消息">
+              <UiTextarea
                 v-model="testMessage"
-                type="textarea"
                 :rows="4"
                 maxlength="160"
-                show-word-limit
+                show-count
                 placeholder="例如：用 Lyra 的语气回复一句问候"
               />
-            </el-form-item>
-          </el-form>
+            </UiFormField>
+          </UiForm>
         </div>
-      </el-tab-pane>
+      </div>
 
-      <el-tab-pane label="女仆人设" name="persona">
+      <div v-show="activePane === 'persona'">
         <div class="panel-grid panel-grid--single">
-          <el-form label-position="top" class="settings-form">
+          <UiForm label-position="top" class="settings-form">
             <div class="form-row">
-              <el-form-item label="名字">
-                <el-input v-model="form.maid.name" placeholder="Lyra" />
-              </el-form-item>
-              <el-form-item label="人设版本">
-                <el-input v-model="form.maid.personaVersion" placeholder="v1.1" />
-              </el-form-item>
+              <UiFormField label="名字">
+                <UiInput v-model="form.maid.name" placeholder="Lyra" />
+              </UiFormField>
+              <UiFormField label="人设版本">
+                <UiInput v-model="form.maid.personaVersion" placeholder="v1.1" />
+              </UiFormField>
             </div>
-            <el-form-item>
+            <UiFormField>
               <template #label>
                 <span class="field-label">
                   系统提示词
-                  <el-tooltip
+                  <UiTooltip
                     content="控制 Lyra 的基础人设、语气、能力边界和回复长度规则。留空时使用后端 resources/prompts/ai 下的默认模板。"
                     placement="top"
                   >
-                    <el-icon class="field-help"><InfoFilled /></el-icon>
-                  </el-tooltip>
+                    <UiIcon name="info" class="field-help" />
+                  </UiTooltip>
                 </span>
               </template>
-              <el-input
+              <UiTextarea
                 v-model="form.maid.systemPrompt"
-                type="textarea"
                 :rows="5"
                 placeholder="留空则使用 maid-system-prompt.txt 默认模板"
               />
-            </el-form-item>
-            <el-form-item>
+            </UiFormField>
+            <UiFormField>
               <template #label>
                 <span class="field-label">
                   站内助手场景提示词
-                  <el-tooltip
+                  <UiTooltip
                     content="控制总结文章、站内检索、引用和推荐等 helper 场景行为。留空时使用默认模板。"
                     placement="top"
                   >
-                    <el-icon class="field-help"><InfoFilled /></el-icon>
-                  </el-tooltip>
+                    <UiIcon name="info" class="field-help" />
+                  </UiTooltip>
                 </span>
               </template>
-              <el-input
+              <UiTextarea
                 v-model="form.maid.helperPrompt"
-                type="textarea"
                 :rows="5"
                 placeholder="留空则使用 maid-helper-task-prompt.txt 默认模板"
               />
-            </el-form-item>
-            <el-form-item>
+            </UiFormField>
+            <UiFormField>
               <template #label>
                 <span class="field-label">
                   陪聊场景提示词
-                  <el-tooltip
+                  <UiTooltip
                     content="控制轻量陪伴、闲聊和从陪聊切回内容帮助的 companion 场景行为。留空时使用默认模板。"
                     placement="top"
                   >
-                    <el-icon class="field-help"><InfoFilled /></el-icon>
-                  </el-tooltip>
+                    <UiIcon name="info" class="field-help" />
+                  </UiTooltip>
                 </span>
               </template>
-              <el-input
+              <UiTextarea
                 v-model="form.maid.companionPrompt"
-                type="textarea"
                 :rows="5"
                 placeholder="留空则使用 maid-companion-task-prompt.txt 默认模板"
               />
-            </el-form-item>
+            </UiFormField>
             <div class="persona-actions">
-              <el-button type="primary" :loading="saving" @click="saveConfig">保存提示词设置</el-button>
+              <UiButton variant="primary" :loading="saving" @click="saveConfig">保存提示词设置</UiButton>
             </div>
-          </el-form>
+          </UiForm>
         </div>
-      </el-tab-pane>
+      </div>
 
-      <el-tab-pane label="聊天与检索" name="chat">
+      <div v-show="activePane === 'chat'">
         <div class="panel-grid">
-          <el-form label-position="top" class="settings-form">
-            <el-form-item label="启用聊天">
-              <el-switch v-model="form.chat.enabled" />
-            </el-form-item>
-            <el-form-item label="启用站内检索">
-              <el-switch v-model="form.chat.retrievalEnabled" />
-            </el-form-item>
-            <el-form-item label="相关推荐需明确意图">
-              <el-switch v-model="form.chat.requireRecommendIntentForRelatedArticles" />
-            </el-form-item>
-            <el-form-item label="引用数量">
-              <el-input-number v-model="form.chat.maxCitationCount" :min="0" :max="8" />
-            </el-form-item>
-            <el-form-item label="相关文章数量">
-              <el-input-number v-model="form.chat.relatedArticleLimit" :min="0" :max="6" />
-            </el-form-item>
-          </el-form>
+          <UiForm label-position="top" class="settings-form">
+            <UiFormField label="启用聊天">
+              <UiSwitch v-model="form.chat.enabled" />
+            </UiFormField>
+            <UiFormField label="启用站内检索">
+              <UiSwitch v-model="form.chat.retrievalEnabled" />
+            </UiFormField>
+            <UiFormField label="相关推荐需明确意图">
+              <UiSwitch v-model="form.chat.requireRecommendIntentForRelatedArticles" />
+            </UiFormField>
+            <UiFormField label="引用数量">
+              <UiNumberField v-model="form.chat.maxCitationCount" :min="0" :max="8" />
+            </UiFormField>
+            <UiFormField label="相关文章数量">
+              <UiNumberField v-model="form.chat.relatedArticleLimit" :min="0" :max="6" />
+            </UiFormField>
+          </UiForm>
 
-          <el-form label-position="top" class="settings-form">
-            <el-form-item label="上下文消息数">
-              <el-input-number v-model="form.chat.maxContextMessages" :min="1" :max="20" />
-            </el-form-item>
-            <el-form-item label="文章正文注入字符数">
-              <el-input-number v-model="form.chat.maxArticleContentChars" :min="500" :max="12000" :step="500" />
-            </el-form-item>
-            <el-form-item label="文章摘要注入字符数">
-              <el-input-number v-model="form.chat.maxArticleSummaryChars" :min="80" :max="1000" :step="40" />
-            </el-form-item>
-            <el-form-item label="建议按钮数量">
-              <el-input-number v-model="form.chat.maxSuggestionCount" :min="0" :max="5" />
-            </el-form-item>
-          </el-form>
+          <UiForm label-position="top" class="settings-form">
+            <UiFormField label="上下文消息数">
+              <UiNumberField v-model="form.chat.maxContextMessages" :min="1" :max="20" />
+            </UiFormField>
+            <UiFormField label="文章正文注入字符数">
+              <UiNumberField v-model="form.chat.maxArticleContentChars" :min="500" :max="12000" :step="500" />
+            </UiFormField>
+            <UiFormField label="文章摘要注入字符数">
+              <UiNumberField v-model="form.chat.maxArticleSummaryChars" :min="80" :max="1000" :step="40" />
+            </UiFormField>
+            <UiFormField label="建议按钮数量">
+              <UiNumberField v-model="form.chat.maxSuggestionCount" :min="0" :max="5" />
+            </UiFormField>
+          </UiForm>
         </div>
-      </el-tab-pane>
+      </div>
 
-      <el-tab-pane label="小气泡" name="bubble">
-        <el-form label-position="top" class="settings-form">
-          <el-form-item label="小气泡最大字符数">
-            <el-input-number v-model="form.chat.bubbleMaxChars" :min="12" :max="60" />
-          </el-form-item>
-          <el-form-item>
+      <div v-show="activePane === 'bubble'">
+        <UiForm label-position="top" class="settings-form">
+          <UiFormField label="小气泡最大字符数">
+            <UiNumberField v-model="form.chat.bubbleMaxChars" :min="12" :max="60" />
+          </UiFormField>
+          <UiFormField>
             <template #label>
               <span class="field-label">
                 长回复替代文案
-                <el-tooltip content="长回复仍然完整展示在聊天面板里，小气泡只负责情绪反馈和引导。" placement="top">
-                  <el-icon class="field-help"><InfoFilled /></el-icon>
-                </el-tooltip>
+                <UiTooltip content="长回复仍然完整展示在聊天面板里，小气泡只负责情绪反馈和引导。" placement="top">
+                  <UiIcon name="info" class="field-help" />
+                </UiTooltip>
               </span>
             </template>
-            <el-input v-model="form.chat.bubbleLongReplyText" maxlength="40" show-word-limit />
-          </el-form-item>
-          <el-form-item>
+            <UiInput v-model="form.chat.bubbleLongReplyText" maxlength="40" show-word-limit />
+          </UiFormField>
+          <UiFormField>
             <template #label>
               <span class="field-label">
                 Web Search 工具
-                <el-tooltip content="当前为预留开关，后续接入真实搜索工具后可直接沿用。" placement="top">
-                  <el-icon class="field-help"><InfoFilled /></el-icon>
-                </el-tooltip>
+                <UiTooltip content="当前为预留开关，后续接入真实搜索工具后可直接沿用。" placement="top">
+                  <UiIcon name="info" class="field-help" />
+                </UiTooltip>
               </span>
             </template>
-            <el-switch v-model="form.tools.webSearchEnabled" />
-          </el-form-item>
-        </el-form>
-      </el-tab-pane>
-    </el-tabs>
+            <UiSwitch v-model="form.tools.webSearchEnabled" />
+          </UiFormField>
+        </UiForm>
+      </div>
+    </UiTabs>
 
-    <el-alert
+    <div
       v-if="testResult"
       class="test-result"
-      :type="testResult.success ? 'success' : 'error'"
-      :closable="false"
-      show-icon
+      :class="testResult.success ? 'test-result--success' : 'test-result--error'"
     >
-      <template #title>
-        {{ testResult.message }}
-      </template>
+      <div class="test-result__head">
+        <UiIcon :name="testResult.success ? 'success' : 'error'" />
+        <strong>{{ testResult.message }}</strong>
+      </div>
       <p v-if="testResult.sampleText">{{ testResult.sampleText }}</p>
       <p v-if="testResult.latencyMs">耗时：{{ testResult.latencyMs }}ms</p>
-    </el-alert>
-  </section>
+    </div>
+  </UiLoadingState>
 </template>
 
 <script setup lang="ts">
 import { onMounted, reactive, ref } from 'vue';
-import { ElMessage } from 'element-plus';
-import { Connection, InfoFilled, Refresh } from '@element-plus/icons-vue';
+import { notify } from '@/lib/feedback';
+import { UiButton, UiTabs, UiTooltip, UiForm, UiFormField, UiIcon, UiInput, UiLoadingState, UiSwitch, UiSelect, UiSlider, UiNumberField, UiTextarea } from '@/components/ui';
+import type { UiTabItem } from '@/components/ui';
 import { getAiAdminConfig, testAiAdminConfig, updateAiAdminConfig } from '@/api/ai-admin';
 import type { AiAdminConfig, AiConfigTestResponse } from '@/types';
+
+const paneItems: UiTabItem[] = [
+  { label: '模型调用', value: 'llm' },
+  { label: '女仆人设', value: 'persona' },
+  { label: '聊天与检索', value: 'chat' },
+  { label: '小气泡', value: 'bubble' },
+];
 
 const activePane = ref('llm');
 const loading = ref(false);
@@ -330,7 +336,7 @@ async function loadConfig() {
   try {
     applyConfig(await getAiAdminConfig());
   } catch {
-    ElMessage.error('加载 AI 配置失败');
+    notify.error('加载 AI 配置失败');
   } finally {
     loading.value = false;
   }
@@ -340,9 +346,9 @@ async function saveConfig() {
   saving.value = true;
   try {
     applyConfig(await updateAiAdminConfig(toPayload()));
-    ElMessage.success('AI 配置已保存');
+    notify.success('AI 配置已保存');
   } catch {
-    ElMessage.error('保存 AI 配置失败');
+    notify.error('保存 AI 配置失败');
   } finally {
     saving.value = false;
   }
@@ -358,12 +364,12 @@ async function testConnection() {
       config: toPayload(),
     });
     if (testResult.value.success) {
-      ElMessage.success('模型连接测试成功');
+      notify.success('模型连接测试成功');
     } else {
-      ElMessage.warning(testResult.value.message || '模型连接测试失败');
+      notify.warning(testResult.value.message || '模型连接测试失败');
     }
   } catch {
-    ElMessage.error('模型连接测试失败');
+    notify.error('模型连接测试失败');
   } finally {
     testing.value = false;
   }
@@ -530,9 +536,34 @@ onMounted(() => {
 
 .test-result {
   border-radius: 14px;
+  padding: 14px 16px;
+  border: 1px solid var(--color-border-light);
 
   p {
     margin: 6px 0 0;
+    color: var(--color-text-secondary);
+    font-size: var(--font-size-sm);
+  }
+}
+
+.test-result__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--font-size-md);
+}
+
+.test-result--success {
+  background: var(--color-success-soft);
+  .test-result__head {
+    color: var(--color-success);
+  }
+}
+
+.test-result--error {
+  background: var(--color-danger-soft);
+  .test-result__head {
+    color: var(--color-danger);
   }
 }
 

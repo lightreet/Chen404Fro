@@ -7,9 +7,9 @@
             <section class="sidebar-user-card">
               <div class="sidebar-user-main">
                 <div class="sidebar-avatar-shell">
-                  <el-avatar :size="78" :src="bannerProfile.avatar" class="sidebar-avatar">
+                  <UiAvatar :size="78" :src="bannerProfile.avatar" class="sidebar-avatar">
                     {{ String(bannerProfile.nickname || bannerProfile.username || 'U').charAt(0) }}
-                  </el-avatar>
+                  </UiAvatar>
                 </div>
                 <div class="sidebar-user-copy">
                   <h1 class="sidebar-name">{{ bannerProfile.nickname || '未登录' }}</h1>
@@ -22,55 +22,54 @@
             </section>
 
             <section class="profile-nav-card">
-              <el-menu :default-active="activeMenu" class="nav-menu" @select="handleMenuSelect">
-                <el-menu-item index="settings"><el-icon><User /></el-icon><span>个人中心</span></el-menu-item>
-                <el-menu-item index="articles"><el-icon><Document /></el-icon><span>我的文章</span></el-menu-item>
-                <el-menu-item index="likes"><el-icon><Medal /></el-icon><span>我的点赞</span></el-menu-item>
-                <el-menu-item index="favorites"><el-icon><Star /></el-icon><span>我的收藏</span></el-menu-item>
-              </el-menu>
+              <nav class="nav-menu" role="tablist">
+                <button
+                  v-for="item in navItems"
+                  :key="item.index"
+                  type="button"
+                  class="nav-menu-item"
+                  :class="{ 'is-active': activeMenu === item.index }"
+                  role="tab"
+                  :aria-selected="activeMenu === item.index"
+                  @click="handleMenuSelect(item.index)"
+                >
+                  <UiIcon :name="item.icon" />
+                  <span>{{ item.label }}</span>
+                </button>
+              </nav>
             </section>
           </aside>
 
           <section class="profile-main">
-            <el-card class="info-card content-panel" shadow="never">
-              <template #header>
-                <div class="panel-heading panel-heading--compact">
-                  <div class="panel-title-group">
-                    <div class="panel-title-inline">
-                      <el-icon class="panel-title-inline-icon"><component :is="panelIcon" /></el-icon>
-                      <h2 class="panel-title">{{ panelTitle }}</h2>
-                      <span class="article-total article-total--inline">{{ panelBadge }}</span>
-                    </div>
-                  </div>
+            <UiPanel class="info-card content-panel">
+              <template #title>
+                <div class="panel-title-inline">
+                  <UiIcon class="panel-title-inline-icon" :name="panelIcon" />
+                  <h2 class="panel-title">{{ panelTitle }}</h2>
+                  <span class="article-total article-total--inline">{{ panelBadge }}</span>
                 </div>
               </template>
 
               <div v-if="activeMenu === 'articles'" class="article-panel">
                 <div class="section-toolbar section-toolbar--controls">
                   <div class="content-actions content-actions--stacked">
-                    <el-radio-group v-model="articleStatus" class="status-radio" @change="loadMyArticles(1)">
-                      <el-radio-button :value="-1">全部</el-radio-button>
-                      <el-radio-button :value="0">草稿</el-radio-button>
-                      <el-radio-button :value="1">已发布</el-radio-button>
-                    </el-radio-group>
-                    <div class="search-shell">
-                      <el-input
-                        v-model="articleKeyword"
-                        placeholder="搜索文章..."
-                        clearable
-                        class="keyword-input"
-                        @keyup.enter="loadMyArticles(1)"
-                      >
-                        <template #prefix>
-                          <el-icon><Search /></el-icon>
-                        </template>
-                      </el-input>
-                      <el-button class="search-button" @click="loadMyArticles(1)">搜索</el-button>
-                    </div>
+                    <UiRadioGroup
+                      v-model="articleStatus"
+                      class="status-radio"
+                      variant="button"
+                      :options="articleStatusOptions"
+                      @change="loadMyArticles(1)"
+                    />
+                    <UiSearchBar
+                      v-model="articleKeyword"
+                      class="article-search"
+                      placeholder="搜索文章..."
+                      @search="loadMyArticles(1)"
+                    />
                   </div>
                 </div>
 
-                <el-skeleton v-if="articleLoading" :rows="6" animated />
+                <UiSkeleton v-if="articleLoading" :rows="6" />
                 <div v-else-if="myArticles.length === 0" class="empty-state">还没有文章，去写下第一篇吧。</div>
                 <div v-else class="article-list-shell">
                   <div class="article-scroll-area">
@@ -88,20 +87,18 @@
                     </div>
                   </div>
                   <div class="pager">
-                    <el-pagination
-                      background
-                      layout="prev, pager, next"
-                      :current-page="articlePage"
+                    <UiPagination
+                      :current="articlePage"
                       :page-size="articlePageSize"
                       :total="articleTotal"
-                      @current-change="loadMyArticles"
+                      @change="loadMyArticles"
                     />
                   </div>
                 </div>
               </div>
 
               <div v-else-if="activeMenu === 'likes'" class="article-panel">
-                <el-skeleton v-if="likedLoading" :rows="6" animated />
+                <UiSkeleton v-if="likedLoading" :rows="6" />
                 <div v-else-if="myLikedArticles.length === 0" class="empty-state">还没有点赞过文章。</div>
                 <div v-else class="article-list-shell">
                   <div class="article-scroll-area">
@@ -118,20 +115,18 @@
                     </div>
                   </div>
                   <div class="pager">
-                    <el-pagination
-                      background
-                      layout="prev, pager, next"
-                      :current-page="likedPage"
+                    <UiPagination
+                      :current="likedPage"
                       :page-size="likedPageSize"
                       :total="likedTotal"
-                      @current-change="loadMyLikedArticles"
+                      @change="loadMyLikedArticles"
                     />
                   </div>
                 </div>
               </div>
 
               <div v-else-if="activeMenu === 'favorites'" class="article-panel">
-                <el-skeleton v-if="favLoading" :rows="6" animated />
+                <UiSkeleton v-if="favLoading" :rows="6" />
                 <div v-else-if="myFavoriteArticles.length === 0" class="empty-state">还没有收藏的文章。</div>
                 <div v-else class="article-list-shell">
                   <div class="article-scroll-area">
@@ -148,13 +143,11 @@
                     </div>
                   </div>
                   <div class="pager">
-                    <el-pagination
-                      background
-                      layout="prev, pager, next"
-                      :current-page="favPage"
+                    <UiPagination
+                      :current="favPage"
                       :page-size="favPageSize"
                       :total="favTotal"
-                      @current-change="loadMyFavoriteArticles"
+                      @change="loadMyFavoriteArticles"
                     />
                   </div>
                 </div>
@@ -162,124 +155,120 @@
 
               <div v-else-if="activeMenu === 'settings'" class="settings-panel">
                 <div v-if="user" class="profile-edit">
-                  <el-form ref="profileFormRef" :model="profileForm" :rules="profileRules" label-position="top" class="profile-form">
-                    <el-form-item label="头像" prop="avatar">
+                  <UiForm ref="profileFormRef" :model="profileForm" :rules="profileRules" label-position="top" class="profile-form">
+                    <UiFormField label="头像" prop="avatar">
                       <div class="avatar-edit-row">
-                        <el-avatar :size="88" :src="profileForm.avatar" class="form-avatar">
+                        <UiAvatar :size="88" :src="profileForm.avatar" class="form-avatar">
                           {{ String(profileForm.nickname || user.username || 'U').charAt(0) }}
-                        </el-avatar>
+                        </UiAvatar>
                         <div class="avatar-edit-copy">
                           <div class="avatar-edit-title">上传新的头像</div>
                           <div class="avatar-edit-hint">建议使用清晰的正方形图片，最大支持 10MB，上传后会自动压缩。</div>
-                          <el-upload
+                          <UiUpload
                             :show-file-list="false"
                             :before-upload="beforeAvatarUpload"
                             :http-request="handleAvatarUpload"
                             class="avatar-upload-inline"
                           >
-                            <el-button type="primary"><el-icon class="btn-icon"><Upload /></el-icon>更新头像</el-button>
-                          </el-upload>
+                            <UiButton variant="primary" icon="upload">更新头像</UiButton>
+                          </UiUpload>
                         </div>
                       </div>
-                    </el-form-item>
+                    </UiFormField>
 
                     <div class="form-grid">
-                      <el-form-item label="昵称" prop="nickname">
-                        <el-input
+                      <UiFormField label="昵称" prop="nickname">
+                        <UiInput
                           v-model="profileForm.nickname"
                           maxlength="20"
                           show-word-limit
                           placeholder="给自己起一个更有辨识度的名字"
                         />
-                      </el-form-item>
-                      <el-form-item label="用户名">
-                        <el-input :model-value="user.username || '--'" disabled />
-                      </el-form-item>
+                      </UiFormField>
+                      <UiFormField label="用户名">
+                        <UiInput :model-value="user.username || '--'" disabled />
+                      </UiFormField>
                     </div>
 
                     <div class="form-grid">
-                      <el-form-item label="邮箱">
-                        <el-input :model-value="user.email || '未绑定'" disabled />
-                      </el-form-item>
-                      <el-form-item label="手机号">
-                        <el-input :model-value="user.phone || '未绑定'" disabled />
-                      </el-form-item>
+                      <UiFormField label="邮箱">
+                        <UiInput :model-value="user.email || '未绑定'" disabled />
+                      </UiFormField>
+                      <UiFormField label="手机号">
+                        <UiInput :model-value="user.phone || '未绑定'" disabled />
+                      </UiFormField>
                     </div>
 
-                    <el-form-item label="个人介绍" prop="bio">
-                      <el-input
+                    <UiFormField label="个人介绍" prop="bio">
+                      <UiTextarea
                         v-model="profileForm.bio"
-                        type="textarea"
                         :rows="5"
                         maxlength="160"
-                        show-word-limit
+                        show-count
                         resize="none"
                         placeholder="写一句能代表你的话，比如喜欢的方向、日常状态，或者一句有你味道的签名。"
                       />
-                    </el-form-item>
+                    </UiFormField>
 
                     <div class="profile-form-actions">
-                      <el-button type="primary" :loading="profileSaving" @click="handleSaveProfile">保存资料</el-button>
-                      <el-button @click="resetProfileForm">重置</el-button>
-                      <el-button @click="openPasswordDialog"><el-icon><Lock /></el-icon>修改密码</el-button>
+                      <UiButton variant="primary" :loading="profileSaving" @click="handleSaveProfile">保存资料</UiButton>
+                      <UiButton variant="secondary" @click="resetProfileForm">重置</UiButton>
+                      <UiButton variant="secondary" icon="lock" @click="openPasswordDialog">修改密码</UiButton>
                     </div>
-                  </el-form>
+                  </UiForm>
                 </div>
-                <el-skeleton v-else :rows="6" animated />
+                <UiSkeleton v-else :rows="6" />
               </div>
 
               <div v-else-if="activeMenu === 'trust'" class="settings-panel">
                 <ProfileTrustRequestPanel :user="user" />
               </div>
-            </el-card>
+            </UiPanel>
           </section>
         </div>
       </div>
     </div>
 
-    <el-dialog
+    <UiDialog
       v-model="passwordDialogVisible"
       title="修改密码"
       width="420px"
       :close-on-click-modal="false"
       class="password-dialog"
     >
-      <el-form ref="passwordFormRef" :model="passwordForm" :rules="passwordRules" label-position="top" class="password-form">
-        <el-form-item label="当前密码" prop="oldPassword">
-          <el-input v-model="passwordForm.oldPassword" type="password" placeholder="请输入当前密码" show-password clearable />
-        </el-form-item>
-        <el-form-item label="新密码" prop="newPassword">
-          <el-input
+      <UiForm ref="passwordFormRef" :model="passwordForm" :rules="passwordRules" label-position="top" class="password-form">
+        <UiFormField label="当前密码" prop="oldPassword">
+          <UiInput v-model="passwordForm.oldPassword" type="password" placeholder="请输入当前密码" clearable />
+        </UiFormField>
+        <UiFormField label="新密码" prop="newPassword">
+          <UiInput
             v-model="passwordForm.newPassword"
             type="password"
             placeholder="请输入新密码，至少 6 位"
-            show-password
             clearable
           />
-        </el-form-item>
-        <el-form-item label="确认新密码" prop="confirmPassword">
-          <el-input
+        </UiFormField>
+        <UiFormField label="确认新密码" prop="confirmPassword">
+          <UiInput
             v-model="passwordForm.confirmPassword"
             type="password"
             placeholder="请再次输入新密码"
-            show-password
             clearable
           />
-        </el-form-item>
-      </el-form>
+        </UiFormField>
+      </UiForm>
       <template #footer>
-        <el-button @click="passwordDialogVisible = false">取消</el-button>
-        <el-button type="primary" :loading="passwordLoading" @click="handleChangePassword">确认修改</el-button>
+        <UiButton variant="text" @click="passwordDialogVisible = false">取消</UiButton>
+        <UiButton variant="primary" :loading="passwordLoading" @click="handleChangePassword">确认修改</UiButton>
       </template>
-    </el-dialog>
+    </UiDialog>
   </DefaultLayout>
 </template>
 
 <script setup lang="ts">
 import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
-import type { FormInstance, FormRules } from 'element-plus'
-import { Document, Lock, Medal, Postcard, Search, Star, Upload, User } from '@element-plus/icons-vue'
+import { notify, confirmDelete } from '@/lib/feedback'
+import { UiPanel, UiAvatar, UiButton, UiDialog, UiForm, UiFormField, UiIcon, UiInput, UiPagination, UiRadioGroup, UiSearchBar, UiSkeleton, UiTextarea, UiUpload } from '@/components/ui'
 import { useRoute, useRouter } from 'vue-router'
 import DefaultLayout from '@/layouts/DefaultLayout.vue'
 import { useUserStore } from '@/stores/user'
@@ -287,6 +276,7 @@ import { changePassword, getUserInfo, updateProfile } from '@/api/auth'
 import { uploadAvatar } from '@/api/upload'
 import { getTrustLevelLabel } from '@/utils/permission'
 import { AVATAR_MAX_MB, createConfirmPasswordRule, validateImageFile } from '@/utils/validation'
+import type { FormItemRule } from '@/utils/validation'
 import { deleteArticle, getMyArticles, getMyFavoriteArticles, getMyLikedArticles } from '@/api/article'
 import ArticleCard from '@/components/ArticleCard/ArticleCard.vue'
 import ProfileTrustRequestPanel from './ProfileTrustRequestPanel.vue'
@@ -327,17 +317,29 @@ const panelBadge = computed(() => {
 })
 
 const panelIcon = computed(() => {
-  if (activeMenu.value === 'articles') return Document
-  if (activeMenu.value === 'likes') return Medal
-  if (activeMenu.value === 'favorites') return Star
-  if (activeMenu.value === 'trust') return Postcard
-  return User
+  if (activeMenu.value === 'articles') return 'Document'
+  if (activeMenu.value === 'likes') return 'Medal'
+  if (activeMenu.value === 'favorites') return 'Star'
+  if (activeMenu.value === 'trust') return 'Postcard'
+  return 'User'
 })
 
-const profileFormRef = ref<FormInstance>()
+const navItems: Array<{ index: string; icon: string; label: string }> = [
+  { index: 'settings', icon: 'User', label: '个人中心' },
+  { index: 'articles', icon: 'Document', label: '我的文章' },
+  { index: 'likes', icon: 'Medal', label: '我的点赞' },
+  { index: 'favorites', icon: 'Star', label: '我的收藏' },
+]
+
+type SimpleFormInstance = {
+  validate: () => Promise<boolean>
+  clearValidate: (props?: string | string[]) => void
+}
+
+const profileFormRef = ref<SimpleFormInstance>()
 const profileSaving = ref(false)
 const profileForm = reactive({ nickname: '', avatar: '', bio: '' })
-const profileRules: FormRules = {
+const profileRules: Record<string, FormItemRule[]> = {
   nickname: [
     { required: true, message: '请输入昵称', trigger: 'blur' },
     { min: 2, max: 20, message: '昵称长度需在 2 到 20 个字符之间', trigger: 'blur' },
@@ -346,11 +348,11 @@ const profileRules: FormRules = {
   bio: [{ max: 160, message: '个人介绍最多 160 个字符', trigger: 'blur' }],
 }
 
-const passwordFormRef = ref<FormInstance>()
+const passwordFormRef = ref<SimpleFormInstance & { resetFields: () => void }>()
 const passwordLoading = ref(false)
 const passwordDialogVisible = ref(false)
 const passwordForm = reactive({ oldPassword: '', newPassword: '', confirmPassword: '' })
-const passwordRules: FormRules = {
+const passwordRules: Record<string, FormItemRule[]> = {
   oldPassword: [{ required: true, message: '请输入当前密码', trigger: 'blur' }],
   newPassword: [
     { required: true, message: '请输入新密码', trigger: 'blur' },
@@ -369,6 +371,11 @@ const myArticles = ref<any[]>([])
 const articlePage = ref(1)
 const articlePageSize = 2
 const articleTotal = ref(0)
+const articleStatusOptions = [
+  { label: '全部', value: -1 },
+  { label: '草稿', value: 0 },
+  { label: '已发布', value: 1 },
+]
 
 const likedLoading = ref(false)
 const myLikedArticles = ref<any[]>([])
@@ -403,7 +410,7 @@ const loadUser = async () => {
     user.value = data
     syncProfileForm(data)
   } catch {
-    ElMessage.error('获取用户信息失败')
+    notify.error('获取用户信息失败')
   }
 }
 
@@ -439,10 +446,10 @@ const handleSaveProfile = async () => {
     userStore.setUser(updated)
     user.value = updated
     syncProfileForm(updated)
-    ElMessage.success('个人资料已更新')
+    notify.success('个人资料已更新')
   } catch (err: unknown) {
     if (err && typeof err === 'object' && 'message' in err) {
-      ElMessage.error((err as { message?: string }).message ?? '保存失败')
+      notify.error((err as { message?: string }).message ?? '保存失败')
     }
   } finally {
     profileSaving.value = false
@@ -452,7 +459,7 @@ const handleSaveProfile = async () => {
 const beforeAvatarUpload = (file: File) => {
   const result = validateImageFile(file, AVATAR_MAX_MB)
   if (!result.valid) {
-    ElMessage.error(result.message)
+    notify.error(result.message)
     return false
   }
   return true
@@ -462,10 +469,10 @@ const handleAvatarUpload = async (options: { file: File }) => {
   try {
     const res = await uploadAvatar(options.file)
     profileForm.avatar = res.url
-    ElMessage.success('头像上传成功，记得保存资料')
+    notify.success('头像上传成功，记得保存资料')
   } catch (err: unknown) {
     if (err && typeof err === 'object' && 'message' in err) {
-      ElMessage.error((err as { message?: string }).message ?? '上传失败')
+      notify.error((err as { message?: string }).message ?? '上传失败')
     }
   }
 }
@@ -525,14 +532,11 @@ const loadMyFavoriteArticles = async (page = 1) => {
 const handleEditArticle = (id: number | string) => router.push(`/article/edit/${String(id)}`)
 
 const handleDeleteArticle = async (id: number | string) => {
+  const confirmed = await confirmDelete('确定要删除这篇文章吗？删除后将无法恢复。')
+  if (!confirmed) return
   try {
-    await ElMessageBox.confirm('确定要删除这篇文章吗？删除后将无法恢复。', '删除确认', {
-      type: 'warning',
-      confirmButtonText: '删除',
-      cancelButtonText: '取消',
-    })
     await deleteArticle(String(id))
-    ElMessage.success('删除成功')
+    notify.success('删除成功')
     loadMyArticles(articlePage.value)
   } catch {
     // noop
@@ -548,7 +552,7 @@ const handleChangePassword = async () => {
       oldPassword: passwordForm.oldPassword,
       newPassword: passwordForm.newPassword,
     })
-    ElMessage.success('密码修改成功')
+    notify.success('密码修改成功')
     passwordForm.oldPassword = ''
     passwordForm.newPassword = ''
     passwordForm.confirmPassword = ''
@@ -556,7 +560,7 @@ const handleChangePassword = async () => {
     passwordDialogVisible.value = false
   } catch (err: unknown) {
     if (err && typeof err === 'object' && 'message' in err) {
-      ElMessage.error((err as { message?: string }).message ?? '修改失败')
+      notify.error((err as { message?: string }).message ?? '修改失败')
     }
   } finally {
     passwordLoading.value = false
@@ -825,92 +829,64 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  border-right: none;
   background: transparent;
+  list-style: none;
+  margin: 0;
+  padding: 0;
 }
 
-.nav-menu :deep(.el-menu-item) {
+.nav-menu-item {
   position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
   height: 52px;
-  line-height: 52px;
-  margin-bottom: 0;
   padding: 0 20px 0 18px;
   border-radius: 16px;
   color: var(--profile-text);
   background: transparent;
   border: none;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+  width: 100%;
   overflow: hidden;
   transition:
     transform 0.22s ease,
     background 0.22s ease,
     box-shadow 0.22s ease,
     color 0.22s ease;
-}
 
-.nav-menu :deep(.el-menu-item::after) {
-  display: none;
-}
+  &:hover {
+    transform: translateX(6px);
+    background: rgba(245, 155, 188, 0.12);
+    box-shadow: 0 8px 20px rgba(245, 184, 204, 0.08);
+    color: var(--profile-sakura);
+  }
 
-.nav-menu :deep(.el-menu-item:hover) {
-  transform: translateX(6px);
-  background: rgba(245, 155, 188, 0.12);
-  box-shadow: 0 8px 20px rgba(245, 184, 204, 0.08);
-}
-
-.nav-menu :deep(.el-menu-item .el-icon) {
-  position: relative;
-  z-index: 1;
-  width: 18px;
-  margin-right: 10px;
-  color: var(--profile-text);
-  font-size: 18px;
-  transition: color 0.22s ease, transform 0.22s ease;
-}
-
-.nav-menu :deep(.el-menu-item span) {
-  position: relative;
-  z-index: 1;
-  font-size: 15px;
-  font-weight: 600;
-  letter-spacing: 0.01em;
-  color: var(--profile-text);
-  transition: color 0.22s ease;
-}
-
-.nav-menu :deep(.el-menu-item.is-active) {
-  background: linear-gradient(135deg, #fff1f6, rgba(255, 255, 255, 0.98));
-  color: var(--profile-sakura);
-  box-shadow:
-    0 6px 18px rgba(245, 155, 188, 0.15),
-    inset 0 0 10px rgba(245, 155, 188, 0.08);
-  transform: scale(1.02);
-}
-
-.nav-menu :deep(.el-menu-item.is-active .el-icon) {
-  color: var(--profile-sakura);
-  transform: translateX(1px);
-}
-
-.nav-menu :deep(.el-menu-item.is-active span) {
-  color: var(--profile-sakura);
-}
-
-.nav-menu :deep(.el-menu-item:hover .el-icon),
-.nav-menu :deep(.el-menu-item:hover span) {
-  color: var(--profile-sakura);
+  &.is-active {
+    background: linear-gradient(135deg, #fff1f6, rgba(255, 255, 255, 0.98));
+    color: var(--profile-sakura);
+    box-shadow:
+      0 6px 18px rgba(245, 155, 188, 0.15),
+      inset 0 0 10px rgba(245, 155, 188, 0.08);
+    transform: scale(1.02);
+  }
 }
 
 .profile-main {
   min-width: 0;
 }
 
-.info-card :deep(.el-card__header) {
-  padding: 22px 28px 18px;
-  border-bottom: 1px solid rgba(226, 232, 240, 0.9);
-}
-
-.info-card :deep(.el-card__body) {
-  padding: 24px 28px 26px;
+.info-card {
+  :deep(.ui-panel__header) {
+    padding: 22px 28px 18px;
+    border-bottom: 1px solid rgba(226, 232, 240, 0.9);
+  }
+  :deep(.ui-panel__body) {
+    padding: 24px 28px 26px;
+  }
 }
 
 .article-panel {
@@ -1071,95 +1047,9 @@ onMounted(() => {
   background: rgba(255, 241, 246, 0.72);
 }
 
-.search-shell {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  min-width: 0;
-  padding: 0;
-  width: min(100%, 248px);
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.94);
-  border: 1px solid rgba(245, 155, 188, 0.12);
-  box-shadow:
-    0 8px 18px rgba(245, 155, 188, 0.05),
-    inset 0 1px 0 rgba(255, 255, 255, 0.88);
-}
-
-.keyword-input {
-  flex: 1;
-  width: auto;
-}
-
-.keyword-input :deep(.el-input__wrapper) {
-  min-height: 36px;
-  padding-left: 12px;
-  padding-right: 2px;
-  border-radius: 999px;
-  box-shadow: none;
-  background: transparent;
-  display: flex;
-  align-items: center;
-}
-
-.keyword-input :deep(.el-input__prefix) {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  height: 100%;
-}
-
-.keyword-input :deep(.el-input__prefix-inner) {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  height: 100%;
-  color: var(--profile-muted);
-}
-
-.keyword-input :deep(.el-input__inner) {
-  height: 100%;
-  color: var(--profile-text);
-  font-size: 13px;
-  line-height: 36px;
-}
-
-.keyword-input :deep(.el-input__inner::placeholder) {
-  color: #a3a6bb;
-}
-
-.search-button {
-  min-width: 76px;
-  height: 36px;
-  padding: 0 12px;
-  border: none;
-  border-radius: 999px;
-  background: linear-gradient(135deg, rgba(245, 155, 188, 0.96), rgba(255, 198, 220, 0.96));
-  color: #fff;
-  font-size: 13px;
-  font-weight: 600;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  line-height: 1;
-  box-shadow: 0 10px 22px rgba(245, 155, 188, 0.18);
-  transition:
-    transform 0.22s ease,
-    box-shadow 0.22s ease,
-    filter 0.22s ease;
-}
-
-.search-button :deep(span) {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  line-height: 1;
-}
-
-.search-button:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 14px 26px rgba(245, 155, 188, 0.22);
-  filter: saturate(1.04);
+.article-search {
+  flex: 0 1 280px;
+  min-width: 180px;
 }
 
 .article-list-shell,
@@ -1316,22 +1206,9 @@ onMounted(() => {
   }
 
   .status-radio,
-  .search-shell {
+  .article-search {
     width: 100%;
-  }
-
-  .keyword-input {
-    width: 100%;
-  }
-
-  .search-shell {
-    flex-direction: column;
-    align-items: stretch;
-    border-radius: 24px;
-  }
-
-  .search-button {
-    width: 100%;
+    flex-basis: auto;
   }
 }
 </style>

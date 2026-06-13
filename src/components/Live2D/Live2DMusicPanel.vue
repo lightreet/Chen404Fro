@@ -6,7 +6,7 @@
         <strong>{{ track?.title || '音乐馆' }}</strong>
       </div>
       <button type="button" class="icon-btn" aria-label="关闭音乐播放器" @click="$emit('close')">
-        <el-icon><Close /></el-icon>
+        <UiIcon name="Close" />
       </button>
     </header>
 
@@ -23,26 +23,22 @@
 
     <div class="music-panel__controls">
       <button type="button" class="round-btn" aria-label="上一首" @click="player.previous">
-        <el-icon><Back /></el-icon>
+        <UiIcon name="Back" />
       </button>
       <button type="button" class="round-btn round-btn--primary" aria-label="播放或暂停" @click="togglePlay">
-        <el-icon>
-          <VideoPause v-if="player.playing" />
-          <VideoPlay v-else />
-        </el-icon>
+        <UiIcon :name="player.playing ? 'VideoPause' : 'VideoPlay'" />
       </button>
       <button type="button" class="round-btn" aria-label="下一首" @click="player.next">
-        <el-icon><Right /></el-icon>
+        <UiIcon name="Right" />
       </button>
     </div>
 
     <div class="music-panel__progress">
       <span>{{ formatTime(player.playbackTime) }}</span>
-      <el-slider
+      <UiSlider
         :model-value="player.playbackTime"
         :max="Math.max(player.duration, 1)"
         :show-tooltip="false"
-        size="small"
         @input="handleSeekPreview"
         @change="handleSeek"
       />
@@ -71,7 +67,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { Back, Close, Right, VideoPause, VideoPlay } from '@element-plus/icons-vue'
+import { UiIcon, UiSlider } from '@/components/ui'
 import { useMusicPlayerStore } from '@/stores/music-player'
 import type { MusicTrack } from '@/types'
 

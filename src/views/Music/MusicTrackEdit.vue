@@ -3,7 +3,7 @@
     <header class="track-edit-topbar">
       <div class="topbar-row">
         <button type="button" class="topbar-back" @click="goBack">
-          <el-icon><ArrowLeft /></el-icon>
+          <UiIcon name="ArrowLeft" />
           <span>返回音乐馆</span>
         </button>
         <div class="topbar-meta">
@@ -16,7 +16,7 @@
       </div>
     </header>
 
-      <main v-loading="loading" class="track-edit-layout">
+      <UiLoadingState :loading="loading" message="正在加载歌曲工作台..." class="track-edit-layout">
         <section class="track-edit-main">
           <div class="editor-panel editor-panel--title">
             <span class="panel-kicker">Track Studio</span>
@@ -24,34 +24,34 @@
             <p>把音频、封面、歌词和推荐语整理成一张可以被播放的唱片。</p>
           </div>
 
-          <el-form label-position="top" class="track-form">
+          <UiForm label-position="top" class="track-form">
             <section class="editor-panel">
               <div class="section-title">
                 <span></span>
                 <strong>基本信息</strong>
               </div>
               <div class="form-grid">
-                <el-form-item label="歌名">
+                <UiFormField label="歌名">
                   <div class="title-field">
-                    <el-input v-model="form.title" maxlength="120" placeholder="例如：夜に駆ける" />
-                    <el-button
+                    <UiInput v-model="form.title" maxlength="120" placeholder="例如：夜に駆ける" />
+                    <UiButton
                       class="ai-suggest-button"
                       :loading="suggestingTrack"
                       :disabled="!form.title.trim() || suggestingTrack"
                       @click="suggestTrackInfo"
                     >
                       AI 匹配
-                    </el-button>
+                    </UiButton>
                   </div>
-                </el-form-item>
-                <el-form-item label="歌手">
-                  <el-input v-model="form.artist" maxlength="120" placeholder="例如：YOASOBI" />
-                </el-form-item>
-                <el-form-item label="专辑">
-                  <el-input v-model="form.album" maxlength="120" placeholder="可选" />
-                </el-form-item>
-                <el-form-item label="发行年份">
-                  <el-date-picker
+                </UiFormField>
+                <UiFormField label="歌手">
+                  <UiInput v-model="form.artist" maxlength="120" placeholder="例如：YOASOBI" />
+                </UiFormField>
+                <UiFormField label="专辑">
+                  <UiInput v-model="form.album" maxlength="120" placeholder="可选" />
+                </UiFormField>
+                <UiFormField label="发行年份">
+                  <UiDateField
                     v-model="releaseYearPicker"
                     type="year"
                     value-format="YYYY"
@@ -59,14 +59,14 @@
                     :disabled-date="disabledReleaseYear"
                     clearable
                   />
-                </el-form-item>
-                <el-form-item label="语言">
-                  <el-input v-model="form.language" maxlength="40" placeholder="日语 / 中文 / English" />
-                </el-form-item>
-                <el-form-item label="风格">
-                  <el-input v-model="form.genre" maxlength="80" placeholder="City Pop / Indie / J-pop" />
-                </el-form-item>
-                <el-form-item class="form-grid__wide" label="上架状态">
+                </UiFormField>
+                <UiFormField label="语言">
+                  <UiInput v-model="form.language" maxlength="40" placeholder="日语 / 中文 / English" />
+                </UiFormField>
+                <UiFormField label="风格">
+                  <UiInput v-model="form.genre" maxlength="80" placeholder="City Pop / Indie / J-pop" />
+                </UiFormField>
+                <UiFormField class="form-grid__wide" label="上架状态">
                   <div class="track-status-selector" role="radiogroup" aria-label="歌曲上架状态">
                     <button
                       v-for="option in trackStatusOptions"
@@ -85,7 +85,7 @@
                       </span>
                     </button>
                   </div>
-                </el-form-item>
+                </UiFormField>
               </div>
               <div v-if="aiSearchTouched || aiCandidates.length" class="ai-candidate-panel">
                 <div class="ai-candidate-head">
@@ -93,7 +93,7 @@
                     <strong>AI 候选结果</strong>
                     <p>{{ aiCandidateSummary }}</p>
                   </div>
-                  <el-switch v-model="overwriteExistingFields" active-text="覆盖已有内容" inactive-text="只填空字段" />
+                  <UiSwitch v-model="overwriteExistingFields" active-text="覆盖已有内容" inactive-text="只填空字段" />
                 </div>
                 <div v-if="aiCandidates.length" class="ai-candidate-list">
                   <article
@@ -116,20 +116,19 @@
                       </div>
                       <small v-if="candidate.matchReason">{{ candidate.matchReason }}</small>
                     </div>
-                    <el-button class="candidate-apply-button" @click="applyTrackCandidate(candidate)">
+                    <UiButton class="candidate-apply-button" @click="applyTrackCandidate(candidate)">
                       应用
-                    </el-button>
+                    </UiButton>
                   </article>
                 </div>
-                <el-empty
+                <UiEmpty
                   v-else
-                  :image-size="72"
                   description="还没有找到合适版本，补充歌手、专辑或年份后再试一次。"
                 />
               </div>
-              <el-form-item label="标签">
-                <el-input v-model="tagDraft" placeholder="用逗号分隔，如 夜读, 日系, 温柔" />
-              </el-form-item>
+              <UiFormField label="标签">
+                <UiInput v-model="tagDraft" placeholder="用逗号分隔，如 夜读, 日系, 温柔" />
+              </UiFormField>
             </section>
 
             <section class="editor-panel">
@@ -138,20 +137,18 @@
                 <strong>媒体文件</strong>
               </div>
               <div class="media-grid">
-                <el-form-item>
+                <UiFormField>
                   <template #label>
                     <span class="form-label-with-help">
                       音频文件
-                      <el-tooltip
-                        effect="light"
+                      <UiTooltip
                         placement="top"
-                        popper-class="music-metadata-tooltip"
                         content="上传后自动识别歌名、歌手、专辑、年份、语言、流派；音频标签含歌词时同步填入；内嵌封面会自动上传；kuwo、???、unknown 等占位信息会被忽略。"
                       >
                         <button type="button" class="metadata-help-button" aria-label="查看音频识别说明">
-                          <el-icon><InfoFilled /></el-icon>
+                          <UiIcon name="InfoFilled" />
                         </button>
-                      </el-tooltip>
+                      </UiTooltip>
                     </span>
                   </template>
                   <div class="media-resource-card" :class="{ 'has-value': Boolean(form.audioUrl) }">
@@ -165,31 +162,31 @@
                       </div>
                     </div>
                     <div class="media-resource-card__actions">
-                      <el-upload
+                      <UiUpload
                         :show-file-list="false"
                         :http-request="handleAudioUpload"
                         :before-upload="beforeAudioUpload"
                         :accept="AUDIO_UPLOAD_ACCEPT"
                       >
                         <div class="media-upload-button" :class="{ 'is-uploading': uploadingAudio }">
-                          <el-icon v-if="!uploadingAudio"><Upload /></el-icon>
+                          <UiIcon v-if="!uploadingAudio" name="upload" />
                           <span>{{ audioUploadButtonText }}</span>
                         </div>
-                      </el-upload>
+                      </UiUpload>
                     </div>
                     <audio v-if="form.audioUrl" class="media-resource-audio" :src="form.audioUrl" controls />
                     <div class="upload-input-stack">
-                      <el-input
+                      <UiInput
                         v-model="form.audioUrl"
                         clearable
                         placeholder="上传后自动填入，也可手动填写 https://..."
-                        @input="handleAudioUrlInput"
+                        @update:model-value="handleAudioUrlInput"
                       />
                       <span class="upload-hint">{{ audioUploadHint }}</span>
                     </div>
                   </div>
-                </el-form-item>
-                <el-form-item label="封面图片">
+                </UiFormField>
+                <UiFormField label="封面图片">
                   <div class="media-resource-card" :class="{ 'has-value': Boolean(form.coverUrl) }">
                     <div class="media-resource-card__main">
                       <div class="media-resource-cover">
@@ -202,28 +199,28 @@
                       </div>
                     </div>
                     <div class="media-resource-card__actions">
-                      <el-upload
+                      <UiUpload
                         :show-file-list="false"
                         :http-request="handleCoverUpload"
                         accept="image/jpeg,image/png,image/webp,image/gif"
                       >
                         <div class="media-upload-button" :class="{ 'is-uploading': uploadingCover }">
-                          <el-icon v-if="!uploadingCover"><Upload /></el-icon>
+                          <UiIcon v-if="!uploadingCover" name="upload" />
                           <span>{{ coverUploadButtonText }}</span>
                         </div>
-                      </el-upload>
+                      </UiUpload>
                     </div>
                     <div class="upload-input-stack">
-                      <el-input
+                      <UiInput
                         v-model="form.coverUrl"
                         clearable
                         placeholder="上传后自动填入，也可手动填写 https://..."
-                        @input="handleCoverUrlInput"
+                        @update:model-value="handleCoverUrlInput"
                       />
                       <span class="upload-hint">{{ coverUploadHint }}</span>
                     </div>
                   </div>
-                </el-form-item>
+                </UiFormField>
               </div>
             </section>
 
@@ -232,16 +229,16 @@
                 <span></span>
                 <strong>推荐与歌词</strong>
               </div>
-              <el-form-item label="推荐语">
-                <el-input v-model="form.recommendation" type="textarea" :rows="3" maxlength="500" />
-              </el-form-item>
-              <el-form-item label="氛围短句">
-                <el-input
+              <UiFormField label="推荐语">
+                <UiTextarea v-model="form.recommendation" :rows="3" maxlength="500" />
+              </UiFormField>
+              <UiFormField label="氛围短句">
+                <UiInput
                   v-model="form.moodText"
                   maxlength="160"
                   placeholder="AI 匹配后会优先摘取歌词里的记忆点句子，最多 3 句。"
                 />
-              </el-form-item>
+              </UiFormField>
               <section class="lyrics-editor">
                 <div class="lyrics-editor-head">
                   <div>
@@ -249,22 +246,22 @@
                     <strong>歌词内容</strong>
                     <p>{{ lyricModeHint }}</p>
                   </div>
-                  <el-segmented v-model="form.lyricType" :options="lyricTypeOptions" />
+                  <UiSegmented v-model="form.lyricType" :options="lyricTypeOptions" />
                 </div>
 
                 <div class="lyrics-toolbar">
-                  <el-button
+                  <UiButton
                     v-if="form.lyricType === 'lrc'"
                     class="lrc-upload-button"
+                    icon="upload"
                     :loading="readingLrcFile"
                     @click="openLrcFilePicker"
                   >
-                    <el-icon><Upload /></el-icon>
-                    <span>上传 .lrc</span>
-                  </el-button>
-                  <el-button class="lyrics-clear-button" :disabled="!form.lyrics" @click="clearLyrics">
+                    上传 .lrc
+                  </UiButton>
+                  <UiButton class="lyrics-clear-button" :disabled="!form.lyrics" @click="clearLyrics">
                     清空歌词
-                  </el-button>
+                  </UiButton>
                   <input
                     ref="lrcFileInputRef"
                     class="lrc-file-input"
@@ -274,25 +271,24 @@
                   />
                 </div>
 
-                <el-form-item label="歌词">
-                  <el-input
+                <UiFormField label="歌词">
+                  <UiTextarea
                     v-model="form.lyrics"
-                    type="textarea"
                     :rows="form.lyricType === 'lrc' ? 12 : 9"
                     :placeholder="lyricsPlaceholder"
                   />
-                </el-form-item>
+                </UiFormField>
 
                 <div class="lyrics-status" :class="`is-${lyricsSummary.tone}`">
                   <strong>{{ lyricsSummary.title }}</strong>
                   <span>{{ lyricsSummary.detail }}</span>
                 </div>
               </section>
-              <el-form-item label="歌词来源">
-                <el-input v-model="form.lyricSource" maxlength="160" placeholder="例如：官方歌词 / 网易云音乐 / 手动校对" />
-              </el-form-item>
+              <UiFormField label="歌词来源">
+                <UiInput v-model="form.lyricSource" maxlength="160" placeholder="例如：官方歌词 / 网易云音乐 / 手动校对" />
+              </UiFormField>
             </section>
-          </el-form>
+          </UiForm>
         </section>
 
         <aside class="track-preview-panel">
@@ -334,22 +330,22 @@
             <span :class="{ done: Boolean(form.audioUrl.trim()) }">音频</span>
           </div>
         </aside>
-      </main>
+      </UiLoadingState>
 
       <div class="track-edit-footer">
         <div class="footer-inner">
           <span>{{ canSaveTrack ? '准备好了就放进唱片架。' : '歌名、歌手和音频地址是必填项。' }}</span>
           <div>
-            <el-button class="footer-button footer-button--neutral" @click="goBack">取消</el-button>
-            <el-button
+            <UiButton class="footer-button footer-button--neutral" @click="goBack">取消</UiButton>
+            <UiButton
               class="footer-button footer-button--save"
-              type="primary"
+              variant="primary"
               :loading="saving"
               :disabled="!canSaveTrack"
               @click="saveTrack"
             >
               保存
-            </el-button>
+            </UiButton>
           </div>
         </div>
       </div>
@@ -358,8 +354,9 @@
 
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from 'vue'
-import { ElMessage, type UploadRequestOptions } from 'element-plus'
-import { ArrowLeft, InfoFilled, Upload } from '@element-plus/icons-vue'
+import { notify } from '@/lib/feedback'
+import { UiButton, UiDateField, UiEmpty, UiForm, UiFormField, UiIcon, UiInput, UiLoadingState, UiSegmented, UiSwitch, UiTextarea, UiTooltip, UiUpload } from '@/components/ui'
+import type { UploadRequestOptions } from '@/components/ui'
 import { useRoute, useRouter } from 'vue-router'
 import { createMusicTrack, getAdminMusicTrack, suggestMusicTrack, updateMusicTrack } from '@/api/music'
 import { uploadMusicAudio, uploadMusicCover, type UploadResult } from '@/api/upload'
@@ -591,7 +588,7 @@ async function loadTrack(id: number) {
     const track = await getAdminMusicTrack(id)
     fillFormFromTrack(track)
   } catch (error) {
-    ElMessage.error(error instanceof Error ? error.message : '歌曲加载失败')
+    notify.error(error instanceof Error ? error.message : '歌曲加载失败')
     void router.replace('/music')
   } finally {
     loading.value = false
@@ -644,11 +641,11 @@ function resetForm() {
 
 async function saveTrack() {
   if (uploadInProgress.value) {
-    ElMessage.warning('文件还在上传，稍等一下再保存')
+    notify.warning('文件还在上传，稍等一下再保存')
     return
   }
   if (!form.title.trim() || !form.artist.trim() || !form.audioUrl.trim()) {
-    ElMessage.warning('歌名、歌手和音频地址都要填写')
+    notify.warning('歌名、歌手和音频地址都要填写')
     return
   }
   saving.value = true
@@ -659,10 +656,10 @@ async function saveTrack() {
     }
     if (isEditMode.value && editingId.value != null) {
       await updateMusicTrack(editingId.value, payload)
-      ElMessage.success('歌曲已更新')
+      notify.success('歌曲已更新')
     } else {
       await createMusicTrack(payload)
-      ElMessage.success('歌曲已创建')
+      notify.success('歌曲已创建')
     }
     void router.push('/music')
   } finally {
@@ -673,7 +670,7 @@ async function saveTrack() {
 async function suggestTrackInfo() {
   const title = form.title.trim()
   if (!title) {
-    ElMessage.warning('先输入歌名，Lyra 才能帮你补全信息')
+    notify.warning('先输入歌名，Lyra 才能帮你补全信息')
     return
   }
 
@@ -693,9 +690,9 @@ async function suggestTrackInfo() {
     })
     aiCandidates.value = (response.candidates || []).slice(0, 5)
     if (aiCandidates.value.length > 0) {
-      ElMessage.success(`AI 找到 ${aiCandidates.value.length} 个候选版本`)
+      notify.success(`AI 找到 ${aiCandidates.value.length} 个候选版本`)
     } else {
-      ElMessage.info('暂时没有找到合适版本，可以补充歌手或专辑后再匹配')
+      notify.info('暂时没有找到合适版本，可以补充歌手或专辑后再匹配')
     }
   } finally {
     suggestingTrack.value = false
@@ -705,9 +702,9 @@ async function suggestTrackInfo() {
 function applyTrackCandidate(candidate: MusicTrackAiCandidate) {
   const appliedCount = applyTrackSuggestion(candidate, overwriteExistingFields.value)
   if (appliedCount > 0) {
-    ElMessage.success(`已应用 ${appliedCount} 项候选信息`)
+    notify.success(`已应用 ${appliedCount} 项候选信息`)
   } else {
-    ElMessage.info('这个候选和当前表单内容差不多')
+    notify.info('这个候选和当前表单内容差不多')
   }
 }
 
@@ -782,11 +779,11 @@ function confidenceLabel(confidence?: string) {
 function beforeAudioUpload(file: File) {
   const extension = getFileExtension(file.name)
   if (!ALLOWED_AUDIO_EXTENSIONS.has(extension)) {
-    ElMessage.warning('请选择 MP3、WAV、FLAC、OGG、AAC 或 M4A 音频文件')
+    notify.warning('请选择 MP3、WAV、FLAC、OGG、AAC 或 M4A 音频文件')
     return false
   }
   if (file.size > MAX_AUDIO_UPLOAD_SIZE) {
-    ElMessage.warning(`音频文件不能超过 ${MAX_AUDIO_UPLOAD_SIZE_MB}MB`)
+    notify.warning(`音频文件不能超过 ${MAX_AUDIO_UPLOAD_SIZE_MB}MB`)
     return false
   }
   return true
@@ -807,7 +804,7 @@ async function handleAudioUpload(options: UploadRequestOptions) {
     const appliedCount = await applyParsedAudioMetadata(metadata)
     applyAudioUpload(result)
     options.onSuccess?.(result)
-    ElMessage.success(appliedCount > 0 ? `音频已上传，已识别 ${appliedCount} 项信息` : '音频已上传')
+    notify.success(appliedCount > 0 ? `音频已上传，已识别 ${appliedCount} 项信息` : '音频已上传')
   } catch (error) {
     options.onError?.(toUploadAjaxError(error))
   } finally {
@@ -827,7 +824,7 @@ async function handleCoverUpload(options: UploadRequestOptions) {
     const result = await uploadMusicCover(options.file)
     applyCoverUpload(result)
     options.onSuccess?.(result)
-    ElMessage.success('封面已上传')
+    notify.success('封面已上传')
   } catch (error) {
     options.onError?.(toUploadAjaxError(error))
   } finally {
@@ -893,7 +890,7 @@ async function uploadParsedCover(file: File) {
     applyCoverUpload(result)
     return true
   } catch (error) {
-    ElMessage.warning(error instanceof Error ? `封面识别成功但上传失败：${error.message}` : '封面识别成功但上传失败')
+    notify.warning(error instanceof Error ? `封面识别成功但上传失败：${error.message}` : '封面识别成功但上传失败')
     return false
   } finally {
     uploadingCover.value = false
@@ -923,7 +920,7 @@ async function handleLrcFileChange(event: Event) {
   const file = input.files?.[0]
   if (!file) return
   if (!file.name.toLowerCase().endsWith('.lrc')) {
-    ElMessage.warning('请选择 .lrc 歌词文件')
+    notify.warning('请选择 .lrc 歌词文件')
     input.value = ''
     return
   }
@@ -932,9 +929,9 @@ async function handleLrcFileChange(event: Event) {
   try {
     form.lyricType = 'lrc'
     form.lyrics = await file.text()
-    ElMessage.success(`已导入 ${file.name}`)
+    notify.success(`已导入 ${file.name}`)
   } catch (error) {
-    ElMessage.error(error instanceof Error ? error.message : 'LRC 文件读取失败')
+    notify.error(error instanceof Error ? error.message : 'LRC 文件读取失败')
   } finally {
     readingLrcFile.value = false
     input.value = ''

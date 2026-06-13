@@ -1,0 +1,43 @@
+/**
+ * Chen404 UI Primitive 层统一出口
+ *
+ * 业务/页面层通过 `import { UiButton, UiPanel } from '@/components/ui'` 使用，
+ * 不直接依赖 Element Plus 的 el-* 组件。
+ */
+
+export { default as UiIcon } from './icon/UiIcon.vue'
+export { default as UiButton } from './button/UiButton.vue'
+export { default as UiInput } from './input/UiInput.vue'
+export { default as UiTextarea } from './textarea/UiTextarea.vue'
+export { default as UiPanel } from './panel/UiPanel.vue'
+export { default as UiTabs } from './tabs/UiTabs.vue'
+export { default as UiDialog } from './dialog/UiDialog.vue'
+export { default as UiDrawer } from './drawer/UiDrawer.vue'
+export { default as UiDropdown } from './dropdown/UiDropdown.vue'
+export { default as UiDropdownMenu } from './dropdown-menu/UiDropdownMenu.vue'
+export { default as UiDropdownItem } from './dropdown-item/UiDropdownItem.vue'
+export { default as UiDivider } from './divider/UiDivider.vue'
+export { default as UiBadge } from './badge/UiBadge.vue'
+export { default as UiSwitch } from './switch/UiSwitch.vue'
+export { default as UiCheckbox } from './checkbox/UiCheckbox.vue'
+export { default as UiSelect } from './select/UiSelect.vue'
+export { default as UiRadioGroup } from './radio-group/UiRadioGroup.vue'
+export { default as UiSegmented } from './segmented/UiSegmented.vue'
+export { default as UiTooltip } from './tooltip/UiTooltip.vue'
+export { default as UiPagination } from './pagination/UiPagination.vue'
+export { default as UiEmpty } from './empty/UiEmpty.vue'
+export { default as UiLoadingState } from './loading-state/UiLoadingState.vue'
+export { default as UiSkeleton } from './skeleton/UiSkeleton.vue'
+export { default as UiNumberField } from './number-field/UiNumberField.vue'
+export { default as UiDateField } from './date-field/UiDateField.vue'
+export { default as UiUpload } from './upload/UiUpload.vue'
+export { default as UiSlider } from './slider/UiSlider.vue'
+export { default as UiForm } from './form/UiForm.vue'
+export { default as UiFormField } from './form-field/UiFormField.vue'
+export { default as UiTable } from './table/UiTable.vue'
+export { default as UiTableColumn } from './table-column/UiTableColumn.vue'
+export { default as UiAvatar } from './avatar/UiAvatar.vue'
+export { default as UiSearchBar } from './search-bar/UiSearchBar.vue'
+
+export type { UiButtonVariant, UiTabItem, UiSize, UiSelectOption, UiRadioOption, UiSegmentedOption } from './types'
+export type { UploadRequestHandler, UploadRequestOptions } from './upload/UiUpload.vue'

@@ -1,0 +1,201 @@
+// Chen404 - Element Plus 主题对齐层
+//
+// 目标：在「短期仍复用 Element Plus」的前提下，把 EP 的默认 CSS 变量
+// 全部映射到 Chen404 设计 token，使所有 el-* 组件在不改页面代码的情况下
+// 立即去掉「标准管理后台味」，与品牌语言统一。
+//
+// 这一层只改视觉变量与少量结构性圆角/阴影，不改 EP 组件行为。
+
+:root {
+  // ---- 主色：樱花粉 ----
+  --el-color-primary: var(--primary);
+  --el-color-primary-light-3: var(--primary-light);
+  --el-color-primary-light-5: color-mix(in srgb, var(--primary) 55%, white);
+  --el-color-primary-light-7: color-mix(in srgb, var(--primary) 35%, white);
+  --el-color-primary-light-8: color-mix(in srgb, var(--primary) 22%, white);
+  --el-color-primary-light-9: var(--color-accent-soft);
+  --el-color-primary-dark-2: var(--primary-dark);
+
+  // ---- 语义色 ----
+  --el-color-success: var(--success);
+  --el-color-warning: var(--warning);
+  --el-color-danger: var(--danger);
+  --el-color-error: var(--danger);
+  --el-color-info: var(--info);
+
+  // ---- 文字 ----
+  --el-text-color-primary: var(--text-primary);
+  --el-text-color-regular: var(--text-secondary);
+  --el-text-color-secondary: var(--text-tertiary);
+  --el-text-color-placeholder: var(--text-tertiary);
+
+  // ---- 边框 ----
+  --el-border-color: var(--border-color);
+  --el-border-color-light: var(--border-light);
+  --el-border-color-lighter: var(--border-light);
+  --el-border-color-extra-light: var(--border-light);
+  --el-border-color-hover: var(--primary-light);
+
+  // ---- 表面 / 填充 ----
+  --el-bg-color: var(--bg-secondary);
+  --el-bg-color-page: var(--bg-primary);
+  --el-bg-color-overlay: var(--bg-elevated);
+  --el-fill-color: var(--bg-hover);
+  --el-fill-color-light: var(--bg-hover);
+  --el-fill-color-lighter: var(--border-light);
+  --el-fill-color-blank: var(--bg-secondary);
+
+  // ---- 圆角：比 EP 默认更柔和 ----
+  --el-border-radius-base: 10px;
+  --el-border-radius-small: var(--radius-sm);
+  --el-border-radius-round: var(--radius-pill);
+
+  // ---- 阴影 ----
+  --el-box-shadow: var(--shadow-md);
+  --el-box-shadow-light: var(--shadow-sm);
+  --el-box-shadow-lighter: var(--shadow-sm);
+
+  // ---- 控件高度统一 ----
+  --el-component-size: var(--control-height-md);
+  --el-component-size-large: var(--control-height-lg);
+  --el-component-size-small: var(--control-height-sm);
+
+  // ---- 字体 ----
+  --el-font-family: var(--font-sans);
+  --el-font-size-base: var(--font-size-base);
+}
+
+// ====== 结构性微调：弱化后台感 ======
+
+// 按钮：圆角更柔，hover 轻微上浮，主按钮带渐变
+.el-button {
+  --el-button-hover-link-text-color: var(--primary-dark);
+  border-radius: 10px;
+  font-weight: 500;
+  transition:
+    transform var(--motion-duration-fast) var(--motion-ease-standard),
+    box-shadow var(--motion-duration-base) var(--motion-ease-standard),
+    background-color var(--motion-duration-fast) var(--motion-ease-standard),
+    border-color var(--motion-duration-fast) var(--motion-ease-standard);
+
+  &:not(.is-text):not(.is-link):not(.is-disabled):hover {
+    transform: translateY(-1px);
+  }
+  &:not(.is-text):not(.is-link):active {
+    transform: translateY(0);
+  }
+}
+
+.el-button.el-button--primary:not(.is-plain):not(.is-text):not(.is-link) {
+  background: linear-gradient(135deg, var(--primary), var(--primary-light));
+  border-color: transparent;
+
+  &:not(.is-disabled):hover {
+    box-shadow: 0 8px 20px color-mix(in srgb, var(--primary) 32%, transparent);
+  }
+}
+
+.el-button.is-round {
+  border-radius: var(--radius-pill);
+}
+
+// 输入：圆角与内边距更舒展
+.el-input,
+.el-textarea {
+  --el-input-border-radius: 10px;
+}
+.el-input__wrapper,
+.el-textarea__inner {
+  border-radius: 10px;
+  box-shadow: 0 0 0 1px var(--border-color) inset;
+  transition: box-shadow var(--motion-duration-base) var(--motion-ease-standard);
+
+  &:hover {
+    box-shadow: 0 0 0 1px var(--primary-light) inset;
+  }
+  &.is-focus,
+  &:focus {
+    box-shadow: 0 0 0 1px var(--primary) inset;
+  }
+}
+
+// 卡片：去掉硬边线感，圆角更大
+.el-card {
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--border-light);
+  --el-card-padding: var(--space-lg);
+}
+
+// 标签：圆润 chip 化
+.el-tag {
+  border-radius: var(--radius-pill);
+  border: none;
+  font-weight: 500;
+}
+
+// 表格：去掉重边框，行 hover 柔和
+.el-table {
+  --el-table-border-color: var(--border-light);
+  --el-table-header-bg-color: var(--bg-hover);
+  --el-table-header-text-color: var(--text-secondary);
+  --el-table-row-hover-bg-color: var(--color-accent-soft);
+  border-radius: var(--radius-lg);
+}
+.el-table th.el-table__cell {
+  font-weight: 600;
+}
+
+// 分页：当前页按品牌色
+.el-pagination {
+  --el-pagination-button-bg-color: transparent;
+  --el-pagination-hover-color: var(--primary);
+}
+.el-pagination.is-background .el-pager li.is-active {
+  background: linear-gradient(135deg, var(--primary), var(--primary-light));
+  border-radius: 8px;
+}
+.el-pagination.is-background .el-pager li:not(.is-active),
+.el-pagination.is-background .btn-prev,
+.el-pagination.is-background .btn-next {
+  border-radius: 8px;
+  background: var(--bg-hover);
+}
+
+// Tabs：去掉灰底切换条，改下划线品牌色
+.el-tabs__item.is-active {
+  color: var(--primary);
+}
+.el-tabs__active-bar {
+  background: linear-gradient(90deg, var(--primary), var(--primary-light));
+  border-radius: var(--radius-pill);
+}
+
+// Dialog / Drawer / Overlay：圆角与阴影统一
+.el-dialog {
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-lg);
+}
+.el-drawer {
+  --el-drawer-padding-primary: var(--space-lg);
+}
+.el-message-box {
+  border-radius: var(--radius-xl);
+}
+
+// Switch：选中走品牌色（默认已继承 primary，这里仅保证圆角）
+.el-switch.is-checked .el-switch__core {
+  border-color: var(--primary);
+}
+
+// Select / Dropdown 浮层
+.el-popper,
+.el-select__popper {
+  border-radius: var(--radius-lg);
+}
+
+// 消息提示：圆润 + 柔和阴影
+.el-message {
+  border-radius: var(--radius-pill);
+  box-shadow: var(--shadow-md);
+  border: 1px solid var(--border-light);
+}

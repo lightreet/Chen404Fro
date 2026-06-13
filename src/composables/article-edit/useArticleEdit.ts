@@ -1,6 +1,6 @@
 import { ref, reactive, computed, onMounted, onUnmounted, onUpdated, watch, nextTick } from 'vue';
 import { useRoute, useRouter, onBeforeRouteLeave } from 'vue-router';
-import { ElMessage, ElMessageBox } from 'element-plus';
+import { notify, confirmAction } from '@/lib/feedback';
 import type { ExposeParam, ToolbarNames } from 'md-editor-v3';
 import type { Category, Tag } from '@/types';
 import { ArticleStatus, ArticleVisibility, ArticleCommentPolicy } from '@/types';
@@ -320,7 +320,7 @@ export function useArticleEdit() {
       }
     } catch (error) {
       console.error('获取文章详情失败', error);
-      ElMessage.error('获取文章详情失败');
+      notify.error('获取文章详情失败');
       router.push('/');
     } finally {
       loading.value = false;
@@ -332,17 +332,17 @@ export function useArticleEdit() {
       const res = await uploadCover(options.file);
       form.coverImage = res.url;
       options.onSuccess(res);
-      ElMessage.success('封面上传成功');
+      notify.success('封面上传成功');
     } catch (error) {
       options.onError(error);
-      ElMessage.error('封面上传失败');
+      notify.error('封面上传失败');
     }
   };
 
   const beforeCoverUpload = (file: File) => {
     const result = validateImageFile(file, DEFAULT_IMAGE_MAX_MB);
     if (!result.valid) {
-      ElMessage.error(result.message);
+      notify.error(result.message);
       return false;
     }
     return true;
@@ -353,7 +353,7 @@ export function useArticleEdit() {
       const validFiles = files.filter((file) => {
         const result = validateImageFile(file, DEFAULT_IMAGE_MAX_MB);
         if (!result.valid) {
-          ElMessage.error(`${file.name}: ${result.message}`);
+          notify.error(`${file.name}: ${result.message}`);
           return false;
         }
         return true;
@@ -370,7 +370,7 @@ export function useArticleEdit() {
           return res.url;
         } catch (error) {
           console.error(`${'上传失败:'} ${file.name}`, error);
-          ElMessage.error(`${file.name} 上传失败`);
+          notify.error(`${file.name} 上传失败`);
           return null;
         }
       });
@@ -380,34 +380,34 @@ export function useArticleEdit() {
 
       callback(urls);
       if (urls.length > 0) {
-        ElMessage.success(`成功上传 ${urls.length} 张图片`);
+        notify.success(`成功上传 ${urls.length} 张图片`);
       }
     } catch (error) {
       console.error('图片上传失败', error);
-      ElMessage.error('图片上传失败');
+      notify.error('图片上传失败');
     }
   };
 
   const validateForm = (): boolean => {
     const title = form.title?.trim() ?? '';
     if (!title) {
-      ElMessage.warning('请输入文章标题');
+      notify.warning('请输入文章标题');
       return false;
     }
     if (title.length < TITLE_LEN_MIN) {
-      ElMessage.warning(`文章标题至少 ${TITLE_LEN_MIN} 个字`);
+      notify.warning(`文章标题至少 ${TITLE_LEN_MIN} 个字`);
       return false;
     }
     if (title.length > TITLE_LEN_MAX) {
-      ElMessage.warning(`文章标题不能超过 ${TITLE_LEN_MAX} 个字`);
+      notify.warning(`文章标题不能超过 ${TITLE_LEN_MAX} 个字`);
       return false;
     }
     if (!form.categoryId) {
-      ElMessage.warning('请选择文章分类');
+      notify.warning('请选择文章分类');
       return false;
     }
     if (!form.content?.trim()) {
-      ElMessage.warning('请输入文章内容');
+      notify.warning('请输入文章内容');
       return false;
     }
     return true;
@@ -475,7 +475,7 @@ export function useArticleEdit() {
     }
 
     if (showMessage) {
-      ElMessage.warning('请输入文章标题');
+      notify.warning('请输入文章标题');
     }
     return false;
   };
@@ -583,7 +583,7 @@ export function useArticleEdit() {
         syncSavedSnapshot('saved');
 
         if (!silent && source === 'manual') {
-          ElMessage.success('草稿保存成功');
+          notify.success('草稿保存成功');
         }
         return true;
       } catch (error) {
@@ -592,7 +592,7 @@ export function useArticleEdit() {
         autoSaveState.value = 'error';
 
         if (!silent && source === 'manual') {
-          ElMessage.error('保存草稿失败');
+          notify.error('保存草稿失败');
         }
         return false;
       } finally {
@@ -619,15 +619,14 @@ export function useArticleEdit() {
   const handlePublish = async () => {
     if (!validateForm()) return;
 
-    try {
-      await ElMessageBox.confirm('确定要发布这篇文章吗？', '确认发布', {
-        confirmButtonText: '确定',
-        cancelButtonText: '取消',
-        type: 'info',
-      });
-    } catch {
-      return;
-    }
+    const confirmed = await confirmAction({
+      message: '确定要发布这篇文章吗？',
+      title: '确认发布',
+      confirmText: '确定',
+      cancelText: '取消',
+      tone: 'info',
+    });
+    if (!confirmed) return;
 
     publishing.value = true;
     try {
@@ -637,18 +636,18 @@ export function useArticleEdit() {
 
       if (isEdit.value && articleId.value) {
         await updateArticle(articleId.value, data);
-        ElMessage.success('文章更新成功');
+        notify.success('文章更新成功');
         router.push(`/article/${articleId.value}`);
       } else {
         const res = await createArticle(data);
-        ElMessage.success('文章发布成功');
+        notify.success('文章发布成功');
         if (res.id) {
           router.push(`/article/${res.id}`);
         }
       }
     } catch (error) {
       console.error('发布失败', error);
-      ElMessage.error('发布失败');
+      notify.error('发布失败');
     } finally {
       publishing.value = false;
     }
@@ -656,7 +655,7 @@ export function useArticleEdit() {
 
   const ensureAiInputReady = () => {
     if (!form.content?.trim()) {
-      ElMessage.warning('请先输入文章正文');
+      notify.warning('请先输入文章正文');
       return false;
     }
     return true;
@@ -708,10 +707,10 @@ export function useArticleEdit() {
         currentSummary: currentSummary || undefined,
       });
       form.summary = result.summary || '';
-      ElMessage.success('AI 摘要已生成');
+      notify.success('AI 摘要已生成');
     } catch (error) {
       console.error('AI 摘要生成失败', error);
-      ElMessage.error('AI 摘要生成失败');
+      notify.error('AI 摘要生成失败');
     } finally {
       generatingSummary.value = false;
     }
@@ -730,10 +729,10 @@ export function useArticleEdit() {
         currentTags: currentTags.length > 0 ? currentTags : undefined,
       });
       applyAiTags(result.tags || []);
-      ElMessage.success('AI 标签建议已应用');
+      notify.success('AI 标签建议已应用');
     } catch (error) {
       console.error('AI 标签生成失败', error);
-      ElMessage.error('AI 标签生成失败');
+      notify.error('AI 标签生成失败');
     } finally {
       generatingTags.value = false;
     }

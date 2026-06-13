@@ -18,99 +18,93 @@
         <div class="auth-form">
           <h3 class="form-title">创建账号</h3>
 
-          <el-form
+          <UiForm
             ref="formRef"
             :model="form"
             :rules="rules"
             class="register-form"
             @keyup.enter="handleRegister"
           >
-            <el-form-item prop="username">
-              <el-input
+            <UiFormField prop="username">
+              <UiInput
                 v-model="form.username"
                 placeholder="请输入用户名"
-                size="large"
-                :prefix-icon="User"
+                size="lg"
+                prefix-icon="user"
                 maxlength="20"
               />
-            </el-form-item>
+            </UiFormField>
 
-            <el-form-item prop="email">
-              <el-input
+            <UiFormField prop="email">
+              <UiInput
                 v-model="form.email"
                 placeholder="请输入邮箱"
-                size="large"
-                :prefix-icon="Message"
+                size="lg"
+                prefix-icon="message"
               />
-            </el-form-item>
+            </UiFormField>
 
-            <el-form-item prop="code">
+            <UiFormField prop="code">
               <div class="verify-code-wrapper">
-                <el-input
+                <UiInput
                   v-model="form.code"
                   placeholder="请输入邮箱验证码"
-                  size="large"
-                  :prefix-icon="Key"
+                  size="lg"
+                  prefix-icon="key"
                   maxlength="6"
                 />
-                <el-button
-                  type="primary"
-                  :disabled="codeSending || codeCountdown > 0"
-                  @click="sendVerifyCode"
-                >
+                <UiButton variant="primary" :disabled="codeSending || codeCountdown > 0" @click="sendVerifyCode">
                   {{ codeCountdown > 0 ? `${codeCountdown}s` : '获取验证码' }}
-                </el-button>
+                </UiButton>
               </div>
-            </el-form-item>
+            </UiFormField>
 
-            <el-form-item prop="password">
-              <el-input
+            <UiFormField prop="password">
+              <UiInput
                 v-model="form.password"
                 type="password"
                 placeholder="请输入密码"
-                size="large"
-                :prefix-icon="Lock"
-                show-password
+                size="lg"
+                prefix-icon="lock"
               />
-            </el-form-item>
+            </UiFormField>
 
-            <el-form-item prop="confirmPassword">
-              <el-input
+            <UiFormField prop="confirmPassword">
+              <UiInput
                 v-model="form.confirmPassword"
                 type="password"
                 placeholder="请确认密码"
-                size="large"
-                :prefix-icon="Lock"
-                show-password
+                size="lg"
+                prefix-icon="lock"
               />
-            </el-form-item>
+            </UiFormField>
 
             <div class="username-hint">
               用户名会作为默认昵称使用，注册后可在个人中心再改成更喜欢的名字。
             </div>
 
             <div class="form-agreement">
-              <el-checkbox v-model="agreement">
+              <UiCheckbox v-model="agreement">
                 我已阅读并同意
                 <a href="#" @click.prevent="agreementDialogVisible = true">《用户协议》</a>
                 和
                 <a href="#" @click.prevent="privacyDialogVisible = true">《隐私政策》</a>
-              </el-checkbox>
+              </UiCheckbox>
             </div>
 
-            <el-form-item>
-              <el-button
-                type="primary"
-                size="large"
+            <UiFormField>
+              <UiButton
+                variant="primary"
+                size="lg"
                 class="submit-btn"
                 :loading="loading"
                 :disabled="!agreement"
                 @click="handleRegister"
               >
                 立即注册
-              </el-button>
-            </el-form-item>
-          </el-form>
+              </UiButton>
+            </UiFormField>
+          </UiForm>
 
           <div class="auth-footer">
             <p>
@@ -118,7 +112,7 @@
               <router-link to="/login" class="link">立即登录</router-link>
             </p>
             <router-link to="/" class="back-link">
-              <el-icon><ArrowLeft /></el-icon>
+              <UiIcon name="arrow-left" />
               返回首页
             </router-link>
           </div>
@@ -126,12 +120,11 @@
       </div>
     </div>
 
-    <el-dialog
+    <UiDialog
       v-model="agreementDialogVisible"
       title="用户协议"
       width="720px"
       class="legal-modal legal-modal--agreement"
-      align-center
     >
       <div class="legal-dialog">
         <div class="legal-hero">
@@ -147,16 +140,15 @@
         </section>
       </div>
       <template #footer>
-        <el-button @click="agreementDialogVisible = false">我知道了</el-button>
+        <UiButton variant="secondary" @click="agreementDialogVisible = false">我知道了</UiButton>
       </template>
-    </el-dialog>
+    </UiDialog>
 
-    <el-dialog
+    <UiDialog
       v-model="privacyDialogVisible"
       title="隐私政策"
       width="720px"
       class="legal-modal legal-modal--privacy"
-      align-center
     >
       <div class="legal-dialog">
         <div class="legal-hero">
@@ -172,17 +164,17 @@
         </section>
       </div>
       <template #footer>
-        <el-button @click="privacyDialogVisible = false">明白了</el-button>
+        <UiButton variant="secondary" @click="privacyDialogVisible = false">明白了</UiButton>
       </template>
-    </el-dialog>
+    </UiDialog>
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue';
 import { useRouter } from 'vue-router';
-import { ElMessage } from 'element-plus';
-import { ArrowLeft, Key, Lock, Message, User } from '@element-plus/icons-vue';
+import { notify } from '@/lib/feedback';
+import { UiButton, UiCheckbox, UiDialog, UiForm, UiFormField, UiIcon, UiInput } from '@/components/ui'
 import { login, register, sendVerifyCode as sendVerifyCodeApi } from '@/api/auth';
 import { useSiteConfig } from '@/composables/useSiteConfig';
 import { useUserStore } from '@/stores/user';
@@ -322,20 +314,20 @@ const rules = {
 
 const sendVerifyCode = async () => {
   if (!form.email.trim()) {
-    ElMessage.warning('请先输入邮箱');
+    notify.warning('请先输入邮箱');
     return;
   }
 
   const emailReg = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   if (!emailReg.test(form.email)) {
-    ElMessage.warning('邮箱格式不正确');
+    notify.warning('邮箱格式不正确');
     return;
   }
 
   codeSending.value = true;
   try {
     await sendVerifyCodeApi({ email: form.email, type: 'register' });
-    ElMessage.success('验证码已发送到邮箱');
+    notify.success('验证码已发送到邮箱');
 
     codeCountdown.value = 60;
     const timer = window.setInterval(() => {
@@ -346,7 +338,7 @@ const sendVerifyCode = async () => {
     }, 1000);
   } catch (error) {
     console.error('发送验证码失败:', error);
-    ElMessage.error('发送验证码失败，请稍后重试');
+    notify.error('发送验证码失败，请稍后重试');
   } finally {
     codeSending.value = false;
   }
@@ -374,7 +366,7 @@ const handleRegister = async () => {
       refreshToken: loginRes.refreshToken,
     });
 
-    ElMessage.success('注册成功');
+    notify.success('注册成功');
     router.push('/');
   } catch (error) {
     console.error('注册失败:', error);
@@ -502,7 +494,7 @@ onMounted(() => {
 }
 
 .register-form {
-  :deep(.el-input__wrapper) {
+  :deep(.ui-input) {
     border-radius: var(--radius-md);
   }
 }
@@ -515,19 +507,14 @@ onMounted(() => {
   --code-input-height: 40px;
   --code-btn-height: 36px;
 
-  :deep(.el-input) {
+  :deep(.ui-input) {
     flex: 1;
     min-width: 0;
     height: var(--code-input-height);
-  }
-
-  :deep(.el-input__wrapper) {
-    height: var(--code-input-height);
-    min-height: var(--code-input-height);
     box-sizing: border-box;
   }
 
-  :deep(.el-button) {
+  :deep(.ui-button) {
     flex-shrink: 0;
     min-width: 120px;
     height: var(--code-btn-height);
@@ -783,10 +770,9 @@ onMounted(() => {
     padding: 0 24px 24px;
   }
 
-  :deep(.el-button) {
+  :deep(.ui-button) {
     min-width: 116px;
     border-radius: 999px;
-    border-color: rgba(251, 114, 153, 0.18);
   }
 }
 

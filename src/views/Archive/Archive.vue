@@ -19,7 +19,7 @@
     </template>
 
     <div class="archive-page">
-      <el-skeleton v-if="loading" :rows="8" animated />
+      <UiSkeleton v-if="loading" :rows="8" size="lg" />
 
       <div v-else-if="archiveData.length === 0" class="empty-state">暂无公开文章记录</div>
 
@@ -76,6 +76,7 @@
 import { ref, onMounted } from 'vue';
 import DefaultLayout from '@/layouts/DefaultLayout.vue';
 import PageHero from '@/components/PageHero/PageHero.vue';
+import { UiSkeleton } from '@/components/ui'
 import { useSiteConfig } from '@/composables/useSiteConfig';
 import type { ArchiveYear } from '@/types';
 import { formatDate } from '@/utils/format';

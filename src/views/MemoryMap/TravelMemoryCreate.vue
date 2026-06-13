@@ -1,12 +1,9 @@
 ﻿<template>
   <div class="travel-memory-create-page">
-    <section v-loading="loading" class="travel-memory-editor">
+    <UiLoadingState :loading="loading" message="正在加载旅行编辑器..." class="travel-memory-editor">
       <div class="travel-memory-create__topbar">
         <div class="travel-memory-create__topbar-inner">
-          <el-button text class="travel-memory-create__back" @click="goBack">
-            <el-icon><ArrowLeft /></el-icon>
-            返回
-          </el-button>
+          <UiButton variant="text" icon="arrow-left" class="travel-memory-create__back" @click="goBack">返回</UiButton>
           <div class="travel-memory-create__meta">
             <span>{{ pageTitle }}</span>
             <span>{{ stopCount }} 个片段</span>
@@ -20,10 +17,10 @@
           <strong>旅行地点加载失败</strong>
           <p>{{ editorLoadError }}</p>
         </div>
-        <div class="travel-memory-editor-error__actions">
-          <el-button type="primary" @click="retryPageLoad">重新加载</el-button>
-          <el-button @click="goToMemoryMap">返回地图</el-button>
-        </div>
+          <div class="travel-memory-editor-error__actions">
+            <UiButton variant="primary" @click="retryPageLoad">重新加载</UiButton>
+            <UiButton variant="secondary" @click="goToMemoryMap">返回地图</UiButton>
+          </div>
       </div>
 
       <template v-else>
@@ -31,23 +28,18 @@
         <div class="map-panel__head">
           <div class="panel-title">
             <span class="panel-title__dot">
-              <el-icon><Location /></el-icon>
+              <UiIcon name="Location" />
             </span>
             <strong>选择地点</strong>
           </div>
           <div class="map-search">
-            <el-input
+            <UiInput
               v-model="locationSearchKeyword"
               placeholder="搜索城市、景点或国家"
               clearable
+              suffix-icon="search"
               @keyup.enter="handleLocationSearch"
-            >
-              <template #suffix>
-                <button type="button" class="map-search__button" title="搜索地点" @click="handleLocationSearch">
-                  <el-icon><Search /></el-icon>
-                </button>
-              </template>
-            </el-input>
+            />
           </div>
         </div>
 
@@ -68,24 +60,24 @@
 
         <div class="map-panel__tools" aria-label="地图操作">
           <button type="button" title="放大地图" @click="zoomInPickerMap">
-            <el-icon><Plus /></el-icon>
+            <UiIcon name="Plus" />
           </button>
           <button type="button" title="缩小地图" @click="zoomOutPickerMap">
             <span>-</span>
           </button>
           <button type="button" title="清除当前坐标" @click="clearCoordinateSelection">
-            <el-icon><Close /></el-icon>
+            <UiIcon name="Close" />
           </button>
         </div>
 
         <button type="button" class="map-panel__locate" @click="locateCurrentPosition">
-          <el-icon><Location /></el-icon>
+          <UiIcon name="Location" />
           <span>自动定位</span>
         </button>
 
         <div v-if="hasCurrentTargetCoordinate" class="map-picked-card">
           <span class="map-picked-card__pin">
-            <el-icon><Location /></el-icon>
+            <UiIcon name="Location" />
           </span>
           <div>
             <strong>{{ currentLocationTitle }}</strong>
@@ -105,20 +97,19 @@
               <strong>旅行主信息</strong>
             </div>
 
-            <el-form label-position="top" class="editor-form">
-              <el-form-item label="旅行标题">
-                <el-input
+            <UiForm label-position="top" class="editor-form">
+              <UiFormField label="旅行标题">
+                <UiInput
                   v-model="form.title"
                   maxlength="50"
                   placeholder="给这趟旅行起个标题吧"
-                >
-                  <template #suffix>{{ titleLength }}/50</template>
-                </el-input>
-              </el-form-item>
+                  show-word-limit
+                />
+              </UiFormField>
 
-              <el-form-item label="旅行时间">
+              <UiFormField label="旅行时间">
                 <div class="date-range-row">
-                  <el-date-picker
+                  <UiDateField
                     v-model="form.visitedAt"
                     type="date"
                     value-format="YYYY-MM-DDTHH:mm:ss"
@@ -126,7 +117,7 @@
                     class="w-full"
                   />
                   <span class="date-range-row__divider">-</span>
-                  <el-date-picker
+                  <UiDateField
                     v-model="form.visitedEndAt"
                     type="date"
                     value-format="YYYY-MM-DDTHH:mm:ss"
@@ -134,26 +125,25 @@
                     class="w-full"
                   />
                 </div>
-              </el-form-item>
+              </UiFormField>
 
-              <el-form-item label="旅行摘要">
-                <el-input
+              <UiFormField label="旅行摘要">
+                <UiTextarea
                   v-model="form.summaryNote"
-                  type="textarea"
                   :rows="4"
                   maxlength="500"
+                  show-count
                   placeholder="这里写整趟旅行的整体感受，下面的片段再写具体景点或阶段。"
                 />
-                <span class="field-counter">{{ summaryLength }}/500</span>
-              </el-form-item>
+              </UiFormField>
 
               <div class="form-meta-row">
-                <el-form-item label="省份">
-                  <el-input v-model="form.province" placeholder="例如：广东省" />
-                </el-form-item>
-                <el-form-item label="城市">
-                  <el-input v-model="form.city" placeholder="例如：广州市" />
-                </el-form-item>
+                <UiFormField label="省份">
+                  <UiInput v-model="form.province" placeholder="例如：广东省" />
+                </UiFormField>
+                <UiFormField label="城市">
+                  <UiInput v-model="form.city" placeholder="例如：广州市" />
+                </UiFormField>
                 <div
                   class="coordinate-status"
                   :class="{
@@ -165,7 +155,7 @@
                   <span>{{ locationMetaStatusText }}</span>
                 </div>
               </div>
-            </el-form>
+            </UiForm>
           </section>
 
           <section class="editor-card editor-card--cover-panel">
@@ -174,7 +164,7 @@
               <strong>封面图片</strong>
             </div>
 
-            <el-upload
+            <UiUpload
               class="cover-upload"
               drag
               :show-file-list="false"
@@ -202,18 +192,18 @@
               </div>
               <div v-else class="cover-upload__empty">
                 <div class="cover-upload__placeholder">
-                  <el-icon><Plus /></el-icon>
+                  <UiIcon name="Plus" />
                   <strong>上传封面</strong>
                 </div>
               </div>
-            </el-upload>
+            </UiUpload>
           </section>
         </div>
 
         <section class="editor-card editor-card--advanced">
           <button type="button" class="advanced-toggle" @click="advancedOpen = !advancedOpen">
             <span>高级参数</span>
-            <el-icon class="toggle-icon" :class="{ open: advancedOpen }"><ArrowDown /></el-icon>
+            <UiIcon class="toggle-icon" :class="{ open: advancedOpen }" name="ArrowDown" />
           </button>
           <Transition name="slide-down">
             <div v-show="advancedOpen" class="advanced-content">
@@ -224,7 +214,7 @@
                     {{ form.status === 1 ? '保存后会展示在旅行地图中' : '保存后暂不展示在旅行地图中' }}
                   </span>
                 </div>
-                <el-switch v-model="form.status" :active-value="1" :inactive-value="0" />
+                <UiSwitch v-model="form.status" :active-value="1" :inactive-value="0" />
               </div>
             </div>
           </Transition>
@@ -243,10 +233,9 @@
                 <span>{{ stopCount }} 个片段</span>
                 <span>{{ photoCount }} 张照片</span>
               </div>
-              <button type="button" class="section-action section-action--primary" @click="addStop">
-                <el-icon><Plus /></el-icon>
+              <UiButton variant="primary" icon="add" class="section-action section-action--primary" @click="addStop">
                 添加旅途片段
-              </button>
+              </UiButton>
             </div>
           </div>
 
@@ -272,7 +261,7 @@
                         aria-label="折叠片段"
                         @click="collapseStop(stopIndex)"
                       >
-                        <el-icon><ArrowUp /></el-icon>
+                        <UiIcon name="ArrowUp" />
                       </button>
                       <button
                         type="button"
@@ -282,7 +271,7 @@
                         :disabled="stopIndex === 0"
                         @click="moveStop(stopIndex, -1)"
                       >
-                        <el-icon><Top /></el-icon>
+                        <UiIcon name="Top" />
                       </button>
                       <button
                         type="button"
@@ -292,10 +281,10 @@
                         :disabled="stopIndex === form.stops.length - 1"
                         @click="moveStop(stopIndex, 1)"
                       >
-                        <el-icon><Bottom /></el-icon>
+                        <UiIcon name="Bottom" />
                       </button>
                       <button type="button" class="icon-button" title="删除片段" aria-label="删除片段" @click="removeStop(stopIndex)">
-                        <el-icon><Close /></el-icon>
+                        <UiIcon name="Close" />
                       </button>
                     </div>
                   </div>
@@ -304,17 +293,16 @@
                     <div class="stop-fields-panel">
                       <div class="field">
                         <label>片段 / 景点标题</label>
-                        <el-input v-model="stop.title" maxlength="50" placeholder="例如：凌晨 2 点的街道" @focus="selectStop(stopIndex)" />
+                        <UiInput v-model="stop.title" maxlength="50" placeholder="例如：凌晨 2 点的街道" @focus="selectStop(stopIndex)" />
                       </div>
 
                       <div class="field">
                         <label>片段文字</label>
-                        <el-input
+                        <UiTextarea
                           v-model="stop.storyNote"
-                          type="textarea"
                           :rows="5"
                           maxlength="500"
-                          show-word-limit
+                          show-count
                           placeholder="记录这个片段里最值得留下的一小段。"
                           @focus="selectStop(stopIndex)"
                         />
@@ -322,7 +310,7 @@
 
                       <div class="field stop-date-field">
                         <label>片段日期（可选）</label>
-                        <el-date-picker
+                        <UiDateField
                           v-model="stop.visitedAt"
                           type="date"
                           value-format="YYYY-MM-DDTHH:mm:ss"
@@ -367,7 +355,7 @@
                             <span v-if="entry.stopCover" class="mini-photo-badge">片段封面</span>
                             <span v-if="entry.cover" class="mini-photo-badge mini-photo-badge--travel">旅行封面</span>
                             <span class="mini-photo-drag-handle" title="拖拽排序" aria-hidden="true">
-                              <el-icon><Rank /></el-icon>
+                              <UiIcon name="Rank" />
                             </span>
                             <div class="mini-photo__overlay" @click.stop>
                               <button type="button" class="mini-photo-overlay-action" @click="setTravelCoverFromOverlay(stopIndex, entryIndex)">
@@ -387,7 +375,7 @@
                             </div>
                           </div>
                           <div class="mini-photo__remark">
-                            <el-input
+                            <UiInput
                               v-if="isEditingEntryRemark(stopIndex, entryIndex)"
                               v-model="entry.remark"
                               maxlength="80"
@@ -408,7 +396,7 @@
                           </div>
                         </div>
 
-                        <el-upload
+                        <UiUpload
                           class="stop-photo-upload mini-photo-add-tile"
                           :show-file-list="false"
                           :before-upload="beforeImageUpload"
@@ -417,10 +405,10 @@
                           multiple
                         >
                           <button type="button" class="mini-photo-add">
-                            <el-icon><Plus /></el-icon>
+                            <UiIcon name="Plus" />
                             <span>{{ stop.entries.length ? '继续添加' : '添加照片' }}</span>
                           </button>
-                        </el-upload>
+                        </UiUpload>
                       </div>
                     </div>
                   </div>
@@ -447,7 +435,7 @@
                     <span v-if="!stop.entries.length" class="stop-compact__empty">暂无照片</span>
                   </span>
                   <span class="stop-compact__toggle" title="展开片段" aria-label="展开片段">
-                    <el-icon><ArrowDown /></el-icon>
+                    <UiIcon name="ArrowDown" />
                   </span>
                 </button>
               </template>
@@ -459,31 +447,31 @@
 
       <div class="travel-memory-create__footer">
         <div class="travel-memory-create__footer-inner">
-          <el-button class="footer-button footer-button--neutral" @click="goToMemoryMap">
+          <UiButton class="footer-button footer-button--neutral" @click="goToMemoryMap">
             返回地图
-          </el-button>
-          <el-button
+          </UiButton>
+          <UiButton
             class="footer-button footer-button--save"
-            type="primary"
+            variant="primary"
             :loading="saving"
             :disabled="uploading"
             @click="handleSave"
           >
             {{ saveButtonLabel }}
-          </el-button>
+          </UiButton>
         </div>
       </div>
       </template>
-    </section>
+    </UiLoadingState>
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue'
 import type { AxiosError } from 'axios'
-import type { UploadRequestOptions } from 'element-plus'
-import { ElMessage } from 'element-plus'
-import { ArrowDown, ArrowLeft, ArrowUp, Bottom, Close, Location, Plus, Rank, Search, Top } from '@element-plus/icons-vue'
+import { notify } from '@/lib/feedback'
+import { UiButton, UiDateField, UiForm, UiFormField, UiIcon, UiInput, UiLoadingState, UiSwitch, UiTextarea, UiUpload } from '@/components/ui'
+import type { UploadRequestOptions } from '@/components/ui'
 import { useRoute, useRouter } from 'vue-router'
 import TravelMemoryMap from '@/components/TravelMemoryMap/TravelMemoryMap.vue'
 import {
@@ -545,8 +533,6 @@ const editingId = computed(() => {
 const isEditMode = computed(() => editingId.value != null)
 const pageTitle = computed(() => (isEditMode.value ? '编辑旅行地点' : '新增旅行地点'))
 const saveButtonLabel = computed(() => (isEditMode.value ? '保存修改' : '保存地点'))
-const titleLength = computed(() => form.title?.length || 0)
-const summaryLength = computed(() => form.summaryNote?.length || 0)
 const stopCount = computed(() => form.stops.length)
 const photoCount = computed(() => allEntries.value.length)
 const coverEntry = computed(() => allEntries.value.find((entry) => entry.cover) || allEntries.value[0] || null)
@@ -764,7 +750,7 @@ async function loadList() {
     list.value = nextList
   } catch {
     if (requestVersion !== listRequestVersion) return
-    ElMessage.error('旅行地点列表加载失败')
+    notify.error('旅行地点列表加载失败')
   }
 }
 
@@ -796,7 +782,7 @@ async function loadEditingDetail() {
     editingDetail.value = null
     resetForm()
     editorLoadError.value = '这段旅行暂时没有加载出来，你可以重新试一次，或先返回地图。'
-    ElMessage.error('地点详情加载失败')
+    notify.error('地点详情加载失败')
   }
 }
 
@@ -811,7 +797,7 @@ function goBack() {
 function beforeImageUpload(file: File) {
   const result = validateImageFile(file, DEFAULT_IMAGE_MAX_MB)
   if (!result.valid) {
-    ElMessage.error(result.message)
+    notify.error(result.message)
     return false
   }
   return true
@@ -968,10 +954,10 @@ async function handleUploadStopImage(stopIndex: number, options: UploadRequestOp
       await applyLocationCoordinateSelection(result.latitude, result.longitude, { silent: true })
     }
     options.onSuccess?.(result as never)
-    ElMessage.success('片段照片上传成功')
+    notify.success('片段照片上传成功')
   } catch (error) {
     options.onError?.(error as never)
-    ElMessage.error('照片上传失败')
+    notify.error('照片上传失败')
   } finally {
     uploading.value = false
   }
@@ -990,10 +976,10 @@ async function handleUploadCoverImage(options: UploadRequestOptions) {
       await applyLocationCoordinateSelection(result.latitude, result.longitude, { silent: true })
     }
     options.onSuccess?.(result as never)
-    ElMessage.success('封面图片上传成功')
+    notify.success('封面图片上传成功')
   } catch (error) {
     options.onError?.(error as never)
-    ElMessage.error('封面上传失败')
+    notify.error('封面上传失败')
   } finally {
     uploading.value = false
   }
@@ -1025,7 +1011,7 @@ async function resolveLocationMetaFromCoordinate(
     locationMetaNeedsManualConfirm.value = !result.province || !result.city
 
     if (!options.silent && (result.province || result.city)) {
-      ElMessage.success('已自动匹配省份和城市')
+      notify.success('已自动匹配省份和城市')
     }
   } catch {
     if (requestId !== locationResolveRequestId) return
@@ -1070,14 +1056,14 @@ async function handleExistingLocationSelect(id: number) {
 function handleLocationSearch() {
   const keyword = locationSearchKeyword.value.trim()
   if (!keyword) {
-    ElMessage.info('先输入一个地点关键词，或者直接在地图上点一下位置。')
+    notify.info('先输入一个地点关键词，或者直接在地图上点一下位置。')
     return
   }
   locationSearchRequest.value += 1
 }
 
 function handleLocationSearchError(message: string) {
-  ElMessage.warning(message)
+  notify.warning(message)
 }
 
 function zoomInPickerMap() {
@@ -1090,7 +1076,7 @@ function zoomOutPickerMap() {
 
 function locateCurrentPosition() {
   if (!navigator.geolocation) {
-    ElMessage.warning('当前浏览器不支持自动定位')
+    notify.warning('当前浏览器不支持自动定位')
     return
   }
 
@@ -1101,10 +1087,10 @@ function locateCurrentPosition() {
 
       await applyLocationCoordinateSelection(latitude, longitude)
       pickerMapRef.value?.focusPickerLocation(latitude, longitude)
-      ElMessage.success('已定位到当前位置')
+      notify.success('已定位到当前位置')
     },
     () => {
-      ElMessage.warning('自动定位失败，请手动搜索或点击地图选择')
+      notify.warning('自动定位失败，请手动搜索或点击地图选择')
     },
     {
       enableHighAccuracy: true,
@@ -1243,18 +1229,18 @@ function handleEntryDragEnd() {
 
 function validateStopsBeforeSave() {
   if (!form.stops.length) {
-    ElMessage.warning('至少需要保留一个旅途片段')
+    notify.warning('至少需要保留一个旅途片段')
     return false
   }
   for (let stopIndex = 0; stopIndex < form.stops.length; stopIndex += 1) {
     const stop = form.stops[stopIndex]
     if (!stop.title.trim()) {
-      ElMessage.warning(`请补充第 ${stopIndex + 1} 个片段的标题`)
+      notify.warning(`请补充第 ${stopIndex + 1} 个片段的标题`)
       selectStop(stopIndex)
       return false
     }
     if (!stop.entries.length) {
-      ElMessage.warning(`第 ${stopIndex + 1} 个片段还没有照片`)
+      notify.warning(`第 ${stopIndex + 1} 个片段还没有照片`)
       selectStop(stopIndex)
       return false
     }
@@ -1264,19 +1250,19 @@ function validateStopsBeforeSave() {
 
 async function handleSave() {
   if (uploading.value) {
-    ElMessage.warning('照片还在上传中，请等上传完成后再保存')
+    notify.warning('照片还在上传中，请等上传完成后再保存')
     return
   }
   if (!form.title.trim()) {
-    ElMessage.warning('请输入地点标题')
+    notify.warning('请输入地点标题')
     return
   }
   if (!hasPickedLocation.value) {
-    ElMessage.warning('请先在地图上选择主地点坐标')
+    notify.warning('请先在地图上选择主地点坐标')
     return
   }
   if (hasInvalidTravelDateRange.value) {
-    ElMessage.warning('旅行结束日期不能早于开始日期')
+    notify.warning('旅行结束日期不能早于开始日期')
     return
   }
   if (!validateStopsBeforeSave()) {
@@ -1323,10 +1309,10 @@ async function handleSave() {
     const saved = isEditMode.value && editingId.value != null
       ? await updateTravelMemory(editingId.value, payload)
       : await createTravelMemory(payload)
-    ElMessage.success(isEditMode.value ? '旅行地点更新成功' : '旅行地点创建成功')
+    notify.success(isEditMode.value ? '旅行地点更新成功' : '旅行地点创建成功')
     router.push({ name: 'TravelMemoryDetail', params: { id: saved.id } })
   } catch (error) {
-    ElMessage.error(resolveSaveErrorMessage(error))
+    notify.error(resolveSaveErrorMessage(error))
   } finally {
     saving.value = false
   }

@@ -7,85 +7,87 @@
           <img :src="siteLogo" :alt="siteName" class="logo-img" />
         </router-link>
 
-        <!-- 导航菜单 -->
-        <nav class="nav-menu" v-if="!isMobile">
-          <router-link
-            v-for="item in navItems"
-            :key="item.key"
-            :to="item.to"
-            class="nav-item"
-            :class="{ 'is-active': isNavItemActive(item) }"
-          >
-            <el-icon class="nav-icon">
-              <component :is="item.icon" />
-            </el-icon>
-            <span>{{ item.name }}</span>
-          </router-link>
-        </nav>
+        <div class="desktop-toolbar" v-if="!isMobile">
+          <!-- 导航菜单 -->
+          <nav class="nav-menu">
+            <router-link
+              v-for="item in navItems"
+              :key="item.key"
+              :to="item.to"
+              class="nav-item"
+              :class="{ 'is-active': isNavItemActive(item) }"
+            >
+              <UiIcon class="nav-icon" :name="item.icon" />
+              <span>{{ item.name }}</span>
+            </router-link>
+          </nav>
 
-        <!-- 右侧操作区 -->
-        <div class="header-actions">
-          <!-- 编写文章按钮（仅管理员显示） -->
-          <router-link
-            v-if="isLoggedIn && canCreateArticle && !isMobile"
-            to="/article/edit"
-            class="write-btn"
-          >
-            <el-button size="small" class="write-link rounded-full">
-              <el-icon><EditPen /></el-icon>
-              <span>编写</span>
-            </el-button>
-          </router-link>
+          <!-- 右侧操作区 -->
+          <div class="header-actions">
+            <!-- 编写文章按钮（仅管理员显示） -->
+            <router-link
+              v-if="isLoggedIn && canCreateArticle"
+              to="/article/edit"
+              class="write-btn"
+            >
+              <UiButton size="sm" variant="ghost" icon="edit" class="write-link rounded-full">
+                <span>编写</span>
+              </UiButton>
+            </router-link>
 
+            <button class="action-btn" @click="toggleTheme">
+              <UiIcon :name="isDark ? 'Sunny' : 'Moon'" />
+            </button>
+
+            <!-- 未登录显示登录按钮 -->
+            <router-link v-if="!isLoggedIn" to="/login" class="login-link">
+              <UiButton variant="primary" size="sm" icon="user" class="login-btn rounded-full">
+                <span>登录</span>
+              </UiButton>
+            </router-link>
+
+            <!-- 已登录显示用户菜单 -->
+            <UiDropdown v-if="isLoggedIn" @command="handleUserCommand" class="user-menu">
+              <div class="user-avatar-wrapper">
+                <UiAvatar
+                  :src="user?.avatar"
+                  :size="32"
+                  class="user-avatar"
+                >
+                  {{ user?.nickname?.charAt(0) || user?.username?.charAt(0) || 'U' }}
+                </UiAvatar>
+              </div>
+              <template #dropdown>
+                <UiDropdownMenu>
+                  <div class="dropdown-user-info">
+                    <span class="dropdown-nickname">{{ user?.nickname || user?.username }}</span>
+                    <span class="dropdown-role">{{ roleText }}</span>
+                  </div>
+                  <UiDropdownItem divided command="profile">
+                    <UiIcon name="User" />
+                    个人中心
+                  </UiDropdownItem>
+                  <UiDropdownItem v-if="isAdmin" command="admin">
+                    <UiIcon name="Setting" />
+                    后台管理
+                  </UiDropdownItem>
+                  <UiDropdownItem divided command="logout">
+                    <UiIcon name="SwitchButton" />
+                    退出登录
+                  </UiDropdownItem>
+                </UiDropdownMenu>
+              </template>
+            </UiDropdown>
+          </div>
+        </div>
+
+        <div class="header-actions mobile-actions" v-if="isMobile">
           <button class="action-btn" @click="toggleTheme">
-            <el-icon v-if="isDark"><Sunny /></el-icon>
-            <el-icon v-else><Moon /></el-icon>
+            <UiIcon :name="isDark ? 'Sunny' : 'Moon'" />
           </button>
 
-          <!-- 未登录显示登录按钮 -->
-          <router-link v-if="!isLoggedIn && !isMobile" to="/login" class="login-link">
-            <el-button type="primary" size="small" class="login-btn rounded-full">
-              <el-icon><User /></el-icon>
-              <span>登录</span>
-            </el-button>
-          </router-link>
-
-          <!-- 已登录显示用户菜单 -->
-          <el-dropdown v-if="isLoggedIn && !isMobile" @command="handleUserCommand" class="user-menu">
-            <div class="user-avatar-wrapper">
-              <el-avatar
-                :src="user?.avatar"
-                :size="32"
-                class="user-avatar"
-              >
-                {{ user?.nickname?.charAt(0) || user?.username?.charAt(0) || 'U' }}
-              </el-avatar>
-            </div>
-            <template #dropdown>
-              <el-dropdown-menu>
-                <div class="dropdown-user-info">
-                  <span class="dropdown-nickname">{{ user?.nickname || user?.username }}</span>
-                  <span class="dropdown-role">{{ roleText }}</span>
-                </div>
-                <el-dropdown-item divided command="profile">
-                  <el-icon><User /></el-icon>
-                  个人中心
-                </el-dropdown-item>
-                <el-dropdown-item v-if="isAdmin" command="admin">
-                  <el-icon><Setting /></el-icon>
-                  后台管理
-                </el-dropdown-item>
-                <el-dropdown-item divided command="logout">
-                  <el-icon><SwitchButton /></el-icon>
-                  退出登录
-                </el-dropdown-item>
-              </el-dropdown-menu>
-            </template>
-          </el-dropdown>
-
-          <!-- 移动端菜单按钮 -->
-          <button class="action-btn menu-btn" v-if="isMobile" @click="toggleMobileMenu">
-            <el-icon><Menu /></el-icon>
+          <button class="action-btn menu-btn" @click="toggleMobileMenu">
+            <UiIcon name="Menu" />
           </button>
         </div>
       </div>
@@ -102,9 +104,7 @@
           class="mobile-nav-item"
           @click="closeMobileMenu"
         >
-          <el-icon>
-            <component :is="item.icon" />
-          </el-icon>
+          <UiIcon :name="item.icon" />
           <span>{{ item.name }}</span>
         </router-link>
 
@@ -121,7 +121,7 @@
             class="mobile-nav-item"
             @click="closeMobileMenu"
           >
-            <el-icon><User /></el-icon>
+            <UiIcon name="User" />
             <span>个人中心</span>
           </router-link>
           <router-link
@@ -130,7 +130,7 @@
             class="mobile-nav-item"
             @click="closeMobileMenu"
           >
-            <el-icon><Setting /></el-icon>
+            <UiIcon name="Setting" />
             <span>后台管理</span>
           </router-link>
           <router-link
@@ -139,12 +139,12 @@
             class="mobile-nav-item"
             @click="closeMobileMenu"
           >
-            <el-icon><EditPen /></el-icon>
+            <UiIcon name="EditPen" />
             <span>编写文章</span>
           </router-link>
           <div class="mobile-menu-divider"></div>
           <div class="mobile-nav-item" @click="handleLogout">
-            <el-icon><SwitchButton /></el-icon>
+            <UiIcon name="SwitchButton" />
             <span>退出登录</span>
           </div>
         </template>
@@ -156,7 +156,7 @@
             class="mobile-nav-item"
             @click="closeMobileMenu"
           >
-            <el-icon><User /></el-icon>
+            <UiIcon name="User" />
             <span>登录</span>
           </router-link>
 
@@ -165,7 +165,7 @@
             class="mobile-nav-item"
             @click="closeMobileMenu"
           >
-            <el-icon><UserFilled /></el-icon>
+            <UiIcon name="UserFilled" />
             <span>注册</span>
           </router-link>
         </template>
@@ -179,25 +179,8 @@
 import { ref, onMounted, onUnmounted, computed, watch } from 'vue';
 import type { RouteLocationRaw } from 'vue-router';
 import { useRoute, useRouter } from 'vue-router';
-import { ElMessage, ElMessageBox } from 'element-plus';
-import {
-  HomeFilled,
-  Folder,
-  List,
-  ChatDotRound,
-  InfoFilled,
-  Sunny,
-  Moon,
-  User,
-  UserFilled,
-  Menu,
-  EditPen,
-  SwitchButton,
-  Setting,
-  Place,
-  Postcard,
-  Headset,
-} from '@element-plus/icons-vue';
+import { notify, confirmAction } from '@/lib/feedback';
+import { UiAvatar, UiButton, UiDropdown, UiDropdownItem, UiDropdownMenu, UiIcon } from '@/components/ui'
 import { useUserStore } from '@/stores/user';
 import { storeToRefs } from 'pinia';
 import { logout as logoutApi } from '@/api/auth';
@@ -233,28 +216,28 @@ interface NavItem {
   name: string;
   path: string;
   to: RouteLocationRaw;
-  icon: object;
+  icon: string;
   activeWhen?: (currentPath: string, currentTab?: string | null) => boolean;
 }
 
 // 导航项
 const navItems = computed<NavItem[]>(() => [
-  { key: 'home', name: '首页', path: '/', to: '/', icon: HomeFilled },
-  { key: 'category', name: '分类', path: '/category', to: '/category', icon: List },
-  { key: 'archive', name: '时光轴', path: '/archive', to: '/archive', icon: Folder },
-  { key: 'memory-map', name: '旅行地图', path: '/memory-map', to: '/memory-map', icon: Place },
-  { key: 'music', name: '音乐馆', path: '/music', to: '/music', icon: Headset },
+  { key: 'home', name: '首页', path: '/', to: '/', icon: 'HomeFilled' },
+  { key: 'category', name: '分类', path: '/category', to: '/category', icon: 'List' },
+  { key: 'archive', name: '时光轴', path: '/archive', to: '/archive', icon: 'Folder' },
+  { key: 'memory-map', name: '旅行地图', path: '/memory-map', to: '/memory-map', icon: 'Place' },
+  { key: 'music', name: '音乐馆', path: '/music', to: '/music', icon: 'Headset' },
   {
     key: 'trust-request',
     name: '好友申请',
     path: '/trust-request',
     to: '/trust-request',
-    icon: Postcard,
+    icon: 'Postcard',
     activeWhen: (currentPath: string, currentTab?: string | null) =>
       currentPath === '/trust-request' || (currentPath === '/profile' && currentTab === 'trust'),
   },
-  { key: 'guestbook', name: '留言板', path: '/guestbook', to: '/guestbook', icon: ChatDotRound },
-  { key: 'about', name: '关于', path: '/about', to: '/about', icon: InfoFilled },
+  { key: 'guestbook', name: '留言板', path: '/guestbook', to: '/guestbook', icon: 'ChatDotRound' },
+  { key: 'about', name: '关于', path: '/about', to: '/about', icon: 'InfoFilled' },
 ]);
 
 const currentRouteTab = computed(() => {
@@ -333,7 +316,8 @@ watch(isMobileMenuOpen, (open) => {
 });
 
 // 用户菜单命令
-const handleUserCommand = (command: string) => {
+const handleUserCommand = (command: string | number | object) => {
+  if (typeof command !== 'string') return;
   switch (command) {
     case 'profile':
       router.push('/profile');
@@ -349,21 +333,23 @@ const handleUserCommand = (command: string) => {
 
 // 退出登录
 const handleLogout = async () => {
+  const confirmed = await confirmAction({
+    message: '确定要退出登录吗？',
+    title: '提示',
+    confirmText: '确定',
+    cancelText: '取消',
+  });
+  if (!confirmed) return;
   try {
-    await ElMessageBox.confirm('确定要退出登录吗？', '提示', {
-      confirmButtonText: '确定',
-      cancelButtonText: '取消',
-      type: 'warning',
-    });
     // 调用退出登录 API
     await logoutApi();
     // 清除本地用户状态
     userStore.logout();
-    ElMessage.success('已退出登录');
+    notify.success('已退出登录');
     closeMobileMenu();
     router.push('/');
   } catch {
-    // 用户取消或请求失败
+    // 请求失败
   }
 };
 </script>
@@ -389,9 +375,10 @@ const handleLogout = async () => {
 }
 
 .header-content {
+  position: relative;
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
   gap: 16px;
   min-height: 64px;
   min-width: 0;
@@ -400,6 +387,10 @@ const handleLogout = async () => {
 // Logo
 .logo {
   flex: 0 0 auto;
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
   display: flex;
   align-items: center;
   text-decoration: none;
@@ -417,6 +408,26 @@ const handleLogout = async () => {
 }
 
 // 导航菜单
+.desktop-toolbar {
+  flex: 0 1 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-width: 0;
+  width: max-content;
+  max-width: calc(100% - 200px);
+  min-height: 54px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: rgba(255, 251, 253, 0.22);
+  border: 1px solid rgba(255, 235, 242, 0.42);
+  box-shadow:
+    0 14px 30px rgba(120, 88, 104, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.54);
+  backdrop-filter: blur(20px) saturate(1.12);
+}
+
 .nav-menu {
   flex: 1 1 auto;
   display: flex;
@@ -426,15 +437,6 @@ const handleLogout = async () => {
   max-width: max-content;
   overflow-x: auto;
   overflow-y: hidden;
-  min-height: 54px;
-  padding: 8px 14px;
-  border-radius: 999px;
-  background: rgba(255, 251, 253, 0.22);
-  border: 1px solid rgba(255, 235, 242, 0.42);
-  box-shadow:
-    0 14px 30px rgba(120, 88, 104, 0.1),
-    inset 0 1px 0 rgba(255, 255, 255, 0.54);
-  backdrop-filter: blur(20px) saturate(1.12);
   scrollbar-width: none;
 
   &::-webkit-scrollbar {
@@ -488,13 +490,22 @@ const handleLogout = async () => {
   display: flex;
   align-items: center;
   gap: 8px;
-  min-height: 54px;
-  padding: 8px 14px;
+  min-height: 38px;
+  padding-left: 10px;
+  margin-left: 4px;
+  border-left: 1px solid rgba(114, 88, 101, 0.14);
+}
+
+.mobile-actions {
+  min-height: 50px;
+  padding: 6px 8px;
+  margin-left: 0;
+  border-left: 0;
   border-radius: 999px;
-  background: rgba(255, 251, 253, 0.18);
+  background: rgba(255, 251, 253, 0.22);
   border: 1px solid rgba(255, 235, 242, 0.42);
   box-shadow:
-    0 14px 30px rgba(120, 88, 104, 0.08),
+    0 14px 30px rgba(120, 88, 104, 0.1),
     inset 0 1px 0 rgba(255, 255, 255, 0.54);
   backdrop-filter: blur(20px) saturate(1.12);
 }
@@ -571,8 +582,8 @@ const handleLogout = async () => {
   }
 }
 
-.write-link.el-button:hover,
-.write-link.el-button:focus {
+.write-link:hover,
+.write-link:focus {
   border: none;
   color: #ff7faa;
   background: rgba(255, 255, 255, 0.38);
@@ -772,13 +783,17 @@ const handleLogout = async () => {
   background: rgba(78, 82, 90, 0.78);
 }
 
-[data-theme="dark"] .nav-menu,
-[data-theme="dark"] .header-actions {
+[data-theme="dark"] .desktop-toolbar,
+[data-theme="dark"] .mobile-actions {
   background: rgba(32, 28, 34, 0.34);
   border-color: rgba(100, 89, 100, 0.38);
   box-shadow:
     0 18px 34px rgba(0, 0, 0, 0.24),
     inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+[data-theme="dark"] .header-actions {
+  border-left-color: rgba(255, 255, 255, 0.08);
 }
 
 [data-theme="dark"] .nav-item {
@@ -808,14 +823,36 @@ const handleLogout = async () => {
     gap: 10px;
   }
 
+  .desktop-toolbar {
+    padding-inline: 10px;
+    max-width: calc(100% - 170px);
+  }
+
   .nav-menu {
     gap: 4px;
-    padding-inline: 10px;
   }
 
   .nav-item {
     gap: 5px;
     padding-inline: 11px;
+  }
+}
+
+/* 中等宽度：导航项较多时隐藏文字旁图标、进一步压缩间距，保证一行排开不被截断 */
+@media (max-width: 1180px) {
+  .desktop-toolbar {
+    gap: 4px;
+    padding-inline: 8px;
+  }
+
+  .nav-item {
+    gap: 0;
+    padding-inline: 9px;
+    font-size: 13px;
+  }
+
+  .nav-item .nav-icon {
+    display: none;
   }
 }
 
@@ -825,11 +862,13 @@ const handleLogout = async () => {
   }
 
   .header-content {
+    justify-content: space-between;
     min-height: 56px;
   }
 
-  .header-actions {
-    padding: 6px 8px;
+  .logo {
+    position: static;
+    transform: none;
   }
 
   .action-btn {

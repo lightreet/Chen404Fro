@@ -27,7 +27,7 @@
         aria-label="展开或收起搜索"
         @click="onToggle"
       >
-        <el-icon><Search /></el-icon>
+        <UiIcon name="Search" />
       </button>
     </div>
   </div>
@@ -35,7 +35,7 @@
 
 <script setup lang="ts">
 import { ref, watch, computed } from 'vue';
-import { Search } from '@element-plus/icons-vue';
+import { UiIcon } from '@/components/ui';
 
 const props = withDefaults(
   defineProps<{
@@ -159,7 +159,7 @@ function submit() {
   transition: color 0.2s, background 0.2s, border-color 0.2s, transform 0.2s;
   -webkit-tap-highlight-color: transparent;
 
-  :deep(.el-icon) {
+  :deep(.ui-icon) {
     margin: 0;
     font-size: 23px;
   }

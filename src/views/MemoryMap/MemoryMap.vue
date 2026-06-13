@@ -16,7 +16,7 @@
       <FeatureAccessCover
         v-if="!canViewContent"
         v-bind="memoryMapCover"
-        :icon="Location"
+        icon="Location"
       />
 
       <template v-else>
@@ -39,9 +39,7 @@
               <div v-else-if="memoryLoadError" class="gallery-state memory-rail__state memory-rail__state--error">
                 <strong>旅行地点加载失败</strong>
                 <p>{{ memoryLoadError }}</p>
-                <el-button plain class="gallery-state__retry" @click="retryMemoryList">
-                  重新加载
-                </el-button>
+                <UiButton variant="secondary" class="gallery-state__retry" @click="retryMemoryList">重新加载</UiButton>
               </div>
               <div v-else-if="!locations.length" class="memory-rail__list memory-rail__list--placeholder">
                 <article
@@ -70,25 +68,40 @@
                     :aria-pressed="activeId === location.id"
                     @click="selectGalleryLocation(location.id)"
                   >
-                    <div class="rail-item__thumb-wrap">
-                      <span v-if="activeId === location.id" class="rail-item__active-badge">当前</span>
+                    <span class="rail-item__rule" aria-hidden="true" />
+                    <span class="rail-item__thumb-wrap">
                       <img
                         v-if="location.coverImage"
                         class="rail-item__thumb"
                         :src="location.coverImage"
                         :alt="location.title"
                       />
-                      <div v-else class="rail-item__thumb rail-item__thumb--empty">TRAVEL</div>
-                    </div>
+                      <span v-else class="rail-item__thumb rail-item__thumb--empty">TRAVEL</span>
+                    </span>
+                    <span class="rail-item__body">
+                      <span class="rail-item__title-row">
+                        <span class="rail-item__title">{{ location.title }}</span>
+                        <span v-if="activeId === location.id" class="rail-item__active-badge">当前</span>
+                      </span>
+                      <span class="rail-item__place">{{ formatLocation(location) }}</span>
+                      <span class="rail-item__meta">
+                        <span v-if="formatDateRange(location.visitedAt, location.visitedEndAt)">
+                          {{ formatDateRange(location.visitedAt, location.visitedEndAt) }}
+                        </span>
+                        <span v-if="location.entryCount" class="rail-item__count">
+                          {{ location.entryCount }} 张
+                        </span>
+                      </span>
+                    </span>
                   </button>
                 </article>
               </div>
 
               <div v-if="canLoadMoreGallery" class="gallery-load-more memory-rail__load-more">
-                <el-button plain class="gallery-load-more__button" @click="loadMoreGallery">
+                <UiButton variant="secondary" class="gallery-load-more__button" @click="loadMoreGallery">
                   加载更多
                   <span class="gallery-load-more__count">剩余 {{ remainingGalleryCount }} 个地点</span>
-                </el-button>
+                </UiButton>
               </div>
             </div>
           </aside>
@@ -109,7 +122,7 @@
                 <div class="spread-badge">
                   <span class="spread-badge__label">当前地点</span>
                   <div class="spread-badge__body">
-                    <el-icon><Location /></el-icon>
+                    <UiIcon name="Location" />
                     <strong>{{ currentLocationName }}</strong>
                   </div>
                 </div>
@@ -122,13 +135,12 @@
               />
 
               <div v-if="canManage" class="spread-map-actions">
-                <el-button type="primary" plain class="journal-action journal-action--primary map-action" @click="openCreateDialog">
+                <UiButton variant="ghost" icon="location" class="journal-action journal-action--primary map-action" @click="openCreateDialog">
                   <span class="map-action__lead">
-                    <el-icon><Location /></el-icon>
                     <span>新增旅游地点</span>
                   </span>
                   <span class="map-action__arrow" aria-hidden="true">→</span>
-                </el-button>
+                </UiButton>
               </div>
             </div>
           </article>
@@ -151,11 +163,11 @@
                     </div>
                     <div class="travel-journal__facts">
                       <span v-if="journalLocationText" class="travel-journal__fact travel-journal__fact--location">
-                        <el-icon><Location /></el-icon>
+                        <UiIcon name="Location" />
                         <span>{{ journalLocationText }}</span>
                       </span>
                       <span v-if="journalDateRange" class="travel-journal__fact travel-journal__fact--date">
-                        <el-icon><Calendar /></el-icon>
+                        <UiIcon name="Calendar" />
                         <span>{{ journalDateRange }}</span>
                       </span>
                     </div>
@@ -172,9 +184,7 @@
                     <strong>地点详情加载失败</strong>
                     <p>{{ detailLoadError }}</p>
                   </div>
-                  <el-button plain class="journal-action journal-action--retry" @click="retryActiveDetail">
-                    重新加载
-                  </el-button>
+                  <UiButton variant="secondary" class="journal-action journal-action--retry" @click="retryActiveDetail">重新加载</UiButton>
                 </div>
 
                 <div class="travel-journal__media">
@@ -212,17 +222,16 @@
                   </div>
 
                   <div v-if="activeDetail" class="travel-journal__actions travel-journal__actions--note">
-                    <el-button type="primary" class="journal-action journal-action--detail-view" @click="openCurrentDetailPage">
-                      <el-icon><View /></el-icon>
+                    <UiButton variant="primary" icon="eye" class="journal-action journal-action--detail-view" @click="openCurrentDetailPage">
                       查看游记
-                    </el-button>
+                    </UiButton>
                     <div v-if="canManage" class="travel-journal__manage">
-                      <el-button plain class="journal-action journal-action--manage" @click="editGalleryLocation(activeDetail.id)">
+                      <UiButton variant="secondary" icon="edit" class="journal-action journal-action--manage" @click="editGalleryLocation(activeDetail.id)">
                         编辑地点
-                      </el-button>
-                      <el-button plain class="journal-action journal-action--danger" @click="deleteGalleryLocation(activeDetail)">
+                      </UiButton>
+                      <UiButton variant="danger" icon="delete" class="journal-action journal-action--danger" @click="deleteGalleryLocation(activeDetail)">
                         删除地点
-                      </el-button>
+                      </UiButton>
                     </div>
                   </div>
                 </div>
@@ -278,12 +287,12 @@ import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import dayjs from 'dayjs'
 import { storeToRefs } from 'pinia'
-import { ElMessage, ElMessageBox } from 'element-plus'
-import { Calendar, Location, View } from '@element-plus/icons-vue'
+import { notify, confirmDelete } from '@/lib/feedback'
 import DefaultLayout from '@/layouts/DefaultLayout.vue'
 import PageHero from '@/components/PageHero/PageHero.vue'
 import FeatureAccessCover from '@/components/FeatureAccessCover.vue'
 import TravelMemoryMap from '@/components/TravelMemoryMap/TravelMemoryMap.vue'
+import { UiButton, UiIcon } from '@/components/ui'
 import { deleteTravelMemory, getTravelMemories, getTravelMemoryDetail } from '@/api/travel-memory'
 import { useSiteConfig } from '@/composables/useSiteConfig'
 import { buildMemoryMapCoverConfig, resolveFeatureHero } from '@/modules/feature-access/constants'
@@ -468,7 +477,7 @@ async function loadMemories(preferredId?: number | null) {
     if (requestVersion !== memoryLoadVersion) return
     resetMemoryState()
     memoryLoadError.value = '请检查登录状态、接口连通性，或稍后再试。'
-    ElMessage.error('旅行地点加载失败')
+    notify.error('旅行地点加载失败')
   } finally {
     if (requestVersion === memoryLoadVersion) {
       loading.value = false
@@ -505,7 +514,7 @@ async function handleSelectLocation(id: number, options: { syncGallery?: boolean
   } catch {
     if (requestVersion === detailRequestVersion && activeId.value === id) {
       detailLoadError.value = '当前先展示基础摘要，你可以稍后重新加载完整游记。'
-      ElMessage.error('地点详情加载失败')
+      notify.error('地点详情加载失败')
     }
   } finally {
     if (requestVersion === detailRequestVersion) {
@@ -529,7 +538,7 @@ function retryMemoryList() {
 
 function openCurrentDetailPage() {
   if (!activeDetail.value) {
-    ElMessage.info('先选择一个地点，再查看游记。')
+    notify.info('先选择一个地点，再查看游记。')
     return
   }
   router.push({ name: 'TravelMemoryDetail', params: { id: activeDetail.value.id } })
@@ -540,25 +549,17 @@ function editGalleryLocation(id: number) {
 }
 
 async function deleteGalleryLocation(location: Pick<TravelMemoryLocationListItem, 'id' | 'title'>) {
+  const confirmed = await confirmDelete(`确定要删除“${location.title}”吗？删除后将无法恢复。`, {
+    title: '删除旅行地点',
+  })
+  if (!confirmed) return
   try {
-    await ElMessageBox.confirm(
-      `确定要删除“${location.title}”吗？删除后将无法恢复。`,
-      '删除旅行地点',
-      {
-        confirmButtonText: '删除',
-        cancelButtonText: '取消',
-        type: 'warning',
-      },
-    )
     await deleteTravelMemory(location.id)
-    ElMessage.success('地点已删除')
+    notify.success('地点已删除')
     detailCache.value = {}
     await loadMemories()
-  } catch (error) {
-    if (error === 'cancel' || error === 'close') {
-      return
-    }
-    ElMessage.error('删除地点失败')
+  } catch {
+    notify.error('删除地点失败')
   }
 }
 
@@ -743,7 +744,16 @@ watch(
 <style scoped lang="scss">
 .memory-map-page {
   --memory-gap: clamp(22px, 2vw, 30px);
-  --memory-card-radius: 34px;
+  --memory-radius-panel: 22px;
+  --memory-radius-card: 16px;
+  /* atlas accent line shared across marker / rail / title */
+  --atlas-route: #d75f87;
+  --atlas-ink: #4e353e;
+  --atlas-paper: #fff8f2;
+  /* neutral ground + solid surfaces, pink reserved as accent */
+  --memory-surface: #ffffff;
+  --memory-rail-fill: rgba(255, 252, 253, 0.55);
+  --memory-line: rgba(232, 214, 221, 0.72);
   --memory-title-font:
     'Microsoft YaHei UI',
     'PingFang SC',
@@ -817,14 +827,10 @@ watch(
   grid-template-rows: auto minmax(0, 1fr) auto;
   gap: 18px;
   padding: clamp(18px, 1.25vw, 24px);
-  border-radius: 32px;
-  background:
-    linear-gradient(180deg, rgba(255, 252, 250, 0.9), rgba(255, 247, 244, 0.76)),
-    radial-gradient(circle at top left, rgba(255, 224, 233, 0.18), transparent 34%);
-  border: 1px solid rgba(243, 227, 233, 0.9);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.88),
-    0 16px 34px rgba(220, 191, 199, 0.07);
+  border-radius: var(--memory-radius-panel);
+  background: var(--memory-rail-fill);
+  border: 1px solid var(--memory-line);
+  box-shadow: none;
 }
 
 .panel-heading {
@@ -844,7 +850,7 @@ watch(
 
 .panel-heading__copy h2 {
   margin: 0;
-  color: #4e353e;
+  color: var(--atlas-ink);
   font-family: var(--memory-title-font);
   font-size: clamp(24px, 1.7vw, 30px);
   font-weight: 700;
@@ -870,7 +876,7 @@ watch(
 
 .memory-rail__list::-webkit-scrollbar-thumb {
   border-radius: 999px;
-  background: rgba(216, 177, 193, 0.54);
+  background: rgba(196, 178, 160, 0.5);
 }
 
 .memory-rail__list--placeholder {
@@ -901,14 +907,12 @@ watch(
   grid-template-rows: auto 1fr auto;
   gap: 16px;
   padding: clamp(16px, 1.1vw, 20px);
-  border-radius: 28px;
-  background:
-    linear-gradient(180deg, rgba(255, 252, 250, 0.54), rgba(255, 247, 244, 0.34)),
-    radial-gradient(circle at top right, rgba(255, 224, 233, 0.08), transparent 28%);
-  border: 1px solid rgba(244, 228, 233, 0.38);
+  border-radius: var(--memory-radius-panel);
+  background: var(--memory-surface);
+  border: 1px solid var(--memory-line);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.78),
-    0 10px 24px rgba(219, 189, 194, 0.05);
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    0 18px 42px rgba(74, 43, 55, 0.13);
 }
 
 .spread-map-card__hero {
@@ -937,7 +941,7 @@ watch(
 
 .spread-heading__copy h2 {
   margin: 0;
-  color: #4e353e;
+  color: var(--atlas-ink);
   font-family: var(--memory-title-font);
   font-size: clamp(30px, 2.3vw, 40px);
   font-weight: 700;
@@ -945,7 +949,7 @@ watch(
 }
 
 .spread-heading__flower {
-  color: #ef88ab;
+  color: var(--atlas-route);
   font-size: 28px;
   line-height: 1;
   transform: translateY(4px);
@@ -957,13 +961,11 @@ watch(
   gap: 10px;
   flex-shrink: 0;
   min-width: 144px;
-  padding: 12px 16px;
-  border-radius: 22px;
-  background: rgba(255, 251, 252, 0.92);
-  border: 1px solid rgba(239, 220, 226, 0.94);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.92),
-    0 16px 28px rgba(223, 193, 202, 0.12);
+  padding: 10px 16px;
+  border-radius: var(--memory-radius-card);
+  background: var(--colors-surface-rose, #fff1f6);
+  border: 1px solid rgba(215, 95, 135, 0.24);
+  box-shadow: none;
   text-align: left;
   white-space: nowrap;
 }
@@ -985,7 +987,7 @@ watch(
 }
 
 .spread-badge__body .el-icon {
-  color: #f07ca3;
+  color: var(--atlas-route);
   font-size: 16px;
 }
 
@@ -1009,7 +1011,7 @@ watch(
 
 :deep(.travel-map-shell) {
   min-height: 100%;
-  border-radius: 28px;
+  border-radius: var(--memory-radius-card);
   background: transparent;
   border: none;
   box-shadow: none;
@@ -1017,7 +1019,7 @@ watch(
 
 :deep(.travel-map-stage) {
   min-height: 640px;
-  padding: 6px 0 74px;
+  padding: 0 0 68px;
 }
 
 :deep(.travel-map-board) {
@@ -1050,13 +1052,11 @@ watch(
   display: flex;
   flex-direction: column;
   gap: 16px;
-  padding: clamp(14px, 1.1vw, 18px);
-  border-radius: 32px;
-  background:
-    linear-gradient(180deg, rgba(255, 252, 250, 0.74), rgba(255, 247, 244, 0.58)),
-    radial-gradient(circle at top right, rgba(255, 224, 233, 0.14), transparent 30%);
-  border: none;
-  box-shadow: 0 14px 30px rgba(219, 189, 194, 0.05);
+  padding: clamp(16px, 1.2vw, 20px);
+  border-radius: var(--memory-radius-panel);
+  background: var(--memory-rail-fill);
+  border: 1px solid var(--memory-line);
+  box-shadow: none;
 }
 
 .travel-journal.is-loading {
@@ -1133,7 +1133,7 @@ watch(
 }
 
 .travel-journal__flower {
-  color: #db7f9d;
+  color: var(--atlas-route);
   font-size: 20px;
   line-height: 1;
   transform: translateY(6px);
@@ -1141,7 +1141,7 @@ watch(
 
 .travel-journal__headline h2 {
   margin: 0;
-  color: #4c333d;
+  color: var(--atlas-ink);
   font-family: var(--memory-title-font);
   font-size: clamp(20px, 1.45vw, 26px);
   font-weight: 700;
@@ -1178,7 +1178,7 @@ watch(
   min-height: 80px;
   padding: 6px;
   border-radius: 999px;
-  color: #c1708b;
+  color: var(--atlas-route);
   text-align: center;
   background:
     rgba(255, 247, 244, 0.72)
@@ -1218,9 +1218,9 @@ watch(
 
 .travel-journal__cover {
   position: relative;
-  height: 136px;
+  height: 184px;
   padding: 8px;
-  border-radius: 18px;
+  border-radius: var(--memory-radius-card);
   overflow: hidden;
   background:
     linear-gradient(135deg, rgba(255, 255, 255, 0.98), rgba(252, 250, 247, 0.95)),
@@ -1282,22 +1282,20 @@ watch(
 .journal-note {
   position: relative;
   display: grid;
-  grid-template-columns: 78px minmax(0, 1fr);
+  grid-template-columns: 96px minmax(0, 1fr);
   align-items: stretch;
-  height: 78px;
-  min-height: 78px;
-  border-radius: 15px;
-  background: rgba(255, 255, 255, 0.82);
+  height: 96px;
+  border-radius: 14px;
+  background: var(--memory-surface);
+  border: 1px solid var(--memory-line);
   overflow: hidden;
-  box-shadow:
-    0 12px 22px rgba(220, 191, 200, 0.08),
-    inset 0 1px 0 rgba(255, 255, 255, 0.72);
+  box-shadow: none;
 }
 
 .journal-note__thumb {
-  height: 78px;
+  height: 100%;
+  min-height: 96px;
   background: rgba(249, 244, 247, 0.86);
-  min-height: 78px;
 }
 
 .journal-note__thumb img {
@@ -1321,18 +1319,19 @@ watch(
 
 .journal-note__body {
   display: grid;
-  gap: 3px;
+  gap: 4px;
   align-content: center;
   min-height: 0;
-  padding: 7px 10px;
+  padding: 10px 12px;
   text-align: left;
 }
 
 .journal-note__body h4 {
   margin: 0;
-  color: #5d3d4b;
-  font-size: 12px;
-  line-height: 1.3;
+  color: var(--atlas-ink);
+  font-size: 13.5px;
+  font-weight: 700;
+  line-height: 1.35;
   display: -webkit-box;
   overflow: hidden;
   -webkit-line-clamp: 1;
@@ -1341,12 +1340,12 @@ watch(
 
 .journal-note__body p {
   margin: 0;
-  color: var(--text-secondary);
-  font-size: 10.5px;
-  line-height: 1.35;
+  color: #7f626e;
+  font-size: 12.5px;
+  line-height: 1.5;
   display: -webkit-box;
   overflow: hidden;
-  -webkit-line-clamp: 1;
+  -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
 }
 
@@ -1361,14 +1360,10 @@ watch(
   display: grid;
   gap: 8px;
   padding: 14px 16px 14px 40px;
-  border-radius: 20px;
-  background:
-    linear-gradient(180deg, rgba(255, 252, 252, 0.98), rgba(255, 247, 248, 0.94)),
-    radial-gradient(circle at top right, rgba(255, 224, 233, 0.18), transparent 38%);
-  border: 1px solid rgba(240, 214, 220, 0.96);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.86),
-    0 12px 24px rgba(226, 196, 206, 0.12);
+  border-radius: 16px;
+  background: var(--memory-surface);
+  border: 1px solid var(--memory-line);
+  box-shadow: none;
 }
 
 .travel-journal__footer {
@@ -1383,14 +1378,14 @@ watch(
   position: absolute;
   top: 12px;
   left: 14px;
-  color: #ff8fb1;
+  color: var(--atlas-route);
   font-size: 16px;
   line-height: 1;
 }
 
 .travel-journal__quote p {
   margin: 0;
-  color: #6c4d5a;
+  color: var(--atlas-ink);
   font-size: 14px;
   font-weight: 600;
   line-height: 1.62;
@@ -1400,14 +1395,15 @@ watch(
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   align-items: stretch;
-  gap: 12px;
+  gap: 14px;
   width: 100%;
 }
 
 .travel-journal__manage {
-  display: flex;
-  justify-content: flex-end;
-  align-items: center;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  justify-content: stretch;
+  align-items: stretch;
   gap: 10px;
   width: 100%;
 }
@@ -1431,71 +1427,37 @@ watch(
 }
 
 .journal-action {
-  --el-button-bg-color: rgba(255, 251, 252, 0.92);
-  --el-button-border-color: rgba(235, 214, 223, 0.96);
-  --el-button-text-color: #7c5b68;
-  --el-button-hover-bg-color: rgba(255, 246, 249, 0.96);
-  --el-button-hover-border-color: rgba(230, 182, 198, 0.96);
-  --el-button-hover-text-color: #704d5b;
   min-height: 38px;
-  width: 156px;
-  flex: 0 0 156px;
+  width: 100%;
+  min-width: 0;
   padding-inline: 16px;
   border-radius: 999px;
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 700;
   line-height: 1.2;
-  box-shadow: 0 10px 20px rgba(225, 190, 202, 0.1);
+  justify-content: center;
+  white-space: nowrap;
 }
 
 .journal-action--primary {
-  --el-button-bg-color: rgba(255, 243, 247, 0.96);
-  --el-button-border-color: rgba(231, 187, 201, 0.96);
-  --el-button-text-color: #cb6f8e;
+  color: #cb6f8e;
 }
 
 .journal-action--danger {
-  --el-button-text-color: #d07a8f;
-}
-
-.journal-action--manage,
-.journal-action--danger {
-  width: auto;
-  min-width: 0;
-  flex: 0 0 auto;
-  padding-inline: 14px;
+  color: #fff;
 }
 
 .journal-action--manage {
-  --el-button-bg-color: rgba(255, 251, 252, 0.9);
-  --el-button-border-color: rgba(232, 212, 222, 0.96);
-  --el-button-text-color: #7a5f6d;
+  color: #7a5f6d;
 }
 
 .journal-action--detail-view {
-  --el-button-text-color: #ffffff;
-  --el-button-hover-text-color: #ffffff;
   width: 100%;
-  min-width: 0;
-  flex-basis: 100%;
   padding-inline: 16px;
-  color: #fff !important;
-  border: none !important;
-  background: linear-gradient(135deg, rgba(255, 133, 176, 0.98), rgba(247, 113, 158, 0.98)) !important;
-  box-shadow: 0 12px 22px rgba(243, 136, 171, 0.28) !important;
-}
-
-:deep(.journal-action--detail-view:hover),
-:deep(.journal-action--detail-view:focus-visible) {
-  color: #fff !important;
-  border: none !important;
-  background: linear-gradient(135deg, rgba(255, 145, 184, 1), rgba(248, 123, 166, 1)) !important;
 }
 
 .journal-action--retry {
   width: 100%;
-  min-width: 0;
-  flex-basis: 100%;
 }
 
 .map-action {
@@ -1528,9 +1490,11 @@ watch(
     inset 0 1px 0 rgba(255, 255, 255, 0.96) !important;
 }
 
-:deep(.map-action > span) {
+.map-action :deep(.ui-button__label) {
   width: auto;
   min-width: 0;
+  display: inline-flex;
+  align-items: center;
   justify-content: space-between;
   gap: 18px;
   padding: 10px 16px;
@@ -1542,45 +1506,27 @@ watch(
   gap: 10px;
 }
 
-.map-action__lead .el-icon {
-  display: inline-grid;
-  place-items: center;
-  width: 22px;
-  height: 22px;
-  border-radius: 999px;
-  color: #ef7fa4;
-  background: rgba(255, 236, 243, 0.9);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.95);
-}
-
 .map-action__arrow {
   color: #d982a0;
   font-size: 16px;
   line-height: 1;
 }
 
-:deep(.journal-action > span) {
-  width: 100%;
+.journal-action :deep(.ui-button__icon) {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+}
+
+.journal-action :deep(.ui-button__label) {
+  flex: 1 1 auto;
+  min-width: 0;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
   line-height: 1.2;
   white-space: nowrap;
-}
-
-:deep(.journal-action .el-icon) {
-  flex: 0 0 auto;
-  font-size: 14px;
-  line-height: 1;
-}
-
-:deep(.journal-action .el-icon svg) {
-  display: block;
-}
-
-:deep(.travel-journal__actions .el-button + .el-button) {
-  margin-left: 0;
 }
 
 .journal-state {
@@ -1626,91 +1572,63 @@ watch(
   display: block;
   width: 100%;
   min-height: 0;
-  overflow: visible;
-  box-shadow: none;
-  transition:
-    transform 0.22s ease,
-    box-shadow 0.22s ease;
 }
 
 .rail-item__select {
-  display: block;
+  position: relative;
+  display: grid;
+  grid-template-columns: auto 72px minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
   width: 100%;
-  min-height: 0;
-  padding: 0;
-  border: none;
-  border-radius: 16px;
+  padding: 10px 12px 10px 0;
+  border: 1px solid transparent;
+  border-radius: var(--memory-radius-card);
   background: transparent;
   text-align: left;
   cursor: pointer;
+  transition:
+    background 0.2s ease,
+    border-color 0.2s ease;
 }
 
-.rail-item.is-active {
-  transform: translateY(-4px);
+.rail-item__select:hover {
+  background: rgba(255, 252, 253, 0.92);
+  border-color: var(--memory-line);
 }
 
 .rail-item__select:focus-visible {
   outline: none;
+  border-color: var(--atlas-route);
+  box-shadow: 0 0 0 3px rgba(215, 95, 135, 0.16);
+}
+
+/* shared atlas accent line — lights up only on the active row */
+.rail-item__rule {
+  width: 3px;
+  align-self: stretch;
+  margin: 2px 0;
+  border-radius: 999px;
+  background: transparent;
+  transition: background 0.2s ease;
 }
 
 .rail-item__thumb-wrap {
   position: relative;
   overflow: hidden;
-  border-radius: 16px;
-  background: rgba(255, 255, 255, 0.92);
-  box-shadow:
-    0 8px 14px rgba(195, 188, 192, 0.1),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.34);
-  transition:
-    transform 0.22s ease,
-    box-shadow 0.22s ease;
-}
-
-.rail-item__active-badge {
-  position: absolute;
-  top: 10px;
-  right: 10px;
-  z-index: 3;
-  display: inline-flex;
-  align-items: center;
-  min-height: 24px;
-  padding: 0 10px;
-  border-radius: 999px;
-  color: #fff;
-  background: linear-gradient(135deg, rgba(255, 141, 182, 0.98), rgba(237, 108, 154, 0.98));
-  box-shadow:
-    0 10px 18px rgba(235, 132, 169, 0.28),
-    inset 0 1px 0 rgba(255, 255, 255, 0.24);
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  pointer-events: none;
-}
-
-.rail-item__thumb-wrap::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  z-index: 2;
-  background: radial-gradient(circle at 18% 20%, rgba(255, 255, 255, 0.22), transparent 36%);
-  pointer-events: none;
-}
-
-.rail-item__thumb-wrap::after {
-  content: none;
+  border-radius: 12px;
+  background: var(--memory-surface);
+  box-shadow: inset 0 0 0 1px var(--memory-line);
 }
 
 .rail-item__thumb {
-  width: 100%;
-  aspect-ratio: 18 / 5;
+  width: 72px;
+  height: 54px;
   display: block;
   object-fit: cover;
   object-position: center center;
   border-radius: inherit;
   background: linear-gradient(135deg, rgba(255, 240, 246, 0.98), rgba(245, 248, 254, 0.9));
-  transition:
-    transform 0.22s ease,
-    filter 0.22s ease;
 }
 
 .rail-item__thumb--empty,
@@ -1718,37 +1636,101 @@ watch(
   display: grid;
   place-items: center;
   color: #c18ca3;
-  letter-spacing: 0.16em;
+  letter-spacing: 0.14em;
+  font-size: 10px;
+}
+
+.rail-item__body {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.rail-item__title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.rail-item__title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--atlas-ink);
+  font-family: var(--memory-title-font);
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.3;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.rail-item__active-badge {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  height: 20px;
+  padding: 0 9px;
+  border-radius: 999px;
+  color: #fff;
+  background: var(--atlas-route);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.rail-item__place {
+  overflow: hidden;
+  color: #8a6f79;
   font-size: 12px;
+  line-height: 1.35;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.rail-item__meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #a98f99;
+  font-size: 11.5px;
+  line-height: 1.3;
+}
+
+.rail-item__count {
+  position: relative;
+  padding-left: 9px;
+}
+
+.rail-item__count::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  width: 3px;
+  height: 3px;
+  border-radius: 999px;
+  background: currentColor;
+  transform: translateY(-50%);
+  opacity: 0.6;
 }
 
 .rail-item--placeholder {
   cursor: default;
 }
 
-.rail-item:hover .rail-item__thumb-wrap,
-.rail-item__select:focus-visible .rail-item__thumb-wrap {
-  transform: translateY(-3px);
-  box-shadow:
-    0 18px 24px rgba(194, 185, 191, 0.18),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.5);
+.rail-item.is-active .rail-item__select {
+  background: var(--colors-surface-rose, #fff1f6);
+  border-color: rgba(215, 95, 135, 0.28);
 }
 
-.rail-item:hover .rail-item__thumb,
-.rail-item__select:focus-visible .rail-item__thumb {
-  transform: scale(1.035);
+.rail-item.is-active .rail-item__rule {
+  background: var(--atlas-route);
 }
 
-.rail-item.is-active .rail-item__thumb-wrap {
-  box-shadow:
-    0 20px 28px rgba(188, 170, 179, 0.22),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.42),
-    0 0 0 2px rgba(239, 128, 168, 0.28);
-}
-
-.rail-item.is-active .rail-item__thumb {
-  transform: scale(1.03);
-  filter: saturate(1.04) brightness(1.02);
+.rail-item.is-active .rail-item__title {
+  color: var(--atlas-route);
 }
 
 .gallery-load-more {
@@ -1962,6 +1944,10 @@ watch(
   }
 
   .travel-journal__actions--note {
+    grid-template-columns: 1fr;
+  }
+
+  .travel-journal__manage {
     grid-template-columns: 1fr;
   }
 

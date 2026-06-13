@@ -1,6 +1,6 @@
 # Chen404 前端架构设计
 
-本文档描述 `Chen404Fro` 当前代码实现的前端结构，而不是历史规划稿。最近一次按代码校准时间：2026-06-03。
+本文档描述 `Chen404Fro` 当前代码实现的前端结构，而不是历史规划稿。最近一次按代码校准时间：2026-06-12。
 
 ## 1. 架构概览
 
@@ -35,8 +35,13 @@ src/
 ├─ assets/
 │  ├─ live2d/
 │  ├─ memory-map/
-│  └─ styles/
+│  └─ styles/         # variables.scss + tokens.scss + motion.scss + element-theme.scss + global.scss
+├─ design/            # 设计系统 TS 入口：tokens.ts / motion.ts / icon-map.ts
+├─ lib/
+│  └─ feedback/       # 统一反馈服务：notify.ts / confirm.ts
 ├─ components/
+│  ├─ ui/             # UI primitive 层（UiButton/UiInput/UiPanel/UiTabs/UiDialog/...）
+│  ├─ app/            # App 风格层（AppSection/AppActionBar/AppStatusPill/...）
 │  ├─ Comment/
 │  ├─ Editor/
 │  ├─ Emoji/
@@ -50,13 +55,17 @@ src/
 │  ├─ TravelMemoryMap/
 │  └─ UserProfile/
 ├─ composables/
-│  └─ article-edit/
+│  ├─ article-edit/
+│  ├─ useLayoutMobile.ts
+│  └─ useSiteConfig.ts
 ├─ emoji/
 ├─ iconify/
 ├─ layouts/
 ├─ modules/
 │  ├─ article-edit/
-│  └─ feature-access/
+│  ├─ category-icons/
+│  ├─ feature-access/
+│  └─ music-metadata/
 ├─ router/
 ├─ sdk/
 │  └─ generated/
@@ -65,6 +74,24 @@ src/
 ├─ utils/
 └─ views/
 ```
+
+### UI 设计系统分层（迁移进行中）
+
+前端正按 `doc/前端 UI 架构迁移方案.md` 渐进迁移到自有设计系统，分层模型：
+
+```text
+Route / Page -> Feature -> components/app (App*) -> components/ui (Ui*) -> design/ tokens + motion + icon
+```
+
+- `design/tokens.ts`、`assets/styles/tokens.scss`：语义化 token（`--color-*` / `--radius-*` / `--space-*` / `--motion-*` 等），在不破坏历史 `variables.scss` 的前提下建立稳定命名。
+- `assets/styles/element-theme.scss`：把 Element Plus 的 CSS 变量整体映射到项目 token，使所有 `el-*` 组件在不改页面代码的情况下立即去掉「标准后台味」，与品牌语言统一（全站生效）。
+- `components/ui`：与库无关的 primitive，对外只暴露项目自己的 API（短期内部可复用 Element Plus）。
+- `components/app`：承接 Chen404 产品语义与品牌表达，消费 `ui` 层。
+- `lib/feedback`：`notify.*` 与 `confirmAction()` 收敛全站对 `ElMessage` / `ElMessageBox` 的直调。
+- 依赖边界：业务页面、业务组件、views、modules、composables 不应再直接引用 `element-plus` 或 `@element-plus/icons-vue`；如仍需使用，只允许保留在 `components/ui` 薄封装、`lib/feedback`、或专门的兼容层内部。
+- 检查命令：`npm run check:element-boundary`。它会阻止业务层新增 `element-plus` / `@element-plus/icons-vue` 直接依赖，同时检查业务层模板中的 `<el-*>` 与 `v-loading` 等 Element 运行时依赖。允许名单仅包含 `components/ui`、`lib/feedback`、`compat` 以及极少数基础运行时文件。
+
+迁移以页面为单位推进，已完成基础设施、阶段 3 全部后台页、阶段 4 表单与编辑页、阶段 5 展示型长页面，以及阶段 6 第一批高频入口与高频业务组件的页面层收口。当前 `src/views` 下业务页面直接书写的 `<el-*>` 为 `0`，业务页 `v-loading` 也已统一收口到 `UiLoadingState`；`src/components` 下剩余的 `el-*` 已全部收口到 `src/components/ui/*` 薄封装内部。后续重点已从“页面层去 Element”转向两类工作：一是继续按收益做低频组件与专题页的视觉统一，二是处理包体、分包与测试等工程收尾。
 
 ## 3. 路由与访问控制
 
@@ -81,6 +108,7 @@ src/
 
 ```text
 /                         首页
+/home                     首页兼容路径（重定向到 /）
 /article/:id              文章详情
 /article/edit/:id?        文章编辑（管理员）
 /archive                  归档
@@ -145,7 +173,7 @@ src/
 
 `src/api/request.ts` 当前负责：
 
-- 读取 `VITE_API_BASE_URL`
+- 读取 `VITE_API_BASE_URL`，未配置时回退到 `/api`
 - 自动写入 `Authorization: Bearer <token>`
 - 统一解析后端 `{ code, message, data }`
 - 401 时串行刷新 `refreshToken`
@@ -166,7 +194,9 @@ src/
 - `useLayoutMobile`：布局侧的设备判断
 - `composables/article-edit/useArticleEdit.ts`：文章编辑页的页面编排
 - `modules/article-edit/*`：文章编辑提交模型、标签逻辑、常量
+- `modules/category-icons/service.ts`：后台分类图标搜索，走 Iconify 远程检索
 - `modules/feature-access/constants.ts`：知友/权限封面文案与 Hero 资源映射
+- `modules/music-metadata/metadata.ts`：音乐上传时读取本地音频 metadata、封面与歌词
 
 整体上，前端没有把所有业务数据推入 Pinia，而是保持“页面请求 + 局部状态”为主，仅把真正跨页面共享的状态收敛到 store。
 
@@ -280,7 +310,7 @@ trust-request / home / archive / memory-map / music / category / about / guestbo
 当前一级菜单：
 
 - 分类管理
-- 站点配置
+- 站点配置（内含基础信息、品牌资源、SEO、运行配置、页面封面、AI 助手 tab）
 - 表情包管理
 - 文件管理
 - 好友申请
@@ -328,7 +358,7 @@ trust-request / home / archive / memory-map / music / category / about / guestbo
 - `@` 指向 `src`
 - Element Plus 自动样式引入
 - UnoCSS
-- `manualChunks` 对布局壳、Vue 运行时和 `ArticleCard` 做了针对性拆分
+- `manualChunks` 对 Element Plus、Vue 运行时、布局壳和 `ArticleCard` 做了针对性拆分
 
 这样做的目的，是降低首页在弱网下动态 chunk 拉取过多导致白屏的概率。
 

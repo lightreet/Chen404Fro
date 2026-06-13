@@ -1,24 +1,15 @@
 <template>
   <div class="files-admin">
-    <el-card class="files-card" shadow="never">
-      <template #header>
-        <div class="files-header">
-          <div class="files-title">
-            <el-icon class="files-title__icon"><Files /></el-icon>
-            <div>
-              <h2>文件管理</h2>
-            </div>
-          </div>
-          <div class="files-actions">
-            <el-button :icon="Refresh" :loading="loading || statsLoading" @click="handleRefresh">
-              刷新
-            </el-button>
-          </div>
-        </div>
+    <UiPanel icon="files" title="文件管理" flush>
+      <template #actions>
+        <UiButton icon="refresh" :loading="loading || statsLoading" @click="handleRefresh">
+          刷新
+        </UiButton>
       </template>
 
       <div class="files-body">
-        <section v-loading="statsLoading" class="stats-hero">
+        <UiLoadingState :loading="statsLoading" message="正在加载统计..." class="stats-loading-shell">
+        <section class="stats-hero">
           <button
             v-for="item in summaryCards"
             :key="item.key"
@@ -33,6 +24,7 @@
             <em class="stats-card__action">{{ item.key === 'total' ? '查看全部文件' : '点击筛选列表' }}</em>
           </button>
         </section>
+        </UiLoadingState>
 
         <section class="files-section stats-panel">
           <div class="section-head section-head--panel">
@@ -42,22 +34,22 @@
             </div>
             <div class="insight-toolbar">
               <span class="section-meta">总容量 {{ totalSizeLabel }}</span>
-              <el-button v-if="hasQuickFilters" text @click="clearQuickFilters">清除快捷筛选</el-button>
+              <UiButton v-if="hasQuickFilters" variant="text" size="sm" @click="clearQuickFilters">清除快捷筛选</UiButton>
             </div>
           </div>
 
           <div v-if="hasQuickFilters" class="quick-filter-bar">
             <span class="quick-filter-bar__label">当前快捷筛选</span>
-            <el-tag
+            <UiBadge
               v-for="item in quickFilterTags"
               :key="item.key"
-              effect="plain"
-              round
-              closable
-              @close="clearQuickFilter(item.key)"
+              tone="neutral"
+              size="sm"
+              class="quick-filter-tag"
+              @click="clearQuickFilter(item.key)"
             >
               {{ item.label }}
-            </el-tag>
+            </UiBadge>
           </div>
 
           <div ref="refTypeChartRef" class="chart-shell chart-shell--bar"></div>
@@ -68,40 +60,26 @@
             <div>
               <h3>筛选与搜索</h3>
             </div>
-            <el-button text @click="resetFilters">清空筛选</el-button>
+            <UiButton variant="text" size="sm" @click="resetFilters">清空筛选</UiButton>
           </div>
 
           <div class="filter-grid">
-            <el-input
+            <UiInput
               v-model="query.keyword"
               clearable
+              prefix-icon="search"
               placeholder="搜索文件名、原始文件名或 URL"
-              @keyup.enter="loadFiles(1)"
-            >
-              <template #prefix>
-                <el-icon><Search /></el-icon>
-              </template>
-            </el-input>
+              @enter="loadFiles(1)"
+            />
 
-            <el-select v-model="query.status" clearable placeholder="文件状态">
-              <el-option v-for="option in statusOptions" :key="option.value" :label="option.label" :value="option.value" />
-            </el-select>
+            <UiSelect v-model="query.status" clearable placeholder="文件状态" :options="statusOptions" />
 
-            <el-select v-model="query.refType" clearable filterable placeholder="上传归属类型">
-              <el-option v-for="option in refTypeOptions" :key="option.value" :label="option.label" :value="option.value" />
-            </el-select>
+            <UiSelect v-model="query.refType" clearable filterable placeholder="上传归属类型" :options="refTypeOptions" />
 
-            <el-select v-model="query.referenceStatus" clearable placeholder="引用状态">
-              <el-option
-                v-for="option in referenceStatusOptions"
-                :key="option.value"
-                :label="option.label"
-                :value="option.value"
-              />
-            </el-select>
+            <UiSelect v-model="query.referenceStatus" clearable placeholder="引用状态" :options="referenceStatusOptions" />
 
             <div class="filter-actions">
-              <el-button type="primary" @click="loadFiles(1)">查询</el-button>
+              <UiButton variant="primary" @click="loadFiles(1)">查询</UiButton>
             </div>
           </div>
         </section>
@@ -116,105 +94,106 @@
 
           <div class="files-table-panel">
             <div class="files-table-shell">
-              <el-table :data="files" v-loading="loading" style="width: 100%" table-layout="fixed">
-                <el-table-column label="预览" width="108">
+              <UiTable :data="files" :loading="loading" style="width: 100%" table-layout="fixed">
+                <UiTableColumn label="预览" width="108">
                   <template #default="{ row }">
                     <button class="asset-thumb" type="button" @click="openDetail(row)">
                       <img v-if="isImage(row)" :src="row.fileUrl" :alt="displayName(row)" />
                       <span v-else>{{ fileKindLabel(row) }}</span>
                     </button>
                   </template>
-                </el-table-column>
+                </UiTableColumn>
 
-                <el-table-column label="文件" min-width="320" show-overflow-tooltip>
+                <UiTableColumn label="文件" min-width="320" show-overflow-tooltip>
                   <template #default="{ row }">
                     <div class="file-main">
                       <strong>{{ displayName(row) }}</strong>
                       <span>{{ row.fileOriginalName || row.fileName || row.objectName || '-' }}</span>
                     </div>
                   </template>
-                </el-table-column>
+                </UiTableColumn>
 
-                <el-table-column label="归属类型" min-width="128">
+                <UiTableColumn label="归属类型" min-width="128">
                   <template #default="{ row }">
-                    <el-tag effect="plain">{{ refTypeLabel(row.refType) }}</el-tag>
+                    <UiBadge tone="neutral">{{ refTypeLabel(row.refType) }}</UiBadge>
                   </template>
-                </el-table-column>
+                </UiTableColumn>
 
-                <el-table-column label="引用状态" min-width="128">
+                <UiTableColumn label="引用状态" min-width="128">
                   <template #default="{ row }">
-                    <el-tag :type="referenceStatusType(row.referenceStatus)">
+                    <AppStatusPill :tone="referenceStatusTone(row.referenceStatus)">
                       {{ referenceStatusLabel(row.referenceStatus) }}
-                    </el-tag>
+                    </AppStatusPill>
                     <span class="reference-count">{{ row.referenceCount }} 次</span>
                   </template>
-                </el-table-column>
+                </UiTableColumn>
 
-                <el-table-column label="上传者" min-width="112" show-overflow-tooltip>
+                <UiTableColumn label="上传者" min-width="112" show-overflow-tooltip>
                   <template #default="{ row }">
                     <span>{{ row.username || '-' }}</span>
                   </template>
-                </el-table-column>
+                </UiTableColumn>
 
-                <el-table-column label="大小" min-width="104">
+                <UiTableColumn label="大小" min-width="104">
                   <template #default="{ row }">
                     <span>{{ formatFileSize(row.fileSize) }}</span>
                   </template>
-                </el-table-column>
+                </UiTableColumn>
 
-                <el-table-column label="上传时间" min-width="156">
+                <UiTableColumn label="上传时间" min-width="156">
                   <template #default="{ row }">
                     <span>{{ formatDateTime(row.createTime) }}</span>
                   </template>
-                </el-table-column>
+                </UiTableColumn>
 
-                <el-table-column label="操作" width="92" align="center">
+                <UiTableColumn label="操作" width="92" align="center">
                   <template #default="{ row }">
                     <div class="table-actions">
-                      <el-button
-                        type="primary"
-                        link
-                        :icon="View"
+                      <UiButton
+                        variant="text"
+                        size="sm"
+                        icon-only
+                        icon="eye"
                         title="详情"
                         aria-label="查看详情"
                         @click="openDetail(row)"
                       />
-                      <el-button
-                        link
-                        :icon="Download"
+                      <UiButton
+                        variant="text"
+                        size="sm"
+                        icon-only
+                        icon="download"
                         title="下载"
                         aria-label="下载文件"
                         @click="downloadFile(row)"
                       />
                     </div>
                   </template>
-                </el-table-column>
-              </el-table>
+                </UiTableColumn>
+              </UiTable>
             </div>
 
             <div class="table-footer">
-              <el-pagination
-                background
-                layout="total, prev, pager, next"
-                :current-page="page"
+              <UiPagination
+                :current="page"
                 :page-size="pageSize"
                 :total="total"
-                @current-change="loadFiles"
+                @change="loadFiles"
               />
             </div>
           </div>
         </section>
       </div>
-    </el-card>
+    </UiPanel>
 
-    <el-drawer v-model="detailVisible" size="560px" destroy-on-close>
+    <UiDrawer v-model="detailVisible" size="560px" destroy-on-close>
       <template #header>
         <div class="drawer-title">
           <h3>{{ detail ? displayName(detail) : '文件详情' }}</h3>
         </div>
       </template>
 
-      <div v-if="detail" v-loading="detailLoading" class="drawer-body">
+      <UiLoadingState v-if="detail" :loading="detailLoading" message="正在加载文件详情..." class="drawer-body">
         <div class="drawer-preview">
           <img v-if="isImage(detail)" :src="detail.fileUrl" :alt="displayName(detail)" />
           <div v-else class="drawer-fallback">
@@ -251,10 +230,10 @@
             </div>
           </div>
 
-          <el-input :model-value="detail.fileUrl" readonly type="textarea" :rows="3" />
+          <UiTextarea :model-value="detail.fileUrl" readonly :rows="3" />
           <div class="drawer-inline-actions">
-            <el-button @click="copyUrl(detail.fileUrl)">复制链接</el-button>
-            <el-button v-if="isImage(detail)" plain @click="windowOpen(detail.fileUrl)">新标签预览</el-button>
+            <UiButton icon="copy" @click="copyUrl(detail.fileUrl)">复制链接</UiButton>
+            <UiButton v-if="isImage(detail)" variant="secondary" icon="external" @click="windowOpen(detail.fileUrl)">新标签预览</UiButton>
           </div>
         </div>
 
@@ -273,7 +252,7 @@
           <div v-else class="reference-list">
             <article v-for="item in detail.references" :key="referenceKey(item)" class="reference-item">
               <div class="reference-item__head">
-                <el-tag effect="plain">{{ moduleLabel(item.moduleCode) }}</el-tag>
+                <UiBadge tone="neutral">{{ moduleLabel(item.moduleCode) }}</UiBadge>
                 <span>{{ item.bizLabel || `${item.bizType} #${item.bizId}` }}</span>
               </div>
               <div class="reference-item__meta">
@@ -283,16 +262,18 @@
             </article>
           </div>
         </div>
-      </div>
-    </el-drawer>
+      </UiLoadingState>
+    </UiDrawer>
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
-import { ElMessage } from 'element-plus'
-import { Download, Files, Refresh, Search, View } from '@element-plus/icons-vue'
 import * as echarts from 'echarts'
+import { notify } from '@/lib/feedback'
+import { UiPanel, UiButton, UiBadge, UiDrawer, UiInput, UiLoadingState, UiPagination, UiSelect, UiTable, UiTableColumn, UiTextarea } from '@/components/ui'
+import { AppStatusPill } from '@/components/app'
+import type { AccentTone } from '@/design/tokens'
 import {
   getAdminFileDetail,
   getAdminFiles,
@@ -409,7 +390,7 @@ async function loadFiles(nextPage = page.value) {
   } catch {
     files.value = []
     total.value = 0
-    ElMessage.error('文件列表加载失败')
+    notify.error('文件列表加载失败')
   } finally {
     loading.value = false
   }
@@ -423,7 +404,7 @@ async function loadStats() {
     renderCharts()
   } catch {
     stats.value = null
-    ElMessage.error('文件统计加载失败')
+    notify.error('文件统计加载失败')
   } finally {
     statsLoading.value = false
   }
@@ -444,7 +425,7 @@ async function openDetail(row: AdminFile) {
   try {
     detail.value = await getAdminFileDetail(row.id)
   } catch {
-    ElMessage.error('文件详情加载失败')
+    notify.error('文件详情加载失败')
   } finally {
     detailLoading.value = false
   }
@@ -518,7 +499,7 @@ function referenceStatusLabel(value?: string) {
   }
 }
 
-function referenceStatusType(value?: string) {
+function referenceStatusTone(value?: string): AccentTone {
   switch (value) {
     case 'REFERENCED':
       return 'success'
@@ -529,7 +510,7 @@ function referenceStatusType(value?: string) {
     case 'DELETED':
       return 'danger'
     default:
-      return undefined
+      return 'neutral'
   }
 }
 
@@ -573,20 +554,20 @@ function formatDateTime(value?: string) {
 
 async function copyUrl(url?: string) {
   if (!url) {
-    ElMessage.warning('当前文件没有可复制的链接')
+    notify.warning('当前文件没有可复制的链接')
     return
   }
   try {
     await navigator.clipboard.writeText(url)
-    ElMessage.success('文件链接已复制')
+    notify.success('文件链接已复制')
   } catch {
-    ElMessage.error('复制失败，请手动复制')
+    notify.error('复制失败，请手动复制')
   }
 }
 
 function downloadFile(row: Pick<AdminFile, 'fileUrl' | 'fileOriginalName' | 'fileName' | 'objectName'>) {
   if (!row.fileUrl) {
-    ElMessage.warning('当前文件没有可下载的地址')
+    notify.warning('当前文件没有可下载的地址')
     return
   }
   const link = document.createElement('a')
@@ -728,20 +709,6 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped lang="scss">
-.files-card {
-  border-radius: var(--radius-xl);
-  border: 1px solid var(--border-color);
-
-  :deep(.el-card__header) {
-    padding: var(--spacing-md) var(--spacing-lg);
-    border-bottom: 1px solid var(--border-light);
-  }
-
-  :deep(.el-card__body) {
-    padding: var(--spacing-lg);
-  }
-}
-
 .files-header,
 .files-actions,
 .section-head,
@@ -784,6 +751,7 @@ onBeforeUnmount(() => {
 .files-body {
   display: grid;
   gap: 18px;
+  padding: var(--space-lg);
 }
 
 .files-section {
@@ -1206,7 +1174,7 @@ onBeforeUnmount(() => {
 }
 
 @media (max-width: 1280px) {
-  .files-card :deep(.el-card__body) {
+  .files-body {
     padding: 16px;
   }
 
@@ -1247,8 +1215,8 @@ onBeforeUnmount(() => {
     justify-content: stretch;
   }
 
-  .filter-actions :deep(.el-button),
-  .table-footer :deep(.el-pagination) {
+  .filter-actions :deep(.ui-button),
+  .filter-actions :deep(.el-button) {
     width: 100%;
   }
 

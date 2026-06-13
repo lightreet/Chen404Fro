@@ -1,6 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router';
 import type { RouteRecordRaw } from 'vue-router';
-import { ElMessage } from 'element-plus';
+import { notify } from '@/lib/feedback';
 import { useSiteConfig } from '@/composables/useSiteConfig';
 import { isAdminUser, isFriendUser } from '@/utils/permission';
 import { applySiteMeta } from '@/utils/siteConfig';
@@ -246,11 +246,11 @@ router.onError((err) => {
   if (!chunkLoadFailed.test(String(err?.message ?? err))) return;
   if (sessionStorage.getItem(CHUNK_RELOAD_KEY)) {
     sessionStorage.removeItem(CHUNK_RELOAD_KEY);
-    ElMessage.error('静态资源加载失败，请强制刷新 (Ctrl+Shift+R) 或检查服务端是否已完整部署前端');
+    notify.error('静态资源加载失败，请强制刷新 (Ctrl+Shift+R) 或检查服务端是否已完整部署前端');
     return;
   }
   sessionStorage.setItem(CHUNK_RELOAD_KEY, '1');
-  ElMessage.warning('页面已更新，正在刷新…');
+  notify.warning('页面已更新，正在刷新…');
   window.location.reload();
 });
 
@@ -266,7 +266,7 @@ router.beforeEach(async (to, _from, next) => {
   if (to.meta.requiresAuth) {
     const ok = await userStore.syncAuthState();
     if (!ok) {
-      ElMessage.warning('请先登录');
+      notify.warning('请先登录');
       next({
         path: '/login',
         query: { redirect: to.fullPath },
@@ -287,7 +287,7 @@ router.beforeEach(async (to, _from, next) => {
   if (to.meta.requiresAdmin) {
     const ok = await userStore.syncAuthState();
     if (!ok || !isAdminUser(userStore.user)) {
-      ElMessage.error('仅管理员可访问');
+      notify.error('仅管理员可访问');
       next({ path: '/' });
       return;
     }
@@ -296,7 +296,7 @@ router.beforeEach(async (to, _from, next) => {
   if (to.meta.requiresFriend) {
     const ok = await userStore.syncAuthState();
     if (!ok || !isFriendUser(userStore.user)) {
-      ElMessage.error('仅管理员与知友可访问');
+      notify.error('仅管理员与知友可访问');
       next({ path: '/' });
       return;
     }

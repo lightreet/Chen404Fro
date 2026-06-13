@@ -222,6 +222,18 @@ Chen404 uses tonal layering, soft borders, photo depth, and restrained shadow. D
 
 Components must be recognizable first and personal second. A user should understand the control before noticing the decoration.
 
+### Implementation layers (how this doc maps to code)
+
+Chen404 now has its own design system in code. This doc describes *intent*; the layers below are *where that intent lives*. Build new surfaces by composing these, not by styling raw library widgets.
+
+- **Tokens — `src/design/` + `src/assets/styles/tokens.scss`.** Semantic CSS variables are the single source of visual truth: `--color-*` (accent / surface / border / text / state), `--radius-*` + `--radius-pill`, `--space-*`, `--font-size-*`, `--line-height-*`, `--motion-duration-*` / `--motion-ease-*`, `--z-*`, `--control-height-*`. The named colors, radii, and shadows in this doc are the *design rationale*; the CSS variables are their *runtime form*. Always reach for a token before a hardcoded value.
+- **Motion — `src/design/motion.ts` + `src/assets/styles/motion.scss`.** Shared enter/leave transitions (`m-fade / m-raise / m-panel / m-list / m-drawer / m-press`) with reduced-motion handling. Use these named presets instead of per-component ad-hoc transitions.
+- **UI primitives — `src/components/ui/` (`Ui*`).** Library-agnostic controls with a project-owned API: `UiButton`, `UiInput`, `UiTextarea`, `UiSelect`, `UiPanel`, `UiTabs`, `UiDialog`, `UiDrawer`, `UiBadge`, `UiTooltip`, `UiPagination`, `UiEmpty`, `UiTable`, `UiForm` / `UiFormField`, `UiAvatar`, `UiRadioGroup`, `UiSegmented`, `UiSwitch`, `UiCheckbox`, `UiSlider`, `UiUpload`, `UiDateField`, `UiNumberField`, `UiSkeleton`, `UiLoadingState`, `UiSearchBar`, `UiDropdown*`, `UiDivider`, and `UiIcon` (the single icon entry, fed by `design/icon-map.ts`).
+- **App shells — `src/components/app/` (`App*`).** Brand-level compositions that carry Chen404's voice but stay cross-feature: `AppSection`, `AppActionBar`, `AppFilterBar`, `AppStatusPill`, `AppEmptyState`.
+- **Feedback — `src/lib/feedback/`.** `notify.*` and `confirmAction()` / `confirmDelete()` / `confirmInput()` are the only message/confirm entry points.
+
+**The Build-From-System Rule.** A new search box, card, filter, or panel should first be assembled from existing `Ui*` / `App*` + tokens. Create a new shared component only when a composition repeats or needs real semantic abstraction — never to re-skin an existing one. Element Plus still powers a few primitives internally, but it is a hidden dependency: business pages and components must not render `<el-*>`, use `v-loading`, or import `element-plus` directly. `npm run check:element-boundary` enforces this.
+
 ### PageHero
 
 - **Role:** route entrance, not the whole page identity.
@@ -299,7 +311,7 @@ Components must be recognizable first and personal second. A user should underst
 ### Workbench / Admin
 
 - **Role:** task completion.
-- **Style:** calm, dense, consistent. Use Element Plus patterns where they help.
+- **Style:** calm, dense, consistent. Compose from the project's own `Ui*` primitives and `App*` shells; do not fall back to raw Element Plus visuals.
 - **Motion:** state feedback only.
 - **Ban:** cute stationery treatment, decorative display fonts, and large hero sections.
 

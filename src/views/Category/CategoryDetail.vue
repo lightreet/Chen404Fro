@@ -7,7 +7,7 @@
       </div>
 
       <div v-if="loading && !articleList.length" class="loading-state">
-        <el-icon class="loading-icon"><Loading /></el-icon>
+        <UiIcon class="loading-icon" name="Loading" />
         <p>加载中…</p>
       </div>
 
@@ -26,19 +26,15 @@
         </div>
 
         <div v-if="hasMore" class="load-more">
-          <el-button
-            class="jp-btn-primary !border-0"
-            :loading="loading"
-            @click="loadMore"
-          >
+          <UiButton class="jp-btn-primary !border-0" variant="primary" :loading="loading" @click="loadMore">
             {{ loading ? '加载中...' : '加载更多' }}
-          </el-button>
+          </UiButton>
         </div>
 
         <div v-else-if="articleList.length > 0" class="no-more">
-          <el-divider>
+          <UiDivider>
             <span class="no-more-text">已经到底啦 ~</span>
-          </el-divider>
+          </UiDivider>
         </div>
       </template>
     </div>
@@ -48,10 +44,10 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue';
 import { useRoute } from 'vue-router';
-import { ElMessage } from 'element-plus';
-import { Loading } from '@element-plus/icons-vue';
+import { notify } from '@/lib/feedback';
 import DefaultLayout from '@/layouts/DefaultLayout.vue';
 import ArticleCard from '@/components/ArticleCard/ArticleCard.vue';
+import { UiButton, UiDivider, UiIcon } from '@/components/ui'
 import { useSiteConfig } from '@/composables/useSiteConfig';
 import type { Article, Category } from '@/types';
 import { getArticles, getCategoryById } from '@/api/article';
@@ -101,7 +97,7 @@ const loadArticles = async (page: number = 1) => {
     total.value = totalCount;
   } catch (err) {
     console.error('加载文章失败', err);
-    ElMessage.error('加载文章失败，请稍后重试');
+    notify.error('加载文章失败，请稍后重试');
     if (currentPage.value === 1) articleList.value = [];
   } finally {
     loading.value = false;

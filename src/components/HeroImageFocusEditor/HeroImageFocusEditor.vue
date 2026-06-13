@@ -31,7 +31,7 @@
       <p>{{ helperText }}</p>
       <div class="focus-editor__actions">
         <span class="focus-editor__position">{{ localPosition }}</span>
-        <el-button size="small" text @click="resetPosition">重置居中</el-button>
+        <UiButton size="sm" variant="text" @click="resetPosition">重置居中</UiButton>
       </div>
     </div>
   </div>
@@ -39,6 +39,7 @@
 
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue';
+import { UiButton } from '@/components/ui'
 
 interface Props {
   imageUrl: string;

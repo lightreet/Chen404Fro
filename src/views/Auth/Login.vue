@@ -18,50 +18,43 @@
         <div class="auth-form">
           <h3 class="form-title">账号登录</h3>
 
-          <el-form
+          <UiForm
             ref="formRef"
             :model="form"
             :rules="rules"
             class="login-form"
             @keyup.enter="handleLogin"
           >
-            <el-form-item prop="account">
-              <el-input
+            <UiFormField prop="account">
+              <UiInput
                 v-model="form.account"
                 placeholder="请输入用户名或邮箱"
-                size="large"
-                :prefix-icon="User"
+                size="lg"
+                prefix-icon="user"
               />
-            </el-form-item>
+            </UiFormField>
 
-            <el-form-item prop="password">
-              <el-input
+            <UiFormField prop="password">
+              <UiInput
                 v-model="form.password"
                 type="password"
                 placeholder="请输入密码"
-                size="large"
-                :prefix-icon="Lock"
-                show-password
+                size="lg"
+                prefix-icon="lock"
               />
-            </el-form-item>
+            </UiFormField>
 
             <div class="form-options">
-              <el-checkbox v-model="rememberMe">记住我</el-checkbox>
+              <UiCheckbox v-model="rememberMe">记住我</UiCheckbox>
               <a href="#" class="forgot-link">忘记密码？</a>
             </div>
 
-            <el-form-item>
-              <el-button
-                type="primary"
-                size="large"
-                class="submit-btn"
-                :loading="loading"
-                @click="handleLogin"
-              >
+            <UiFormField>
+              <UiButton variant="primary" size="lg" class="submit-btn" :loading="loading" @click="handleLogin">
                 立即登录
-              </el-button>
-            </el-form-item>
-          </el-form>
+              </UiButton>
+            </UiFormField>
+          </UiForm>
 
           <div class="auth-footer">
             <p>
@@ -69,7 +62,7 @@
               <router-link to="/register" class="link">立即注册</router-link>
             </p>
             <router-link to="/" class="back-link">
-              <el-icon><ArrowLeft /></el-icon>
+              <UiIcon name="arrow-left" />
               返回首页
             </router-link>
           </div>
@@ -82,8 +75,8 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
-import { ElMessage } from 'element-plus';
-import { User, Lock, ArrowLeft } from '@element-plus/icons-vue';
+import { notify } from '@/lib/feedback';
+import { UiButton, UiCheckbox, UiForm, UiFormField, UiIcon, UiInput } from '@/components/ui'
 import { login } from '@/api/auth';
 import { useSiteConfig } from '@/composables/useSiteConfig';
 import { useUserStore } from '@/stores/user';
@@ -141,7 +134,7 @@ const handleLogin = async () => {
       refreshToken: res.refreshToken,
     });
 
-    ElMessage.success('登录成功');
+    notify.success('登录成功');
     const redirect = (route.query.redirect as string) || '/';
     router.push(redirect.startsWith('/') ? redirect : '/');
   } catch (error) {
@@ -273,7 +266,7 @@ onMounted(() => {
 }
 
 .login-form {
-  :deep(.el-input__wrapper) {
+  :deep(.ui-input) {
     border-radius: var(--radius-md);
   }
 }

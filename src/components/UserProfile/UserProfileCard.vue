@@ -25,14 +25,14 @@
       <dl class="user-profile-card__facts">
         <div class="user-profile-card__fact">
           <dt>
-            <el-icon><UserFilled /></el-icon>
+            <UiIcon name="UserFilled" />
             身份
           </dt>
           <dd>{{ identityDescription }}</dd>
         </div>
         <div class="user-profile-card__fact">
           <dt>
-            <el-icon><Message /></el-icon>
+            <UiIcon name="Message" />
             邮箱
           </dt>
           <dd>
@@ -64,8 +64,8 @@
 
 <script setup lang="ts">
 import { computed } from 'vue';
-import { ElMessage } from 'element-plus';
-import { Message, UserFilled } from '@element-plus/icons-vue';
+import { notify } from '@/lib/feedback';
+import { UiIcon } from '@/components/ui';
 import type { SiteMember } from '@/api/home';
 
 const DEFAULT_MEMBER_AVATAR = '/default-member-avatar.svg';
@@ -108,9 +108,9 @@ async function copyEmail() {
   if (!props.user.email) return;
   try {
     await navigator.clipboard.writeText(props.user.email);
-    ElMessage.success('邮箱已复制');
+    notify.success('邮箱已复制');
   } catch {
-    ElMessage.warning('复制失败，可以手动选择邮箱');
+    notify.warning('复制失败，可以手动选择邮箱');
   }
 }
 

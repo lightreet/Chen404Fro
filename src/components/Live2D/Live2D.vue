@@ -67,7 +67,7 @@
 
       <div class="live2d-tools">
         <button class="tool-btn" type="button" aria-label="对话" @click="handleChat">
-          <el-icon><ChatDotRound /></el-icon>
+          <UiIcon name="ChatDotRound" />
         </button>
         <button
           class="tool-btn"
@@ -76,16 +76,16 @@
           aria-label="音乐"
           @click="handleMusic"
         >
-          <el-icon><Headset /></el-icon>
+          <UiIcon name="Headset" />
         </button>
         <button class="tool-btn" type="button" aria-label="换装" @click="handleChange">
-          <el-icon><Refresh /></el-icon>
+          <UiIcon name="Refresh" />
         </button>
         <button class="tool-btn" type="button" aria-label="截图" @click="handleScreenshot">
-          <el-icon><Camera /></el-icon>
+          <UiIcon name="Camera" />
         </button>
         <button class="tool-btn close-btn" type="button" aria-label="关闭" @click="handleClose">
-          <el-icon><Close /></el-icon>
+          <UiIcon name="Close" />
         </button>
       </div>
     </div>
@@ -95,8 +95,8 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue';
 import { useRoute } from 'vue-router';
-import { Camera, ChatDotRound, Close, Headset, Refresh } from '@element-plus/icons-vue';
-import { ElMessage } from 'element-plus';
+import { UiIcon } from '@/components/ui';
+import { notify } from '@/lib/feedback';
 import Live2DChatPanel from './Live2DChatPanel.vue';
 import Live2DMusicPanel from './Live2DMusicPanel.vue';
 import maidImage from '@/assets/live2d/maid-witch.webp';
@@ -418,7 +418,7 @@ const applyStreamEvent = (event: AiChatStreamEvent) => {
       break;
     }
     case 'error':
-      ElMessage.warning(event.data.message || '这次我没接稳，再试一次呀。');
+      notify.warning(event.data.message || '这次我没接稳，再试一次呀。');
       break;
   }
 };

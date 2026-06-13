@@ -1,0 +1,126 @@
+// Chen404 动效系统 - 通用 transition 类
+//
+// 与 src/design/motion.ts 的 motionPresets 对齐。
+// 业务层用 <transition name="m-fade"> 等即可获得统一的进出场语言。
+
+// fade：纯淡入淡出，用于内容切换
+.m-fade-enter-active,
+.m-fade-leave-active {
+  transition: opacity var(--motion-duration-base) var(--motion-ease-standard);
+}
+.m-fade-enter-from,
+.m-fade-leave-to {
+  opacity: 0;
+}
+
+// raise：上浮淡入，用于卡片/区块入场
+.m-raise-enter-active {
+  transition:
+    opacity var(--motion-duration-base) var(--motion-ease-entrance),
+    transform var(--motion-duration-base) var(--motion-ease-entrance);
+}
+.m-raise-leave-active {
+  transition:
+    opacity var(--motion-duration-fast) var(--motion-ease-exit),
+    transform var(--motion-duration-fast) var(--motion-ease-exit);
+}
+.m-raise-enter-from {
+  opacity: 0;
+  transform: translateY(10px);
+}
+.m-raise-leave-to {
+  opacity: 0;
+  transform: translateY(6px);
+}
+
+// panel：浮层/面板展开
+.m-panel-enter-active {
+  transition:
+    opacity var(--motion-duration-base) var(--motion-ease-entrance),
+    transform var(--motion-duration-base) var(--motion-ease-entrance);
+  transform-origin: top center;
+}
+.m-panel-leave-active {
+  transition:
+    opacity var(--motion-duration-fast) var(--motion-ease-exit),
+    transform var(--motion-duration-fast) var(--motion-ease-exit);
+  transform-origin: top center;
+}
+.m-panel-enter-from,
+.m-panel-leave-to {
+  opacity: 0;
+  transform: scale(0.97) translateY(-6px);
+}
+
+// list：列表重排（配合 transition-group）
+.m-list-enter-active {
+  transition:
+    opacity var(--motion-duration-base) var(--motion-ease-entrance),
+    transform var(--motion-duration-base) var(--motion-ease-entrance);
+}
+.m-list-leave-active {
+  transition:
+    opacity var(--motion-duration-fast) var(--motion-ease-exit),
+    transform var(--motion-duration-fast) var(--motion-ease-exit);
+  position: absolute;
+}
+.m-list-enter-from,
+.m-list-leave-to {
+  opacity: 0;
+  transform: translateY(12px);
+}
+.m-list-move {
+  transition: transform var(--motion-duration-base) var(--motion-ease-standard);
+}
+
+// drawer：抽屉从右侧滑入
+.m-drawer-enter-active {
+  transition:
+    opacity var(--motion-duration-base) var(--motion-ease-entrance),
+    transform var(--motion-duration-base) var(--motion-ease-entrance);
+}
+.m-drawer-leave-active {
+  transition:
+    opacity var(--motion-duration-fast) var(--motion-ease-exit),
+    transform var(--motion-duration-fast) var(--motion-ease-exit);
+}
+.m-drawer-enter-from,
+.m-drawer-leave-to {
+  opacity: 0;
+  transform: translateX(24px);
+}
+
+// press：按压反馈（工具类，给可点击元素加 :active 缩放）
+.m-press {
+  transition: transform var(--motion-duration-fast) var(--motion-ease-standard);
+  &:active {
+    transform: scale(0.97);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .m-fade-enter-active,
+  .m-fade-leave-active,
+  .m-raise-enter-active,
+  .m-raise-leave-active,
+  .m-panel-enter-active,
+  .m-panel-leave-active,
+  .m-list-enter-active,
+  .m-list-leave-active,
+  .m-list-move,
+  .m-drawer-enter-active,
+  .m-drawer-leave-active,
+  .m-press {
+    transition-duration: 0.01ms !important;
+  }
+  .m-raise-enter-from,
+  .m-raise-leave-to,
+  .m-panel-enter-from,
+  .m-panel-leave-to,
+  .m-list-enter-from,
+  .m-list-leave-to,
+  .m-drawer-enter-from,
+  .m-drawer-leave-to {
+    transform: none !important;
+  }
+}

@@ -4,7 +4,7 @@
     <header ref="editTopDockRef" class="edit-top-dock">
       <div class="edit-dock-row edit-dock-row--back">
         <button type="button" class="back-link" @click="goBack">
-          <el-icon><ArrowLeft /></el-icon>
+          <UiIcon name="ArrowLeft" />
           <span>返回</span>
         </button>
         <div class="dock-back-meta">
@@ -23,12 +23,12 @@
       <!-- 正文纸媒：标题 → 分割线 → 编辑器（目录由 md-editor catalog 固定在左侧） -->
       <main class="edit-paper">
         <div class="paper-title-block">
-          <el-input
+          <UiInput
             v-model="form.title"
             placeholder="请输入文章标题（5～100 个字）"
-            size="large"
+            size="lg"
             class="paper-title-input"
-            maxlength="100"
+            :maxlength="100"
             show-word-limit
           />
         </div>
@@ -65,7 +65,7 @@
             <!-- 封面 -->
             <section class="sidebar-section cover-section">
               <div class="section-label">文章封面</div>
-              <el-upload
+              <UiUpload
                 class="cover-uploader"
                 :http-request="handleCoverUpload"
                 :show-file-list="false"
@@ -74,21 +74,20 @@
               >
                 <img v-if="form.coverImage" :src="form.coverImage" class="cover-preview" />
                 <div v-else class="cover-placeholder">
-                  <el-icon><Plus /></el-icon>
+                  <UiIcon name="Plus" />
                   <span>点击上传封面</span>
                   <span class="cover-tip">建议尺寸 1200×630，支持 GIF 动图</span>
                 </div>
-              </el-upload>
-              <el-button
+              </UiUpload>
+              <UiButton
                 v-if="form.coverImage"
-                type="danger"
-                link
-                size="small"
+                variant="text"
+                size="sm"
                 @click="form.coverImage = ''"
                 class="remove-cover"
               >
                 移除封面
-              </el-button>
+              </UiButton>
             </section>
 
             <!-- 分类 -->
@@ -123,28 +122,27 @@
             <section class="sidebar-section meta-section tags-section">
               <div class="section-header">
                 <label class="meta-section-label">标签</label>
-                <el-button
-                  size="small"
-                  text
-                  type="primary"
+                <UiButton
+                  size="sm"
+                  variant="text"
                   :loading="generatingTags"
                   @click="handleGenerateTags"
                 >
                   {{ hasGeneratedTags ? '重新推荐' : 'AI 推荐' }}
-                </el-button>
+                </UiButton>
               </div>
               <div
                 class="tags-input-wrap"
                 @mouseenter="onTagsWrapMouseEnter"
                 @mouseleave="onTagsWrapMouseLeave"
               >
-                <el-input
+                <UiInput
                   v-model="newTagName"
                   placeholder="输入标签，按回车添加"
-                  size="large"
+                  size="lg"
                   clearable
                   class="tags-input"
-                  @keyup.enter="addCustomTag"
+                  @enter="addCustomTag"
                   @focus="showTagSuggestions = true"
                   @blur="onTagsInputBlur"
                 />
@@ -193,22 +191,21 @@
             <section class="sidebar-section summary-section">
               <div class="section-header">
                 <label class="section-label">内容摘要</label>
-                <el-button
-                  size="small"
-                  text
-                  type="primary"
+                <UiButton
+                  size="sm"
+                  variant="text"
                   :loading="generatingSummary"
                   @click="handleGenerateSummary"
                 >
                   {{ hasGeneratedSummary ? '重新生成' : 'AI 生成' }}
-                </el-button>
+                </UiButton>
               </div>
-              <el-input
+              <UiInput
                 v-model="form.summary"
                 type="textarea"
                 :rows="3"
                 placeholder="选填，不填将自动提取正文前200字"
-                maxlength="500"
+                :maxlength="500"
                 show-word-limit
               />
             </section>
@@ -221,40 +218,24 @@
                 @click="advancedOpen = !advancedOpen"
               >
                 <span>高级设置</span>
-                <el-icon class="toggle-icon" :class="{ open: advancedOpen }"><ArrowDown /></el-icon>
+                <UiIcon name="ArrowDown" class="toggle-icon" :class="{ open: advancedOpen }" />
               </button>
               <Transition name="slide-down">
                 <div v-show="advancedOpen" class="advanced-content">
                   <div class="advanced-field">
                     <label class="advanced-field-label">文章可见性</label>
-                    <el-select v-model="form.visibility" class="advanced-select">
-                      <el-option
-                        v-for="item in visibilityOptions"
-                        :key="item.value"
-                        :label="item.label"
-                        :value="item.value"
-                      />
-                    </el-select>
+                    <UiSelect v-model="form.visibility" class="advanced-select" :options="visibilityOptions" />
                   </div>
                   <div class="advanced-field">
                     <label class="advanced-field-label">评论策略</label>
-                    <el-select v-model="form.commentPolicy" class="advanced-select">
-                      <el-option
-                        v-for="item in commentPolicyOptions"
-                        :key="item.value"
-                        :label="item.label"
-                        :value="item.value"
-                      />
-                    </el-select>
+                    <UiSelect v-model="form.commentPolicy" class="advanced-select" :options="commentPolicyOptions" />
                   </div>
-                  <el-checkbox
+                  <UiCheckbox
                     v-if="canSetArticleTop"
-                    v-model="form.isTop"
-                    :true-value="1"
-                    :false-value="0"
-                  >
-                    置顶文章
-                  </el-checkbox>
+                    :model-value="form.isTop === 1"
+                    label="置顶文章"
+                    @update:model-value="(v) => (form.isTop = v ? 1 : 0)"
+                  />
                 </div>
               </Transition>
             </section>
@@ -280,9 +261,9 @@
         >
           保存草稿
         </button>
-        <el-button type="primary" class="footer-publish" @click="handlePublish" :loading="publishing">
+        <UiButton variant="primary" class="footer-publish" @click="handlePublish" :loading="publishing">
           {{ form.status === ArticleStatus.PUBLISHED ? '更新发布' : '发布文章' }}
-        </el-button>
+        </UiButton>
       </div>
     </footer>
   </div>
@@ -290,10 +271,10 @@
 
 <script setup lang="ts">
 import { h } from 'vue';
-import { ArrowLeft, ArrowDown, Plus } from '@element-plus/icons-vue';
 import { MdEditor } from 'md-editor-v3';
 import 'md-editor-v3/lib/style.css';
 import { ArticleStatus } from '@/types';
+import { UiButton, UiInput, UiSelect, UiCheckbox, UiIcon, UiUpload } from '@/components/ui';
 import CategoryIcon from '@/components/CategoryIcon/CategoryIcon.vue';
 import MdEditorEmojiToolbar from '@/components/Editor/MdEditorEmojiToolbar.vue';
 import MdEditorUnorderedListToolbar from '@/components/Editor/MdEditorUnorderedListToolbar.vue';

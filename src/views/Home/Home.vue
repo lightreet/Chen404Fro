@@ -19,7 +19,7 @@
       <!-- Discovery 标题与搜索同一行 -->
       <div id="discovery" class="discovery-head">
         <div class="jp-section-title section-header discovery-head__title">
-          <el-icon class="jp-section-icon"><Compass /></el-icon>
+          <UiIcon class="jp-section-icon" name="Compass" />
           <h2 class="!m-0">Discovery</h2>
         </div>
         <HomeDiscoverySearch
@@ -64,14 +64,14 @@
 
       <!-- 加载更多 -->
       <div class="load-more" v-if="false && hasMore">
-        <el-button
-          type="primary"
+        <UiButton
+          variant="primary"
           :loading="loading"
           @click="loadMore"
           class="jp-btn-primary !border-0"
         >
           {{ loading ? '加载中...' : '加载更多' }}
-        </el-button>
+        </UiButton>
       </div>
 
       <!-- 没有更多了 -->
@@ -80,9 +80,9 @@
       </div>
 
       <div class="no-more" v-else-if="articleList.length > 0">
-        <el-divider>
+        <UiDivider>
           <span class="no-more-text">已经到底啦 ~</span>
-        </el-divider>
+        </UiDivider>
       </div>
     </div>
   </DefaultLayout>
@@ -90,12 +90,12 @@
 
 <script setup lang="ts">
 import { computed, ref, onMounted, onUnmounted, watch, nextTick } from 'vue';
-import { ElMessage } from 'element-plus';
-import { Compass } from '@element-plus/icons-vue';
+import { notify } from '@/lib/feedback';
 import DefaultLayout from '@/layouts/DefaultLayout.vue';
 import ArticleCard from '@/components/ArticleCard/ArticleCard.vue';
 import HomeDiscoverySearch from '@/components/HomeDiscoverySearch/HomeDiscoverySearch.vue';
 import PageHero from '@/components/PageHero/PageHero.vue';
+import { UiButton, UiDivider, UiIcon } from '@/components/ui'
 import { useSiteConfig } from '@/composables/useSiteConfig';
 import type { Article } from '@/types';
 import { getArticles } from '@/api/article';
@@ -235,7 +235,7 @@ const loadArticles = async (page: number = 1) => {
     hasMore.value = list.length > 0 && pageFilled && countSuggestsMore;
   } catch (err) {
     console.error('加载文章列表失败', err);
-    ElMessage.error('加载文章列表失败，请稍后重试');
+    notify.error('加载文章列表失败，请稍后重试');
     if (currentPage.value === 1) {
       hasMore.value = false;
     }

@@ -21,7 +21,7 @@
     <div class="category-page">
       <!-- 加载中 -->
       <div v-if="loading" class="loading-state">
-        <el-icon class="loading-icon"><Loading /></el-icon>
+        <UiIcon class="loading-icon" name="Loading" />
         <p>加载中…</p>
       </div>
 
@@ -51,16 +51,16 @@
 
         <!-- 加载更多 -->
         <div v-else-if="hasMore" class="load-more">
-          <el-button class="jp-btn-primary !border-0" @click="loadMore">
+          <UiButton variant="primary" class="jp-btn-primary !border-0" @click="loadMore">
             加载更多
-          </el-button>
+          </UiButton>
         </div>
 
         <!-- 没有更多了 -->
         <div v-else-if="categories.length > 0" class="no-more">
-          <el-divider>
+          <UiDivider>
             <span class="no-more-text">已经到底啦 ~</span>
-          </el-divider>
+          </UiDivider>
         </div>
       </template>
     </div>
@@ -69,11 +69,11 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
-import { ElMessage } from 'element-plus';
-import { Loading } from '@element-plus/icons-vue';
+import { notify } from '@/lib/feedback';
 import DefaultLayout from '@/layouts/DefaultLayout.vue';
 import CategoryIcon from '@/components/CategoryIcon/CategoryIcon.vue';
 import PageHero from '@/components/PageHero/PageHero.vue';
+import { UiButton, UiDivider, UiIcon } from '@/components/ui'
 import { useSiteConfig } from '@/composables/useSiteConfig';
 import type { Category } from '@/types';
 import { resolveHeroImagePosition } from '@/utils/siteConfig';
@@ -110,7 +110,7 @@ const fetchCategories = async () => {
     categories.value = list ?? [];
   } catch (err) {
     console.error('加载分类失败', err);
-    ElMessage.error('加载分类失败，请稍后重试');
+    notify.error('加载分类失败，请稍后重试');
     categories.value = [];
   } finally {
     loading.value = false;

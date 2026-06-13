@@ -21,13 +21,13 @@
       <div class="travel-map-haze travel-map-haze--right" />
       <div class="travel-map-controls">
         <button type="button" class="travel-map-control" title="放大地图" @click="zoomIn">
-          <el-icon><Plus /></el-icon>
+          <UiIcon name="Plus" />
         </button>
         <button type="button" class="travel-map-control" title="缩小地图" @click="zoomOut">
-          <el-icon><Minus /></el-icon>
+          <UiIcon name="Minus" />
         </button>
         <button type="button" class="travel-map-control travel-map-control--reset" title="恢复初始比例" @click="resetZoom">
-          <el-icon><Refresh /></el-icon>
+          <UiIcon name="Refresh" />
         </button>
       </div>
 
@@ -230,8 +230,6 @@
 
       <div class="travel-map-petals">
         <span class="petal petal--one" />
-        <span class="petal petal--two" />
-        <span class="petal petal--three" />
       </div>
 
     </div>
@@ -246,7 +244,7 @@
 
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue'
-import { Minus, Plus, Refresh } from '@element-plus/icons-vue'
+import { UiIcon } from '@/components/ui'
 import { geoContains, geoMercator, geoPath } from 'd3-geo'
 import chinaMapData from '@svg-maps/china'
 import mdiMapMarkerOutline from '@iconify/icons-mdi/map-marker-outline'
@@ -2061,7 +2059,7 @@ defineExpose({
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.72),
     0 16px 36px rgba(201, 169, 180, 0.14);
-  filter: saturate(0.94) sepia(0.03);
+  filter: saturate(0.82) sepia(0.08) brightness(1.02) hue-rotate(-6deg);
 }
 
 .travel-map-stage {
@@ -2395,7 +2393,7 @@ defineExpose({
   transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
 }
 
-.travel-map-control .el-icon {
+.travel-map-control :deep(.ui-icon) {
   font-size: 18px;
   pointer-events: none;
 }
