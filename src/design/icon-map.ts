@@ -106,6 +106,7 @@ export const elementIconAlias: Record<string, IconName> = {
   Delete: 'delete',
   Close: 'close',
   Search: 'search',
+  Sort: 'sort',
   Refresh: 'refresh',
   Setting: 'settings',
   Upload: 'upload',
