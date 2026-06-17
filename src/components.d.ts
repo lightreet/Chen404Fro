@@ -39,6 +39,7 @@ declare module 'vue' {
     RouterView: typeof import('vue-router')['RouterView']
     SakuraOverlay: typeof import('./components/SakuraOverlay/SakuraOverlay.vue')['default']
     TravelMemoryMap: typeof import('./components/TravelMemoryMap/TravelMemoryMap.vue')['default']
+    TravelPhotoSphere: typeof import('./components/TravelMemoryMap/TravelPhotoSphere.vue')['default']
     UiAvatar: typeof import('./components/ui/avatar/UiAvatar.vue')['default']
     UiBadge: typeof import('./components/ui/badge/UiBadge.vue')['default']
     UiButton: typeof import('./components/ui/button/UiButton.vue')['default']

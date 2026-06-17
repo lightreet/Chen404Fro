@@ -80,6 +80,7 @@ export const iconMap = {
   // 媒体 / 音乐
   play: 'mdi:play',
   pause: 'mdi:pause',
+  'sequence-play': 'mdi:playlist-play',
   music: 'mdi:music-note-outline',
   headset: 'mdi:headphones',
   radio: 'mdi:radio',
