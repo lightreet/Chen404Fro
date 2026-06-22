@@ -189,6 +189,15 @@ const routes: RouteRecordRaw[] = [
     },
   },
   {
+    path: '/forgot-password',
+    name: 'ForgotPassword',
+    component: () => import('@/views/Auth/ForgotPassword.vue'),
+    meta: {
+      title: '找回密码',
+      guest: true,
+    },
+  },
+  {
     path: '/trust-request',
     name: 'TrustRequest',
     component: () => import('@/views/TrustRequest/TrustRequest.vue'),

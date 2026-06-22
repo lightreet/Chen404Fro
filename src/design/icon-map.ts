@@ -71,6 +71,7 @@ export const iconMap = {
   file: 'mdi:file-outline',
   files: 'mdi:file-multiple-outline',
   folder: 'mdi:folder-outline',
+  mail: 'mdi:email-outline',
   lock: 'mdi:lock-outline',
   key: 'mdi:key-outline',
   eye: 'mdi:eye-outline',

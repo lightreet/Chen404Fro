@@ -2,7 +2,7 @@
   <el-select
     v-model="proxyValue"
     class="ui-select"
-    :class="`ui-select--${size}`"
+    :class="[`ui-select--${size}`, { 'ui-select--borderless': borderless }]"
     :placeholder="placeholder"
     :clearable="clearable"
     :filterable="filterable"
@@ -44,6 +44,7 @@ const props = defineProps<{
   filterable?: boolean
   multiple?: boolean
   disabled?: boolean
+  borderless?: boolean
   collapseTags?: boolean
   size?: 'sm' | 'md' | 'lg'
 }>()
@@ -64,5 +65,13 @@ const onChange = (v: SelectValue) => emit('change', v)
 <style scoped lang="scss">
 .ui-select {
   width: 100%;
+}
+
+.ui-select--borderless {
+  :deep(.el-select__wrapper) {
+    border: none;
+    box-shadow: none !important;
+    background: transparent;
+  }
 }
 </style>

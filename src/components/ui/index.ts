@@ -38,6 +38,7 @@ export { default as UiTable } from './table/UiTable.vue'
 export { default as UiTableColumn } from './table-column/UiTableColumn.vue'
 export { default as UiAvatar } from './avatar/UiAvatar.vue'
 export { default as UiSearchBar } from './search-bar/UiSearchBar.vue'
+export { default as AuthEmailField } from '../Auth/AuthEmailField.vue'
 
 export type { UiButtonVariant, UiTabItem, UiSize, UiSelectOption, UiRadioOption, UiSegmentedOption } from './types'
 export type { UploadRequestHandler, UploadRequestOptions } from './upload/UiUpload.vue'

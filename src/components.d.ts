@@ -17,6 +17,7 @@ declare module 'vue' {
     AppSection: typeof import('./components/app/AppSection/AppSection.vue')['default']
     AppStatusPill: typeof import('./components/app/AppStatusPill/AppStatusPill.vue')['default']
     ArticleCard: typeof import('./components/ArticleCard/ArticleCard.vue')['default']
+    AuthEmailField: typeof import('./components/Auth/AuthEmailField.vue')['default']
     CategoryIcon: typeof import('./components/CategoryIcon/CategoryIcon.vue')['default']
     CommentItem: typeof import('./components/Comment/CommentItem.vue')['default']
     CommentSection: typeof import('./components/Comment/CommentSection.vue')['default']

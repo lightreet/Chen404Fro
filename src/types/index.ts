@@ -99,7 +99,7 @@ export interface SendCodeParams {
 
 // 忘记密码请求
 export interface ForgotPasswordParams {
-  account: string; // 邮箱或手机号
+  email: string;
   code: string;
   newPassword: string;
 }
