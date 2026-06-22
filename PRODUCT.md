@@ -14,8 +14,8 @@ The product is not a generic blog shell. It is a small personal world with usabl
 
 ## Users
 
-- **Public readers** browse articles, categories, archives, music, guestbook, about, and public profiles.
-- **Trusted friends** can access more intimate surfaces such as the travel memory map and travel details.
+- **Public readers** browse articles, categories, archives, music, guestbook, about, public profiles, and public travel memories.
+- **Trusted friends** can access more intimate travel memories and private travel details.
 - **The site owner** writes articles, edits travel memories, manages music, handles trust requests, uploads files, tunes AI settings, and curates the site.
 
 ## Experience Model
@@ -27,14 +27,14 @@ Chen404 has one emotional universe, but every surface needs a different intensit
 | Editorial reading | `/`, `/category`, `/category/:id`, `/archive`, `/article/:id`, `/tag`, `/tag/:id` | Help readers find and read content | Balanced to expressive | Clear hierarchy, calm article rhythm, enough personality to feel owned |
 | Social note | `/guestbook` | Let visitors leave a short message and read others | Balanced | Warm, legible, conversational, not a plain form dump |
 | Companion listening | `/music` | Let readers browse and play Sakura Radio | Expressive product UI | Tactile, musical, familiar controls, no nightclub or dashboard mood |
-| Private travel atlas | `/memory-map`, `/memory-map/detail/:id` | Let trusted friends browse places, routes, photos, and memories | Expressive but structured | Travel atlas first, scrapbook second, clear map/detail relationship |
+| Travel atlas | `/memory-map`, `/memory-map/detail/:id` | Let public readers browse public places, while trusted friends can see more private routes, photos, and memories | Expressive but structured | Travel atlas first, scrapbook second, clear map/detail relationship |
 | Personal workspace | `/profile`, `/trust-request` | Let users manage identity and request status | Calm | Task-shaped, readable, emotionally soft but not decorative |
 | Owner workbench | editors and `/admin` | Let the owner create and maintain content | Quiet and efficient | Fast scanning, stable actions, consistent controls |
 
 ## Current Product Surface
 
 - Public reading: home, article detail, archive, category, tag, guestbook, about, public user page.
-- Trust layer: trust request flow, friend-only memory map access, profile-side request status.
+- Trust layer: trust request flow, public travel map browsing, friend-only travel memories, profile-side request status.
 - Owner workbench: article editor, travel memory editor, music track editor, admin tabs for categories, site config, AI assistant, emojis, files, and trust requests.
 - Companion layer: Live2D Lyra chat, SSE answers, article citations, related article suggestions, Sakura Radio mini-player.
 - Sakura Radio: public music room, playlists, lyrics, shared player state, admin song and playlist maintenance, AI song metadata suggestions.
@@ -71,7 +71,7 @@ Improve the form/message relationship: the composer, message list, reply state, 
 
 ### Travel Memory Map
 
-The travel map now has the right product skeleton: a public access cover, a travel index rail, a real map surface with graceful fallback, and a selected-place detail panel. The remaining weakness is not missing structure, but inconsistent tone between the locked state, the live map surface, and the paper-like detail materials.
+The travel map now has the right product skeleton: public memory browsing, an inline public empty state, a travel index rail, a real map surface with graceful fallback, and a selected-place detail panel. The remaining weakness is not missing structure, but keeping the public empty state, the live map surface, and the paper-like detail materials in one shared tone.
 
 The target is **private travel atlas**, not aquarium, not SaaS map dashboard, not decorative notebook page. The map page should feel like opening a personal atlas on a desk: map, selected place, route, photo evidence, and gallery all belonging to the same physical scene.
 
@@ -116,7 +116,7 @@ The refined rule: **dreamy at the entrance, precise at the task.**
 
 ## Current Gaps
 
-- Travel memory map now has the correct atlas scaffolding, but the locked-state cover, the real map surface, and the selected-detail paper still need a tighter shared material language.
+- Travel memory map now has the correct atlas scaffolding, but the public empty state, the real map surface, and the selected-detail paper still need a tighter shared material language.
 - Travel memory detail now has the correct support rail structure, but the reading rhythm, media density, and desktop/mobile transitions still need refinement.
 - Guestbook needs a more coherent message-desk pattern for composer, message cards, replies, and moderation actions.
 - Archive should remain compact and utility-led while still fitting Chen404's material language.

@@ -602,7 +602,7 @@ onMounted(() => {
   --profile-text: #70738a;
   --profile-muted: #9ca0b3;
   margin-top: 0;
-  padding: 0 0 var(--spacing-xl);
+  padding: clamp(72px, 7vh, 88px) 0 var(--spacing-xl);
   background:
     radial-gradient(circle at top left, rgba(245, 155, 188, 0.08), transparent 26%),
     radial-gradient(circle at top right, rgba(199, 189, 217, 0.12), transparent 30%),
@@ -623,7 +623,7 @@ onMounted(() => {
 
 .profile-sidebar {
   position: sticky;
-  top: calc(64px + 24px);
+  top: calc(64px + clamp(72px, 7vh, 88px));
   align-self: start;
   height: fit-content;
   display: flex;
@@ -1171,7 +1171,7 @@ onMounted(() => {
 @media (max-width: 640px) {
   .profile-page {
     margin-top: 0;
-    padding-top: 0;
+    padding-top: 36px;
   }
 
   .profile-center {

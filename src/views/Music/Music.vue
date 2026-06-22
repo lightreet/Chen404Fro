@@ -221,7 +221,7 @@
                       :title="player.mode === 'single' ? '当前为单曲循环，点击切回顺序播放' : '顺序播放'"
                       @click="setPlayMode('sequence')"
                     >
-                      <UiIcon name="Sort" />
+                      <UiIcon name="sequence-play" />
                     </button>
                     <button
                       type="button"
