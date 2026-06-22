@@ -120,7 +120,7 @@ The design language has four intensities:
 
 - **Editorial public**: home, category, archive, article, tag, guestbook. Warm, readable, lightly expressive.
 - **Companion product**: music. Tactile, musical, familiar, and state-driven.
-- **Private atlas**: memory map and travel detail. Expressive, photo-led, map-aware, and structured.
+- **Travel atlas**: memory map and travel detail. Public entries are explorable by everyone; friend-visible entries are more private, expressive, photo-led, map-aware, and structured.
 - **Workbench**: editors, profile, admin. Quiet, dense, and task-shaped.
 
 The current strongest surfaces are home and music. Home has a working editorial rhythm. Music has a product metaphor that supports the task. Category and archive are clear but ordinary, which is acceptable if they remain fast to scan. Guestbook needs a warmer message-desk pattern. Memory map and travel detail need the clearest correction: they must become a coherent private travel atlas rather than a mix of underwater hero, scrapbook spread, generic photo article, and oversized cards.
@@ -290,8 +290,8 @@ Chen404 now has its own design system in code. This doc describes *intent*; the 
 
 ### Memory Map
 
-- **Role:** private travel atlas.
-- **Access cover:** because `/memory-map` is a public entry, the locked state must clearly distinguish "log in first" from "friend access required", and should feel like a paused atlas, not a dead end.
+- **Role:** public-to-private travel atlas.
+- **Access state:** because `/memory-map` is a public entry, public locations should load without login. Empty public data must stay inside the normal map interface as an inline state; login and friend-application actions are optional nudges, not a full-page cover.
 - **First viewport:** show route title, map, selected place preview, and primary browsing actions. The selected place preview must be visually tied to the map marker or route.
 - **Material:** atlas paper, route ink, photo evidence, travel stamps used sparingly. Scrapbook details are accents, not structure.
 - **Map:** reserve safe corners for zoom/reset/attribution. Custom controls must be grouped in a toolbar and visually subordinate to the map.

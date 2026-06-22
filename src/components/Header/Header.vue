@@ -372,6 +372,10 @@ const handleLogout = async () => {
   &.is-hidden {
     transform: translateY(calc(-100% - 18px));
   }
+
+  > .container {
+    max-width: min(1480px, calc(100% - 24px));
+  }
 }
 
 .header-content {
@@ -416,7 +420,7 @@ const handleLogout = async () => {
   gap: 8px;
   min-width: 0;
   width: max-content;
-  max-width: calc(100% - 200px);
+  max-width: calc(100% - 120px);
   min-height: 54px;
   padding: 8px 12px;
   border-radius: 999px;
@@ -825,7 +829,7 @@ const handleLogout = async () => {
 
   .desktop-toolbar {
     padding-inline: 10px;
-    max-width: calc(100% - 170px);
+    max-width: calc(100% - 110px);
   }
 
   .nav-menu {

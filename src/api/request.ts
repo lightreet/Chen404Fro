@@ -1,7 +1,7 @@
 // Axios 请求封装
 
 import axios, { type AxiosInstance, type AxiosRequestConfig, type AxiosResponse } from 'axios';
-import { notify } from '@/lib/feedback';
+import { confirmAction, notify } from '@/lib/feedback';
 
 export interface RequestConfig extends AxiosRequestConfig {
   suppressErrorMessage?: boolean;
@@ -23,6 +23,8 @@ export const AI_REQUEST_TIMEOUT_MESSAGE = 'AI 生成耗时较久已超时，请�
 
 let isRefreshing = false;
 let refreshWaiters: Array<(token: string) => void> = [];
+let loginRedirectPrompt: Promise<boolean> | null = null;
+let isLoginRedirecting = false;
 
 export interface TokenRefreshResult {
   token: string;
@@ -45,6 +47,36 @@ function shouldSuppressError(config?: AxiosRequestConfig) {
 
 function shouldSkipAuthRedirect(config?: AxiosRequestConfig) {
   return Boolean((config as RequestConfig | undefined)?.skipAuthRedirect);
+}
+
+function clearStoredAuth() {
+  localStorage.removeItem('token');
+  localStorage.removeItem('refreshToken');
+}
+
+function resolveLoginRedirectUrl() {
+  const redirect = encodeURIComponent(window.location.pathname + window.location.search);
+  return redirect ? `/login?redirect=${redirect}` : '/login';
+}
+
+async function promptLoginRedirect(message: string) {
+  if (isLoginRedirecting) return;
+  if (!loginRedirectPrompt) {
+    loginRedirectPrompt = confirmAction({
+      title: '需要登录',
+      message,
+      confirmText: '前往登录',
+      cancelText: '暂不登录',
+      tone: 'info',
+    }).finally(() => {
+      loginRedirectPrompt = null;
+    });
+  }
+
+  const confirmed = await loginRedirectPrompt;
+  if (!confirmed || isLoginRedirecting) return;
+  isLoginRedirecting = true;
+  window.location.href = resolveLoginRedirectUrl();
 }
 
 function isTimeoutError(error: unknown) {
@@ -120,13 +152,8 @@ function installRequestInterceptors(client: AxiosInstance, options: InterceptorI
                 if (shouldSkipAuthRedirect(originalConfig)) {
                   return Promise.reject(error);
                 }
-                if (!shouldSuppressError(originalConfig)) {
-                  notify.error('未授权，请重新登录');
-                }
-                localStorage.removeItem('token');
-                localStorage.removeItem('refreshToken');
-                const redirect = encodeURIComponent(window.location.pathname + window.location.search);
-                window.location.href = redirect ? `/login?redirect=${redirect}` : '/login';
+                clearStoredAuth();
+                await promptLoginRedirect('这个内容需要登录后才能继续查看，是否现在前往登录？');
                 return Promise.reject(error);
               }
 
@@ -140,13 +167,8 @@ function installRequestInterceptors(client: AxiosInstance, options: InterceptorI
                   if (shouldSkipAuthRedirect(originalConfig)) {
                     return Promise.reject(error);
                   }
-                  if (!shouldSuppressError(originalConfig)) {
-                    notify.error('登录已过期，请重新登录');
-                  }
-                  localStorage.removeItem('token');
-                  localStorage.removeItem('refreshToken');
-                  const redirect = encodeURIComponent(window.location.pathname + window.location.search);
-                  window.location.href = redirect ? `/login?redirect=${redirect}` : '/login';
+                  clearStoredAuth();
+                  await promptLoginRedirect('登录状态已过期，需要重新登录后继续。');
                   return Promise.reject(error);
                 }
                 originalConfig.headers = originalConfig.headers || {};
@@ -172,13 +194,8 @@ function installRequestInterceptors(client: AxiosInstance, options: InterceptorI
                 if (shouldSkipAuthRedirect(originalConfig)) {
                   return Promise.reject(error);
                 }
-                if (!shouldSuppressError(originalConfig)) {
-                  notify.error('登录已过期，请重新登录');
-                }
-                localStorage.removeItem('token');
-                localStorage.removeItem('refreshToken');
-                const redirect = encodeURIComponent(window.location.pathname + window.location.search);
-                window.location.href = redirect ? `/login?redirect=${redirect}` : '/login';
+                clearStoredAuth();
+                await promptLoginRedirect('登录状态已过期，需要重新登录后继续。');
                 return Promise.reject(refreshError);
               } finally {
                 isRefreshing = false;

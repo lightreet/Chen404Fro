@@ -236,6 +236,7 @@ export interface TravelMemoryLocationListItem {
   visitedAt?: string;
   visitedEndAt?: string;
   entryCount?: number;
+  visibility?: TravelMemoryVisibility;
 }
 
 export interface TravelMemoryLocationDetail extends TravelMemoryLocationListItem {
@@ -282,12 +283,18 @@ export interface CreateTravelMemoryCommand {
   visitedAt?: string;
   visitedEndAt?: string;
   status?: number;
+  visibility?: TravelMemoryVisibility;
   sortOrder?: number;
   stops?: TravelMemoryStopUpsertCommand[];
   entries?: TravelMemoryEntryUpsertCommand[];
 }
 
 export interface UpdateTravelMemoryCommand extends CreateTravelMemoryCommand {}
+
+export enum TravelMemoryVisibility {
+  PUBLIC = 0,
+  FRIEND = 2,
+}
 
 // ==================== 音乐电台相关类型 ====================
 

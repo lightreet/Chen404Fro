@@ -1,4 +1,4 @@
-import { del, get, post, put } from './request'
+import { del, get, post, put, type RequestConfig } from './request'
 import type {
   CreateTravelMemoryCommand,
   TravelMemoryLocationDetail,
@@ -6,12 +6,17 @@ import type {
   UpdateTravelMemoryCommand,
 } from '@/types'
 
+const publicTravelMemoryRequestConfig: RequestConfig = {
+  skipAuthRedirect: true,
+  suppressErrorMessage: true,
+}
+
 export function getTravelMemories(): Promise<TravelMemoryLocationListItem[]> {
-  return get('/travel-memories')
+  return get('/travel-memories', undefined, publicTravelMemoryRequestConfig)
 }
 
 export function getTravelMemoryDetail(id: number | string): Promise<TravelMemoryLocationDetail> {
-  return get(`/travel-memories/${String(id)}`)
+  return get(`/travel-memories/${String(id)}`, undefined, publicTravelMemoryRequestConfig)
 }
 
 export function getAdminTravelMemories(): Promise<TravelMemoryLocationDetail[]> {

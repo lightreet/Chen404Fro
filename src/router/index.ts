@@ -1,6 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router';
 import type { RouteRecordRaw } from 'vue-router';
-import { notify } from '@/lib/feedback';
+import { confirmAction, notify } from '@/lib/feedback';
 import { useSiteConfig } from '@/composables/useSiteConfig';
 import { isAdminUser, isFriendUser } from '@/utils/permission';
 import { applySiteMeta } from '@/utils/siteConfig';
@@ -88,8 +88,6 @@ const routes: RouteRecordRaw[] = [
     component: () => import('@/views/MemoryMap/TravelMemoryDetail.vue'),
     meta: {
       title: '旅行游记',
-      requiresAuth: true,
-      requiresFriend: true,
     },
   },
   {
@@ -275,11 +273,22 @@ router.beforeEach(async (to, _from, next) => {
   if (to.meta.requiresAuth) {
     const ok = await userStore.syncAuthState();
     if (!ok) {
-      notify.warning('请先登录');
-      next({
-        path: '/login',
-        query: { redirect: to.fullPath },
+      const confirmed = await confirmAction({
+        title: '需要登录',
+        message: '这个页面需要登录后才能继续查看，是否现在前往登录？',
+        confirmText: '去登录',
+        cancelText: '暂不登录',
+        tone: 'info',
       });
+      if (confirmed) {
+        next({
+          path: '/login',
+          query: { redirect: to.fullPath },
+        });
+        return;
+      }
+      notify.info('你可以先继续浏览公开内容');
+      next(false);
       return;
     }
   }
