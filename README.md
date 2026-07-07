@@ -39,7 +39,7 @@ npm run check:element-boundary
 
 - `npm run build` 会先执行 `vue-tsc -b`，再执行 Vite 构建。
 - `npm run check:element-boundary` 校验 UI 架构边界：业务层不得直接 `import` `element-plus` / `@element-plus/icons-vue`，模板里也不得出现 `<el-*>` 或 `v-loading`；仅 `components/ui`、`lib/feedback`、`compat` 及少数基础运行时文件在允许名单内。
-- 开发服务固定端口 `5173`，`strictPort = true`。
+- 开发服务固定端口 `20204`，`strictPort = true`。
 - 当前未配置 `server.proxy`，本地开发应显式配置 `VITE_API_BASE_URL` 直连后端；未配置时请求层会回退到 `/api`。
 
 ## 环境变量

@@ -27,11 +27,14 @@ export const iconMap = {
   more: 'mdi:dots-horizontal',
   filter: 'mdi:filter-variant',
   sort: 'mdi:sort',
+  rank: 'mdi:sort-variant',
   settings: 'mdi:cog-outline',
+  logout: 'mdi:logout',
   save: 'mdi:content-save-outline',
   copy: 'mdi:content-copy',
   download: 'mdi:download-outline',
   upload: 'mdi:tray-arrow-up',
+  menu: 'mdi:menu',
   link: 'mdi:link-variant',
   external: 'mdi:open-in-new',
 
@@ -103,6 +106,7 @@ export const iconMap = {
 export const elementIconAlias: Record<string, IconName> = {
   Plus: 'add',
   Edit: 'edit',
+  EditPen: 'edit',
   Delete: 'delete',
   Close: 'close',
   Search: 'search',
@@ -121,6 +125,7 @@ export const elementIconAlias: Record<string, IconName> = {
   Right: 'forward',
   Top: 'arrow-up',
   Bottom: 'arrow-down',
+  HomeFilled: 'home',
   InfoFilled: 'info',
   User: 'user',
   UserFilled: 'user',
@@ -128,6 +133,7 @@ export const elementIconAlias: Record<string, IconName> = {
   StarFilled: 'star-filled',
   Calendar: 'calendar',
   Location: 'location',
+  Place: 'location',
   MapLocation: 'map',
   Document: 'article',
   Files: 'files',
@@ -139,6 +145,8 @@ export const elementIconAlias: Record<string, IconName> = {
   View: 'eye',
   Grid: 'grid',
   List: 'list',
+  Menu: 'menu',
+  Rank: 'rank',
   VideoPlay: 'play',
   VideoPause: 'pause',
   Headset: 'headset',
@@ -152,6 +160,7 @@ export const elementIconAlias: Record<string, IconName> = {
   Minus: 'close',
   Sunny: 'sun',
   Moon: 'moon',
+  SwitchButton: 'logout',
 }
 
 /** 解析任意输入到最终 Iconify 名（找不到时原样返回，方便直接传 iconify 名） */
