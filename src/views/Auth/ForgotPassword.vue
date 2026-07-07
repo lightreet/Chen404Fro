@@ -44,7 +44,12 @@
                   prefix-icon="key"
                   maxlength="6"
                 />
-                <UiButton variant="primary" :disabled="codeSending || codeCountdown > 0" @click="handleSendCode">
+                <UiButton
+                  variant="primary"
+                  size="lg"
+                  :disabled="codeSending || codeCountdown > 0"
+                  @click="handleSendCode"
+                >
                   {{ codeCountdown > 0 ? `${codeCountdown}s` : '获取验证码' }}
                 </UiButton>
               </div>
@@ -373,21 +378,19 @@ onBeforeUnmount(() => {
   align-items: center;
   gap: 12px;
   width: 100%;
-  --code-input-height: 40px;
-  --code-btn-height: 36px;
 
   :deep(.ui-input) {
     flex: 1;
     min-width: 0;
-    height: var(--code-input-height);
-    box-sizing: border-box;
   }
 
   :deep(.ui-button) {
     flex-shrink: 0;
     min-width: 120px;
-    height: var(--code-btn-height);
+    height: var(--control-height-lg);
     margin: 0;
+    padding-inline: 20px;
+    border-radius: 12px;
   }
 }
 
