@@ -15,6 +15,7 @@ import mdiArrowLeft from '@iconify/icons-mdi/arrow-left'
 import mdiArrowRight from '@iconify/icons-mdi/arrow-right'
 import mdiBellOutline from '@iconify/icons-mdi/bell-outline'
 import mdiCalendarBlankOutline from '@iconify/icons-mdi/calendar-blank-outline'
+import mdiCalendarClock from '@iconify/icons-mdi/calendar-clock'
 import mdiChatOutline from '@iconify/icons-mdi/chat-outline'
 import mdiCheck from '@iconify/icons-mdi/check'
 import mdiCheckCircleOutline from '@iconify/icons-mdi/check-circle-outline'
@@ -67,6 +68,7 @@ import mdiPlus from '@iconify/icons-mdi/plus'
 import mdiRadio from '@iconify/icons-mdi/radio'
 import mdiRefresh from '@iconify/icons-mdi/refresh'
 import mdiSendOutline from '@iconify/icons-mdi/send-outline'
+import mdiShuffle from '@iconify/icons-mdi/shuffle'
 import mdiSort from '@iconify/icons-mdi/sort'
 import mdiSortVariant from '@iconify/icons-mdi/sort-variant'
 import mdiStar from '@iconify/icons-mdi/star'
@@ -142,6 +144,7 @@ export const iconMap = {
   'star-filled': mdiStar,
   heart: mdiHeartOutline,
   calendar: mdiCalendarBlankOutline,
+  'calendar-clock': mdiCalendarClock,
   clock: mdiClockOutline,
   location: mdiMapMarkerOutline,
   map: mdiMapOutline,
@@ -160,6 +163,7 @@ export const iconMap = {
   play: mdiPlay,
   pause: mdiPause,
   'sequence-play': mdiPlaylistPlay,
+  shuffle: mdiShuffle,
   music: mdiMusicNoteOutline,
   headset: mdiHeadphones,
   radio: mdiRadio,
