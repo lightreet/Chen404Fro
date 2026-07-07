@@ -188,7 +188,7 @@ watch(() => props.modelValue, (nextValue) => {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 44px;
+  width: 36px;
   color: var(--color-text-tertiary);
   font-size: 15px;
   flex-shrink: 0;

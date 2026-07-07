@@ -221,7 +221,7 @@
                       :title="player.mode === 'single' ? '当前为单曲循环，点击切回顺序播放' : '顺序播放'"
                       @click="setPlayMode('sequence')"
                     >
-                      <UiIcon name="sequence-play" />
+                      <UiIcon name="sequence-play" :size="18" />
                     </button>
                     <button
                       type="button"
@@ -229,7 +229,7 @@
                       title="随机播放"
                       @click="setPlayMode('shuffle')"
                     >
-                      <Icon icon="mdi:shuffle" class="play-mode-icon" aria-hidden="true" />
+                      <UiIcon name="shuffle" :size="18" />
                     </button>
                   </div>
                   <div
@@ -316,7 +316,7 @@
 
                       <div class="music-track-card__footer">
                         <span class="music-track-card__year">
-                          <Icon icon="mdi:calendar-clock" class="music-track-card__year-icon" aria-hidden="true" />
+                          <UiIcon name="calendar-clock" class="music-track-card__year-icon" />
                           {{ track.releaseYear || '年份未知' }}
                         </span>
                         <div class="music-track-card__actions">
@@ -594,7 +594,6 @@
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { notify, confirmDelete, confirmInput } from '@/lib/feedback'
-import { Icon } from '@iconify/vue'
 import { useRouter } from 'vue-router'
 import DefaultLayout from '@/layouts/DefaultLayout.vue'
 import PageHero from '@/components/PageHero/PageHero.vue'
@@ -3457,12 +3456,6 @@ function handlePlaylistSearchSubmit() {
   color: #d56f95;
   background: rgba(255, 239, 246, 0.72);
   box-shadow: none;
-}
-
-.play-mode-icon {
-  width: 18px;
-  height: 18px;
-  display: block;
 }
 
 .category-track-board__actions {

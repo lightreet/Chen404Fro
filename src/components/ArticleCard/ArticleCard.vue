@@ -96,7 +96,7 @@
               {{ formatNumber(article.viewCount ?? 0) }}
             </span>
             <span class="stat-item">
-              <Icon class="stat-iconify" icon="mdi:heart-outline" width="14" height="14" aria-hidden="true" />
+              <UiIcon class="stat-iconify" name="heart" :size="14" />
               {{ formatNumber(article.likeCount ?? 0) }}
             </span>
             <span class="stat-item">
@@ -165,7 +165,7 @@
             {{ formatNumber(article.viewCount ?? 0) }}
           </span>
           <span class="stat-item">
-            <Icon class="stat-iconify" icon="mdi:heart-outline" width="14" height="14" aria-hidden="true" />
+            <UiIcon class="stat-iconify" name="heart" :size="14" />
             {{ formatNumber(article.likeCount ?? 0) }}
           </span>
           <span class="stat-item">
@@ -261,7 +261,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
-import { Icon } from '@iconify/vue';
 import { UiBadge, UiButton, UiIcon } from '@/components/ui'
 import CategoryIcon from '@/components/CategoryIcon/CategoryIcon.vue';
 import type { Article } from '@/types';

@@ -314,9 +314,9 @@ onMounted(() => {
 }
 
 .login-mode-switch {
-  display: inline-flex;
+  display: inline-grid;
+  grid-template-columns: repeat(2, 72px);
   align-items: center;
-  gap: 28px;
   margin: 0 0 18px;
   padding-bottom: 2px;
   border-bottom: 1px solid color-mix(in srgb, var(--color-border) 88%, white);
@@ -326,12 +326,13 @@ onMounted(() => {
   position: relative;
   min-width: 0;
   height: 40px;
-  padding: 0 2px;
+  padding: 0 8px;
   border: none;
   background: transparent;
   color: var(--text-secondary);
   font-size: 16px;
   font-weight: 600;
+  text-align: center;
   cursor: pointer;
   transition:
     color var(--motion-duration-fast) var(--motion-ease-standard),

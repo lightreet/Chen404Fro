@@ -353,7 +353,7 @@ trust-request / home / archive / memory-map / music / category / about / guestbo
 `vite.config.ts` 当前关键配置：
 
 - `host = 0.0.0.0`
-- `port = 5173`
+- `port = 20204`
 - `strictPort = true`
 - `@` 指向 `src`
 - Element Plus 自动样式引入
