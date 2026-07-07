@@ -74,6 +74,7 @@ export const iconMap = {
   file: 'mdi:file-outline',
   files: 'mdi:file-multiple-outline',
   folder: 'mdi:folder-outline',
+  mail: 'mdi:email-outline',
   lock: 'mdi:lock-outline',
   key: 'mdi:key-outline',
   eye: 'mdi:eye-outline',
@@ -83,6 +84,7 @@ export const iconMap = {
   // 媒体 / 音乐
   play: 'mdi:play',
   pause: 'mdi:pause',
+  'sequence-play': 'mdi:playlist-play',
   music: 'mdi:music-note-outline',
   headset: 'mdi:headphones',
   radio: 'mdi:radio',

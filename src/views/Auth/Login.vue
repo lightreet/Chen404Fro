@@ -25,12 +25,39 @@
             class="login-form"
             @keyup.enter="handleLogin"
           >
+            <div class="login-mode-switch" role="tablist" aria-label="登录方式">
+              <button
+                type="button"
+                class="login-mode-switch__item"
+                :class="{ 'is-active': loginMode === 'username' }"
+                @click="setLoginMode('username')"
+              >
+                用户名
+              </button>
+              <button
+                type="button"
+                class="login-mode-switch__item"
+                :class="{ 'is-active': loginMode === 'email' }"
+                @click="setLoginMode('email')"
+              >
+                邮箱
+              </button>
+            </div>
+
             <UiFormField prop="account">
               <UiInput
+                v-if="loginMode === 'username'"
                 v-model="form.account"
-                placeholder="请输入用户名或邮箱"
+                placeholder="请输入用户名"
                 size="lg"
                 prefix-icon="user"
+                maxlength="20"
+              />
+              <AuthEmailField
+                v-else
+                v-model="form.account"
+                placeholder="请输入邮箱账号"
+                size="lg"
               />
             </UiFormField>
 
@@ -46,7 +73,7 @@
 
             <div class="form-options">
               <UiCheckbox v-model="rememberMe">记住我</UiCheckbox>
-              <a href="#" class="forgot-link">忘记密码？</a>
+              <router-link to="/forgot-password" class="forgot-link">忘记密码？</router-link>
             </div>
 
             <UiFormField>
@@ -76,7 +103,7 @@
 import { computed, onMounted, reactive, ref } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { notify } from '@/lib/feedback';
-import { UiButton, UiCheckbox, UiForm, UiFormField, UiIcon, UiInput } from '@/components/ui'
+import { AuthEmailField, UiButton, UiCheckbox, UiForm, UiFormField, UiIcon, UiInput } from '@/components/ui'
 import { login } from '@/api/auth';
 import { useSiteConfig } from '@/composables/useSiteConfig';
 import { useUserStore } from '@/stores/user';
@@ -90,6 +117,7 @@ const { siteConfig, loadSiteConfig } = useSiteConfig();
 const formRef = ref();
 const loading = ref(false);
 const rememberMe = ref(false);
+const loginMode = ref<'username' | 'email'>('username');
 const form = reactive({
   account: '',
   password: '',
@@ -99,14 +127,19 @@ const siteLogo = computed(() => resolveSiteLogo(siteConfig.value));
 
 const rules = {
   account: [
-    { required: true, message: '请输入用户名或邮箱', trigger: 'blur' },
+    { required: true, message: '请输入登录账号', trigger: 'blur' },
     {
       validator: (_rule: unknown, value: string, callback: (err?: Error) => void) => {
         if (!value) return callback();
-        const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+        if (loginMode.value === 'email') {
+          const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+          if (isEmail) return callback();
+          callback(new Error('请输入正确的邮箱'));
+          return;
+        }
         const isUsername = isValidUsername(value);
-        if (isEmail || isUsername) return callback();
-        callback(new Error('请输入正确的用户名（3-20 位字母、数字、下划线）或邮箱'));
+        if (isUsername) return callback();
+        callback(new Error('请输入正确的用户名（3-20 位字母、数字、下划线）'));
       },
       trigger: 'blur',
     },
@@ -116,6 +149,15 @@ const rules = {
     { min: 6, message: '密码至少 6 位', trigger: 'blur' },
   ],
 };
+
+function setLoginMode(mode: 'username' | 'email') {
+  if (loginMode.value === mode) {
+    return;
+  }
+  loginMode.value = mode;
+  form.account = '';
+  formRef.value?.clearValidate?.('account');
+}
 
 const handleLogin = async () => {
   if (!formRef.value) return;
@@ -268,6 +310,57 @@ onMounted(() => {
 .login-form {
   :deep(.ui-input) {
     border-radius: var(--radius-md);
+  }
+}
+
+.login-mode-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 28px;
+  margin: 0 0 18px;
+  padding-bottom: 2px;
+  border-bottom: 1px solid color-mix(in srgb, var(--color-border) 88%, white);
+}
+
+.login-mode-switch__item {
+  position: relative;
+  min-width: 0;
+  height: 40px;
+  padding: 0 2px;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    color var(--motion-duration-fast) var(--motion-ease-standard),
+    opacity var(--motion-duration-fast) var(--motion-ease-standard);
+
+  &::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: -3px;
+    height: 2px;
+    border-radius: 999px;
+    background: linear-gradient(90deg, var(--primary), color-mix(in srgb, var(--primary-light) 78%, white));
+    transform: scaleX(0);
+    transform-origin: center;
+    transition: transform var(--motion-duration-fast) var(--motion-ease-standard);
+  }
+
+  &:hover {
+    opacity: 0.88;
+  }
+}
+
+.login-mode-switch__item.is-active {
+  color: var(--primary);
+
+  &::after {
+    transform: scaleX(1);
   }
 }
 

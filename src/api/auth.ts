@@ -10,6 +10,7 @@ import type {
   RegisterParams,
   User,
   SendCodeParams,
+  ForgotPasswordParams,
   ChangePasswordParams,
   UpdateProfileParams,
 } from '@/types';
@@ -96,6 +97,17 @@ export async function changePassword(params: ChangePasswordParams): Promise<void
       newPassword: params.newPassword,
     },
   }));
+}
+
+/**
+ * 忘记密码（通过邮箱验证码重置）
+ */
+export function forgotPassword(params: ForgotPasswordParams): Promise<void> {
+  return post('/auth/forgot-password', {
+    email: params.email,
+    code: params.code,
+    newPassword: params.newPassword,
+  });
 }
 
 /**

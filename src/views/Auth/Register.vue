@@ -36,11 +36,10 @@
             </UiFormField>
 
             <UiFormField prop="email">
-              <UiInput
+              <AuthEmailField
                 v-model="form.email"
-                placeholder="请输入邮箱"
+                placeholder="请输入邮箱账号"
                 size="lg"
-                prefix-icon="message"
               />
             </UiFormField>
 
@@ -174,7 +173,7 @@
 import { computed, onMounted, reactive, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { notify } from '@/lib/feedback';
-import { UiButton, UiCheckbox, UiDialog, UiForm, UiFormField, UiIcon, UiInput } from '@/components/ui'
+import { AuthEmailField, UiButton, UiCheckbox, UiDialog, UiForm, UiFormField, UiIcon, UiInput } from '@/components/ui'
 import { login, register, sendVerifyCode as sendVerifyCodeApi } from '@/api/auth';
 import { useSiteConfig } from '@/composables/useSiteConfig';
 import { useUserStore } from '@/stores/user';

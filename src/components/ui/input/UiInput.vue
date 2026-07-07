@@ -5,6 +5,7 @@
       `ui-input--${size}`,
       {
         'ui-input--textarea': type === 'textarea',
+        'ui-input--borderless': borderless,
         'is-disabled': disabled,
         'is-focused': focused,
         'has-prefix': $slots.prefix || prefixIcon,
@@ -90,6 +91,7 @@ withDefaults(
     placeholder?: string
     disabled?: boolean
     readonly?: boolean
+    borderless?: boolean
     clearable?: boolean
     size?: 'sm' | 'md' | 'lg'
     prefixIcon?: string
@@ -107,6 +109,7 @@ withDefaults(
     placeholder: '',
     disabled: false,
     readonly: false,
+    borderless: false,
     clearable: false,
     size: 'md',
     prefixIcon: undefined,
@@ -200,6 +203,19 @@ defineExpose({
   height: auto;
   align-items: stretch;
   padding: 8px 12px;
+}
+
+.ui-input--borderless {
+  padding: 0;
+  gap: 0;
+  background: transparent;
+  box-shadow: none;
+  border-radius: 0;
+
+  &:hover:not(.is-disabled),
+  &.is-focused {
+    box-shadow: none;
+  }
 }
 
 .ui-input__inner {

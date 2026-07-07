@@ -1,6 +1,6 @@
 ﻿<template>
   <div class="travel-memory-create-page">
-    <UiLoadingState :loading="loading" message="正在加载旅行编辑器..." class="travel-memory-editor">
+    <UiLoadingState :loading="loading" message="正在加载旅行编辑器...">
       <div class="travel-memory-create__topbar">
         <div class="travel-memory-create__topbar-inner">
           <UiButton variant="text" icon="arrow-left" class="travel-memory-create__back" @click="goBack">返回</UiButton>
@@ -23,7 +23,7 @@
           </div>
       </div>
 
-      <template v-else>
+      <div v-else class="travel-memory-editor">
       <aside class="travel-memory-map-panel">
         <div class="map-panel__head">
           <div class="panel-title">
@@ -207,6 +207,16 @@
           </button>
           <Transition name="slide-down">
             <div v-show="advancedOpen" class="advanced-content">
+              <div class="advanced-field advanced-field--inline">
+                <div>
+                  <label class="advanced-field-label">可见范围</label>
+                  <span class="advanced-field-hint">
+                    {{ visibilityHint }}
+                  </span>
+                </div>
+                <UiSegmented v-model="form.visibility" :options="visibilityOptions" class="visibility-segmented" />
+              </div>
+
               <div class="advanced-field advanced-field--inline">
                 <div>
                   <label class="advanced-field-label">地图展示</label>
@@ -444,8 +454,9 @@
           </div>
         </section>
       </main>
+      </div>
 
-      <div class="travel-memory-create__footer">
+      <div v-if="!editorLoadError" class="travel-memory-create__footer">
         <div class="travel-memory-create__footer-inner">
           <UiButton class="footer-button footer-button--neutral" @click="goToMemoryMap">
             返回地图
@@ -461,7 +472,6 @@
           </UiButton>
         </div>
       </div>
-      </template>
     </UiLoadingState>
   </div>
 </template>
@@ -470,7 +480,7 @@
 import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue'
 import type { AxiosError } from 'axios'
 import { notify } from '@/lib/feedback'
-import { UiButton, UiDateField, UiForm, UiFormField, UiIcon, UiInput, UiLoadingState, UiSwitch, UiTextarea, UiUpload } from '@/components/ui'
+import { UiButton, UiDateField, UiForm, UiFormField, UiIcon, UiInput, UiLoadingState, UiSegmented, UiSwitch, UiTextarea, UiUpload } from '@/components/ui'
 import type { UploadRequestOptions } from '@/components/ui'
 import { useRoute, useRouter } from 'vue-router'
 import TravelMemoryMap from '@/components/TravelMemoryMap/TravelMemoryMap.vue'
@@ -482,6 +492,7 @@ import {
 } from '@/api/travel-memory'
 import { uploadTravelMemoryImage } from '@/api/upload'
 import { useSiteConfig } from '@/composables/useSiteConfig'
+import { TravelMemoryVisibility } from '@/types'
 import type {
   CreateTravelMemoryCommand,
   TravelMemoryEntry,
@@ -573,6 +584,15 @@ const locationMetaStatusText = computed(() => {
 })
 const hasInvalidTravelDateRange = computed(() => isEndDateBeforeStartDate(form.visitedAt, form.visitedEndAt))
 const allEntries = computed(() => form.stops.flatMap((stop) => stop.entries))
+const visibilityOptions = [
+  { label: '公开', value: TravelMemoryVisibility.PUBLIC },
+  { label: '知友可见', value: TravelMemoryVisibility.FRIEND },
+]
+const visibilityHint = computed(() =>
+  form.visibility === TravelMemoryVisibility.PUBLIC
+    ? '未登录访客也可以在旅行地图里看到这个地点。'
+    : '仅知友和管理员可以查看这个地点，适合更私人的旅行记录。',
+)
 
 const createEmptyStop = (index: number): TravelMemoryStopUpsertCommand => ({
   title: '',
@@ -592,6 +612,7 @@ const createEmptyForm = (): TravelMemoryEditorForm => ({
   visitedAt: '',
   visitedEndAt: '',
   status: 1,
+  visibility: TravelMemoryVisibility.FRIEND,
   sortOrder: 0,
   stops: [createEmptyStop(0)],
 })
@@ -714,6 +735,7 @@ function fillFormFromDetail(detail: TravelMemoryLocationDetail) {
     visitedAt: detail.visitedAt || '',
     visitedEndAt: detail.visitedEndAt || '',
     status: detail.status ?? 1,
+    visibility: detail.visibility ?? TravelMemoryVisibility.FRIEND,
     sortOrder: detail.sortOrder ?? 0,
     stops: buildStopsFromDetail(detail),
   })
@@ -1281,6 +1303,7 @@ async function handleSave() {
     visitedAt: form.visitedAt || undefined,
     visitedEndAt: form.visitedEndAt || undefined,
     status: form.status,
+    visibility: form.visibility,
     sortOrder: form.sortOrder,
     stops: form.stops.map((stop, stopIndex) => ({
       id: stop.id,
@@ -2034,7 +2057,12 @@ watch(
 .advanced-field--inline {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
+  gap: 16px;
   align-items: center;
+}
+
+.visibility-segmented {
+  justify-self: end;
 }
 
 .advanced-field-label {

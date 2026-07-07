@@ -16,7 +16,8 @@
       </div>
     </header>
 
-      <UiLoadingState :loading="loading" message="正在加载歌曲工作台..." class="track-edit-layout">
+      <UiLoadingState :loading="loading" message="正在加载歌曲工作台...">
+        <div class="track-edit-layout">
         <section class="track-edit-main">
           <div class="editor-panel editor-panel--title">
             <span class="panel-kicker">Track Studio</span>
@@ -330,6 +331,7 @@
             <span :class="{ done: Boolean(form.audioUrl.trim()) }">音频</span>
           </div>
         </aside>
+        </div>
       </UiLoadingState>
 
       <div class="track-edit-footer">

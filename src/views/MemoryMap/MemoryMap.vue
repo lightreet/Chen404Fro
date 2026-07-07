@@ -13,14 +13,11 @@
     </template>
 
     <div class="memory-map-page">
-      <FeatureAccessCover
-        v-if="!canViewContent"
-        v-bind="memoryMapCover"
-        icon="Location"
-      />
+      <section v-if="!authReady" class="memory-map-access-state" aria-live="polite">
+        <div class="gallery-state memory-map-access-state__body">正在确认旅行地图访问权限...</div>
+      </section>
 
-      <template v-else>
-        <section class="memory-spread">
+      <section v-else class="memory-spread">
           <aside class="memory-spread__page memory-spread__page--rail">
             <div class="memory-rail">
               <div class="panel-heading panel-heading--rail">
@@ -41,16 +38,8 @@
                 <p>{{ memoryLoadError }}</p>
                 <UiButton variant="secondary" class="gallery-state__retry" @click="retryMemoryList">重新加载</UiButton>
               </div>
-              <div v-else-if="!locations.length" class="memory-rail__list memory-rail__list--placeholder">
-                <article
-                  v-for="card in placeholderFilmCards"
-                  :key="card.title"
-                  class="rail-item rail-item--placeholder"
-                >
-                  <div class="rail-item__thumb rail-item__thumb--placeholder">
-                    <span>{{ card.label }}</span>
-                  </div>
-                </article>
+              <div v-else-if="!locations.length" class="memory-rail__empty">
+                <span>当前暂无内容</span>
               </div>
               <div v-else class="memory-rail__list">
                 <article
@@ -133,6 +122,39 @@
                 :active-id="activeId"
                 @select="selectMapLocation"
               />
+
+              <div v-if="showPublicEmptyNotice" class="public-map-notice" role="status" aria-live="polite">
+                <div class="public-map-notice__copy">
+                  <strong>{{ publicEmptyNoticeTitle }}</strong>
+                  <p>{{ publicEmptyNoticeText }}</p>
+                </div>
+                <div class="public-map-notice__actions">
+                  <UiButton
+                    v-if="!isLoggedIn"
+                    variant="primary"
+                    class="public-map-notice__button"
+                    @click="goToLogin"
+                  >
+                    登录查看更多
+                  </UiButton>
+                  <UiButton
+                    v-else-if="!canViewFriendMemoryMap"
+                    variant="primary"
+                    class="public-map-notice__button"
+                    @click="goToTrustRequest"
+                  >
+                    申请知友访问
+                  </UiButton>
+                  <UiButton
+                    v-else-if="canManage"
+                    variant="primary"
+                    class="public-map-notice__button"
+                    @click="openCreateDialog"
+                  >
+                    新增旅行地点
+                  </UiButton>
+                </div>
+              </div>
 
               <div v-if="canManage" class="spread-map-actions">
                 <UiButton variant="ghost" icon="location" class="journal-action journal-action--primary map-action" @click="openCreateDialog">
@@ -239,45 +261,11 @@
             </template>
             <template v-else>
               <div class="travel-journal travel-journal--empty">
-                <div class="travel-journal__head">
-                  <div class="travel-journal__copy">
-                    <span class="eyebrow">Travel Detail</span>
-                    <div class="travel-journal__headline">
-                      <span class="travel-journal__flower">✿</span>
-                      <h2>等待旅程开始</h2>
-                    </div>
-                  </div>
-
-                  <div class="travel-journal__stamp travel-journal__stamp--placeholder">
-                    Waiting
-                    <strong>Stamp</strong>
-                  </div>
-                </div>
-
-                <div class="travel-journal__cover travel-journal__cover--placeholder">
-                  <img class="travel-journal__tape" :src="tapeCornerAsset" alt="" aria-hidden="true" />
-                  <div class="travel-journal__cover-empty">Your First Journey</div>
-                </div>
-
-                <div class="travel-journal__entries travel-journal__entries--placeholder">
-                  <article
-                    v-for="card in placeholderNotes"
-                    :key="card.title"
-                    class="journal-note journal-note--placeholder"
-                  >
-                    <div class="journal-note__thumb journal-note__thumb--placeholder" />
-                    <div class="journal-note__body">
-                      <h4>{{ card.title }}</h4>
-                      <p>{{ card.copy }}</p>
-                      <span>{{ card.date }}</span>
-                    </div>
-                  </article>
-                </div>
+                <div class="journal-empty-state">当前暂无内容</div>
               </div>
             </template>
           </aside>
-        </section>
-      </template>
+      </section>
     </div>
   </DefaultLayout>
 </template>
@@ -290,12 +278,11 @@ import { storeToRefs } from 'pinia'
 import { notify, confirmDelete } from '@/lib/feedback'
 import DefaultLayout from '@/layouts/DefaultLayout.vue'
 import PageHero from '@/components/PageHero/PageHero.vue'
-import FeatureAccessCover from '@/components/FeatureAccessCover.vue'
 import TravelMemoryMap from '@/components/TravelMemoryMap/TravelMemoryMap.vue'
 import { UiButton, UiIcon } from '@/components/ui'
 import { deleteTravelMemory, getTravelMemories, getTravelMemoryDetail } from '@/api/travel-memory'
 import { useSiteConfig } from '@/composables/useSiteConfig'
-import { buildMemoryMapCoverConfig, resolveFeatureHero } from '@/modules/feature-access/constants'
+import { resolveFeatureHero } from '@/modules/feature-access/constants'
 import { useUserStore } from '@/stores/user'
 import type { TravelMemoryEntry, TravelMemoryLocationDetail, TravelMemoryLocationListItem, TravelMemoryStop } from '@/types'
 import { isAdminUser, isFriendUser } from '@/utils/permission'
@@ -306,7 +293,8 @@ const GALLERY_LOAD_MORE_STEP = 4
 
 const { siteConfig, loadSiteConfig } = useSiteConfig()
 const userStore = useUserStore()
-const { isLoggedIn, user } = storeToRefs(userStore)
+userStore.initUser()
+const { user, isLoggedIn } = storeToRefs(userStore)
 const route = useRoute()
 const router = useRouter()
 
@@ -315,6 +303,7 @@ const heroBgImage = ref(defaultHero.bgImage)
 const heroBgPosition = ref(defaultHero.bgPosition)
 const loading = ref(false)
 const loadingDetail = ref(false)
+const authReady = ref(false)
 const locations = ref<TravelMemoryLocationListItem[]>([])
 const visibleGalleryCount = ref(INITIAL_GALLERY_VISIBLE_COUNT)
 const activeId = ref<number | null>(null)
@@ -327,8 +316,28 @@ let detailRequestVersion = 0
 let memoryLoadVersion = 0
 let hasInitializedAccessState = false
 const canManage = computed(() => isAdminUser(user.value))
-const canViewContent = computed(() => isAdminUser(user.value) || isFriendUser(user.value))
-const memoryMapCover = computed(() => buildMemoryMapCoverConfig(isLoggedIn.value))
+const canViewFriendMemoryMap = computed(() => isAdminUser(user.value) || isFriendUser(user.value))
+const showPublicEmptyNotice = computed(() =>
+  authReady.value
+  && !loading.value
+  && !memoryLoadError.value
+  && !locations.value.length
+)
+const publicEmptyNoticeTitle = computed(() => {
+  if (canViewFriendMemoryMap.value) {
+    return '还没有可展示的旅行地点'
+  }
+  return '当前没有公开旅行地点'
+})
+const publicEmptyNoticeText = computed(() => {
+  if (canViewFriendMemoryMap.value) {
+    return '你已经可以查看知友可见内容。等新的旅行地点发布后，这张地图会直接显示地点、照片和路线。'
+  }
+  if (isLoggedIn.value) {
+    return '你已经进入旅行地图，公开内容暂时为空。通过好友申请后，可以看到知友可见的私人旅途。'
+  }
+  return '你已经进入旅行地图，公开内容暂时为空。登录并通过好友申请后，可以看到更多私人旅途。'
+})
 const coverEntry = computed<TravelMemoryEntry | null>(() => {
   const entries = activeDetail.value?.entries || []
   return entries.find((entry) => entry.cover) || entries[0] || null
@@ -406,50 +415,6 @@ const journalQuote = computed(() => {
   const firstNote = noteEntries.value[0]?.thanksNote?.trim()
   return firstNote || '海面在发着光，心情也跟着慢慢静下来。'
 })
-const placeholderNotes = [
-  {
-    title: '写下第一句感想',
-    copy: '海风、山色、街角黄昏，都可以从这里开始被认真收藏。',
-    date: '等待第一天',
-  },
-  {
-    title: '放进一张封面照',
-    copy: '上传照片之后，这里会像一本真正的纪念册，把旅途装订起来。',
-    date: '等待第二页',
-  },
-  {
-    title: '点亮地图印章',
-    copy: '左侧地图和底部胶片会随着第一个地点一起醒来，开始连成足迹。',
-    date: '等待启程',
-  },
-] as const
-const placeholderFilmCards = [
-  {
-    label: 'SPRING',
-    title: '樱花季的小旅行',
-    place: '等待标注城市',
-    copy: '第一段回忆会从这里展开',
-    date: '等待日期',
-    meta: '等待收藏',
-  },
-  {
-    label: 'SEA',
-    title: '海边的晚风',
-    place: '等待标注城市',
-    copy: '把夕阳和潮声装进胶片里',
-    date: '等待日期',
-    meta: '等待收藏',
-  },
-  {
-    label: 'MOUNTAIN',
-    title: '山野来信',
-    place: '等待标注城市',
-    copy: '留给未来再翻阅的一页',
-    date: '等待日期',
-    meta: '等待收藏',
-  },
-] as const
-
 async function loadMemories(preferredId?: number | null) {
   const requestVersion = ++memoryLoadVersion
   loading.value = true
@@ -457,7 +422,7 @@ async function loadMemories(preferredId?: number | null) {
   memoryLoadError.value = ''
   try {
     const list = await getTravelMemories()
-    if (requestVersion !== memoryLoadVersion || !canViewContent.value) return
+    if (requestVersion !== memoryLoadVersion) return
     if (list?.length) {
       locations.value = list
       resetGalleryVisibleCount()
@@ -476,7 +441,7 @@ async function loadMemories(preferredId?: number | null) {
   } catch {
     if (requestVersion !== memoryLoadVersion) return
     resetMemoryState()
-    memoryLoadError.value = '请检查登录状态、接口连通性，或稍后再试。'
+    memoryLoadError.value = '请检查接口连通性，或稍后再试。'
     notify.error('旅行地点加载失败')
   } finally {
     if (requestVersion === memoryLoadVersion) {
@@ -525,6 +490,14 @@ async function handleSelectLocation(id: number, options: { syncGallery?: boolean
 
 function openCreateDialog() {
   router.push({ name: 'TravelMemoryCreate' })
+}
+
+function goToLogin() {
+  router.push({ path: '/login', query: { redirect: '/memory-map' } })
+}
+
+function goToTrustRequest() {
+  router.push('/trust-request')
 }
 
 function retryActiveDetail() {
@@ -710,35 +683,29 @@ onMounted(async () => {
   const hero = resolveFeatureHero(siteConfig.value, 'memory-map')
   heroBgImage.value = hero.bgImage
   heroBgPosition.value = hero.bgPosition
+  authReady.value = true
   await syncMemoryContent()
   hasInitializedAccessState = true
 })
 
 async function syncMemoryContent() {
-  if (!canViewContent.value) {
-    resetMemoryState()
-    return
-  }
   await loadMemories(resolveRouteFocusId())
 }
 
 watch(
-  () => canViewContent.value,
-  async (next, previous) => {
-    if (!hasInitializedAccessState || next === previous) return
-    await syncMemoryContent()
-  },
-)
-
-watch(
   () => route.query.focus,
   (focus) => {
-    if (!hasInitializedAccessState || !canViewContent.value) return
+    if (!hasInitializedAccessState) return
     const targetId = Array.isArray(focus) ? Number(focus[0]) : Number(focus)
     if (!Number.isFinite(targetId) || targetId === activeId.value) return
     void handleSelectLocation(targetId)
   },
 )
+
+watch(canViewFriendMemoryMap, () => {
+  if (!authReady.value || !hasInitializedAccessState) return
+  void syncMemoryContent()
+})
 </script>
 
 <style scoped lang="scss">
@@ -769,6 +736,16 @@ watch(
   padding-bottom: 44px;
   position: relative;
   z-index: 2;
+}
+
+.memory-map-access-state {
+  display: grid;
+  place-items: center;
+  min-height: 220px;
+}
+
+.memory-map-access-state__body {
+  width: min(520px, 100%);
 }
 
 .eyebrow {
@@ -877,10 +854,6 @@ watch(
 .memory-rail__list::-webkit-scrollbar-thumb {
   border-radius: 999px;
   background: rgba(196, 178, 160, 0.5);
-}
-
-.memory-rail__list--placeholder {
-  overflow: hidden;
 }
 
 .memory-rail__load-more {
@@ -1009,6 +982,46 @@ watch(
   margin-left: 0;
 }
 
+.public-map-notice {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 14px;
+  align-items: center;
+  padding: 14px 16px;
+  border-radius: 16px;
+  border: 1px solid rgba(235, 211, 221, 0.92);
+  background: rgba(255, 252, 253, 0.78);
+}
+
+.public-map-notice__copy {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+
+.public-map-notice__copy strong {
+  color: #5d4650;
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 1.35;
+}
+
+.public-map-notice__copy p {
+  margin: 0;
+  color: #7d6570;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.public-map-notice__actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.public-map-notice__button {
+  min-width: 118px;
+}
+
 :deep(.travel-map-shell) {
   min-height: 100%;
   border-radius: var(--memory-radius-card);
@@ -1061,6 +1074,30 @@ watch(
 
 .travel-journal.is-loading {
   opacity: 0.94;
+}
+
+.memory-rail__empty,
+.journal-empty-state {
+  display: grid;
+  place-items: center;
+  min-height: 160px;
+  padding: 24px;
+  border-radius: 14px;
+  border: 1px dashed rgba(226, 204, 214, 0.86);
+  color: #9b7d89;
+  background: rgba(255, 252, 253, 0.46);
+  font-size: 14px;
+  font-weight: 700;
+  text-align: center;
+}
+
+.memory-rail__empty {
+  align-self: start;
+}
+
+.journal-empty-state {
+  flex: 1;
+  min-height: 320px;
 }
 
 .travel-journal__loading-note {
@@ -1273,10 +1310,6 @@ watch(
   grid-template-columns: 1fr;
   gap: 8px;
   align-items: stretch;
-}
-
-.travel-journal__entries--placeholder {
-  opacity: 0.94;
 }
 
 .journal-note {
@@ -1716,10 +1749,6 @@ watch(
   opacity: 0.6;
 }
 
-.rail-item--placeholder {
-  cursor: default;
-}
-
 .rail-item.is-active .rail-item__select {
   background: var(--colors-surface-rose, #fff1f6);
   border-color: rgba(215, 95, 135, 0.28);
@@ -1862,6 +1891,15 @@ watch(
 
   .spread-map-actions {
     justify-content: center;
+  }
+
+  .public-map-notice {
+    grid-template-columns: 1fr;
+  }
+
+  .public-map-notice__actions,
+  .public-map-notice__button {
+    width: 100%;
   }
 
   .map-action {

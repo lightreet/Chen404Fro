@@ -44,34 +44,6 @@ export function resolveFeatureHero(config: Partial<SiteConfig> | null | undefine
   }
 }
 
-export function buildMemoryMapCoverConfig(isLoggedIn: boolean): FeatureAccessCoverConfig {
-  if (!isLoggedIn) {
-    return {
-      eyebrow: 'Memory Map',
-      title: '登录后解锁这张旅行地图',
-      description: '登录之后，你就能回到这张地图里查看旅行地点、照片和沿途写下的纪念内容。',
-      noticeTitle: '当前仅对登录成员开放',
-      noticeText: '我们先保留一个安静的封面，不强制打断浏览；等你准备好，再登录查看完整内容。',
-      primaryText: '前往登录',
-      primaryTo: { path: '/login', query: { redirect: '/memory-map' } },
-      secondaryText: '先去首页看看',
-      secondaryTo: '/',
-    }
-  }
-
-  return {
-    eyebrow: 'Memory Map',
-    title: '通过好友申请后解锁这张旅行地图',
-    description: '这张地图目前只对知友开放。完成好友申请后，就能回来继续翻阅这些旅途记录。',
-    noticeTitle: '当前仅对知友开放',
-    noticeText: '如果你希望查看这部分旅行内容，可以先前往好友申请页提交理由，审核通过后就能访问。',
-    primaryText: '去提交好友申请',
-    primaryTo: '/trust-request',
-    secondaryText: '返回首页',
-    secondaryTo: '/',
-  }
-}
-
 export const TRUST_REQUEST_LOGIN_COVER: FeatureAccessCoverConfig = {
   eyebrow: 'Members Only',
   title: '登录后可查看好友申请内容',
