@@ -8,9 +8,7 @@
       :value="value"
       @change="onChange"
     />
-    <span class="ui-checkbox__box">
-      <UiIcon v-if="isChecked" name="check" class="ui-checkbox__tick" />
-    </span>
+    <span class="ui-checkbox__box" aria-hidden="true"></span>
     <span v-if="$slots.default || label" class="ui-checkbox__label">
       <slot>{{ label }}</slot>
     </span>
@@ -19,8 +17,6 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import UiIcon from '../icon/UiIcon.vue'
-
 /**
  * UiCheckbox —— 复选框。
  * 单值模式：modelValue 为 boolean。
@@ -96,6 +92,7 @@ const onChange = (ev: Event) => {
 }
 
 .ui-checkbox__box {
+  position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -109,6 +106,20 @@ const onChange = (ev: Event) => {
   transition:
     border-color var(--motion-duration-fast) var(--motion-ease-standard),
     background-color var(--motion-duration-fast) var(--motion-ease-standard);
+
+  &::after {
+    content: '';
+    position: absolute;
+    width: 8px;
+    height: 4px;
+    border-left: 2px solid currentColor;
+    border-bottom: 2px solid currentColor;
+    transform: translateY(-1px) rotate(-45deg) scale(0.72);
+    opacity: 0;
+    transition:
+      opacity var(--motion-duration-fast) var(--motion-ease-standard),
+      transform var(--motion-duration-fast) var(--motion-ease-standard);
+  }
 }
 
 .ui-checkbox:hover:not(.is-disabled) .ui-checkbox__box {
@@ -118,6 +129,11 @@ const onChange = (ev: Event) => {
 .ui-checkbox.is-checked .ui-checkbox__box {
   background: linear-gradient(135deg, var(--primary), var(--primary-light));
   border-color: transparent;
+
+  &::after {
+    opacity: 1;
+    transform: translateY(-1px) rotate(-45deg) scale(1);
+  }
 }
 
 .ui-checkbox__label {
