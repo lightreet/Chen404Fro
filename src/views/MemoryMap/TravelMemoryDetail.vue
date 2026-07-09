@@ -19,33 +19,35 @@
     </div>
 
     <section v-else-if="detail" class="travel-detail-shell">
-      <article class="detail-overview-card">
-        <div class="detail-overview-card__meta">
-          <span v-if="visitDate">{{ visitDate }}</span>
-          <span v-if="locationText">{{ locationText }}</span>
+      <article class="detail-overview-card" :class="{ 'has-media': heroImage }">
+        <div class="detail-overview-card__content">
+          <div class="detail-overview-card__meta">
+            <span v-if="visitDate">{{ visitDate }}</span>
+            <span v-if="locationText">{{ locationText }}</span>
+          </div>
+
+          <h1>{{ detail.title }}</h1>
+          <p class="detail-overview-card__summary">{{ journalQuote }}</p>
+
+          <div class="detail-overview-card__stats" aria-label="旅程概览">
+            <article>
+              <span>片段</span>
+              <strong>{{ storyStops.length.toString().padStart(2, '0') }}</strong>
+            </article>
+            <article>
+              <span>照片</span>
+              <strong>{{ allEntries.length.toString().padStart(2, '0') }}</strong>
+            </article>
+            <article>
+              <span>天数</span>
+              <strong>{{ durationNumber.toString().padStart(2, '0') }}</strong>
+            </article>
+          </div>
         </div>
 
-        <div class="detail-overview-card__stamp">
-          <span>记忆</span>
-        </div>
-
-        <h1>{{ detail.title }}</h1>
-        <p class="detail-overview-card__summary">{{ journalQuote }}</p>
-
-        <div class="detail-overview-card__stats" aria-label="旅程概览">
-          <article>
-            <span>Fragments</span>
-            <strong>{{ storyStops.length.toString().padStart(2, '0') }}</strong>
-          </article>
-          <article>
-            <span>Photos</span>
-            <strong>{{ allEntries.length.toString().padStart(2, '0') }}</strong>
-          </article>
-          <article>
-            <span>Days</span>
-            <strong>{{ durationNumber.toString().padStart(2, '0') }}</strong>
-          </article>
-        </div>
+        <figure v-if="heroImage" class="detail-overview-card__media">
+          <img :src="heroImage" :alt="detail.title" />
+        </figure>
       </article>
 
       <section class="detail-reading-band">
@@ -81,14 +83,14 @@
           </div>
 
           <button type="button" class="detail-directory-card__footer" @click="showAllStops">
-            组织好整个 {{ monthLabel }} 的片段
+            回到第一个片段
           </button>
         </aside>
       </section>
 
       <section class="detail-photo-panel">
         <header class="detail-photo-panel__head">
-          <h2>照片面板</h2>
+          <h2>旅程相册</h2>
           <p>拖动照片球查看所有照片，点击照片切换到所属片段</p>
         </header>
 
@@ -238,10 +240,7 @@ const durationNumber = computed(() => {
   return Number.isFinite(days) && days > 0 ? days : 1
 })
 
-const monthLabel = computed(() => {
-  const start = detail.value?.visitedAt
-  return start ? dayjs(start).format('M 月') : '旅程'
-})
+const heroImage = computed(() => detail.value?.coverImage || allEntries.value[0]?.imageUrl || '')
 
 const currentStopLabel = computed(() => `${String(activeStopIndex.value + 1).padStart(2, '0')}.`)
 const currentStopDate = computed(() => formatDate(currentStop.value.visitedAt) || visitDate.value || '未记录日期')
@@ -413,12 +412,44 @@ onMounted(() => {
 
 <style scoped lang="scss">
 .travel-detail-page {
+  /* 与旅行地图页共享的图鉴词汇 */
+  --atlas-route: #d75f87;
+  --atlas-ink: #4e353e;
+  --detail-line: rgba(232, 214, 221, 0.72);
+  --detail-surface: #ffffff;
+  --detail-text: #565057;
+  --detail-text-muted: #8a7a84;
+  --detail-label: #9d7583;
+  --detail-rose-wash: #fff1f6;
+  /* 原先散落在各处的裸色号，收进 token，方便和暗色主题联动 */
+  --detail-quiet-action: #926978;
+  --detail-dot-idle: #f3c7d7;
+  --detail-title-font:
+    'Microsoft YaHei UI',
+    'PingFang SC',
+    'Hiragino Sans GB',
+    'Noto Sans CJK SC',
+    sans-serif;
   min-height: 100vh;
   padding: calc(112px + env(safe-area-inset-top, 0px)) 0 70px;
-  color: #201a1f;
-  background:
-    linear-gradient(90deg, rgba(255, 247, 249, 0.96), rgba(255, 247, 249, 0.96)),
-    linear-gradient(180deg, #fff 0%, #fff7fa 100%);
+  /* 与全站保持一致：复用系统的淡樱粉尘渐变背景，不再单独铺一层偏暖的图鉴纸色 */
+  background-color: var(--bg-primary);
+  background-image: var(--page-background-image);
+  background-attachment: fixed;
+  color: var(--detail-text);
+}
+
+[data-theme='dark'] .travel-detail-page {
+  --detail-line: rgba(255, 230, 239, 0.14);
+  --detail-surface: #2b2431;
+  --detail-text: #c9bcc6;
+  --detail-text-muted: #9b8d99;
+  --detail-label: #d8b3c2;
+  --detail-rose-wash: rgba(242, 154, 182, 0.16);
+  --detail-quiet-action: #d8b3c2;
+  --detail-dot-idle: rgba(242, 154, 182, 0.4);
+  --atlas-ink: #f2ebf0;
+  --atlas-route: #f29ab6;
 }
 
 .detail-topbar,
@@ -432,12 +463,11 @@ onMounted(() => {
 .detail-topbar {
   position: fixed;
   inset: 0 0 auto;
-  z-index: 280;
+  z-index: var(--z-sticky, 100);
   padding-top: env(safe-area-inset-top, 0px);
-  border-bottom: 1px solid rgba(155, 59, 82, 0.16);
-  background: rgba(255, 255, 255, 0.78);
+  border-bottom: 1px solid var(--detail-line, rgba(232, 214, 221, 0.72));
+  background: var(--bg-glass-strong, rgba(255, 255, 255, 0.84));
   backdrop-filter: blur(8px);
-  box-shadow: 0 8px 30px rgba(155, 59, 82, 0.06);
 }
 
 .detail-topbar__inner {
@@ -447,7 +477,6 @@ onMounted(() => {
   width: min(1120px, calc(100vw - 48px));
   min-height: 72px;
   margin: 0 auto;
-  color: #9b3b52;
   font-size: 14px;
   font-weight: 600;
 }
@@ -455,27 +484,32 @@ onMounted(() => {
 .detail-topbar__back {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
+  gap: 6px;
   justify-self: start;
-  padding: 0;
-  border: 0;
-  color: inherit;
-  background: transparent;
+  min-height: 34px;
+  padding: 0 14px;
+  border: 1px solid var(--detail-line, rgba(232, 214, 221, 0.72));
+  border-radius: 999px;
+  color: var(--detail-quiet-action, #926978);
+  background: rgba(255, 255, 255, 0.72);
   font: inherit;
   cursor: pointer;
-  transition: color var(--motion-duration-fast) var(--motion-ease-standard);
+  transition:
+    color var(--motion-duration-fast) var(--motion-ease-standard),
+    border-color var(--motion-duration-fast) var(--motion-ease-standard);
 }
 
 .detail-topbar__back:hover {
-  color: #7f6672;
+  color: var(--primary-dark, #e44d78);
+  border-color: rgba(215, 95, 135, 0.4);
 }
 
 .detail-topbar__brand {
   justify-self: center;
-  color: #9b3b52;
-  font-family: Georgia, 'Times New Roman', serif;
-  font-size: 16px;
-  font-weight: 600;
+  color: var(--atlas-ink, #4e353e);
+  font-family: var(--detail-title-font);
+  font-size: 15px;
+  font-weight: 700;
   letter-spacing: 0.01em;
 }
 
@@ -483,7 +517,8 @@ onMounted(() => {
   display: inline-flex;
   gap: 8px;
   justify-self: end;
-  color: #554245;
+  color: var(--detail-text-muted, #8a7a84);
+  font-weight: 500;
 }
 
 .detail-loading,
@@ -492,9 +527,8 @@ onMounted(() => {
   margin: 0 auto;
   padding: 28px;
   border-radius: 16px;
-  border: 1px solid rgba(219, 192, 195, 0.3);
-  background: #fff;
-  box-shadow: 0 8px 30px rgba(155, 59, 82, 0.08);
+  border: 1px solid var(--detail-line, rgba(232, 214, 221, 0.72));
+  background: var(--detail-surface, #fff);
 }
 
 .travel-detail-empty {
@@ -506,7 +540,7 @@ onMounted(() => {
 
 .travel-detail-shell {
   display: grid;
-  gap: 64px;
+  gap: 48px;
   width: min(1120px, calc(100vw - 48px));
   margin: 0 auto;
 }
@@ -517,106 +551,121 @@ onMounted(() => {
 .detail-photo-panel,
 .detail-adjacent-nav__item {
   border-radius: 16px;
-  border: 1px solid rgba(219, 192, 195, 0.3);
-  background: rgba(255, 255, 255, 0.96);
-  box-shadow: 0 8px 30px rgba(155, 59, 82, 0.08);
+  border: 1px solid var(--detail-line, rgba(232, 214, 221, 0.72));
+  background: var(--detail-surface, #fff);
 }
 
 .detail-overview-card {
   position: relative;
   overflow: hidden;
-  padding: 49px;
+  padding: clamp(28px, 3.4vw, 44px);
+  border-radius: 22px;
+}
+
+.detail-overview-card.has-media {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 400px);
+  gap: clamp(28px, 3.4vw, 48px);
+  align-items: stretch;
+}
+
+.detail-overview-card__content {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 0;
+}
+
+.detail-overview-card__media {
+  position: relative;
+  overflow: hidden;
+  margin: 0;
+  min-height: 300px;
+  border-radius: 16px;
+  box-shadow: 0 18px 42px rgba(74, 43, 55, 0.13);
+}
+
+.detail-overview-card__media img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .detail-overview-card__meta {
   display: flex;
   flex-wrap: wrap;
-  gap: 16px;
-  color: #5f5a63;
-  font-size: 14px;
+  gap: 10px;
+  font-size: 13px;
   font-weight: 600;
-  letter-spacing: 0.05em;
 }
 
 .detail-overview-card__meta span {
   display: inline-flex;
   align-items: center;
-  min-height: 32px;
-  padding: 0 13px;
+  min-height: 30px;
+  padding: 0 14px;
   border-radius: 999px;
-  border: 1px solid rgba(219, 192, 195, 0.3);
-  background: #f8eaf2;
-}
-
-.detail-overview-card__stamp {
-  position: absolute;
-  top: 40px;
-  right: 48px;
-  display: grid;
-  place-items: center;
-  width: 72px;
-  aspect-ratio: 1;
-  border-radius: 999px;
-  border: 1px solid rgba(219, 120, 140, 0.32);
-  color: #c98298;
-  font-size: 16px;
-  background: rgba(255, 247, 249, 0.6);
+  border: 1px solid rgba(215, 95, 135, 0.18);
+  background: var(--detail-rose-wash, #fff1f6);
+  color: var(--detail-quiet-action, #926978);
+  letter-spacing: 0.01em;
 }
 
 .detail-overview-card h1 {
-  max-width: 10ch;
-  margin: 24px 0 18px;
-  color: #201a1f;
-  font-family: 'Noto Serif SC', 'Songti SC', 'SimSun', serif;
-  font-size: clamp(3.2rem, 5.8vw, 5.9rem);
+  margin: 20px 0 14px;
+  color: var(--atlas-ink, #4e353e);
+  font-family: var(--detail-title-font);
+  font-size: clamp(2rem, 3.6vw, 2.75rem);
   font-weight: 700;
-  line-height: 1;
-  letter-spacing: -0.025em;
+  line-height: 1.16;
+  letter-spacing: -0.01em;
   text-wrap: balance;
 }
 
 .detail-overview-card__summary {
-  max-width: 74ch;
+  max-width: 62ch;
   margin: 0;
-  color: #554245;
-  font-size: 18px;
-  line-height: 1.72;
+  color: var(--detail-text, #565057);
+  font-size: 16px;
+  line-height: 1.8;
 }
 
 .detail-overview-card__stats {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  max-width: 512px;
-  gap: 32px;
-  margin-top: 48px;
-  padding-top: 27px;
-  border-top: 1px solid rgba(219, 192, 195, 0.2);
+  max-width: 420px;
+  gap: 24px;
+  margin-top: 32px;
+  padding-top: 20px;
+  border-top: 1px solid var(--detail-line, rgba(232, 214, 221, 0.72));
 }
 
 .detail-overview-card__stats article {
   display: grid;
-  gap: 6px;
+  gap: 4px;
 }
 
 .detail-overview-card__stats span {
-  color: #5f5a63;
-  font-size: 13px;
-  font-weight: 700;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
+  color: var(--detail-label, #9d7583);
+  font-size: 12px;
+  font-weight: 650;
+  letter-spacing: 0.06em;
 }
 
 .detail-overview-card__stats strong {
-  color: #9b3b52;
-  font-family: Georgia, 'Times New Roman', serif;
-  font-size: 24px;
-  font-weight: 600;
+  color: var(--atlas-ink, #4e353e);
+  font-family: var(--detail-title-font);
+  font-size: 20px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
 }
 
 .detail-reading-band {
   display: grid;
   grid-template-columns: repeat(12, minmax(0, 1fr));
-  gap: 48px;
+  gap: 32px;
   align-items: stretch;
 }
 
@@ -626,7 +675,7 @@ onMounted(() => {
   min-height: 486px;
   max-height: 486px;
   flex-direction: column;
-  padding: 41px;
+  padding: clamp(28px, 3vw, 40px);
   overflow: hidden;
 }
 
@@ -640,11 +689,12 @@ onMounted(() => {
 .detail-fragment-card__marker {
   display: inline-flex;
   align-items: center;
-  gap: 12px;
-  color: #9b3b52;
-  font-family: Georgia, 'Times New Roman', serif;
+  gap: 10px;
+  color: var(--atlas-ink, #4e353e);
+  font-family: var(--detail-title-font);
   font-size: 14px;
   font-weight: 700;
+  font-variant-numeric: tabular-nums;
 }
 
 .detail-fragment-card__marker::before {
@@ -652,30 +702,30 @@ onMounted(() => {
   width: 8px;
   height: 8px;
   border-radius: 999px;
-  background: #9b3b52;
+  background: var(--atlas-route, #d75f87);
 }
 
 .detail-fragment-card__meta {
-  color: #9f7c87;
+  color: var(--detail-label, #9d7583);
   font-size: 13px;
   font-weight: 600;
 }
 
 .detail-fragment-card h2 {
-  margin: 20px 0 18px;
-  color: #201a1f;
-  font-family: 'Noto Serif SC', 'Songti SC', 'SimSun', serif;
-  font-size: 32px;
-  font-weight: 650;
-  line-height: 1.3;
+  margin: 18px 0 14px;
+  color: var(--atlas-ink, #4e353e);
+  font-family: var(--detail-title-font);
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 1.35;
 }
 
 .detail-fragment-card p {
   max-width: 65ch;
-  margin: 0 0 24px;
-  color: #554245;
-  font-size: 18px;
-  line-height: 1.72;
+  margin: 0 0 20px;
+  color: var(--detail-text, #565057);
+  font-size: 16px;
+  line-height: 1.8;
 }
 
 .detail-fragment-card p:first-of-type {
@@ -695,11 +745,12 @@ onMounted(() => {
 .detail-directory-card__title h2 {
   margin: 0;
   padding-bottom: 16px;
-  border-bottom: 1px solid rgba(219, 192, 195, 0.2);
-  color: #5f5a63;
-  font-size: 14px;
-  font-weight: 700;
-  letter-spacing: 0.05em;
+  border-bottom: 1px solid var(--detail-line, rgba(232, 214, 221, 0.72));
+  color: var(--detail-label, #9d7583);
+  font-family: var(--detail-title-font);
+  font-size: 13px;
+  font-weight: 650;
+  letter-spacing: 0.06em;
 }
 
 .detail-directory-card__list {
@@ -710,7 +761,7 @@ onMounted(() => {
   padding-bottom: 16px;
   overflow: auto;
   scrollbar-width: thin;
-  scrollbar-color: rgba(155, 59, 82, 0.28) transparent;
+  scrollbar-color: rgba(215, 95, 135, 0.32) transparent;
 }
 
 .detail-directory-card__list::before {
@@ -720,7 +771,7 @@ onMounted(() => {
   bottom: 16px;
   left: 11px;
   width: 2px;
-  background: rgba(219, 192, 195, 0.2);
+  background: var(--detail-line, rgba(232, 214, 221, 0.72));
 }
 
 .detail-directory-item {
@@ -733,7 +784,6 @@ onMounted(() => {
   border: 0;
   border-radius: 8px;
   background: transparent;
-  color: #7f6c76;
   text-align: left;
   cursor: pointer;
   transition:
@@ -757,42 +807,46 @@ onMounted(() => {
   height: 8px;
   border: 2px solid #fff;
   border-radius: 999px;
-  background: #dbc0c3;
+  background: var(--detail-dot-idle, #f3c7d7);
 }
 
 .detail-directory-item span {
   min-width: 0;
   overflow: hidden;
-  color: #5f5a63;
+  color: var(--detail-text, #565057);
   font-size: 14px;
   font-weight: 600;
-  letter-spacing: 0.03em;
   line-height: 1.4;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
+.detail-directory-item:hover {
+  background: rgba(255, 241, 246, 0.6);
+}
+
 .detail-directory-item.is-active {
-  background: #fef0f7;
+  background: var(--detail-rose-wash, #fff1f6);
 }
 
 .detail-directory-item.is-active b::after {
-  background: #9b3b52;
-  box-shadow: 0 0 0 2px rgba(155, 59, 82, 0.1);
+  background: var(--atlas-route, #d75f87);
+  box-shadow: 0 0 0 2px rgba(215, 95, 135, 0.14);
 }
 
 .detail-directory-item.is-active span {
-  color: #9b3b52;
+  color: var(--atlas-ink, #4e353e);
 }
 
 .detail-directory-card__footer {
   min-height: 38px;
   margin-top: auto;
-  border: 1px solid rgba(219, 192, 195, 0.3);
+  border: 1px solid var(--detail-line, rgba(232, 214, 221, 0.72));
   border-radius: 999px;
-  color: #5f5a63;
+  color: var(--detail-quiet-action, #926978);
   background: rgba(255, 255, 255, 0.72);
   font-size: 13px;
+  font-weight: 600;
   cursor: pointer;
   transition:
     color var(--motion-duration-fast) var(--motion-ease-standard),
@@ -800,16 +854,18 @@ onMounted(() => {
 }
 
 .detail-directory-card__footer:hover {
-  color: #b78693;
+  color: var(--primary-dark, #e44d78);
+  border-color: rgba(215, 95, 135, 0.4);
 }
 
 .detail-photo-panel {
   overflow: hidden;
-  min-height: 875px;
-  padding: 48px 48px 34px;
-  border-radius: 24px;
-  background: rgba(255, 255, 255, 0.82);
-  box-shadow: 0 12px 40px rgba(155, 59, 82, 0.1);
+  min-height: 780px;
+  padding: 40px 48px 34px;
+  border-radius: 22px;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    0 18px 42px rgba(74, 43, 55, 0.13);
 }
 
 .detail-photo-panel__head {
@@ -821,17 +877,16 @@ onMounted(() => {
 
 .detail-photo-panel__head h2 {
   margin: 0;
-  color: #9b3b52;
-  font-family: 'Noto Serif SC', 'Songti SC', 'SimSun', serif;
-  font-size: 32px;
-  font-weight: 650;
+  color: var(--atlas-ink, #4e353e);
+  font-family: var(--detail-title-font);
+  font-size: clamp(22px, 1.7vw, 28px);
+  font-weight: 700;
 }
 
 .detail-photo-panel__head p {
   margin: 0;
-  color: #5f5a63;
+  color: var(--detail-text-muted, #8a7a84);
   font-size: 13px;
-  letter-spacing: 0.1em;
 }
 
 .detail-adjacent-nav {
@@ -844,29 +899,32 @@ onMounted(() => {
   display: grid;
   gap: 6px;
   min-height: 80px;
-  padding: 24px;
+  padding: 22px 24px;
   text-align: left;
   cursor: pointer;
   transition:
     transform var(--motion-duration-fast) var(--motion-ease-standard),
-    box-shadow var(--motion-duration-base) var(--motion-ease-standard);
+    border-color var(--motion-duration-fast) var(--motion-ease-standard);
 }
 
 .detail-adjacent-nav__item small {
-  color: #bc98a5;
-  font-size: 13px;
+  color: var(--detail-label, #9d7583);
+  font-size: 12px;
+  font-weight: 650;
+  letter-spacing: 0.06em;
 }
 
 .detail-adjacent-nav__item strong {
-  color: #201a1f;
-  font-family: 'Noto Serif SC', 'Songti SC', 'SimSun', serif;
-  font-size: 20px;
-  font-weight: 500;
-  line-height: 1.55;
+  color: var(--atlas-ink, #4e353e);
+  font-family: var(--detail-title-font);
+  font-size: 17px;
+  font-weight: 700;
+  line-height: 1.5;
 }
 
 .detail-adjacent-nav__item:hover:not(:disabled) {
   transform: translateY(-1px);
+  border-color: rgba(215, 95, 135, 0.4);
 }
 
 .detail-adjacent-nav__item:disabled {
@@ -880,6 +938,22 @@ onMounted(() => {
   .travel-detail-shell,
   .travel-detail-empty {
     width: min(100vw - 24px, 100%);
+  }
+
+  .detail-overview-card.has-media {
+    grid-template-columns: 1fr;
+    gap: 22px;
+  }
+
+  .detail-overview-card__media {
+    order: -1;
+    min-height: 0;
+  }
+
+  .detail-overview-card__media img {
+    position: static;
+    aspect-ratio: 16 / 10;
+    height: auto;
   }
 
   .detail-reading-band {
@@ -929,7 +1003,7 @@ onMounted(() => {
   }
 
   .detail-overview-card h1 {
-    font-size: 3rem;
+    font-size: 1.75rem;
   }
 
   .detail-overview-card__summary,
@@ -940,11 +1014,6 @@ onMounted(() => {
   .detail-photo-panel {
     min-height: 640px;
     padding-top: 34px;
-  }
-
-  .detail-overview-card__stamp {
-    top: 18px;
-    right: 18px;
   }
 }
 </style>
