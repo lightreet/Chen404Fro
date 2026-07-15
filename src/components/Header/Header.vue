@@ -72,9 +72,69 @@
               </UiButton>
             </router-link>
 
-            <button class="action-btn" @click="toggleTheme">
-              <UiIcon :name="isDark ? 'Sunny' : 'Moon'" />
-            </button>
+            <UiDropdown
+              trigger="click"
+              placement="bottom"
+              :hide-on-click="false"
+              popper-class="site-display-popper"
+              @command="handleDisplayCommand"
+            >
+              <button
+                type="button"
+                class="action-btn site-display-trigger"
+                :aria-label="displayTriggerLabel"
+                :title="displayTriggerLabel"
+              >
+                <UiIcon name="appearance" />
+                <span
+                  class="site-display-trigger__petal"
+                  :class="`is-${sakuraEffect}`"
+                  aria-hidden="true"
+                />
+              </button>
+              <template #dropdown>
+                <UiDropdownMenu class="site-display-menu">
+                  <div class="site-display-menu__title">
+                    <UiIcon name="appearance" />
+                    <span>站点展示</span>
+                  </div>
+                  <div class="site-display-menu__section-label">主题</div>
+                  <UiDropdownItem
+                    command="theme:light"
+                    :class="{ 'is-selected': !isDark }"
+                  >
+                    <UiIcon name="sun" />
+                    <span class="site-display-menu__option">浅色模式</span>
+                    <UiIcon v-if="!isDark" class="site-display-menu__check" name="check" />
+                  </UiDropdownItem>
+                  <UiDropdownItem
+                    command="theme:dark"
+                    :class="{ 'is-selected': isDark }"
+                  >
+                    <UiIcon name="moon" />
+                    <span class="site-display-menu__option">暗色模式</span>
+                    <UiIcon v-if="isDark" class="site-display-menu__check" name="check" />
+                  </UiDropdownItem>
+
+                  <div class="site-display-menu__divider" />
+                  <div class="site-display-menu__section-label">樱花效果</div>
+                  <UiDropdownItem
+                    v-for="option in sakuraEffectOptions"
+                    :key="option.value"
+                    :command="`sakura:${option.value}`"
+                    :class="{ 'is-selected': sakuraEffect === option.value }"
+                  >
+                    <UiIcon :name="option.icon" />
+                    <span class="site-display-menu__option">{{ option.label }}</span>
+                    <UiIcon
+                      v-if="sakuraEffect === option.value"
+                      class="site-display-menu__check"
+                      name="check"
+                    />
+                  </UiDropdownItem>
+                </UiDropdownMenu>
+              </template>
+            </UiDropdown>
 
             <!-- 未登录显示登录按钮 -->
             <router-link v-if="!isLoggedIn" to="/login" class="login-link">
@@ -119,9 +179,62 @@
         </div>
 
         <div class="header-actions mobile-actions" v-if="isMobile">
-          <button class="action-btn" @click="toggleTheme">
-            <UiIcon :name="isDark ? 'Sunny' : 'Moon'" />
-          </button>
+          <UiDropdown
+            trigger="click"
+            placement="bottom"
+            :hide-on-click="false"
+            popper-class="site-display-popper"
+            @command="handleDisplayCommand"
+          >
+            <button
+              type="button"
+              class="action-btn site-display-trigger"
+              :aria-label="displayTriggerLabel"
+              :title="displayTriggerLabel"
+            >
+              <UiIcon name="appearance" />
+              <span
+                class="site-display-trigger__petal"
+                :class="`is-${sakuraEffect}`"
+                aria-hidden="true"
+              />
+            </button>
+            <template #dropdown>
+              <UiDropdownMenu class="site-display-menu">
+                <div class="site-display-menu__title">
+                  <UiIcon name="appearance" />
+                  <span>站点展示</span>
+                </div>
+                <div class="site-display-menu__section-label">主题</div>
+                <UiDropdownItem command="theme:light" :class="{ 'is-selected': !isDark }">
+                  <UiIcon name="sun" />
+                  <span class="site-display-menu__option">浅色模式</span>
+                  <UiIcon v-if="!isDark" class="site-display-menu__check" name="check" />
+                </UiDropdownItem>
+                <UiDropdownItem command="theme:dark" :class="{ 'is-selected': isDark }">
+                  <UiIcon name="moon" />
+                  <span class="site-display-menu__option">暗色模式</span>
+                  <UiIcon v-if="isDark" class="site-display-menu__check" name="check" />
+                </UiDropdownItem>
+                <div class="site-display-menu__divider" />
+                <div class="site-display-menu__section-label">樱花效果</div>
+                <UiDropdownItem
+                  v-for="option in sakuraEffectOptions"
+                  :key="option.value"
+                  :command="`sakura:${option.value}`"
+                  :class="{ 'is-selected': sakuraEffect === option.value }"
+                >
+                  <UiIcon :name="option.icon" />
+                  <span class="site-display-menu__option">{{ option.label }}</span>
+                  <UiIcon
+                    v-if="sakuraEffect === option.value"
+                    class="site-display-menu__check"
+                    name="check"
+                  />
+                </UiDropdownItem>
+              </UiDropdownMenu>
+            </template>
+          </UiDropdown>
 
           <button class="action-btn menu-btn" @click="toggleMobileMenu">
             <UiIcon name="Menu" />
@@ -254,6 +367,8 @@ import type { RouteLocationRaw } from 'vue-router';
 import { useRoute, useRouter } from 'vue-router';
 import { notify, confirmAction } from '@/lib/feedback';
 import { UiAvatar, UiButton, UiDropdown, UiDropdownItem, UiDropdownMenu, UiIcon } from '@/components/ui'
+import { useAppStore } from '@/stores/app';
+import type { SakuraEffectPreference } from '@/stores/app';
 import { useUserStore } from '@/stores/user';
 import { storeToRefs } from 'pinia';
 import { logout as logoutApi } from '@/api/auth';
@@ -264,12 +379,56 @@ import { useLayoutMobile } from '@/composables/useLayoutMobile';
 
 const router = useRouter();
 const route = useRoute();
+const appStore = useAppStore();
 const userStore = useUserStore();
 userStore.initUser();
+const { theme, sakuraEffect } = storeToRefs(appStore);
 const { isLoggedIn, user } = storeToRefs(userStore);
 const { siteConfig, loadSiteConfig } = useSiteConfig();
 const siteName = computed(() => resolveSiteName(siteConfig.value));
 const siteLogo = computed(() => resolveSiteLogo(siteConfig.value));
+
+const isDark = computed(() => theme.value === 'dark');
+
+const sakuraEffectOptions: ReadonlyArray<{
+  value: SakuraEffectPreference;
+  label: string;
+  icon: string;
+}> = [
+  { value: 'full', label: '完整', icon: 'star-filled' },
+  { value: 'light', label: '轻量', icon: 'star' },
+  { value: 'off', label: '关闭', icon: 'close' },
+];
+
+const displayTriggerLabel = computed(() => {
+  const themeLabel = isDark.value ? '暗色模式' : '浅色模式';
+  const effectLabel = sakuraEffectOptions.find((option) => option.value === sakuraEffect.value)?.label;
+  return `站点展示：${themeLabel}，樱花${effectLabel ?? '完整'}`;
+});
+
+const handleDisplayCommand = (command: string | number | object) => {
+  if (typeof command !== 'string') return;
+
+  switch (command) {
+    case 'theme:light':
+      appStore.setTheme('light');
+      break;
+    case 'theme:dark':
+      appStore.setTheme('dark');
+      break;
+    case 'sakura:full':
+      appStore.setSakuraEffect('full');
+      break;
+    case 'sakura:light':
+      appStore.setSakuraEffect('light');
+      break;
+    case 'sakura:off':
+      appStore.setSakuraEffect('off');
+      break;
+    default:
+      break;
+  }
+};
 
 // 角色文本
 const roleText = computed(() => getTrustLevelLabel(user.value));
@@ -371,24 +530,6 @@ onMounted(() => {
 onUnmounted(() => {
   window.removeEventListener('scroll', handleScroll);
   document.body.style.overflow = '';
-});
-
-// 主题切换
-const isDark = ref(false);
-
-const toggleTheme = () => {
-  isDark.value = !isDark.value;
-  document.documentElement.setAttribute('data-theme', isDark.value ? 'dark' : 'light');
-  localStorage.setItem('theme', isDark.value ? 'dark' : 'light');
-};
-
-// 初始化主题
-onMounted(() => {
-  const savedTheme = localStorage.getItem('theme');
-  if (savedTheme === 'dark') {
-    isDark.value = true;
-    document.documentElement.setAttribute('data-theme', 'dark');
-  }
 });
 
 // 移动端菜单
@@ -656,6 +797,40 @@ const handleLogout = async () => {
     color: var(--primary);
     transform: translateY(-1px);
   }
+
+  &:focus-visible {
+    outline: 2px solid var(--color-accent-strong);
+    outline-offset: 2px;
+  }
+}
+
+.site-display-trigger {
+  position: relative;
+}
+
+.site-display-trigger__petal {
+  position: absolute;
+  right: 5px;
+  bottom: 5px;
+  width: 7px;
+  height: 7px;
+  border: 1px solid rgba(255, 255, 255, 0.82);
+  border-radius: 70% 30% 68% 32%;
+  background: var(--color-accent);
+  transform: rotate(-28deg);
+  transition:
+    opacity var(--motion-duration-fast) var(--motion-ease-standard),
+    transform var(--motion-duration-fast) var(--motion-ease-standard);
+}
+
+.site-display-trigger__petal.is-light {
+  opacity: 0.56;
+  transform: rotate(-28deg) scale(0.78);
+}
+
+.site-display-trigger__petal.is-off {
+  opacity: 0;
+  transform: rotate(-28deg) scale(0.4);
 }
 
 // 编写按钮
@@ -1081,10 +1256,85 @@ const handleLogout = async () => {
   color: var(--color-accent-strong);
 }
 
+.site-display-popper.el-popper {
+  overflow: hidden;
+  width: 220px;
+  border: 0;
+  border-radius: var(--radius-lg);
+  background: rgba(255, 255, 255, 0.98);
+  box-shadow: 0 6px 8px rgba(96, 68, 82, 0.14);
+}
+
+.site-display-popper .el-dropdown-menu {
+  padding: 8px;
+  background: transparent;
+}
+
+.site-display-popper .site-display-menu__title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px 10px;
+  color: var(--color-text-primary);
+  font-size: 15px;
+  font-weight: 650;
+}
+
+.site-display-popper .site-display-menu__section-label {
+  padding: 6px 10px 5px;
+  color: var(--color-text-tertiary);
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.site-display-popper .site-display-menu__divider {
+  height: 1px;
+  margin: 7px 6px;
+  background: var(--color-border-light);
+}
+
+.site-display-popper .el-dropdown-menu__item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 42px;
+  padding: 7px 10px;
+  border-radius: var(--radius-md);
+  color: var(--color-text-secondary);
+  line-height: 1.3;
+}
+
+.site-display-popper .el-dropdown-menu__item:hover,
+.site-display-popper .el-dropdown-menu__item:focus,
+.site-display-popper .el-dropdown-menu__item.is-selected {
+  background: var(--color-accent-soft);
+  color: var(--color-accent-strong);
+}
+
+.site-display-popper .site-display-menu__option {
+  min-width: 0;
+  flex: 1;
+  font-size: 14px;
+}
+
+.site-display-popper .site-display-menu__check {
+  flex: 0 0 auto;
+  color: var(--color-accent-strong);
+}
+
 [data-theme='dark'] .timeline-nav-popper.el-popper {
   border-color: rgba(255, 162, 194, 0.24);
   background: rgba(43, 36, 49, 0.97);
   box-shadow: 0 16px 36px rgba(0, 0, 0, 0.28);
+}
+
+[data-theme='dark'] .site-display-popper.el-popper {
+  background: rgba(43, 36, 49, 0.98);
+  box-shadow: 0 6px 8px rgba(0, 0, 0, 0.28);
+}
+
+[data-theme='dark'] .site-display-popper .site-display-menu__divider {
+  background: rgba(255, 255, 255, 0.08);
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -60,6 +60,7 @@ import mdiMenu from '@iconify/icons-mdi/menu'
 import mdiMessageOutline from '@iconify/icons-mdi/message-outline'
 import mdiMusicNoteOutline from '@iconify/icons-mdi/music-note-outline'
 import mdiOpenInNew from '@iconify/icons-mdi/open-in-new'
+import mdiPaletteOutline from '@iconify/icons-mdi/palette-outline'
 import mdiPause from '@iconify/icons-mdi/pause'
 import mdiPencilOutline from '@iconify/icons-mdi/pencil-outline'
 import mdiPlay from '@iconify/icons-mdi/play'
@@ -108,6 +109,7 @@ export const iconMap = {
   sort: mdiSort,
   rank: mdiSortVariant,
   settings: mdiCogOutline,
+  appearance: mdiPaletteOutline,
   logout: mdiLogout,
   save: mdiContentSaveOutline,
   copy: mdiContentCopy,

@@ -2,14 +2,19 @@
   <canvas
     ref="canvasRef"
     class="sakura-overlay"
+    :class="`sakura-overlay--${effectLevel}`"
     aria-hidden="true"
   />
 </template>
 
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref } from 'vue';
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
+import { storeToRefs } from 'pinia';
+import { useAppStore } from '@/stores/app';
 
 type SakuraDepth = 'background' | 'midground' | 'foreground';
+type SakuraSceneMode = 'hero' | 'ambient' | 'reading' | 'off';
+type SakuraEffectLevel = 'full' | 'ambient' | 'reading' | 'off';
 
 interface SakuraPetal {
   depth: SakuraDepth;
@@ -53,6 +58,82 @@ interface AtmosphereMote {
   tintMid: string;
   tintOuter: string;
 }
+
+interface EffectProfile {
+  petalScale: number;
+  moteScale: number;
+  mobilePetals: number;
+  mobileMotes: number;
+  alpha: number;
+  veilAlpha: number;
+  depthWeights: Record<SakuraDepth, number>;
+}
+
+const props = withDefaults(defineProps<{
+  mode?: SakuraSceneMode;
+}>(), {
+  mode: 'ambient',
+});
+
+const appStore = useAppStore();
+const { sakuraEffect } = storeToRefs(appStore);
+const isHeroActive = ref(true);
+const heroBoundaryY = ref(Number.POSITIVE_INFINITY);
+
+const effectLevel = computed<SakuraEffectLevel>(() => {
+  if (sakuraEffect.value === 'off' || props.mode === 'off') return 'off';
+
+  if (sakuraEffect.value === 'light') {
+    return props.mode === 'hero' ? 'ambient' : 'reading';
+  }
+
+  if (props.mode === 'hero') {
+    return isHeroActive.value ? 'full' : 'ambient';
+  }
+
+  return props.mode;
+});
+
+const EFFECT_PROFILES: Record<SakuraEffectLevel, EffectProfile> = {
+  full: {
+    petalScale: 1,
+    moteScale: 1,
+    mobilePetals: 12,
+    mobileMotes: 5,
+    alpha: 1,
+    veilAlpha: 1,
+    depthWeights: { background: 0.58, midground: 0.3, foreground: 0.12 },
+  },
+  ambient: {
+    petalScale: 0.5,
+    moteScale: 0.42,
+    mobilePetals: 8,
+    mobileMotes: 3,
+    alpha: 0.72,
+    veilAlpha: 0.28,
+    depthWeights: { background: 0.68, midground: 0.28, foreground: 0.04 },
+  },
+  reading: {
+    petalScale: 0.28,
+    moteScale: 0,
+    mobilePetals: 5,
+    mobileMotes: 0,
+    alpha: 0.52,
+    veilAlpha: 0,
+    depthWeights: { background: 0.78, midground: 0.22, foreground: 0 },
+  },
+  off: {
+    petalScale: 0,
+    moteScale: 0,
+    mobilePetals: 0,
+    mobileMotes: 0,
+    alpha: 0,
+    veilAlpha: 0,
+    depthWeights: { background: 1, midground: 0, foreground: 0 },
+  },
+};
+
+const effectProfile = computed(() => EFFECT_PROFILES[effectLevel.value]);
 
 /** Draw order: back → front */
 const DEPTH_DRAW_ORDER: readonly SakuraDepth[] = ['background', 'midground', 'foreground'];
@@ -278,8 +359,11 @@ const DEPTH_FINISH: Record<
 };
 
 const pickDepth = (): SakuraDepth => {
-  const i = Math.floor(Math.random() * DEPTH_DRAW_ORDER.length);
-  return DEPTH_DRAW_ORDER[i]!;
+  const weights = effectProfile.value.depthWeights;
+  const roll = Math.random();
+  if (roll < weights.background) return 'background';
+  if (roll < weights.background + weights.midground) return 'midground';
+  return 'foreground';
 };
 
 const canvasRef = ref<HTMLCanvasElement | null>(null);
@@ -295,6 +379,7 @@ let petals: SakuraPetal[] = [];
 let atmosphereMotes: AtmosphereMote[] = [];
 let animationFrameId = 0;
 let resizeTimer = 0;
+let heroScrollFrame = 0;
 let lastFrameTime = 0;
 let viewportWidth = 0;
 let viewportHeight = 0;
@@ -331,17 +416,49 @@ const spawnYAboveViewport = (size: number) => {
 };
 
 const getPetalCount = () => {
+  if (effectLevel.value === 'off') return 0;
+  if (viewportWidth <= 768) return effectProfile.value.mobilePetals;
+
   const area = viewportWidth * viewportHeight;
-  return Math.max(24, Math.min(56, Math.round(area / 28500)));
+  const baseCount = Math.max(24, Math.min(56, Math.round(area / 28500)));
+  return Math.max(1, Math.round(baseCount * effectProfile.value.petalScale));
 };
 
 const getAtmosphereMoteCount = () => {
+  if (effectProfile.value.moteScale === 0) return 0;
+  if (viewportWidth <= 768) return effectProfile.value.mobileMotes;
+
   const area = viewportWidth * viewportHeight;
-  return Math.max(18, Math.min(34, Math.round(area / 64000)));
+  const baseCount = Math.max(18, Math.min(34, Math.round(area / 64000)));
+  return Math.max(1, Math.round(baseCount * effectProfile.value.moteScale));
 };
 
-const createPetal = (startInViewport = false): SakuraPetal => {
-  const depth = pickDepth();
+const createPetalDepthPlan = (count: number): SakuraDepth[] => {
+  const weights = effectProfile.value.depthWeights;
+  const foregroundCount = Math.min(
+    viewportWidth <= 768 ? 2 : count,
+    Math.round(count * weights.foreground)
+  );
+  const midgroundCount = Math.min(
+    count - foregroundCount,
+    Math.round(count * weights.midground)
+  );
+  const backgroundCount = Math.max(0, count - foregroundCount - midgroundCount);
+  const plan: SakuraDepth[] = [
+    ...Array<SakuraDepth>(backgroundCount).fill('background'),
+    ...Array<SakuraDepth>(midgroundCount).fill('midground'),
+    ...Array<SakuraDepth>(foregroundCount).fill('foreground'),
+  ];
+
+  for (let i = plan.length - 1; i > 0; i -= 1) {
+    const swapIndex = Math.floor(Math.random() * (i + 1));
+    [plan[i], plan[swapIndex]] = [plan[swapIndex]!, plan[i]!];
+  }
+  return plan;
+};
+
+const createPetal = (startInViewport = false, forcedDepth?: SakuraDepth): SakuraPetal => {
+  const depth = forcedDepth ?? pickDepth();
   const r = DEPTH_RANGES[depth];
   const [colorStart, colorEnd] = PETAL_COLORS[Math.floor(Math.random() * PETAL_COLORS.length)];
   const size = r.size[0] + (r.size[1] - r.size[0]) * nextUniform01(depth);
@@ -418,7 +535,7 @@ const createAtmosphereMote = (startInViewport = false): AtmosphereMote => {
 };
 
 const resetPetal = (petal: SakuraPetal) => {
-  const nextPetal = createPetal(false);
+  const nextPetal = createPetal(false, petal.depth);
   Object.assign(petal, nextPetal);
 
   // 从顶部横向均匀回补（与之前一致）
@@ -463,7 +580,7 @@ const syncCanvasSize = () => {
   }
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
-  petals = Array.from({ length: getPetalCount() }, () => createPetal(true));
+  petals = createPetalDepthPlan(getPetalCount()).map((depth) => createPetal(true, depth));
   atmosphereMotes = Array.from(
     { length: getAtmosphereMoteCount() },
     () => createAtmosphereMote(true)
@@ -496,7 +613,7 @@ const drawPetal = (petal: SakuraPetal) => {
     petal.scaleX * flipWidth * (isBackFace ? -1 : 1),
     petal.scaleY * flipHeight
   );
-  c.globalAlpha = petal.opacity * surfaceAlpha;
+  c.globalAlpha = petal.opacity * surfaceAlpha * effectProfile.value.alpha;
   c.shadowColor = paint.shadowColor;
   c.shadowBlur = petal.blur * paint.shadowBlurScale;
 
@@ -524,6 +641,7 @@ const drawPetal = (petal: SakuraPetal) => {
   };
 
   c.save();
+  c.globalAlpha = effectProfile.value.veilAlpha;
   c.shadowBlur = 0;
   c.shadowColor = 'transparent';
   const bloomGradient = c.createRadialGradient(-s * 0.08, -s * 0.18, s * 0.08, 0, 0, s * 1.34);
@@ -701,7 +819,7 @@ const drawAtmosphereMote = (mote: AtmosphereMote, timestamp: number) => {
   c.save();
   c.translate(mote.x, mote.y);
   c.scale(mote.stretchX, mote.stretchY);
-  c.globalAlpha = mote.opacity * pulse;
+  c.globalAlpha = mote.opacity * pulse * effectProfile.value.alpha;
   c.shadowBlur = mote.blur;
   c.shadowColor = 'rgba(255, 232, 244, 0.2)';
 
@@ -744,6 +862,12 @@ const animate = (timestamp: number) => {
   const windRipple = Math.sin(timestamp / 880) * 1.4;
 
   ctx.clearRect(0, 0, viewportWidth, viewportHeight);
+  ctx.save();
+  if (effectLevel.value === 'full' && Number.isFinite(heroBoundaryY.value)) {
+    ctx.beginPath();
+    ctx.rect(0, 0, viewportWidth, clamp(heroBoundaryY.value, 0, viewportHeight));
+    ctx.clip();
+  }
   drawAtmosphereVeil(timestamp);
 
   atmosphereMotes.forEach((mote) => {
@@ -794,6 +918,7 @@ const animate = (timestamp: number) => {
       }
     }
   }
+  ctx.restore();
 
   animationFrameId = window.requestAnimationFrame(animate);
 };
@@ -805,7 +930,7 @@ const stopAnimation = () => {
 
 const startAnimation = () => {
   stopAnimation();
-  if (prefersReducedMotion?.matches) {
+  if (prefersReducedMotion?.matches || effectLevel.value === 'off') {
     if (ctx) {
       ctx.clearRect(0, 0, viewportWidth, viewportHeight);
     }
@@ -814,6 +939,32 @@ const startAnimation = () => {
 
   lastFrameTime = 0;
   animationFrameId = window.requestAnimationFrame(animate);
+};
+
+const updateHeroState = () => {
+  if (props.mode !== 'hero') {
+    isHeroActive.value = true;
+    return;
+  }
+
+  const hero = document.querySelector<HTMLElement>('[data-hero]');
+  if (hero) {
+    const heroBottom = hero.getBoundingClientRect().bottom;
+    heroBoundaryY.value = heroBottom;
+    isHeroActive.value = heroBottom > 120;
+    return;
+  }
+
+  heroBoundaryY.value = Number.POSITIVE_INFINITY;
+  isHeroActive.value = window.scrollY < window.innerHeight * 0.68;
+};
+
+const handleScroll = () => {
+  if (heroScrollFrame) return;
+  heroScrollFrame = window.requestAnimationFrame(() => {
+    heroScrollFrame = 0;
+    updateHeroState();
+  });
 };
 
 const handleResize = () => {
@@ -836,12 +987,20 @@ const handleVisibilityChange = () => {
   startAnimation();
 };
 
+watch(effectLevel, () => {
+  if (!canvasRef.value) return;
+  syncCanvasSize();
+  startAnimation();
+});
+
 onMounted(() => {
   prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+  updateHeroState();
   syncCanvasSize();
   startAnimation();
 
   window.addEventListener('resize', handleResize);
+  window.addEventListener('scroll', handleScroll, { passive: true });
   document.addEventListener('visibilitychange', handleVisibilityChange);
   prefersReducedMotion.addEventListener('change', startAnimation);
 });
@@ -849,7 +1008,9 @@ onMounted(() => {
 onUnmounted(() => {
   stopAnimation();
   window.clearTimeout(resizeTimer);
+  window.cancelAnimationFrame(heroScrollFrame);
   window.removeEventListener('resize', handleResize);
+  window.removeEventListener('scroll', handleScroll);
   document.removeEventListener('visibilitychange', handleVisibilityChange);
   prefersReducedMotion?.removeEventListener('change', startAnimation);
 });
@@ -863,5 +1024,17 @@ onUnmounted(() => {
   height: 100%;
   pointer-events: none;
   z-index: 6;
+  opacity: 1;
+  transition: opacity var(--motion-duration-base) var(--motion-ease-standard);
+}
+
+.sakura-overlay--off {
+  opacity: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sakura-overlay {
+    transition: none;
+  }
 }
 </style>
