@@ -10,16 +10,53 @@
         <div class="desktop-toolbar" v-if="!isMobile">
           <!-- 导航菜单 -->
           <nav class="nav-menu">
-            <router-link
+            <template
               v-for="item in navItems"
               :key="item.key"
-              :to="item.to"
-              class="nav-item"
-              :class="{ 'is-active': isNavItemActive(item) }"
             >
-              <UiIcon class="nav-icon" :name="item.icon" />
-              <span>{{ item.name }}</span>
-            </router-link>
+              <UiDropdown
+                v-if="item.children?.length"
+                trigger="click"
+                placement="bottom-start"
+                popper-class="timeline-nav-popper"
+                class="nav-dropdown"
+                @command="handleNavCommand"
+              >
+                <button
+                  type="button"
+                  class="nav-item nav-dropdown-trigger"
+                  :class="{ 'is-active': isNavItemActive(item) }"
+                  :aria-label="`${item.name}菜单`"
+                >
+                  <UiIcon class="nav-icon" :name="item.icon" />
+                  <span>{{ item.name }}</span>
+                  <UiIcon class="nav-chevron" name="arrow-down" />
+                </button>
+                <template #dropdown>
+                  <UiDropdownMenu>
+                    <UiDropdownItem
+                      v-for="child in item.children"
+                      :key="child.key"
+                      :command="child.to"
+                      :class="{ 'is-active': route.path === child.path }"
+                    >
+                      <UiIcon :name="child.icon" />
+                      <span>{{ child.name }}</span>
+                    </UiDropdownItem>
+                  </UiDropdownMenu>
+                </template>
+              </UiDropdown>
+
+              <router-link
+                v-else
+                :to="item.to"
+                class="nav-item"
+                :class="{ 'is-active': isNavItemActive(item) }"
+              >
+                <UiIcon class="nav-icon" :name="item.icon" />
+                <span>{{ item.name }}</span>
+              </router-link>
+            </template>
           </nav>
 
           <!-- 右侧操作区 -->
@@ -97,16 +134,52 @@
     <div class="mobile-menu" v-show="isMobileMenuOpen" v-if="isMobile">
       <div class="mobile-menu-overlay" @click="closeMobileMenu"></div>
       <div class="mobile-menu-content">
-        <router-link
+        <template
           v-for="item in navItems"
           :key="item.key"
-          :to="item.to"
-          class="mobile-nav-item"
-          @click="closeMobileMenu"
         >
-          <UiIcon :name="item.icon" />
-          <span>{{ item.name }}</span>
-        </router-link>
+          <div v-if="item.children?.length" class="mobile-nav-group">
+            <button
+              type="button"
+              class="mobile-nav-item mobile-nav-group-trigger"
+              :class="{ 'is-active': isNavItemActive(item) }"
+              :aria-expanded="mobileTimelineOpen"
+              @click="mobileTimelineOpen = !mobileTimelineOpen"
+            >
+              <UiIcon :name="item.icon" />
+              <span>{{ item.name }}</span>
+              <UiIcon
+                name="arrow-down"
+                class="mobile-nav-chevron"
+                :class="{ 'is-open': mobileTimelineOpen }"
+              />
+            </button>
+            <div v-show="mobileTimelineOpen" class="mobile-nav-children">
+              <router-link
+                v-for="child in item.children"
+                :key="child.key"
+                :to="child.to"
+                class="mobile-nav-item mobile-nav-child"
+                :class="{ 'is-active': route.path === child.path }"
+                @click="closeMobileMenu"
+              >
+                <UiIcon :name="child.icon" />
+                <span>{{ child.name }}</span>
+              </router-link>
+            </div>
+          </div>
+
+          <router-link
+            v-else
+            :to="item.to"
+            class="mobile-nav-item"
+            :class="{ 'is-active': isNavItemActive(item) }"
+            @click="closeMobileMenu"
+          >
+            <UiIcon :name="item.icon" />
+            <span>{{ item.name }}</span>
+          </router-link>
+        </template>
 
         <div class="mobile-menu-divider"></div>
 
@@ -217,6 +290,7 @@ interface NavItem {
   path: string;
   to: RouteLocationRaw;
   icon: string;
+  children?: NavItem[];
   activeWhen?: (currentPath: string, currentTab?: string | null) => boolean;
 }
 
@@ -224,7 +298,23 @@ interface NavItem {
 const navItems = computed<NavItem[]>(() => [
   { key: 'home', name: '首页', path: '/', to: '/', icon: 'HomeFilled' },
   { key: 'category', name: '分类', path: '/category', to: '/category', icon: 'List' },
-  { key: 'archive', name: '时光轴', path: '/archive', to: '/archive', icon: 'Folder' },
+  {
+    key: 'timeline',
+    name: '时光轴',
+    path: '/archive',
+    to: '/archive',
+    icon: 'Folder',
+    children: [
+      { key: 'archive', name: '文章记录', path: '/archive', to: '/archive', icon: 'article' },
+      {
+        key: 'development-history',
+        name: '开发历程',
+        path: '/development-history',
+        to: '/development-history',
+        icon: 'branch',
+      },
+    ],
+  },
   { key: 'memory-map', name: '旅行地图', path: '/memory-map', to: '/memory-map', icon: 'Place' },
   { key: 'music', name: '音乐馆', path: '/music', to: '/music', icon: 'Headset' },
   {
@@ -247,8 +337,12 @@ const currentRouteTab = computed(() => {
 
 function isNavItemActive(item: {
   path: string;
+  children?: NavItem[];
   activeWhen?: (currentPath: string, currentTab?: string | null) => boolean;
 }) {
+  if (item.children?.some((child) => child.path === route.path)) {
+    return true;
+  }
   if (item.activeWhen) {
     return item.activeWhen(route.path, currentRouteTab.value);
   }
@@ -299,13 +393,23 @@ onMounted(() => {
 
 // 移动端菜单
 const isMobileMenuOpen = ref(false);
+const mobileTimelineOpen = ref(false);
 
 const toggleMobileMenu = () => {
   isMobileMenuOpen.value = !isMobileMenuOpen.value;
+  if (isMobileMenuOpen.value) {
+    mobileTimelineOpen.value = route.path === '/archive' || route.path === '/development-history';
+  }
 };
 
 const closeMobileMenu = () => {
   isMobileMenuOpen.value = false;
+};
+
+const handleNavCommand = (command: string | number | object) => {
+  if (typeof command === 'string') {
+    void router.push(command);
+  }
 };
 
 watch(isMobileMenuOpen, (open) => {
@@ -486,6 +590,24 @@ const handleLogout = async () => {
       0 8px 16px rgba(255, 142, 181, 0.12),
       inset 0 0 0 1px rgba(255, 196, 216, 0.4);
   }
+}
+
+.nav-dropdown {
+  flex: 0 0 auto;
+}
+
+.nav-dropdown-trigger {
+  border: 0;
+  background: transparent;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.nav-chevron {
+  flex: 0 0 auto;
+  margin-left: -1px;
+  font-size: 12px;
+  opacity: 0.68;
 }
 
 // 操作按钮
@@ -730,10 +852,53 @@ const handleLogout = async () => {
   transition: all 0.3s;
   cursor: pointer;
 
+  &.is-active {
+    background: var(--color-accent-soft);
+    color: var(--color-accent-strong);
+  }
+
   &:hover {
     background: var(--bg-hover);
     color: var(--primary);
   }
+}
+
+.mobile-nav-group {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.mobile-nav-group-trigger {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  font-family: inherit;
+  text-align: left;
+}
+
+.mobile-nav-chevron {
+  margin-left: auto;
+  font-size: 14px;
+  transition: transform var(--motion-duration-fast) var(--motion-ease-standard);
+}
+
+.mobile-nav-chevron.is-open {
+  transform: rotate(180deg);
+}
+
+.mobile-nav-children {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-left: 20px;
+}
+
+.mobile-nav-child {
+  min-height: 44px;
+  padding-top: 10px;
+  padding-bottom: 10px;
+  font-size: 15px;
 }
 
 .mobile-account-summary {
@@ -878,6 +1043,53 @@ const handleLogout = async () => {
   .action-btn {
     width: 34px;
     height: 34px;
+  }
+}
+</style>
+
+<style lang="scss">
+.timeline-nav-popper.el-popper {
+  overflow: hidden;
+  min-width: 176px;
+  border: 1px solid rgba(243, 199, 215, 0.72);
+  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 16px 36px rgba(96, 68, 82, 0.16);
+  backdrop-filter: blur(18px) saturate(1.08);
+}
+
+.timeline-nav-popper .el-dropdown-menu {
+  padding: 6px;
+  background: transparent;
+}
+
+.timeline-nav-popper .el-dropdown-menu__item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 40px;
+  padding: 0 12px;
+  border-radius: 6px;
+  color: var(--color-text-secondary);
+  font-size: 14px;
+}
+
+.timeline-nav-popper .el-dropdown-menu__item:hover,
+.timeline-nav-popper .el-dropdown-menu__item:focus,
+.timeline-nav-popper .el-dropdown-menu__item.is-active {
+  background: var(--color-accent-soft);
+  color: var(--color-accent-strong);
+}
+
+[data-theme='dark'] .timeline-nav-popper.el-popper {
+  border-color: rgba(255, 162, 194, 0.24);
+  background: rgba(43, 36, 49, 0.97);
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.28);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mobile-nav-chevron {
+    transition: none;
   }
 }
 </style>
