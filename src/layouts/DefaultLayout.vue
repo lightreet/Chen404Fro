@@ -1,6 +1,6 @@
 <template>
   <div class="default-layout">
-    <SakuraOverlay />
+    <SakuraOverlay :mode="sakuraSceneMode" />
     <!-- 顶部导航 -->
     <Header v-if="showHeader" />
 
@@ -38,11 +38,38 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue';
+import { useRoute } from 'vue-router';
 import Header from '@/components/Header/Header.vue';
 import Footer from '@/components/Footer/Footer.vue';
 import Live2D from '@/components/Live2D/Live2D.vue';
 import SakuraOverlay from '@/components/SakuraOverlay/SakuraOverlay.vue';
 import { useLayoutMobile } from '@/composables/useLayoutMobile';
+
+type SakuraSceneMode = 'hero' | 'ambient' | 'reading' | 'off';
+
+const route = useRoute();
+
+const sakuraSceneMode = computed<SakuraSceneMode>(() => {
+  const path = route.path;
+
+  if (path === '/') return 'hero';
+  if (/^\/article\/[^/]+$/.test(path) || path.startsWith('/memory-map/detail/')) {
+    return 'reading';
+  }
+  if (
+    path.startsWith('/admin')
+    || path.startsWith('/article/edit')
+    || path.startsWith('/music/tracks')
+    || path.startsWith('/memory-map/create')
+    || path.startsWith('/memory-map/edit')
+    || path.startsWith('/profile')
+  ) {
+    return 'off';
+  }
+
+  return 'ambient';
+});
 
 interface Props {
   showRightSidebar?: boolean;

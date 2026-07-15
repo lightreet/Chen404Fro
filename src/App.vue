@@ -7,15 +7,11 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted } from 'vue';
 import { useAppStore } from '@/stores';
 
 const appStore = useAppStore();
-
-onMounted(() => {
-  // 初始化主题
-  appStore.initTheme();
-});
+// 在子页面挂载前恢复本地展示偏好，避免主题或樱花强度闪烁
+appStore.initDisplayPreferences();
 </script>
 
 <style>
