@@ -2,62 +2,101 @@
   <DefaultLayout>
     <template #hero>
       <PageHero
+        class="about-hero"
         title="关于 Chen404"
         eyebrow="About"
-        subtitle="这里记录技术，也收藏生活与心绪"
+        subtitle="一个写技术、听音乐，也珍藏旅途与朋友的小站"
         :bg-image="heroBgImage"
         :bg-position="heroBgPosition"
-        min-height="70vh"
+        min-height="52vh"
         compact
       />
     </template>
 
     <div class="about-page">
-      <section class="glass-panel community-panel">
-        <div class="community-layout">
-          <div class="community-main">
-            <div class="community-copy">
-              <span class="eyebrow">Member Constellation</span>
-              <h2 class="panel-title">从一个人，到一片星群</h2>
-            </div>
-            <UserProfileCard
-              v-if="activeMember"
-              :user="activeMember"
-              :owner-id="owner?.id"
-              class="member-preview-card"
-            />
+      <section class="community-section" aria-labelledby="about-community-title">
+        <header class="section-heading">
+          <div>
+            <h2 id="about-community-title">一起停留的人</h2>
+            <p>{{ communitySummary }}</p>
           </div>
+          <button
+            v-if="canToggleMembers"
+            type="button"
+            class="member-toggle"
+            :aria-expanded="membersExpanded"
+            @click="membersExpanded = !membersExpanded"
+          >
+            {{ memberToggleLabel }}
+          </button>
+        </header>
 
-          <div class="community-side">
-            <div class="community-aside">
-              <p class="community-hint">鼠标悬浮头像即可切换预览，点击头像可以打开完整成员卡片。</p>
-              <div class="community-stats">
-                <span class="community-stat">已注册 {{ memberCount }} 位成员</span>
-                <span class="community-stat">知友 {{ trustedCount }} 位</span>
-                <span class="community-stat">悬浮头像可预览成员卡片</span>
-              </div>
-            </div>
+        <div v-if="isMembersLoading" class="member-status" role="status">
+          正在加载成员信息…
+        </div>
 
-            <div class="member-cloud">
+        <div v-else-if="activeMember" class="community-layout">
+          <article class="member-preview">
+            <img
+              :src="getMemberAvatar(activeMember)"
+              :alt="getMemberDisplayName(activeMember)"
+              @error="handleAvatarError"
+            />
+            <div class="member-preview__content">
+              <span class="member-role">{{ getMemberRoleLabel(activeMember) }}</span>
+              <h3>{{ getMemberDisplayName(activeMember) }}</h3>
+              <p v-if="activeMember.username" class="member-handle">@{{ activeMember.username }}</p>
+              <p class="member-bio">{{ getMemberBio(activeMember) }}</p>
               <button
-                v-for="(member, index) in displayMembers"
+                type="button"
+                class="member-card-button"
+                @click="openMemberCard(activeMember)"
+              >
+                查看成员卡片
+              </button>
+            </div>
+          </article>
+
+          <div class="member-picker">
+            <p class="member-picker__label">选择头像预览成员，打开卡片查看详情</p>
+            <div class="member-list">
+              <button
+                v-for="member in visibleMembers"
                 :key="member.id"
                 type="button"
-                class="member-orb"
-                :class="[memberIdentityClass(member), { 'is-active': activeMember?.id === member.id }]"
-                :style="getMemberOrbStyle(index)"
-                :aria-label="`查看 ${getMemberDisplayName(member)} 的信息卡片`"
+                class="member-option"
+                :class="{ 'is-active': String(activeMember.id) === String(member.id) }"
+                :aria-label="`预览 ${getMemberDisplayName(member)}`"
+                :aria-pressed="String(activeMember.id) === String(member.id)"
+                :title="getMemberDisplayName(member)"
                 @mouseenter="setActiveMember(member.id)"
                 @focus="setActiveMember(member.id)"
-                @click="openMemberCard(member)"
+                @click="setActiveMember(member.id)"
               >
-                <span class="member-orb__glow"></span>
-                <span class="member-orb__ring"></span>
-                <img :src="getMemberAvatar(member)" :alt="getMemberDisplayName(member)" />
-                <span class="member-orb__label">{{ getMemberDisplayName(member) }}</span>
+                <img
+                  :src="getMemberAvatar(member)"
+                  alt=""
+                  @error="handleAvatarError"
+                />
+                <span>
+                  <strong>{{ getMemberDisplayName(member) }}</strong>
+                  <small>{{ getMemberRoleLabel(member) }}</small>
+                </span>
               </button>
             </div>
           </div>
+        </div>
+
+        <div v-else class="member-status">
+          <p>{{ membersLoadFailed ? '成员信息暂时没有加载成功。' : '这里还没有成员信息。' }}</p>
+          <button
+            v-if="membersLoadFailed"
+            type="button"
+            class="member-card-button"
+            @click="loadAboutPage"
+          >
+            重新加载成员
+          </button>
         </div>
       </section>
 
@@ -67,63 +106,56 @@
         :owner-id="owner?.id"
       />
 
-      <div class="about-grid">
-        <section class="glass-panel story-panel">
-          <span class="eyebrow">Why We Gather</span>
-          <h2 class="panel-title">让“关于”不再只是一个人的独白</h2>
-          <p class="panel-text">
-            这里会认真展示每一位已经注册的成员。头像、名字和一点点介绍放在一起，
-            让这个小站从个人记录，慢慢变成一片有人停留的共同角落。
-          </p>
-          <div class="tech-tags">
-            <span v-for="tech in techs" :key="tech" class="tech-tag">{{ tech }}</span>
-          </div>
-        </section>
+      <section class="site-notes" aria-labelledby="about-site-notes-title">
+        <div class="site-notes__mark" aria-hidden="true">
+          <span>Chen</span>
+          <strong>404</strong>
+        </div>
 
-        <section class="glass-panel contact-panel">
-          <span class="eyebrow">Contact & Signals</span>
-          <h2 class="panel-title">如果你也想留下痕迹，我们总会在这里相遇</h2>
-          <div class="contact-list">
-            <a v-if="siteEmail" :href="`mailto:${siteEmail}`" class="contact-item">
-              <UiIcon name="Message" />
-              <span>{{ siteEmail }}</span>
-            </a>
-            <a v-if="githubLink" :href="githubLink" class="contact-item" target="_blank" rel="noreferrer">
-              <UiIcon name="Link" />
-              <span>GitHub</span>
-            </a>
-            <div class="contact-item contact-item--muted">
-              <span class="contact-item__label">成员数</span>
-              <strong>{{ memberCount }}</strong>
-            </div>
-            <div class="contact-item contact-item--muted">
-              <span class="contact-item__label">知友</span>
-              <strong>{{ trustedCount }}</strong>
-            </div>
-            <div v-if="!siteEmail && !githubLink" class="contact-empty">
-              联系方式会在站点配置完善后展示在这里。
-            </div>
-          </div>
-        </section>
-      </div>
+        <div class="site-notes__copy">
+          <h2 id="about-site-notes-title">有想聊的文章、歌或旅途，欢迎来信。</h2>
+          <p>这里的内容由 {{ ownerName }} 持续整理，代码与项目记录放在 GitHub。</p>
+        </div>
+
+        <nav v-if="contactEmail || githubLink" class="site-links" aria-label="联系站长">
+          <a
+            v-if="contactEmail"
+            :href="`mailto:${contactEmail}`"
+            :aria-label="`写邮件到 ${contactEmail}`"
+            :title="contactEmail"
+            class="site-link site-link--primary"
+          >
+            <UiIcon name="Message" />
+            <span>写封邮件</span>
+          </a>
+          <a
+            v-if="githubLink"
+            :href="githubLink"
+            target="_blank"
+            rel="noreferrer"
+            class="site-link site-link--secondary"
+          >
+            <UiIcon name="Link" />
+            <span>查看 GitHub</span>
+          </a>
+        </nav>
+        <p v-else class="contact-empty">联系方式将在站点配置完善后显示。</p>
+      </section>
     </div>
   </DefaultLayout>
 </template>
 
 <script setup lang="ts">
-import dayjs from 'dayjs';
 import { computed, onMounted, ref, watch } from 'vue';
 import type { SiteOwner } from '@/types';
 import { getSiteMembers, getSiteOwner, type SiteMember } from '@/api/home';
 import PageHero from '@/components/PageHero/PageHero.vue';
-import UserProfileCard from '@/components/UserProfile/UserProfileCard.vue';
 import UserProfilePopover from '@/components/UserProfile/UserProfilePopover.vue';
 import { UiIcon } from '@/components/ui';
 import { useSiteConfig } from '@/composables/useSiteConfig';
 import DefaultLayout from '@/layouts/DefaultLayout.vue';
 import { resolveHeroImagePosition } from '@/utils/siteConfig';
 
-const techs = ref(['Vue 3', 'TypeScript', 'Spring Boot', 'Java', 'MySQL', 'Redis']);
 const DEFAULT_ABOUT_HERO =
   'https://images.unsplash.com/photo-1498050108023-c5249f4df085?w=1920&q=80';
 const DEFAULT_ABOUT_HERO_POSITION = '50% 42%';
@@ -132,7 +164,7 @@ const DEFAULT_MEMBER_AVATAR = '/default-member-avatar.svg';
 const DEFAULT_GITHUB_LINK = 'https://github.com/lightreet';
 const LEGACY_GITHUB_LINK = 'https://github.com/chen404';
 const LEGACY_DEFAULT_AVATAR = '/default-avatar.jpg';
-
+const INITIAL_MEMBER_LIMIT = 4;
 const heroBgImage = ref(DEFAULT_ABOUT_HERO);
 const heroBgPosition = ref(DEFAULT_ABOUT_HERO_POSITION);
 const owner = ref<SiteOwner | null>(null);
@@ -142,6 +174,9 @@ const selectedMember = ref<SiteMember | null>(null);
 const profilePopoverVisible = ref(false);
 const siteEmail = ref('');
 const githubLink = ref('');
+const membersExpanded = ref(false);
+const isMembersLoading = ref(true);
+const membersLoadFailed = ref(false);
 const { loadSiteConfig } = useSiteConfig();
 
 const ownerMember = computed<SiteMember | null>(() => {
@@ -156,8 +191,10 @@ const ownerMember = computed<SiteMember | null>(() => {
     avatar: owner.value.avatar,
     bio: owner.value.bio,
     trustLevel: 1,
+    memberLabel: owner.value.memberLabel,
   };
 });
+
 const displayMembers = computed<SiteMember[]>(() => {
   const ownerId = owner.value?.id ?? null;
   const memberMap = new Map<string, SiteMember>();
@@ -185,9 +222,12 @@ const displayMembers = computed<SiteMember[]>(() => {
       return trustGap;
     }
 
-    return dayjs(left.createTime).valueOf() - dayjs(right.createTime).valueOf();
+    const leftTime = left.createTime ? Date.parse(left.createTime) : 0;
+    const rightTime = right.createTime ? Date.parse(right.createTime) : 0;
+    return leftTime - rightTime;
   });
 });
+
 const activeMember = computed(() => {
   if (!displayMembers.value.length) {
     return null;
@@ -198,12 +238,26 @@ const activeMember = computed(() => {
     displayMembers.value[0]
   );
 });
-const memberCount = computed(() => displayMembers.value.length);
-const trustedCount = computed(() =>
-  displayMembers.value.filter(
-    (member) => member.trustLevel === 1 && String(member.id) !== String(owner.value?.id)
-  ).length
+
+const visibleMembers = computed(() =>
+  membersExpanded.value
+    ? displayMembers.value
+    : displayMembers.value.slice(0, INITIAL_MEMBER_LIMIT)
 );
+const memberCount = computed(() => displayMembers.value.length);
+const canToggleMembers = computed(() => memberCount.value > INITIAL_MEMBER_LIMIT);
+const memberToggleLabel = computed(() =>
+  membersExpanded.value ? '收起成员' : `查看全部 ${memberCount.value} 位成员`
+);
+const communitySummary = computed(() =>
+  memberCount.value > 0
+    ? `${memberCount.value} 位成员在这里留下了名字，选择一位认识他们。`
+    : '成员们会在这里留下名字和一点介绍。'
+);
+const ownerName = computed(() =>
+  owner.value?.nickname?.trim() || owner.value?.username || DEFAULT_OWNER_NAME
+);
+const contactEmail = computed(() => siteEmail.value || owner.value?.email?.trim() || '');
 
 watch(
   displayMembers,
@@ -235,7 +289,21 @@ function getMemberDisplayName(member: SiteMember) {
 }
 
 function getMemberAvatar(member: SiteMember) {
-  return resolveMemberAvatar(member.avatar, DEFAULT_MEMBER_AVATAR);
+  return resolveMemberAvatar(member.avatar);
+}
+
+function getMemberBio(member: SiteMember) {
+  return member.bio?.trim() || '在 Chen404 留下了一颗名字。';
+}
+
+function getMemberRoleLabel(member: SiteMember) {
+  if (String(owner.value?.id) === String(member.id)) {
+    return '站长';
+  }
+  if (member.memberLabel?.trim()) {
+    return member.memberLabel.trim();
+  }
+  return member.trustLevel === 1 ? '知友' : '成员';
 }
 
 function resolveMemberAvatar(avatar?: string, fallback: string = DEFAULT_MEMBER_AVATAR) {
@@ -246,6 +314,13 @@ function resolveMemberAvatar(avatar?: string, fallback: string = DEFAULT_MEMBER_
   return normalized;
 }
 
+function handleAvatarError(event: Event) {
+  const image = event.currentTarget as HTMLImageElement | null;
+  if (!image) return;
+  image.onerror = null;
+  image.src = DEFAULT_MEMBER_AVATAR;
+}
+
 function normalizeGithubLink(link?: string) {
   const normalized = link?.trim();
   if (!normalized || normalized === LEGACY_GITHUB_LINK) {
@@ -254,456 +329,504 @@ function normalizeGithubLink(link?: string) {
   return normalized;
 }
 
-function memberIdentityClass(member: SiteMember) {
-  if (owner.value?.id === member.id) {
-    return 'is-owner';
-  }
-  if (member.trustLevel === 1) {
-    return 'is-trusted';
-  }
-  return 'is-member';
-}
+async function loadAboutPage() {
+  isMembersLoading.value = true;
+  membersLoadFailed.value = false;
 
-function getMemberOrbStyle(index: number) {
-  const sizes = [74, 58, 86, 66, 92, 62, 78, 70, 84, 60];
-  const shiftX = [-10, 14, -16, 20, 6, -20, 12, -24, 18, -8];
-  const shiftY = [-16, 18, -6, 24, -22, 10, -26, 14, -12, 22];
-  const delays = [0, 0.45, 1.1, 0.75, 1.5, 0.25, 1.9, 0.95, 1.35, 0.6];
+  const [configResult, ownerResult, memberResult] = await Promise.allSettled([
+    loadSiteConfig(true),
+    getSiteOwner(),
+    getSiteMembers(),
+  ]);
 
-  return {
-    '--orb-size': `${sizes[index % sizes.length]}px`,
-    '--orb-shift-x': `${shiftX[index % shiftX.length]}px`,
-    '--orb-shift-y': `${shiftY[index % shiftY.length]}px`,
-    '--orb-delay': `${delays[index % delays.length]}s`,
-  };
+  if (configResult.status === 'fulfilled') {
+    heroBgImage.value = configResult.value.heroImages?.about || DEFAULT_ABOUT_HERO;
+    heroBgPosition.value = resolveHeroImagePosition(
+      configResult.value,
+      'about',
+      DEFAULT_ABOUT_HERO_POSITION
+    );
+    siteEmail.value = configResult.value.email || '';
+    githubLink.value = normalizeGithubLink(configResult.value.github);
+  }
+
+  if (ownerResult.status === 'fulfilled' && ownerResult.value) {
+    owner.value = ownerResult.value;
+  }
+
+  if (memberResult.status === 'fulfilled') {
+    members.value = memberResult.value ?? [];
+  } else {
+    membersLoadFailed.value = true;
+  }
+
+  isMembersLoading.value = false;
 }
 
 onMounted(() => {
-  void Promise.allSettled([loadSiteConfig(true), getSiteOwner(), getSiteMembers()]).then(
-    ([configResult, ownerResult, memberResult]) => {
-      if (configResult.status === 'fulfilled') {
-        heroBgImage.value = configResult.value.heroImages?.about || DEFAULT_ABOUT_HERO;
-        heroBgPosition.value = resolveHeroImagePosition(configResult.value, 'about', DEFAULT_ABOUT_HERO_POSITION);
-        siteEmail.value = configResult.value.email || '';
-        githubLink.value = normalizeGithubLink(configResult.value.github);
-      }
-
-      if (ownerResult.status === 'fulfilled' && ownerResult.value) {
-        owner.value = ownerResult.value;
-      }
-
-      if (memberResult.status === 'fulfilled') {
-        members.value = memberResult.value ?? [];
-      }
-    }
-  );
+  void loadAboutPage();
 });
 </script>
 
 <style scoped lang="scss">
-.about-page {
-  width: 100%;
-  max-width: 1180px;
-  margin: 0 auto;
-  padding-top: 24px;
-  display: grid;
-  gap: 24px;
-}
-
-.glass-panel {
-  position: relative;
-  overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.72);
-  border-radius: 32px;
+.about-hero :deep(.page-hero__bg)::before {
+  content: '';
+  position: absolute;
+  inset: 0;
   background:
-    linear-gradient(145deg, rgba(255, 255, 255, 0.86), rgba(255, 246, 250, 0.72)),
-    radial-gradient(circle at top right, rgba(255, 212, 230, 0.4), transparent 42%);
-  box-shadow:
-    0 30px 60px rgba(214, 166, 189, 0.16),
-    inset 0 1px 0 rgba(255, 255, 255, 0.78);
-  backdrop-filter: blur(20px);
+    radial-gradient(circle at center, rgba(57, 37, 49, 0.34), rgba(57, 37, 49, 0.08) 58%),
+    linear-gradient(to bottom, rgba(43, 27, 38, 0.08), rgba(43, 27, 38, 0.2));
+  pointer-events: none;
 }
 
-.eyebrow {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 14px;
-  font-size: 12px;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: #ba7d97;
+.about-hero :deep(.page-hero__subtitle-text) {
+  color: #fff;
+  text-shadow: 0 2px 10px rgba(32, 20, 28, 0.7);
 }
 
-.panel-title {
+.about-page {
+  width: min(100%, 1120px);
+  margin: 0 auto;
+  padding: clamp(36px, 5vw, 64px) 24px 80px;
+  display: grid;
+  gap: clamp(52px, 7vw, 80px);
+}
+
+.section-heading h2,
+.site-notes h2 {
   margin: 0;
-  font-size: clamp(28px, 3vw, 38px);
-  line-height: 1.18;
-  color: #5e3a4a;
+  color: var(--color-text-primary);
+  text-wrap: balance;
 }
 
-.panel-text {
-  margin: 18px 0 0;
+.member-toggle:focus-visible,
+.member-option:focus-visible,
+.member-card-button:focus-visible,
+.site-links a:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 3px;
+}
+
+.community-section {
+  display: grid;
+  gap: 28px;
+}
+
+.section-heading {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 24px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--color-border-light);
+}
+
+.section-heading h2 {
+  font-size: clamp(26px, 3vw, 34px);
+  line-height: 1.2;
+}
+
+.section-heading p {
+  margin: 10px 0 0;
+  color: var(--color-text-secondary);
   font-size: 15px;
-  line-height: 1.9;
-  color: rgba(96, 69, 82, 0.86);
+  line-height: 1.65;
 }
 
-.community-panel {
-  --community-card-height: 484px;
-  padding: 30px;
+.member-toggle {
+  flex: 0 0 auto;
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--color-accent-strong);
+  font-size: 14px;
+  font-weight: 650;
+  cursor: pointer;
 }
 
 .community-layout {
   display: grid;
-  grid-template-columns: minmax(320px, 0.86fr) minmax(0, 1.14fr);
-  gap: 26px;
-  align-items: stretch;
+  grid-template-columns: minmax(0, 1.05fr) minmax(340px, 0.95fr);
+  gap: clamp(28px, 5vw, 56px);
+  align-items: center;
 }
 
-.community-main,
-.community-side {
-  display: flex;
-  flex-direction: column;
+.member-preview {
+  display: grid;
+  grid-template-columns: 104px minmax(0, 1fr);
   gap: 22px;
+  align-items: center;
+  padding: 28px;
+  border: 1px solid var(--color-border-light);
+  border-radius: 16px;
+  background: var(--color-surface);
+}
+
+.member-preview > img {
+  width: 104px;
+  height: 104px;
+  border-radius: 14px;
+  object-fit: cover;
+  background: var(--color-surface-muted);
+}
+
+.member-role {
+  color: var(--color-accent-strong);
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.member-preview h3 {
+  margin: 6px 0 0;
+  color: var(--color-text-primary);
+  font-size: 24px;
+  line-height: 1.25;
+}
+
+.member-handle {
+  margin: 3px 0 0;
+  color: var(--color-text-tertiary);
+  font-size: 13px;
+}
+
+.member-bio {
+  margin: 14px 0 0;
+  color: var(--color-text-secondary);
+  font-size: 15px;
+  line-height: 1.7;
+  text-wrap: pretty;
+}
+
+.member-card-button {
+  min-height: 42px;
+  margin-top: 18px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: var(--color-accent-soft);
+  color: var(--color-accent-strong);
+  font-size: 14px;
+  font-weight: 650;
+  cursor: pointer;
+  transition: background var(--motion-duration-fast) var(--motion-ease-standard);
+}
+
+.member-card-button:hover {
+  background: color-mix(in srgb, var(--color-accent) 20%, transparent);
+}
+
+.member-picker {
   min-width: 0;
 }
 
-.community-copy {
-  max-width: 100%;
-}
-
-.community-copy .panel-title {
-  max-width: none;
-  font-size: clamp(25px, 2.5vw, 36px);
-  line-height: 1.14;
-  letter-spacing: -0.02em;
-  white-space: nowrap;
-  color: #5f3a4d;
-  background: linear-gradient(135deg, #5f3a4d 0%, #9d6680 54%, #d99ab2 100%);
-  background-clip: text;
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-}
-
-.member-preview-card {
-  min-height: var(--community-card-height);
-}
-
-.community-hint {
-  margin: 0;
+.member-picker__label {
+  margin: 0 0 14px;
+  color: var(--color-text-tertiary);
   font-size: 13px;
-  line-height: 1.7;
-  color: rgba(116, 82, 96, 0.78);
+  line-height: 1.6;
 }
 
-.community-aside {
+.member-list {
   display: grid;
-  justify-items: start;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
-  max-width: 520px;
 }
 
-.community-stats {
+.member-option {
+  min-width: 0;
+  min-height: 76px;
   display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-start;
-  gap: 10px;
-}
-
-.community-stat {
-  display: inline-flex;
   align-items: center;
-  padding: 9px 14px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.7);
-  color: #9a6079;
-  font-size: 13px;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.82);
-}
-
-.member-cloud {
-  position: relative;
-  display: flex;
-  flex-wrap: wrap;
-  align-content: flex-start;
-  justify-content: center;
-  gap: 24px 22px;
-  min-height: var(--community-card-height);
-  padding: 22px 18px 18px;
-  border-radius: 30px;
-  background:
-    radial-gradient(circle at 20% 20%, rgba(255, 211, 227, 0.32), transparent 36%),
-    radial-gradient(circle at 80% 12%, rgba(225, 233, 255, 0.5), transparent 32%),
-    linear-gradient(160deg, rgba(255, 255, 255, 0.68), rgba(251, 239, 246, 0.8));
-  border: 1px solid rgba(255, 255, 255, 0.76);
-  overflow: hidden;
-}
-
-.member-cloud::before,
-.member-cloud::after {
-  content: '';
-  position: absolute;
-  border-radius: 50%;
-  pointer-events: none;
-}
-
-.member-cloud::before {
-  inset: 12% auto auto 8%;
-  width: 180px;
-  height: 180px;
-  background: radial-gradient(circle, rgba(255, 255, 255, 0.5), transparent 72%);
-}
-
-.member-cloud::after {
-  inset: auto 10% 6% auto;
-  width: 240px;
-  height: 240px;
-  background: radial-gradient(circle, rgba(244, 224, 255, 0.35), transparent 72%);
-}
-
-.member-orb {
-  position: relative;
-  z-index: 1;
-  width: var(--orb-size);
-  height: calc(var(--orb-size) + 30px);
-  padding: 0;
-  border: none;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--color-border-light);
+  border-radius: 12px;
   background: transparent;
+  color: var(--color-text-secondary);
+  text-align: left;
   cursor: pointer;
-  transform: translate(var(--orb-shift-x), var(--orb-shift-y));
-  animation: orb-float 7s ease-in-out infinite;
-  animation-delay: var(--orb-delay);
+  transition:
+    border-color var(--motion-duration-fast) var(--motion-ease-standard),
+    background var(--motion-duration-fast) var(--motion-ease-standard),
+    color var(--motion-duration-fast) var(--motion-ease-standard);
 }
 
-.member-orb__glow,
-.member-orb__ring {
-  position: absolute;
-  inset: 0 auto auto 50%;
-  transform: translateX(-50%);
-  border-radius: 50%;
+.member-option:hover,
+.member-option.is-active {
+  border-color: color-mix(in srgb, var(--color-accent) 48%, var(--color-border));
+  background: var(--color-accent-soft);
+  color: var(--color-text-primary);
 }
 
-.member-orb__glow {
-  top: 4px;
-  width: var(--orb-size);
-  height: var(--orb-size);
-  background: radial-gradient(circle, rgba(255, 214, 233, 0.5), transparent 72%);
-  filter: blur(4px);
-  opacity: 0.85;
-  transition: opacity 0.3s ease, transform 0.3s ease;
-}
-
-.member-orb__ring {
-  top: 4px;
-  width: calc(var(--orb-size) + 10px);
-  height: calc(var(--orb-size) + 10px);
-  border: 1px solid rgba(255, 255, 255, 0.72);
-  opacity: 0;
-  transition: opacity 0.32s ease, transform 0.32s ease;
-}
-
-.member-orb img {
-  position: absolute;
-  top: 4px;
-  left: 50%;
-  width: var(--orb-size);
-  height: var(--orb-size);
-  transform: translateX(-50%);
+.member-option img {
+  flex: 0 0 auto;
+  width: 50px;
+  height: 50px;
   border-radius: 50%;
   object-fit: cover;
-  border: 3px solid rgba(255, 255, 255, 0.84);
-  box-shadow: 0 18px 28px rgba(186, 130, 157, 0.2);
-  transition: transform 0.32s ease, box-shadow 0.32s ease, border-color 0.32s ease;
+  background: var(--color-surface-muted);
 }
 
-.member-orb__label {
-  position: absolute;
-  left: 50%;
-  bottom: 0;
-  transform: translateX(-50%);
-  max-width: 120px;
+.member-option span {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.member-option strong,
+.member-option small {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.member-option strong {
+  font-size: 14px;
+  font-weight: 650;
+}
+
+.member-option small {
+  color: var(--color-text-tertiary);
   font-size: 12px;
-  color: rgba(98, 67, 80, 0.76);
 }
 
-.member-orb:hover,
-.member-orb:focus-visible,
-.member-orb.is-active {
-  outline: none;
-
-  .member-orb__glow {
-    opacity: 1;
-    transform: translateX(-50%) scale(1.08);
-  }
-
-  .member-orb__ring {
-    opacity: 1;
-    transform: translateX(-50%) scale(1.03);
-  }
-
-  img {
-    transform: translateX(-50%) translateY(-4px) scale(1.06);
-    box-shadow: 0 24px 34px rgba(190, 128, 156, 0.28);
-    border-color: rgba(255, 255, 255, 0.94);
-  }
-}
-
-.about-grid {
+.member-status {
+  min-height: 160px;
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 24px;
-}
-
-.story-panel,
-.contact-panel {
+  place-items: center;
+  align-content: center;
+  gap: 4px;
   padding: 28px;
+  border: 1px solid var(--color-border-light);
+  border-radius: 16px;
+  background: var(--color-surface);
+  color: var(--color-text-secondary);
+  text-align: center;
 }
 
-.tech-tags {
+.member-status p {
+  margin: 0;
+}
+
+.site-notes {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(148px, 190px) minmax(0, 1fr);
+  align-items: center;
+  column-gap: clamp(28px, 5vw, 64px);
+  row-gap: 18px;
+  overflow: hidden;
+  padding: clamp(28px, 4vw, 48px);
+  border: 1px solid var(--color-border-light);
+  border-radius: 16px;
+  background: var(--color-surface);
+}
+
+.site-notes__mark {
+  width: 100%;
+  min-height: 156px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border-radius: 14px;
+  background: var(--color-accent-soft);
+  line-height: 0.82;
+  user-select: none;
+}
+
+.site-notes__mark span {
+  margin-left: 0.1em;
+  color: var(--color-accent-strong);
+  font-size: clamp(15px, 1.7vw, 20px);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.site-notes__mark strong {
+  color: var(--color-accent-strong);
+  font-family: "Patrick Hand", "ZCOOL KuaiLe", "Segoe Print", cursive;
+  font-size: clamp(68px, 7vw, 88px);
+  font-weight: 400;
+  letter-spacing: -0.03em;
+}
+
+.site-notes__copy {
+  align-self: end;
+  max-width: 620px;
+}
+
+.site-notes h2 {
+  margin: 0;
+  color: var(--color-text-primary);
+  font-size: clamp(24px, 2.8vw, 34px);
+  font-weight: 700;
+  line-height: 1.3;
+  letter-spacing: -0.02em;
+  text-wrap: balance;
+}
+
+.site-notes__copy p {
+  max-width: 42ch;
+  margin: 14px 0 0;
+  color: var(--color-text-secondary);
+  font-size: 15px;
+  line-height: 1.75;
+  text-wrap: pretty;
+}
+
+.site-links {
+  grid-column: 2;
   display: flex;
   flex-wrap: wrap;
   gap: 12px;
-  margin-top: 22px;
+  margin-top: -12px;
 }
 
-.tech-tag {
-  padding: 10px 16px;
-  background: rgba(255, 255, 255, 0.74);
-  border: 1px solid rgba(255, 255, 255, 0.8);
-  border-radius: 999px;
-  font-size: 13px;
-  color: #8f5d75;
-  transition: transform 0.28s ease, box-shadow 0.28s ease;
-  box-shadow: 0 10px 18px rgba(198, 154, 178, 0.08);
-}
-
-.tech-tag:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 14px 24px rgba(198, 154, 178, 0.14);
-}
-
-.contact-list {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 14px;
-  margin-top: 22px;
-}
-
-.contact-item {
-  display: flex;
+.site-links a {
+  min-height: 44px;
+  display: inline-flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  min-height: 62px;
-  padding: 14px 18px;
-  background: rgba(255, 255, 255, 0.7);
-  border: 1px solid rgba(255, 255, 255, 0.8);
-  border-radius: 20px;
-  color: #7c5366;
+  gap: 11px;
+  justify-content: center;
+  padding: 0 18px;
+  border-radius: var(--radius-pill);
+  font-size: 14px;
+  font-weight: 650;
   text-decoration: none;
-  transition: transform 0.28s ease, box-shadow 0.28s ease, background 0.28s ease;
+  transition:
+    background var(--motion-duration-fast) var(--motion-ease-standard),
+    color var(--motion-duration-fast) var(--motion-ease-standard),
+    transform var(--motion-duration-fast) var(--motion-ease-standard);
 }
 
-.contact-item:hover {
-  transform: translateY(-2px);
-  background: rgba(255, 255, 255, 0.82);
-  box-shadow: 0 16px 28px rgba(198, 154, 178, 0.12);
+.site-link--primary {
+  background: var(--color-accent);
+  color: #fff;
 }
 
-.contact-item--muted {
-  cursor: default;
+.site-link--secondary {
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text-primary);
 }
 
-.contact-item__label {
-  font-size: 13px;
-  color: rgba(119, 85, 99, 0.72);
+.site-links a:hover {
+  transform: translateY(-1px);
+}
+
+.site-link--primary:hover {
+  background: var(--primary-hover);
+  color: #fff;
+}
+
+.site-link--secondary:hover {
+  background: var(--color-accent-soft);
+  color: var(--color-accent-strong);
+}
+
+.site-links a:focus-visible {
+  outline: 2px solid var(--color-accent-strong);
+  outline-offset: 3px;
 }
 
 .contact-empty {
-  grid-column: 1 / -1;
-  padding: 16px 18px;
-  border-radius: 18px;
-  background: rgba(255, 255, 255, 0.6);
-  color: rgba(109, 78, 91, 0.72);
+  margin: 0;
+  color: var(--color-text-tertiary);
   font-size: 14px;
 }
 
-@keyframes orb-float {
-  0%,
-  100% {
-    transform: translate(var(--orb-shift-x), var(--orb-shift-y));
-  }
-  50% {
-    transform: translate(var(--orb-shift-x), calc(var(--orb-shift-y) - 10px));
-  }
-}
-
-@media (max-width: 1024px) {
-  .community-layout,
-  .about-grid {
+@media (max-width: 900px) {
+  .community-layout {
     grid-template-columns: 1fr;
   }
-
-  .community-copy .panel-title {
-    white-space: normal;
-  }
-
-  .member-preview-card,
-  .member-cloud {
-    min-height: 0;
-  }
-
-  .community-aside,
-  .community-hint {
-    max-width: none;
-  }
-
-  .community-aside {
-    justify-items: start;
-  }
-
-  .community-stats {
-    justify-content: flex-start;
-  }
 }
 
-@media (max-width: 768px) {
+@media (max-width: 640px) {
   .about-page {
-    gap: 18px;
+    padding: 32px 18px 56px;
+    gap: 44px;
   }
 
-  .community-panel,
-  .story-panel,
-  .contact-panel {
-    padding: 24px;
+  .section-heading {
+    align-items: start;
+    flex-direction: column;
+    gap: 8px;
   }
 
-  .panel-title {
-    font-size: 26px;
+  .member-preview {
+    grid-template-columns: 76px minmax(0, 1fr);
+    align-items: start;
+    gap: 16px;
+    padding: 20px;
   }
 
-  .community-copy .panel-title {
-    font-size: clamp(30px, 9vw, 38px);
-    white-space: normal;
+  .member-preview > img {
+    width: 76px;
+    height: 76px;
+    border-radius: 12px;
   }
 
-  .member-cloud {
-    gap: 18px 12px;
-    min-height: 0;
-    padding-inline: 12px;
+  .member-preview h3 {
+    font-size: 20px;
   }
 
-  .member-orb {
-    transform: none;
-    animation: none;
+  .member-bio,
+  .member-card-button {
+    grid-column: 1 / -1;
   }
 
-  .contact-list {
+  .member-list {
+    gap: 10px;
+  }
+
+  .member-option {
+    min-height: 68px;
+    gap: 9px;
+    padding: 8px;
+  }
+
+  .member-option img {
+    width: 44px;
+    height: 44px;
+  }
+
+  .site-notes {
     grid-template-columns: 1fr;
+    align-items: start;
+    gap: 24px;
+    padding: 28px 24px;
+  }
+
+  .site-notes__mark {
+    width: 124px;
+    min-height: 112px;
+  }
+
+  .site-notes__mark strong {
+    font-size: 68px;
+  }
+
+  .site-links {
+    grid-column: 1;
+    margin-top: 0;
+  }
+
+  .site-links a {
+    flex: 1 1 150px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .member-card-button,
+  .member-option,
+  .site-links a {
+    transition: none;
+  }
+
+  .site-links a:hover {
+    transform: none;
   }
 }
 </style>
