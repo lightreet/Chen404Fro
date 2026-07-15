@@ -163,16 +163,18 @@ const projectedEntries = computed<EntryProjection[]>(() => {
     const left = 50 + rotatedX * 18 * centerBias
     const top = 45 + projectedY * 17 * centerBias
     const scale = 0.48 + depthRatio * 0.62
-    const opacity = 0.2 + depthRatio * 0.78
+    const opacity = 0.28 + depthRatio * 0.7
     const rotate = rotatedX * 12 + projectedY * 8 + (index % 2 ? 4 : -5)
     const activeScale = base.isSelected ? scale * 1.22 : base.isActiveStop ? scale * 1.08 : scale
+    // 未选中片段的照片仍需保持可辨识度，避免在浅色背景下"隐形"
+    const dimmedOpacity = Math.max(opacity * 0.55, 0.22)
 
     return {
       ...base,
       style: {
         left: `${left}%`,
         top: `${top}%`,
-        opacity: base.isDimmed ? opacity * 0.3 : opacity,
+        opacity: base.isDimmed ? dimmedOpacity : opacity,
         zIndex: String(Math.round((depth + 1) * 100)),
         transform: `translate(-50%, -50%) rotate(${rotate}deg) scale(${activeScale})`,
       },
@@ -275,9 +277,9 @@ onBeforeUnmount(() => {
 .travel-photo-board__switch button {
   min-height: 34px;
   padding: 0 15px;
-  border: 1px solid rgba(155, 59, 82, 0.28);
+  border: 1px solid rgba(215, 95, 135, 0.28);
   border-radius: 999px;
-  color: #9b3b52;
+  color: var(--detail-quiet-action, #926978);
   background: rgba(255, 253, 254, 0.94);
   font-size: 12px;
   font-weight: 600;
@@ -290,12 +292,16 @@ onBeforeUnmount(() => {
     transform var(--motion-duration-fast) var(--motion-ease-standard);
 }
 
-.travel-photo-board__switch button:hover,
+.travel-photo-board__switch button:hover {
+  color: var(--primary-dark, #e44d78);
+  border-color: rgba(215, 95, 135, 0.5);
+  transform: translateY(-1px);
+}
+
 .travel-photo-board__switch button.is-active {
   color: #fff;
-  border-color: rgba(155, 59, 82, 0.72);
-  background: #9b3b52;
-  transform: translateY(-1px);
+  border-color: transparent;
+  background: var(--primary, #fb7299);
 }
 
 .travel-photo-sphere {
@@ -345,7 +351,7 @@ onBeforeUnmount(() => {
   }
 
   &:focus-visible {
-    outline: 1px solid rgba(210, 132, 151, 0.9);
+    outline: 2px solid rgba(228, 77, 120, 0.8);
     outline-offset: 2px;
   }
 }
@@ -361,8 +367,8 @@ onBeforeUnmount(() => {
   filter: saturate(1.12) contrast(1.08);
   box-shadow:
     0 22px 42px rgba(106, 60, 80, 0.22),
-    0 0 0 2px rgba(155, 59, 82, 0.8),
-    0 0 0 7px rgba(248, 234, 242, 0.72);
+    0 0 0 2px rgba(215, 95, 135, 0.85),
+    0 0 0 7px rgba(255, 241, 246, 0.85);
 }
 
 .travel-photo-sphere__photo.is-dimmed {
@@ -380,7 +386,7 @@ onBeforeUnmount(() => {
   padding: 18px 28px 96px;
   overflow: auto;
   scrollbar-width: thin;
-  scrollbar-color: rgba(155, 59, 82, 0.34) transparent;
+  scrollbar-color: rgba(215, 95, 135, 0.32) transparent;
 }
 
 .travel-photo-grid__item {
@@ -388,7 +394,7 @@ onBeforeUnmount(() => {
   gap: 9px;
   padding: 0;
   border: 0;
-  color: #6f5963;
+  color: var(--detail-text, #565057);
   background: transparent;
   text-align: left;
   cursor: pointer;
@@ -408,7 +414,7 @@ onBeforeUnmount(() => {
 
 .travel-photo-grid__item span {
   overflow: hidden;
-  color: #78646f;
+  color: var(--detail-text-muted, #8a7a84);
   font-size: 12px;
   line-height: 1.45;
   text-overflow: ellipsis;
@@ -420,7 +426,7 @@ onBeforeUnmount(() => {
   transform: translateY(-2px);
   box-shadow:
     0 16px 30px rgba(120, 78, 96, 0.14),
-    0 0 0 2px rgba(155, 59, 82, 0.45);
+    0 0 0 2px rgba(215, 95, 135, 0.5);
 }
 
 .travel-photo-grid__item.is-dimmed img {

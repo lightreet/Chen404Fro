@@ -43,7 +43,15 @@ const routes: RouteRecordRaw[] = [
     name: 'Archive',
     component: () => import('@/views/Archive/Archive.vue'),
     meta: {
-      title: '时光轴',
+      title: '文章记录',
+    },
+  },
+  {
+    path: '/development-history',
+    name: 'DevelopmentHistory',
+    component: () => import('@/views/DevelopmentHistory/DevelopmentHistory.vue'),
+    meta: {
+      title: '开发历程',
     },
   },
   {
@@ -263,6 +271,12 @@ router.onError((err) => {
 
 // 路由守卫
 router.beforeEach(async (to, _from, next) => {
+  if (to.path === '/archive' && to.query.view === 'development') {
+    const { view: _legacyView, ...query } = to.query;
+    next({ path: '/development-history', query, hash: to.hash, replace: true });
+    return;
+  }
+
   const userStore = useUserStore();
   const { loadSiteConfig } = useSiteConfig();
   const title = to.meta.title as string;

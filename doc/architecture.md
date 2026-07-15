@@ -111,7 +111,8 @@ Route / Page -> Feature -> components/app (App*) -> components/ui (Ui*) -> desig
 /home                     首页兼容路径（重定向到 /）
 /article/:id              文章详情
 /article/edit/:id?        文章编辑（管理员）
-/archive                  归档
+/archive                  文章记录
+/development-history      开发历程
 /category                 分类总览
 /category/:id             分类详情
 /tag                      标签总览

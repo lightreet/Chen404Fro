@@ -71,6 +71,8 @@ import mdiSendOutline from '@iconify/icons-mdi/send-outline'
 import mdiShuffle from '@iconify/icons-mdi/shuffle'
 import mdiSort from '@iconify/icons-mdi/sort'
 import mdiSortVariant from '@iconify/icons-mdi/sort-variant'
+import mdiSourceBranch from '@iconify/icons-mdi/source-branch'
+import mdiSourceCommit from '@iconify/icons-mdi/source-commit'
 import mdiStar from '@iconify/icons-mdi/star'
 import mdiStarOutline from '@iconify/icons-mdi/star-outline'
 import mdiTagMultipleOutline from '@iconify/icons-mdi/tag-multiple-outline'
@@ -158,6 +160,8 @@ export const iconMap = {
   eye: mdiEyeOutline,
   grid: mdiViewGridOutline,
   list: mdiFormatListBulleted,
+  branch: mdiSourceBranch,
+  commit: mdiSourceCommit,
 
   // 媒体 / 音乐
   play: mdiPlay,

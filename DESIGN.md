@@ -246,6 +246,7 @@ Chen404 now has its own design system in code. This doc describes *intent*; the 
 - **Style:** floating translucent pill is a signature pattern.
 - **State:** selected route uses sakura tint and clear text contrast.
 - **Constraint:** navigation must not feel louder than the current page task.
+- **Hierarchy:** when a concept groups multiple peer destinations, expose the parent in global navigation and keep each child as a standalone route. Do not repeat that cross-page choice as a selector inside page content.
 
 ### Buttons
 
@@ -259,6 +260,9 @@ Chen404 now has its own design system in code. This doc describes *intent*; the 
 - **Article cards:** keep the current editorial image/text split. Preserve strong title hierarchy and metadata scanning.
 - **Category cards:** simple topic tiles are enough. Improve empty states and icon/category hierarchy before adding more decoration.
 - **Archive rows:** compact timeline rows should prioritize chronology and click targets. Do not turn archive into a card gallery.
+- **Development-history summary:** project metrics and the contribution heatmap share one parent surface with a quiet internal divider; they should not appear as two consecutive cards separated by page background.
+- **Development-history heatmap:** contribution cells scale with the available content width on desktop while remaining square. Keep a fixed minimum chart width and horizontal overflow on narrow screens; avoid fixed-size desktop charts that leave half the summary surface empty.
+- **Development-history rows:** the month index is a period selector, not a scrollspy over every month concatenated into one page. Render one selected month at a time and let its records expand into the normal page flow on every viewport; do not add a nested scrollbar inside the record area.
 - **Guestbook cards:** should feel like message notes on a desk. Composer, replies, like/reply/delete actions, and empty states need one shared material language.
 - **Admin/workbench cards:** flatter, denser, and more predictable than public cards.
 
