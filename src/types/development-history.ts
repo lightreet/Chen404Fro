@@ -29,3 +29,18 @@ export interface DevelopmentHistory {
   stale: boolean
   notice?: string | null
 }
+
+export interface GitHubDevelopmentAdminConfig {
+  owner: string
+  repositories: string[]
+  branch: string
+  token?: string
+  tokenConfigured?: boolean
+  tokenPreview?: string
+  clearToken?: boolean
+  cacheMinutes: number
+  apiCommitLimit: number
+  requestTimeoutSeconds: number
+  apiBaseUrl: string
+  webBaseUrl: string
+}
