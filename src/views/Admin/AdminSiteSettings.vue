@@ -1,20 +1,10 @@
 <template>
   <UiPanel icon="settings" title="站点配置" flush>
-    <template #actions>
-      <div v-if="activeTab !== 'ai'" class="settings-actions">
-        <UiButton icon="refresh" :loading="loading" @click="loadConfig">刷新</UiButton>
-        <UiButton variant="primary" :loading="saving" @click="saveConfig">保存配置</UiButton>
-      </div>
-    </template>
-
     <UiLoadingState :loading="loading" message="正在加载站点配置..." class="settings-body">
       <UiTabs v-model="activeTab" :items="tabItems" variant="line" class="settings-tabs">
         <section v-show="activeTab === 'basic'" class="settings-section">
             <div class="section-head">
-              <div>
-                <h3>站点基础信息</h3>
-              </div>
-              <UiBadge tone="success">已接入</UiBadge>
+              <h3>站点基础信息</h3>
             </div>
 
             <UiForm label-position="top" class="settings-form">
@@ -49,10 +39,7 @@
 
         <section v-show="activeTab === 'brand'" class="settings-section">
             <div class="section-head">
-              <div>
-                <h3>Logo、图标与版权</h3>
-              </div>
-              <UiBadge tone="warning">部分前台待接入</UiBadge>
+              <h3>Logo、图标与版权</h3>
             </div>
 
             <div class="brand-grid">
@@ -116,10 +103,7 @@
 
         <section v-show="activeTab === 'seo'" class="settings-section">
             <div class="section-head">
-              <div>
-                <h3>搜索展示信息</h3>
-              </div>
-              <UiBadge tone="success">已接入</UiBadge>
+              <h3>搜索展示信息</h3>
             </div>
 
             <UiForm label-position="top" class="settings-form">
@@ -143,62 +127,39 @@
 
         <section v-show="activeTab === 'runtime'" class="settings-section">
             <div class="section-head">
-              <div>
-                <h3>评论互动策略</h3>
-              </div>
+              <h3>评论互动策略</h3>
             </div>
 
-            <div class="runtime-grid">
-              <section class="runtime-panel">
-                <div class="runtime-panel__icon">审核</div>
-                <div class="runtime-panel__body">
-                  <div class="runtime-panel__head">
-                    <div>
-                      <h4>评论审核</h4>
-                      <p>控制新评论是否先进入待审核状态。</p>
-                    </div>
-                    <UiSwitch
-                      v-model="form.commentAudit"
-                      active-text="开启"
-                      inactive-text="关闭"
-                    />
-                  </div>
-                  <div class="runtime-panel__meta">
-                    <span class="runtime-chip runtime-chip--soft">推荐开启</span>
-                    <span class="runtime-note">开启后，除管理员外的新评论默认待审核。</span>
-                  </div>
+            <div class="runtime-list">
+              <section class="runtime-row">
+                <div>
+                  <h4>评论审核</h4>
+                  <p>开启后，普通用户的新评论先进入待审核状态。</p>
                 </div>
+                <UiSwitch
+                  v-model="form.commentAudit"
+                  active-text="开启"
+                  inactive-text="关闭"
+                />
               </section>
 
-              <section class="runtime-panel">
-                <div class="runtime-panel__icon">访客</div>
-                <div class="runtime-panel__body">
-                  <div class="runtime-panel__head">
-                    <div>
-                      <h4>游客评论</h4>
-                      <p>决定未登录用户能否在文章和留言板发言。</p>
-                    </div>
-                    <UiSwitch
-                      v-model="form.commentGuest"
-                      active-text="允许"
-                      inactive-text="关闭"
-                    />
-                  </div>
-                  <div class="runtime-panel__meta">
-                    <span class="runtime-chip">影响留言板和文章评论</span>
-                    <span class="runtime-note">关闭后，所有评论都需要先登录。</span>
-                  </div>
+              <section class="runtime-row">
+                <div>
+                  <h4>游客评论</h4>
+                  <p>关闭后，文章和留言板仅允许登录用户发言。</p>
                 </div>
+                <UiSwitch
+                  v-model="form.commentGuest"
+                  active-text="允许"
+                  inactive-text="关闭"
+                />
               </section>
             </div>
           </section>
 
         <section v-show="activeTab === 'hero'" class="settings-section">
             <div class="section-head">
-              <div>
-                <h3>页面封面</h3>
-              </div>
-              <UiBadge tone="success">已接入</UiBadge>
+              <h3>页面封面</h3>
             </div>
 
             <div class="hero-grid">
@@ -211,10 +172,7 @@
                   />
                 </div>
                 <div class="hero-panel__body">
-                  <div>
-                    <h4>{{ item.label }}</h4>
-                    <p>{{ item.desc }}</p>
-                  </div>
+                  <h4>{{ item.label }}</h4>
                   <div class="hero-actions">
                     <UiUpload
                       :show-file-list="false"
@@ -226,7 +184,7 @@
                     </UiUpload>
                     <UiButton
                       v-if="heroImages[item.key]"
-                      variant="text"
+                      variant="danger"
                       icon="delete"
                       @click="clearHeroImage(item.key)"
                     >
@@ -246,25 +204,31 @@
         <div v-show="activeTab === 'ai'">
           <AiAssistantSettings />
         </div>
+
+        <div v-if="activeTab === 'github-development'">
+          <GitHubDevelopmentSettings />
+        </div>
       </UiTabs>
 
-      <div v-if="activeTab !== 'ai'" class="settings-footer">
+      <AdminSettingsFooter v-if="!activeTabManagesOwnActions">
         <UiButton variant="text" @click="loadConfig">重置</UiButton>
         <UiButton variant="primary" :loading="saving" @click="saveConfig">保存配置</UiButton>
-      </div>
+      </AdminSettingsFooter>
     </UiLoadingState>
   </UiPanel>
 </template>
 
 <script setup lang="ts">
-import { onMounted, reactive, ref } from 'vue';
+import { computed, onMounted, reactive, ref } from 'vue';
 import { notify } from '@/lib/feedback';
-import { UiPanel, UiButton, UiTabs, UiBadge, UiForm, UiFormField, UiInput, UiLoadingState, UiSwitch, UiTextarea, UiUpload } from '@/components/ui';
+import { UiPanel, UiButton, UiTabs, UiForm, UiFormField, UiInput, UiLoadingState, UiSwitch, UiTextarea, UiUpload } from '@/components/ui';
 import type { UiTabItem } from '@/components/ui';
 import type { UploadRequestOptions } from '@/components/ui';
 import { getSiteConfig, updateSiteConfig } from '@/api/home';
 import { uploadSiteAsset } from '@/api/upload';
 import AiAssistantSettings from '@/views/Admin/components/AiAssistantSettings.vue';
+import AdminSettingsFooter from '@/views/Admin/components/AdminSettingsFooter.vue';
+import GitHubDevelopmentSettings from '@/views/Admin/components/GitHubDevelopmentSettings.vue';
 import HeroImageFocusEditor from '@/components/HeroImageFocusEditor/HeroImageFocusEditor.vue';
 import { useSiteConfig } from '@/composables/useSiteConfig';
 import type { SiteConfig } from '@/types';
@@ -276,6 +240,7 @@ const tabItems: UiTabItem[] = [
   { label: 'SEO', value: 'seo' },
   { label: '运行配置', value: 'runtime' },
   { label: '页面封面', value: 'hero' },
+  { label: '开发同步', value: 'github-development' },
   { label: 'AI 助手', value: 'ai' },
 ];
 
@@ -283,15 +248,15 @@ type HeroKey = 'home' | 'archive' | 'memory-map' | 'trust-request' | 'music' | '
 type AssetKey = 'siteLogo' | 'siteFavicon';
 type UploadingKey = HeroKey | AssetKey | '';
 
-const heroPages: Array<{ key: HeroKey; label: string; desc: string }> = [
-  { key: 'trust-request', label: '好友申请', desc: '好友申请页面顶部封面' },
-  { key: 'home', label: '首页', desc: '首页主视觉封面' },
-  { key: 'archive', label: '时光轴', desc: '时光轴页面顶部封面' },
-  { key: 'memory-map', label: '旅行地图', desc: '旅行纪念地图页面顶部封面' },
-  { key: 'music', label: '音乐馆', desc: '音乐馆页面顶部封面' },
-  { key: 'category', label: '分类页', desc: '分类列表顶部封面' },
-  { key: 'about', label: '关于页', desc: '关于页面顶部封面' },
-  { key: 'guestbook', label: '留言板', desc: '留言板顶部封面' },
+const heroPages: Array<{ key: HeroKey; label: string }> = [
+  { key: 'trust-request', label: '好友申请' },
+  { key: 'home', label: '首页' },
+  { key: 'archive', label: '时光轴' },
+  { key: 'memory-map', label: '旅行地图' },
+  { key: 'music', label: '音乐馆' },
+  { key: 'category', label: '分类页' },
+  { key: 'about', label: '关于页' },
+  { key: 'guestbook', label: '留言板' },
 ];
 const HERO_DEFAULT_POSITIONS: Record<HeroKey, string> = {
   home: '50% 58%',
@@ -307,6 +272,9 @@ const HERO_DEFAULT_POSITIONS: Record<HeroKey, string> = {
 const { setSiteConfig } = useSiteConfig();
 
 const activeTab = ref('basic');
+const activeTabManagesOwnActions = computed(() =>
+  activeTab.value === 'ai' || activeTab.value === 'github-development',
+);
 const loading = ref(false);
 const saving = ref(false);
 const uploadingKey = ref<UploadingKey>('');
@@ -527,53 +495,66 @@ onMounted(() => {
 </script>
 
 <style scoped lang="scss">
-.settings-header,
-.settings-actions,
 .section-head,
 .asset-actions,
-.hero-actions,
-.settings-footer {
+.hero-actions {
   display: flex;
   align-items: center;
-  gap: var(--spacing-md);
+  gap: var(--space-md);
   flex-wrap: wrap;
 }
 
-.settings-header,
-.section-head,
-.settings-footer {
+.section-head {
   justify-content: space-between;
 }
 
 .settings-body {
-  display: grid;
-  gap: 18px;
   padding: var(--space-lg);
-}
 
-.settings-section {
-  border: 1px solid rgba(235, 219, 228, 0.86);
-  border-radius: 8px;
-  background:
-    linear-gradient(145deg, rgba(255, 255, 255, 0.92), rgba(255, 249, 252, 0.76)),
-    radial-gradient(circle at right top, rgba(255, 214, 230, 0.2), transparent 40%);
+  > :deep(.ui-loading-state__content) {
+    display: grid;
+    gap: var(--space-lg);
+    min-width: 0;
+  }
 }
 
 .settings-tabs {
-  margin-bottom: 4px;
+  min-width: 0;
+
+  :deep(.ui-tabs__nav) {
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    scrollbar-width: none;
+  }
+
+  :deep(.ui-tabs__nav::-webkit-scrollbar) {
+    display: none;
+  }
+
+  :deep(.ui-tabs__tab) {
+    flex: 0 0 auto;
+    white-space: nowrap;
+  }
+
+  :deep(.ui-tabs__panel) {
+    margin-top: var(--space-lg);
+  }
 }
 
 .settings-section {
-  padding: 18px;
+  min-width: 0;
+  padding: 2px;
 }
 
 .section-head {
-  margin-bottom: 18px;
+  margin-bottom: var(--space-lg);
 
   h3 {
     margin: 0;
-    color: var(--text-primary);
+    color: var(--color-text-primary);
     font-size: 18px;
+    font-weight: 650;
+    letter-spacing: 0;
   }
 }
 
@@ -583,101 +564,40 @@ onMounted(() => {
   }
 }
 
-.field-hint {
-  margin: 8px 0 0;
-  color: var(--text-tertiary);
-  font-size: 12px;
-  line-height: 1.6;
-}
-
-.runtime-grid {
+.runtime-list {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 18px;
-}
-
-.runtime-panel {
-  display: grid;
-  grid-template-columns: 68px minmax(0, 1fr);
-  gap: 16px;
-  padding: 20px;
-  border: 1px solid rgba(235, 219, 228, 0.8);
-  border-radius: 16px;
-  background:
-    linear-gradient(145deg, rgba(255, 255, 255, 0.82), rgba(255, 248, 251, 0.72)),
-    radial-gradient(circle at right top, rgba(255, 223, 236, 0.18), transparent 42%);
-  box-shadow: 0 14px 28px rgba(212, 180, 194, 0.08);
-}
-
-.runtime-panel__icon {
-  width: 68px;
-  height: 68px;
-  display: grid;
-  place-items: center;
-  border-radius: 22px;
-  background: linear-gradient(135deg, rgba(255, 229, 239, 0.88), rgba(239, 244, 255, 0.8));
-  color: #b97792;
-  font-size: 14px;
-  font-weight: 600;
-  letter-spacing: 0.08em;
-}
-
-.runtime-panel__body {
-  min-width: 0;
-}
-
-.runtime-panel__head {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
   gap: 12px;
+}
+
+.runtime-row {
+  --runtime-tint: var(--primary);
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-lg);
+  min-height: 88px;
+  padding: var(--space-md) var(--space-lg);
+  border-radius: var(--radius-lg);
+  background: color-mix(in oklch, var(--color-surface) 92%, var(--runtime-tint));
+
+  &:nth-child(2) {
+    --runtime-tint: oklch(72% 0.08 310);
+  }
 
   h4 {
     margin: 0;
-    color: #573848;
-    font-size: 17px;
+    color: color-mix(in oklch, var(--color-text-primary) 90%, var(--runtime-tint));
+    font-size: 15px;
+    font-weight: 620;
   }
 
   p {
-    margin: 8px 0 0;
-    color: rgba(95, 73, 86, 0.72);
-    font-size: 13px;
-    line-height: 1.7;
+    margin: 5px 0 0;
+    color: color-mix(in oklch, var(--color-text-primary) 68%, var(--runtime-tint));
+    font-size: 12px;
+    line-height: 1.6;
   }
-}
-
-.runtime-panel__meta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  margin-top: 14px;
-}
-
-.runtime-chip,
-.runtime-note {
-  display: inline-flex;
-  align-items: center;
-  min-height: 30px;
-  padding: 0 12px;
-  border-radius: 999px;
-  font-size: 12px;
-}
-
-.runtime-chip {
-  background: rgba(255, 239, 245, 0.92);
-  border: 1px solid rgba(237, 203, 219, 0.92);
-  color: #9f6a82;
-}
-
-.runtime-chip--soft {
-  background: rgba(243, 249, 255, 0.9);
-  border-color: rgba(208, 223, 243, 0.92);
-  color: #6e7f9d;
-}
-
-.runtime-note {
-  background: rgba(255, 255, 255, 0.72);
-  color: rgba(95, 73, 86, 0.7);
 }
 
 .form-grid {
@@ -704,20 +624,18 @@ onMounted(() => {
   display: grid;
   grid-template-columns: 132px minmax(0, 1fr);
   gap: 16px;
-  padding: 16px;
-  border: 1px solid rgba(235, 219, 228, 0.78);
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.72);
+  padding: var(--space-md);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface-muted);
 }
 
 .asset-preview {
   min-height: 116px;
   display: grid;
   place-items: center;
-  border-radius: 8px;
-  background:
-    linear-gradient(135deg, rgba(255, 245, 249, 0.92), rgba(240, 246, 255, 0.86));
-  color: #b68098;
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  color: var(--color-text-tertiary);
   font-size: 13px;
 
   img {
@@ -743,7 +661,7 @@ onMounted(() => {
 
   p {
     margin: 6px 0 12px;
-    color: var(--text-tertiary);
+    color: var(--color-text-secondary);
     font-size: 12px;
     line-height: 1.6;
   }
@@ -761,70 +679,54 @@ onMounted(() => {
 }
 
 .hero-panel {
-  border: 1px solid rgba(235, 219, 228, 0.78);
-  border-radius: 8px;
+  --hero-tint: oklch(72% 0.08 310);
+
+  border: 1px solid color-mix(in oklch, var(--color-border-light) 82%, var(--hero-tint));
+  border-radius: var(--radius-lg);
   overflow: hidden;
-  background: rgba(255, 255, 255, 0.74);
+  background: color-mix(in oklch, var(--color-surface) 97%, var(--hero-tint));
   align-self: start;
 }
 
 .hero-preview {
   padding: 14px;
-  background:
-    linear-gradient(135deg, rgba(93, 66, 82, 0.78), rgba(145, 111, 132, 0.66));
+  background: color-mix(in oklch, var(--color-surface) 93%, var(--hero-tint));
 }
 
 .hero-panel__body {
   display: grid;
   gap: 12px;
   padding: 15px;
+  background: color-mix(in oklch, var(--color-surface) 97%, var(--hero-tint));
 
   h4 {
     margin: 0;
-    color: var(--text-primary);
+    color: color-mix(in oklch, var(--color-text-primary) 90%, var(--hero-tint));
     font-size: 15px;
+    font-weight: 650;
   }
-
-  p {
-    margin: 4px 0 0;
-    color: var(--text-tertiary);
-    font-size: 12px;
-  }
-}
-
-.settings-footer {
-  padding-top: 2px;
 }
 
 @media (max-width: 1080px) {
   .brand-grid,
   .hero-grid,
-  .runtime-grid,
   .form-grid {
     grid-template-columns: 1fr;
   }
 }
 
 @media (max-width: 760px) {
-  .settings-header,
-  .section-head,
-  .settings-footer {
-    align-items: flex-start;
-    flex-direction: column;
-  }
-
-  .settings-actions,
-  .settings-footer {
-    width: 100%;
-
-    :deep(.el-button) {
-      flex: 1;
-    }
+  .settings-body {
+    padding: var(--space-md);
   }
 
   .asset-panel {
     width: 100%;
     grid-template-columns: 1fr;
+  }
+
+  .runtime-row {
+    align-items: flex-start;
   }
 }
 </style>
