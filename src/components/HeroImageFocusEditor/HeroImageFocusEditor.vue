@@ -282,12 +282,10 @@ function clamp(value: number, min: number, max: number) {
   overflow: hidden;
   width: 100%;
   border-radius: 20px;
-  background:
-    linear-gradient(135deg, rgba(74, 58, 83, 0.88), rgba(126, 95, 115, 0.8)),
-    radial-gradient(circle at top left, rgba(255, 214, 232, 0.18), transparent 38%);
+  background: color-mix(in oklch, var(--color-surface) 94%, var(--hero-tint, oklch(72% 0.06 295)));
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.18),
-    0 20px 36px rgba(49, 33, 47, 0.16);
+    inset 0 0 0 1px color-mix(in oklch, var(--hero-tint, oklch(72% 0.06 295)) 18%, transparent),
+    0 8px 16px color-mix(in oklch, var(--hero-tint, oklch(72% 0.04 295)) 10%, transparent);
   touch-action: none;
 }
 
@@ -318,7 +316,7 @@ function clamp(value: number, min: number, max: number) {
   display: grid;
   place-items: center;
   padding: 24px;
-  color: rgba(255, 243, 248, 0.82);
+  color: color-mix(in oklch, var(--color-text-primary) 80%, var(--hero-tint, oklch(72% 0.06 295)));
   font-size: 13px;
   text-align: center;
 }
@@ -339,9 +337,9 @@ function clamp(value: number, min: number, max: number) {
   min-height: 28px;
   padding: 0 12px;
   border-radius: 999px;
-  background: rgba(25, 18, 31, 0.54);
-  border: 1px solid rgba(255, 232, 240, 0.2);
-  color: rgba(255, 244, 248, 0.92);
+  background: color-mix(in oklch, var(--color-surface) 88%, transparent);
+  border: 1px solid color-mix(in oklch, var(--hero-tint, oklch(72% 0.06 295)) 22%, transparent);
+  color: color-mix(in oklch, var(--color-text-primary) 86%, var(--hero-tint, oklch(72% 0.06 295)));
   font-size: 12px;
   backdrop-filter: blur(8px);
 }
@@ -389,7 +387,7 @@ function clamp(value: number, min: number, max: number) {
 
   p {
     margin: 0;
-    color: var(--text-tertiary);
+    color: color-mix(in oklch, var(--color-text-primary) 72%, var(--hero-tint, oklch(72% 0.06 295)));
     font-size: 12px;
     line-height: 1.7;
   }
@@ -409,9 +407,9 @@ function clamp(value: number, min: number, max: number) {
   min-height: 28px;
   padding: 0 10px;
   border-radius: 999px;
-  background: rgba(255, 245, 248, 0.88);
-  border: 1px solid rgba(233, 212, 222, 0.92);
-  color: #9b6880;
+  background: color-mix(in oklch, var(--color-surface) 96%, var(--hero-tint, oklch(72% 0.06 295)));
+  border: 1px solid color-mix(in oklch, var(--hero-tint, oklch(72% 0.06 295)) 20%, transparent);
+  color: color-mix(in oklch, var(--color-text-primary) 76%, var(--hero-tint, oklch(72% 0.06 295)));
   font-size: 12px;
 }
 </style>

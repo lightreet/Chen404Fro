@@ -1,35 +1,32 @@
 <template>
   <UiLoadingState :loading="loading" message="正在加载 AI 配置..." class="ai-settings">
-    <div class="ai-settings__hero">
-      <div>
-        <p class="eyebrow">Lyra Control Room</p>
+    <header class="ai-settings__header">
+      <div class="title-row">
         <h3>AI 助手配置</h3>
+        <UiBadge :tone="form.llm.enabled ? 'success' : 'info'">
+          {{ form.llm.enabled ? '已启用' : '已停用' }}
+        </UiBadge>
       </div>
-      <div class="hero-actions">
-        <UiButton icon="refresh" :loading="loading" @click="loadConfig">重新加载</UiButton>
-        <UiButton icon="connection" :loading="testing" @click="testConnection">测试连接</UiButton>
-        <UiButton variant="primary" :loading="saving" @click="saveConfig">保存 AI 配置</UiButton>
-      </div>
-    </div>
+    </header>
 
-    <div class="status-grid">
-      <div class="status-card">
-        <span>模型</span>
-        <strong>{{ form.llm.model || '未指定' }}</strong>
+    <dl class="status-strip">
+      <div>
+        <dt>模型</dt>
+        <dd>{{ form.llm.model || '未指定' }}</dd>
       </div>
-      <div class="status-card">
-        <span>API Key</span>
-        <strong>{{ form.llm.apiKeyConfigured ? form.llm.apiKeyPreview || '已配置' : '未配置' }}</strong>
+      <div>
+        <dt>API Key</dt>
+        <dd>{{ form.llm.apiKeyConfigured ? form.llm.apiKeyPreview || '已配置' : '未配置' }}</dd>
       </div>
-      <div class="status-card">
-        <span>聊天能力</span>
-        <strong>{{ form.chat.enabled ? '已开启' : '已关闭' }}</strong>
+      <div>
+        <dt>聊天能力</dt>
+        <dd>{{ form.chat.enabled ? '已开启' : '已关闭' }}</dd>
       </div>
-      <div class="status-card">
-        <span>站内检索</span>
-        <strong>{{ form.chat.retrievalEnabled ? '已开启' : '已关闭' }}</strong>
+      <div>
+        <dt>站内检索</dt>
+        <dd>{{ form.chat.retrievalEnabled ? '已开启' : '已关闭' }}</dd>
       </div>
-    </div>
+    </dl>
 
     <UiTabs v-model="activePane" :items="paneItems" variant="line" class="ai-tabs">
       <div v-show="activePane === 'llm'">
@@ -68,10 +65,10 @@
           </UiForm>
 
           <UiForm label-position="top" class="settings-form">
-            <UiFormField label="Temperature">
+            <UiFormField label="回复随机度">
               <UiSlider v-model="form.llm.temperature" :min="0" :max="2" :step="0.1" show-input />
             </UiFormField>
-            <UiFormField label="Max Tokens">
+            <UiFormField label="最大输出 Token">
               <UiNumberField v-model="form.llm.maxTokens" :min="128" :max="8192" :step="128" />
             </UiFormField>
             <UiFormField label="超时时间（秒）">
@@ -155,9 +152,6 @@
                 placeholder="留空则使用 maid-companion-task-prompt.txt 默认模板"
               />
             </UiFormField>
-            <div class="persona-actions">
-              <UiButton variant="primary" :loading="saving" @click="saveConfig">保存提示词设置</UiButton>
-            </div>
           </UiForm>
         </div>
       </div>
@@ -242,14 +236,25 @@
       <p v-if="testResult.sampleText">{{ testResult.sampleText }}</p>
       <p v-if="testResult.latencyMs">耗时：{{ testResult.latencyMs }}ms</p>
     </div>
+
+    <AdminSettingsFooter>
+      <UiButton variant="text" :disabled="saving || testing" @click="loadConfig">重置</UiButton>
+      <UiButton icon="connection" :loading="testing" :disabled="saving" @click="testConnection">
+        测试连接
+      </UiButton>
+      <UiButton variant="primary" :loading="saving" :disabled="testing" @click="saveConfig">
+        保存配置
+      </UiButton>
+    </AdminSettingsFooter>
   </UiLoadingState>
 </template>
 
 <script setup lang="ts">
 import { onMounted, reactive, ref } from 'vue';
 import { notify } from '@/lib/feedback';
-import { UiButton, UiTabs, UiTooltip, UiForm, UiFormField, UiIcon, UiInput, UiLoadingState, UiSwitch, UiSelect, UiSlider, UiNumberField, UiTextarea } from '@/components/ui';
+import { UiBadge, UiButton, UiTabs, UiTooltip, UiForm, UiFormField, UiIcon, UiInput, UiLoadingState, UiSwitch, UiSelect, UiSlider, UiNumberField, UiTextarea } from '@/components/ui';
 import type { UiTabItem } from '@/components/ui';
+import AdminSettingsFooter from '@/views/Admin/components/AdminSettingsFooter.vue';
 import { getAiAdminConfig, testAiAdminConfig, updateAiAdminConfig } from '@/api/ai-admin';
 import type { AiAdminConfig, AiConfigTestResponse } from '@/types';
 
@@ -382,95 +387,112 @@ onMounted(() => {
 
 <style scoped lang="scss">
 .ai-settings {
-  display: grid;
-  gap: 18px;
   min-width: 0;
+
+  > :deep(.ui-loading-state__content) {
+    display: grid;
+    gap: 28px;
+    min-width: 0;
+  }
 }
 
-.ai-settings__hero,
-.status-card,
-.settings-form {
-  border: 1px solid rgba(235, 219, 228, 0.86);
-  background:
-    linear-gradient(145deg, rgba(255, 255, 255, 0.94), rgba(255, 249, 252, 0.78)),
-    radial-gradient(circle at right top, rgba(255, 214, 230, 0.24), transparent 42%);
-  box-shadow: 0 16px 32px rgba(151, 106, 127, 0.06);
-}
-
-.ai-settings__hero {
+.ai-settings__header,
+.title-row {
   display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 18px;
-  padding: 20px;
-  border-radius: 18px;
-  min-width: 0;
+  align-items: center;
+}
+
+.ai-settings__header {
+  min-height: 32px;
+}
+
+.title-row {
+  gap: 10px;
 
   h3 {
-    margin: 4px 0 8px;
-    color: #573848;
-    font-size: 22px;
-  }
-
-  p {
-    max-width: 760px;
     margin: 0;
-    color: rgba(96, 72, 86, 0.72);
-    line-height: 1.8;
+    color: var(--color-text-primary);
+    font-size: 20px;
+    letter-spacing: 0;
   }
 }
 
-.eyebrow {
-  color: #d984a5 !important;
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-}
-
-.hero-actions {
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  flex: 0 1 360px;
-
-  :deep(.el-button) {
-    margin-left: 0;
-  }
-}
-
-.status-grid {
+.status-strip {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 12px;
+  margin: 0;
+  padding: 0;
   min-width: 0;
 }
 
-.status-card {
-  padding: 16px;
-  border-radius: 16px;
+.status-strip > div {
+  --metric-tint: var(--primary);
+
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 76px;
+  padding: 14px 16px;
+  border-radius: var(--radius-lg);
+  background: color-mix(in oklch, var(--color-surface) 92%, var(--metric-tint));
+  min-width: 0;
+}
+
+.status-strip > div:nth-child(2) {
+  --metric-tint: oklch(72% 0.08 310);
+}
+
+.status-strip > div:nth-child(3) {
+  --metric-tint: oklch(72% 0.08 245);
+}
+
+.status-strip > div:nth-child(4) {
+  --metric-tint: var(--success);
+}
+
+.status-strip dt {
+  color: color-mix(in oklch, var(--color-text-primary) 60%, var(--metric-tint));
+  font-size: 11px;
+}
+
+.status-strip dd {
+  overflow: hidden;
+  margin: 6px 0 0;
+  color: color-mix(in oklch, var(--color-text-primary) 90%, var(--metric-tint));
+  font-size: 14px;
+  font-weight: 620;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ai-tabs {
   min-width: 0;
 
-  span {
-    display: block;
-    color: rgba(96, 72, 86, 0.62);
-    font-size: 12px;
+  :deep(.ui-tabs__panel) {
+    padding-top: 24px;
   }
 
-  strong {
-    display: block;
-    margin-top: 8px;
-    color: #573848;
-    font-size: 16px;
-    word-break: break-all;
+  :deep(.ui-tabs__nav) {
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    scrollbar-width: none;
+  }
+
+  :deep(.ui-tabs__nav::-webkit-scrollbar) {
+    display: none;
+  }
+
+  :deep(.ui-tabs__tab) {
+    flex: 0 0 auto;
+    white-space: nowrap;
   }
 }
 
 .panel-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px;
+  gap: 36px;
   min-width: 0;
 }
 
@@ -479,8 +501,6 @@ onMounted(() => {
 }
 
 .settings-form {
-  padding: 18px;
-  border-radius: 18px;
   min-width: 0;
 
   :deep(.el-form-item:last-child) {
@@ -506,17 +526,13 @@ onMounted(() => {
 }
 
 .field-help {
-  color: rgba(217, 132, 165, 0.86);
+  color: var(--color-text-tertiary);
   cursor: help;
-  font-size: 15px;
-  transform: translateY(1px);
-  transition:
-    color 0.18s ease,
-    transform 0.18s ease;
+  font-size: 14px;
+  transition: color var(--motion-duration-fast) var(--motion-ease-standard);
 
   &:hover {
-    color: #4f9fff;
-    transform: translateY(1px) scale(1.08);
+    color: var(--primary);
   }
 }
 
@@ -525,13 +541,6 @@ onMounted(() => {
   color: rgba(96, 72, 86, 0.62);
   font-size: 12px;
   line-height: 1.6;
-}
-
-.persona-actions {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  margin-top: 4px;
 }
 
 .test-result {
@@ -568,16 +577,6 @@ onMounted(() => {
 }
 
 @media (max-width: 1360px) {
-  .ai-settings__hero {
-    flex-direction: column;
-  }
-
-  .hero-actions {
-    width: 100%;
-    justify-content: flex-start;
-    flex-basis: auto;
-  }
-
   .panel-grid {
     grid-template-columns: 1fr;
   }
@@ -590,25 +589,13 @@ onMounted(() => {
 }
 
 @media (max-width: 760px) {
-  .ai-settings__hero {
-    flex-direction: column;
+  .status-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .hero-actions {
-    width: 100%;
-
-    :deep(.el-button) {
-      flex: 1;
-    }
-  }
-
-  .persona-actions {
-    align-items: stretch;
-    flex-direction: column;
-    gap: 8px;
-
-    :deep(.el-button) {
-      flex: 1;
+  .ai-settings {
+    > :deep(.ui-loading-state__content) {
+      gap: var(--space-lg);
     }
   }
 }

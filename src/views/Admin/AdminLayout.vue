@@ -1,6 +1,6 @@
 ﻿<template>
   <div class="admin-page">
-    <DefaultLayout wide-content>
+    <DefaultLayout wide-content :show-live2-d="false">
       <div class="admin-container">
         <div class="admin-header">
           <div class="title">
@@ -211,6 +211,24 @@ const handleSelect = (key: string) => {
 
   .admin-nav {
     display: block;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .admin-nav::-webkit-scrollbar {
+    display: none;
+  }
+
+  .admin-menu {
+    width: max-content;
+    min-width: 100%;
+    flex-direction: row;
+  }
+
+  .admin-menu__item {
+    width: auto;
+    flex: 0 0 auto;
+    white-space: nowrap;
   }
 }
 </style>

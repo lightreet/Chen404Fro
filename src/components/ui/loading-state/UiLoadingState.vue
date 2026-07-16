@@ -55,6 +55,7 @@ withDefaults(
 }
 
 .ui-loading-state__content {
+  min-width: 0;
   transition:
     opacity var(--motion-duration-base) var(--motion-ease-standard),
     filter var(--motion-duration-base) var(--motion-ease-standard);
