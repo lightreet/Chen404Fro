@@ -316,6 +316,14 @@ Chen404 now has its own design system in code. This doc describes *intent*; the 
 
 - **Role:** task completion.
 - **Style:** calm, dense, consistent. Compose from the project's own `Ui*` primitives and `App*` shells; do not fall back to raw Element Plus visuals.
+- **Settings actions:** every configuration tab uses the shared bottom-right settings footer for reset, test/sync, and save commands. Headers carry identity and status only; never duplicate save actions at the top or inside a sub-pane.
+- **Settings structure:** use whitespace, alignment, and at most one quiet group surface before adding dividers. Do not place borders around the outer panel, every section, every status cell, and the footer at the same time.
+- **Settings color:** quiet does not mean grayscale. In light admin screens, avoid broad neutral-gray and charcoal work surfaces; use restrained rose, lavender, blue, and mint tints to distinguish operational summaries and setting modes while keeping primary actions pink.
+- **Settings rhythm:** keep 24-32px between a feature heading, its status summary, and the editable form or sub-tabs. Summary metrics need their own breathing room instead of forming one dense strip directly under the title.
+- **Media settings:** let uploaded images carry the color. Use clean surfaces, cool-lilac hairlines, and quiet elevation for cover or asset editors; do not wash the entire editor card in brand pink when the media is already visually saturated.
+- **Settings copy:** helper text explains a consequence, constraint, or unfamiliar term. Remove subtitles and chips that only restate the heading or field label.
+- **Technical settings:** translate implementation terms into operational labels and attach concise info tooltips to numeric limits, durations, and timeout fields.
+- **Workbench focus:** hide floating companion widgets on admin routes so they cannot cover navigation, forms, or actions.
 - **Motion:** state feedback only.
 - **Ban:** cute stationery treatment, decorative display fonts, and large hero sections.
 
