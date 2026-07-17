@@ -2,7 +2,7 @@
   <UiPanel icon="settings" title="站点配置" flush>
     <UiLoadingState :loading="loading" message="正在加载站点配置..." class="settings-body">
       <UiTabs v-model="activeTab" :items="tabItems" variant="line" class="settings-tabs">
-        <section v-show="activeTab === 'basic'" class="settings-section">
+        <section v-show="activeTab === 'basic'" class="settings-section settings-section--wide">
             <div class="section-head">
               <h3>站点基础信息</h3>
             </div>
@@ -37,7 +37,7 @@
             </UiForm>
           </section>
 
-        <section v-show="activeTab === 'brand'" class="settings-section">
+        <section v-show="activeTab === 'brand'" class="settings-section settings-section--wide">
             <div class="section-head">
               <h3>Logo、图标与版权</h3>
             </div>
@@ -101,7 +101,7 @@
             </UiForm>
           </section>
 
-        <section v-show="activeTab === 'seo'" class="settings-section">
+        <section v-show="activeTab === 'seo'" class="settings-section settings-section--focused">
             <div class="section-head">
               <h3>搜索展示信息</h3>
             </div>
@@ -125,7 +125,7 @@
             </UiForm>
           </section>
 
-        <section v-show="activeTab === 'runtime'" class="settings-section">
+        <section v-show="activeTab === 'runtime'" class="settings-section settings-section--focused">
             <div class="section-head">
               <h3>评论互动策略</h3>
             </div>
@@ -157,7 +157,7 @@
             </div>
           </section>
 
-        <section v-show="activeTab === 'hero'" class="settings-section">
+        <section v-show="activeTab === 'hero'" class="settings-section settings-section--wide">
             <div class="section-head">
               <h3>页面封面</h3>
             </div>
@@ -201,11 +201,11 @@
             </div>
           </section>
 
-        <div v-show="activeTab === 'ai'">
+        <div v-show="activeTab === 'ai'" class="settings-pane settings-pane--wide">
           <AiAssistantSettings />
         </div>
 
-        <div v-if="activeTab === 'github-development'">
+        <div v-if="activeTab === 'github-development'" class="settings-pane settings-pane--wide">
           <GitHubDevelopmentSettings />
         </div>
       </UiTabs>
@@ -509,11 +509,11 @@ onMounted(() => {
 }
 
 .settings-body {
-  padding: var(--space-lg);
+  padding: clamp(var(--space-lg), 2.4vw, var(--space-xl));
 
   > :deep(.ui-loading-state__content) {
     display: grid;
-    gap: var(--space-lg);
+    gap: var(--space-xl);
     min-width: 0;
   }
 }
@@ -537,17 +537,32 @@ onMounted(() => {
   }
 
   :deep(.ui-tabs__panel) {
-    margin-top: var(--space-lg);
+    margin-top: var(--space-xl);
   }
 }
 
-.settings-section {
+.settings-section,
+.settings-pane {
+  width: 100%;
   min-width: 0;
-  padding: 2px;
+  margin-inline: auto;
+}
+
+.settings-section {
+  padding: var(--space-xs) 2px var(--space-sm);
+}
+
+.settings-section--wide,
+.settings-pane--wide {
+  max-width: 1160px;
+}
+
+.settings-section--focused {
+  max-width: 920px;
 }
 
 .section-head {
-  margin-bottom: var(--space-lg);
+  margin-bottom: var(--space-xl);
 
   h3 {
     margin: 0;
@@ -559,6 +574,9 @@ onMounted(() => {
 }
 
 .settings-form {
+  display: grid;
+  gap: var(--space-lg);
+
   :deep(.el-form-item) {
     margin-bottom: 0;
   }
@@ -566,7 +584,7 @@ onMounted(() => {
 
 .runtime-list {
   display: grid;
-  gap: 12px;
+  gap: var(--space-md);
 }
 
 .runtime-row {
@@ -603,7 +621,7 @@ onMounted(() => {
 .form-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px;
+  gap: var(--space-lg);
 }
 
 .form-item--wide {
@@ -611,20 +629,20 @@ onMounted(() => {
 }
 
 .settings-form--single {
-  margin-top: 16px;
+  margin-top: var(--space-lg);
 }
 
 .brand-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px;
+  gap: var(--space-lg);
 }
 
 .asset-panel {
   display: grid;
   grid-template-columns: 132px minmax(0, 1fr);
-  gap: 16px;
-  padding: var(--space-md);
+  gap: var(--space-lg);
+  padding: var(--space-lg);
   border-radius: var(--radius-lg);
   background: var(--color-surface-muted);
 }
@@ -674,7 +692,7 @@ onMounted(() => {
 .hero-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px;
+  gap: var(--space-lg);
   align-items: start;
 }
 
@@ -718,6 +736,18 @@ onMounted(() => {
 @media (max-width: 760px) {
   .settings-body {
     padding: var(--space-md);
+  }
+
+  .settings-body > :deep(.ui-loading-state__content) {
+    gap: var(--space-lg);
+  }
+
+  .settings-tabs :deep(.ui-tabs__panel) {
+    margin-top: var(--space-lg);
+  }
+
+  .section-head {
+    margin-bottom: var(--space-lg);
   }
 
   .asset-panel {

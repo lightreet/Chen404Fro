@@ -277,6 +277,7 @@ import { uploadAvatar } from '@/api/upload'
 import { getTrustLevelLabel } from '@/utils/permission'
 import { AVATAR_MAX_MB, createConfirmPasswordRule, validateImageFile } from '@/utils/validation'
 import type { FormItemRule } from '@/utils/validation'
+import { notifyAuthFailure } from '@/utils/authFeedback'
 import { deleteArticle, getMyArticles, getMyFavoriteArticles, getMyLikedArticles } from '@/api/article'
 import ArticleCard from '@/components/ArticleCard/ArticleCard.vue'
 import ProfileTrustRequestPanel from './ProfileTrustRequestPanel.vue'
@@ -544,10 +545,16 @@ const handleDeleteArticle = async (id: number | string) => {
 }
 
 const handleChangePassword = async () => {
-  if (!passwordFormRef.value) return
+  if (!passwordFormRef.value || passwordLoading.value) return
+
   try {
     await passwordFormRef.value.validate()
-    passwordLoading.value = true
+  } catch {
+    return
+  }
+
+  passwordLoading.value = true
+  try {
     await changePassword({
       oldPassword: passwordForm.oldPassword,
       newPassword: passwordForm.newPassword,
@@ -559,9 +566,7 @@ const handleChangePassword = async () => {
     passwordFormRef.value.resetFields()
     passwordDialogVisible.value = false
   } catch (err: unknown) {
-    if (err && typeof err === 'object' && 'message' in err) {
-      notify.error((err as { message?: string }).message ?? '修改失败')
-    }
+    notifyAuthFailure(err, '密码修改失败，请检查原密码后重试')
   } finally {
     passwordLoading.value = false
   }
