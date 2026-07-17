@@ -116,6 +116,7 @@ import { AuthEmailField, UiButton, UiForm, UiFormField, UiIcon, UiInput } from '
 import { forgotPassword, sendVerifyCode } from '@/api/auth';
 import { useSiteConfig } from '@/composables/useSiteConfig';
 import { resolveSiteLogo, resolveSiteName } from '@/utils/siteConfig';
+import { notifyAuthFailure } from '@/utils/authFeedback';
 import { createConfirmPasswordRule } from '@/utils/validation';
 
 const router = useRouter();
@@ -184,6 +185,8 @@ function startCountdown(seconds: number) {
 }
 
 async function handleSendCode() {
+  if (codeSending.value || codeCountdown.value > 0) return;
+
   if (!form.email.trim()) {
     notify.warning('请先输入注册邮箱');
     return;
@@ -202,18 +205,23 @@ async function handleSendCode() {
     startCountdown(Math.max(1, result.expireSeconds > 60 ? 60 : result.expireSeconds));
   } catch (error) {
     console.error('发送重置验证码失败:', error);
+    notifyAuthFailure(error, '重置验证码发送失败，请稍后重试');
   } finally {
     codeSending.value = false;
   }
 }
 
 async function handleResetPassword() {
-  if (!formRef.value) return;
+  if (!formRef.value || loading.value) return;
 
   try {
     await formRef.value.validate();
-    loading.value = true;
+  } catch {
+    return;
+  }
 
+  loading.value = true;
+  try {
     await forgotPassword({
       email: form.email.trim(),
       code: form.code.trim(),
@@ -225,6 +233,7 @@ async function handleResetPassword() {
     await router.push('/login');
   } catch (error) {
     console.error('重置密码失败:', error);
+    notifyAuthFailure(error, '密码重置失败，请检查验证码后重试');
   } finally {
     loading.value = false;
   }

@@ -170,7 +170,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref } from 'vue';
+import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { notify } from '@/lib/feedback';
 import { AuthEmailField, UiButton, UiCheckbox, UiDialog, UiForm, UiFormField, UiIcon, UiInput } from '@/components/ui'
@@ -178,6 +178,7 @@ import { login, register, sendVerifyCode as sendVerifyCodeApi } from '@/api/auth
 import { useSiteConfig } from '@/composables/useSiteConfig';
 import { useUserStore } from '@/stores/user';
 import { resolveSiteLogo, resolveSiteName } from '@/utils/siteConfig';
+import { notifyAuthFailure } from '@/utils/authFeedback';
 import { createConfirmPasswordRule, createUsernameRules } from '@/utils/validation';
 
 const router = useRouter();
@@ -188,6 +189,7 @@ const loading = ref(false);
 const agreement = ref(false);
 const codeSending = ref(false);
 const codeCountdown = ref(0);
+const countdownTimer = ref<number | null>(null);
 const agreementDialogVisible = ref(false);
 const privacyDialogVisible = ref(false);
 
@@ -311,7 +313,28 @@ const rules = {
   ],
 };
 
+function resetCountdown() {
+  if (countdownTimer.value !== null) {
+    window.clearInterval(countdownTimer.value);
+    countdownTimer.value = null;
+  }
+  codeCountdown.value = 0;
+}
+
+function startCountdown(seconds: number) {
+  resetCountdown();
+  codeCountdown.value = seconds;
+  countdownTimer.value = window.setInterval(() => {
+    codeCountdown.value -= 1;
+    if (codeCountdown.value <= 0) {
+      resetCountdown();
+    }
+  }, 1000);
+}
+
 const sendVerifyCode = async () => {
+  if (codeSending.value || codeCountdown.value > 0) return;
+
   if (!form.email.trim()) {
     notify.warning('请先输入邮箱');
     return;
@@ -325,50 +348,64 @@ const sendVerifyCode = async () => {
 
   codeSending.value = true;
   try {
-    await sendVerifyCodeApi({ email: form.email, type: 'register' });
+    const result = await sendVerifyCodeApi({ email: form.email.trim(), type: 'register' });
     notify.success('验证码已发送到邮箱');
-
-    codeCountdown.value = 60;
-    const timer = window.setInterval(() => {
-      codeCountdown.value -= 1;
-      if (codeCountdown.value <= 0) {
-        clearInterval(timer);
-      }
-    }, 1000);
+    startCountdown(Math.max(1, result.expireSeconds > 60 ? 60 : result.expireSeconds));
   } catch (error) {
     console.error('发送验证码失败:', error);
-    notify.error('发送验证码失败，请稍后重试');
+    notifyAuthFailure(error, '验证码发送失败，请稍后重试');
   } finally {
     codeSending.value = false;
   }
 };
 
 const handleRegister = async () => {
-  if (!formRef.value) return;
+  if (!formRef.value || loading.value) return;
+  if (!agreement.value) {
+    notify.warning('请先阅读并同意用户协议与隐私政策');
+    return;
+  }
 
   try {
     await formRef.value.validate();
-    loading.value = true;
+  } catch {
+    return;
+  }
 
+  loading.value = true;
+  try {
     await register({
-      username: form.username,
+      username: form.username.trim(),
       password: form.password,
-      nickname: form.username,
-      email: form.email,
-      code: form.code,
+      nickname: form.username.trim(),
+      email: form.email.trim(),
+      code: form.code.trim(),
       registerType: 'email',
     });
+  } catch (error) {
+    console.error('注册失败:', error);
+    notifyAuthFailure(error, '注册失败，请检查填写内容后重试');
+    loading.value = false;
+    return;
+  }
 
-    const loginRes = await login({ username: form.username, password: form.password });
+  try {
+    const loginRes = await login({ username: form.username.trim(), password: form.password });
     userStore.login(loginRes.user, loginRes.token, {
       remember: true,
       refreshToken: loginRes.refreshToken,
     });
 
     notify.success('注册成功');
-    router.push('/');
+    await router.push('/');
   } catch (error) {
-    console.error('注册失败:', error);
+    console.error('注册后自动登录失败:', error);
+    notify.warning({
+      message: '账号已创建，但自动登录失败，请使用刚才的账号手动登录',
+      duration: 5000,
+      showClose: true,
+    });
+    await router.push('/login');
   } finally {
     loading.value = false;
   }
@@ -376,6 +413,10 @@ const handleRegister = async () => {
 
 onMounted(() => {
   void loadSiteConfig();
+});
+
+onBeforeUnmount(() => {
+  resetCountdown();
 });
 </script>
 

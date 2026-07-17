@@ -49,6 +49,49 @@ function shouldSkipAuthRedirect(config?: AxiosRequestConfig) {
   return Boolean((config as RequestConfig | undefined)?.skipAuthRedirect);
 }
 
+const PUBLIC_AUTH_PATHS = [
+  '/auth/login',
+  '/auth/register',
+  '/auth/send-code',
+  '/auth/forgot-password',
+  '/auth/check-username',
+  '/auth/check-email',
+  '/auth/check-phone',
+];
+const GENERIC_AUTH_HTTP_MESSAGES = new Set([
+  '拒绝访问',
+  '未授权',
+  'Unauthorized',
+  'Forbidden',
+]);
+
+function isPublicAuthRequest(config?: AxiosRequestConfig) {
+  const requestUrl = String(config?.url || '');
+  return PUBLIC_AUTH_PATHS.some((path) => requestUrl.includes(path));
+}
+
+function resolvePublicAuthErrorMessage(config?: AxiosRequestConfig, backendMessage?: string) {
+  const normalizedMessage = String(backendMessage || '').trim();
+  if (normalizedMessage && !GENERIC_AUTH_HTTP_MESSAGES.has(normalizedMessage)) {
+    return normalizedMessage;
+  }
+
+  const requestUrl = String(config?.url || '');
+  if (requestUrl.includes('/auth/login')) {
+    return '账号或密码不匹配，请重新输入';
+  }
+  if (requestUrl.includes('/auth/register')) {
+    return '注册信息校验失败，请检查后重试';
+  }
+  if (requestUrl.includes('/auth/send-code')) {
+    return '验证码发送失败，请稍后重试';
+  }
+  if (requestUrl.includes('/auth/forgot-password')) {
+    return '密码重置失败，请检查邮箱和验证码';
+  }
+  return '认证信息不正确，请检查后重试';
+}
+
 function clearStoredAuth() {
   localStorage.removeItem('token');
   localStorage.removeItem('refreshToken');
@@ -142,9 +185,16 @@ function installRequestInterceptors(client: AxiosInstance, options: InterceptorI
         const { status, data } = response;
 
         switch (status) {
-          case 401:
+          case 401: {
+            const originalConfig: RequestConfig & { _retry?: boolean } = error.config || {};
+            if (isPublicAuthRequest(originalConfig)) {
+              if (!shouldSuppressError(originalConfig)) {
+                notify.error(resolvePublicAuthErrorMessage(originalConfig, data?.message));
+              }
+              return Promise.reject(error);
+            }
+
             return (async () => {
-              const originalConfig: RequestConfig & { _retry?: boolean } = error.config || {};
               const refreshToken = localStorage.getItem('refreshToken') || '';
               const reqUrl = String(originalConfig.url || '');
 
@@ -201,9 +251,12 @@ function installRequestInterceptors(client: AxiosInstance, options: InterceptorI
                 isRefreshing = false;
               }
             })();
+          }
           case 403:
             if (!shouldSuppressError(error.config)) {
-              notify.error('拒绝访问');
+              notify.error(isPublicAuthRequest(error.config)
+                ? resolvePublicAuthErrorMessage(error.config, data?.message)
+                : '拒绝访问');
             }
             break;
           case 404:

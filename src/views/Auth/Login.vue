@@ -108,6 +108,7 @@ import { login } from '@/api/auth';
 import { useSiteConfig } from '@/composables/useSiteConfig';
 import { useUserStore } from '@/stores/user';
 import { resolveSiteLogo, resolveSiteName } from '@/utils/siteConfig';
+import { notifyAuthFailure } from '@/utils/authFeedback';
 import { isValidUsername } from '@/utils/validation';
 
 const router = useRouter();
@@ -160,14 +161,18 @@ function setLoginMode(mode: 'username' | 'email') {
 }
 
 const handleLogin = async () => {
-  if (!formRef.value) return;
+  if (!formRef.value || loading.value) return;
 
   try {
     await formRef.value.validate();
-    loading.value = true;
+  } catch {
+    return;
+  }
 
+  loading.value = true;
+  try {
     const res = await login({
-      username: form.account,
+      username: form.account.trim(),
       password: form.password,
     });
 
@@ -181,6 +186,7 @@ const handleLogin = async () => {
     router.push(redirect.startsWith('/') ? redirect : '/');
   } catch (error) {
     console.error('登录失败:', error);
+    notifyAuthFailure(error, '登录失败，请检查账号和密码后重试');
   } finally {
     loading.value = false;
   }
