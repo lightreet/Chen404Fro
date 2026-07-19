@@ -1,5 +1,5 @@
 <template>
-  <DefaultLayout :wide-content="true" :show-live2-d="false">
+  <DefaultLayout :wide-content="true">
     <template #hero>
       <PageHero
         title="旅行纪念地图"

@@ -72,16 +72,16 @@
         class="live2d-tools"
         :class="{ 'is-compact': compactView }"
         role="toolbar"
-        aria-label="Chen404 看板娘工具栏"
+        aria-label="Lyra 工具栏"
       >
         <div
           v-if="compactView"
           class="assistant-identity"
-          aria-label="拖动 Chen404 看板娘工具栏"
-          title="拖动 Chen404 看板娘工具栏"
+          aria-label="拖动 Lyra 工具栏"
+          title="拖动 Lyra 工具栏"
           @pointerdown="startDrag"
         >
-          <span class="assistant-identity__mark" aria-hidden="true">404</span>
+          <span class="assistant-identity__mark" aria-hidden="true">Lyra</span>
           <span
             v-if="musicPlayer.playing"
             class="assistant-identity__playing"
@@ -164,12 +164,16 @@ const CHAT_SESSION_STORAGE_KEY = 'chen404.live2d.chat.session';
 const CHAT_VISITOR_STORAGE_KEY = 'chen404.live2d.chat.visitor';
 const LIVE2D_SCALE = 2 / 3;
 const VIEWPORT_PADDING = 52;
-const BASE_WIDGET_WIDTH = 252;
-const BASE_WIDGET_HEIGHT = 456;
-const WIDGET_WIDTH = Math.round(BASE_WIDGET_WIDTH * LIVE2D_SCALE);
+const EXPANDED_TOOLBAR_WIDTH = 298;
+const EXPANDED_TOOLBAR_HEIGHT = 66;
+const EXPANDED_TOOLBAR_OFFSET_Y = 428;
+const EXPANDED_WRAPPER_WIDTH = EXPANDED_TOOLBAR_WIDTH;
+const BASE_WIDGET_HEIGHT = EXPANDED_TOOLBAR_OFFSET_Y + EXPANDED_TOOLBAR_HEIGHT;
+const WIDGET_WIDTH = Math.round(EXPANDED_WRAPPER_WIDTH * LIVE2D_SCALE);
 const WIDGET_HEIGHT = Math.round(BASE_WIDGET_HEIGHT * LIVE2D_SCALE);
-const COMPACT_WIDGET_WIDTH = 278;
-const COMPACT_WIDGET_HEIGHT = 52;
+const COMPACT_WIDGET_WIDTH = 224;
+const COMPACT_WIDGET_HEIGHT = 44;
+const MOBILE_COMPACT_WIDGET_HEIGHT = 58;
 const PANEL_ESTIMATED_WIDTH = 420;
 const PANEL_VIEWPORT_MARGIN = 12;
 const PANEL_WIDGET_GAP = 14;
@@ -218,8 +222,16 @@ const route = useRoute();
 const musicPlayer = useMusicPlayerStore();
 const compactOnly = computed(() => props.compactOnly);
 const compactView = computed(() => compactOnly.value || isCompact.value);
+const getCompactWidgetHeight = () => (
+  viewportWidth.value < 1024 ? MOBILE_COMPACT_WIDGET_HEIGHT : COMPACT_WIDGET_HEIGHT
+);
 const currentWidgetWidth = computed(() => compactView.value ? COMPACT_WIDGET_WIDTH : WIDGET_WIDTH);
-const currentWidgetHeight = computed(() => compactView.value ? COMPACT_WIDGET_HEIGHT : WIDGET_HEIGHT);
+const currentWidgetHeight = computed(() => {
+  if (!compactView.value) {
+    return WIDGET_HEIGHT;
+  }
+  return getCompactWidgetHeight();
+});
 
 const speeches = [
   '欢迎来到 Chen404 的博客魔法屋。',
@@ -235,6 +247,7 @@ const containerStyle = computed(() => ({
   left: `${positionX.value}px`,
   top: `${positionY.value}px`,
   '--live2d-scale': String(LIVE2D_SCALE),
+  '--live2d-wrapper-width': `${EXPANDED_WRAPPER_WIDTH}px`,
   '--live2d-width': `${currentWidgetWidth.value}px`,
   '--live2d-height': `${currentWidgetHeight.value}px`,
   '--live2d-panel-space-above': `${Math.max(180, positionY.value - 24)}px`,
@@ -635,12 +648,44 @@ const clampPosition = (x: number, y: number) => {
   };
 };
 
-const positionStorageKey = computed(() => compactView.value ? COMPACT_POSITION_STORAGE_KEY : STORAGE_KEY);
+const getToolbarLayout = (compact: boolean) => {
+  if (compact) {
+    return {
+      offsetX: 0,
+      offsetY: 0,
+      width: COMPACT_WIDGET_WIDTH,
+      height: getCompactWidgetHeight(),
+    };
+  }
+
+  return {
+    offsetX: (EXPANDED_WRAPPER_WIDTH - EXPANDED_TOOLBAR_WIDTH) * LIVE2D_SCALE / 2,
+    offsetY: EXPANDED_TOOLBAR_OFFSET_Y * LIVE2D_SCALE,
+    width: EXPANDED_TOOLBAR_WIDTH * LIVE2D_SCALE,
+    height: EXPANDED_TOOLBAR_HEIGHT * LIVE2D_SCALE,
+  };
+};
+
+const getToolbarAnchor = (x: number, y: number, compact: boolean) => {
+  const layout = getToolbarLayout(compact);
+  return {
+    toolbarCenterX: x + layout.offsetX + layout.width / 2,
+    toolbarBottomY: y + layout.offsetY + layout.height,
+  };
+};
+
+const positionFromToolbarAnchor = (toolbarCenterX: number, toolbarBottomY: number) => {
+  const layout = getToolbarLayout(compactView.value);
+  return clampPosition(
+    toolbarCenterX - layout.offsetX - layout.width / 2,
+    toolbarBottomY - layout.offsetY - layout.height,
+  );
+};
 
 const persistPosition = () => {
   window.localStorage.setItem(
-    positionStorageKey.value,
-    JSON.stringify({ x: positionX.value, y: positionY.value })
+    STORAGE_KEY,
+    JSON.stringify(getToolbarAnchor(positionX.value, positionY.value, compactView.value)),
   );
 };
 
@@ -655,19 +700,44 @@ const applyDefaultPosition = () => {
 };
 
 const restorePosition = () => {
-  const saved = window.localStorage.getItem(positionStorageKey.value);
-  if (!saved) {
-    applyDefaultPosition();
-    return;
+  const saved = window.localStorage.getItem(STORAGE_KEY);
+  if (saved) {
+    try {
+      const parsed = JSON.parse(saved) as {
+        toolbarCenterX?: number;
+        toolbarBottomY?: number;
+      };
+      if (
+        typeof parsed.toolbarCenterX === 'number'
+        && typeof parsed.toolbarBottomY === 'number'
+      ) {
+        const next = positionFromToolbarAnchor(parsed.toolbarCenterX, parsed.toolbarBottomY);
+        positionX.value = next.x;
+        positionY.value = next.y;
+        return;
+      }
+    } catch {
+      // Fall through to the legacy mode-specific position below.
+    }
   }
-  try {
-    const parsed = JSON.parse(saved) as { x?: number; y?: number };
-    const next = clampPosition(parsed.x ?? 92, parsed.y ?? 120);
-    positionX.value = next.x;
-    positionY.value = next.y;
-  } catch {
-    applyDefaultPosition();
+
+  const legacyKey = compactView.value ? COMPACT_POSITION_STORAGE_KEY : STORAGE_KEY;
+  const legacySaved = window.localStorage.getItem(legacyKey);
+  if (legacySaved) {
+    try {
+      const parsed = JSON.parse(legacySaved) as { x?: number; y?: number };
+      if (typeof parsed.x === 'number' && typeof parsed.y === 'number') {
+        const next = clampPosition(parsed.x, parsed.y);
+        positionX.value = next.x;
+        positionY.value = next.y;
+        return;
+      }
+    } catch {
+      // Use the mode's default position when stored data is invalid.
+    }
   }
+
+  applyDefaultPosition();
 };
 
 const handleResize = () => {
@@ -881,7 +951,7 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   align-items: center;
-  width: 252px;
+  width: var(--live2d-wrapper-width, 298px);
   transform: scale(var(--live2d-scale));
   transform-origin: top left;
 }
@@ -1100,29 +1170,36 @@ onUnmounted(() => {
   margin-top: 8px;
   justify-content: center;
   gap: 8px;
+  padding: 0 4px;
+  border: 1px solid rgba(236, 219, 226, 0.56);
+  border-radius: 12px;
+  background: rgba(255, 253, 254, 0.44);
+  backdrop-filter: blur(14px) saturate(112%);
+  box-shadow: 0 4px 8px rgba(84, 60, 73, 0.08);
+}
+
+.live2d-tools:not(.is-compact) {
+  gap: 10px;
+  padding: 8px;
 }
 
 .live2d-tools.is-compact {
   align-items: center;
   width: 100%;
-  min-height: 52px;
+  min-height: 44px;
   margin-top: 0;
-  padding: 6px;
-  gap: 4px;
-  border: 1px solid rgba(236, 219, 226, 0.94);
-  border-radius: 14px;
-  background: rgba(255, 253, 254, 0.98);
-  box-shadow: 0 4px 8px rgba(84, 60, 73, 0.1);
+  padding: 4px 6px;
+  gap: 2px;
 }
 
 .assistant-identity {
   display: inline-flex;
   flex: 0 0 auto;
   min-width: 0;
-  height: 40px;
+  height: 32px;
   align-items: center;
-  gap: 7px;
-  padding: 0 5px;
+  gap: 5px;
+  padding: 0 5px 0 6px;
   color: #6b505d;
   cursor: grab;
   touch-action: none;
@@ -1135,12 +1212,12 @@ onUnmounted(() => {
 
 .assistant-identity__mark {
   display: inline-grid;
-  flex: 0 0 40px;
-  width: 40px;
-  height: 28px;
+  flex: 0 0 36px;
+  width: 36px;
+  height: 26px;
   place-items: center;
-  border-radius: 9px;
-  background: #bd3569;
+  border-radius: 8px;
+  background: var(--primary, #fb7299);
   color: #fff;
   font-size: 11px;
   font-weight: 800;
@@ -1174,16 +1251,15 @@ onUnmounted(() => {
 }
 
 .tool-btn {
-  width: 34px;
-  height: 34px;
+  width: 32px;
+  height: 32px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   border: none;
   border-radius: 999px;
-  background: rgba(255, 251, 253, 0.96);
+  background: transparent;
   color: #8e7280;
-  box-shadow: 0 4px 8px rgba(84, 60, 73, 0.1);
   cursor: pointer;
   transition: transform 180ms ease-out, background 180ms ease-out, color 180ms ease-out;
 
@@ -1204,12 +1280,16 @@ onUnmounted(() => {
   }
 }
 
+.live2d-tools:not(.is-compact) .tool-btn {
+  width: 48px;
+  height: 48px;
+  font-size: 24px;
+}
+
 .live2d-tools.is-compact .tool-btn {
-  flex: 0 0 36px;
-  width: 36px;
-  height: 36px;
-  background: transparent;
-  box-shadow: none;
+  flex: 0 0 30px;
+  width: 30px;
+  height: 30px;
 }
 
 .live2d-tools.is-compact .tool-btn:hover,

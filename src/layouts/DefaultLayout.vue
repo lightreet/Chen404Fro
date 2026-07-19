@@ -32,8 +32,6 @@
 
     <!-- 底部 -->
     <Footer />
-
-    <Live2D v-if="showAssistantTools" :compact-only="isMobile || !showLive2D" />
   </div>
 </template>
 
@@ -42,7 +40,6 @@ import { computed } from 'vue';
 import { useRoute } from 'vue-router';
 import Header from '@/components/Header/Header.vue';
 import Footer from '@/components/Footer/Footer.vue';
-import Live2D from '@/components/Live2D/Live2D.vue';
 import SakuraOverlay from '@/components/SakuraOverlay/SakuraOverlay.vue';
 import { useLayoutMobile } from '@/composables/useLayoutMobile';
 
@@ -74,18 +71,12 @@ const sakuraSceneMode = computed<SakuraSceneMode>(() => {
 interface Props {
   showRightSidebar?: boolean;
   wideContent?: boolean;
-  /** 是否显示完整看板娘形象；关闭时仍保留紧凑工具栏。 */
-  showLive2D?: boolean;
-  /** 是否挂载看板娘及其全部快捷工具。 */
-  showAssistantTools?: boolean;
   showHeader?: boolean;
 }
 
 withDefaults(defineProps<Props>(), {
   showRightSidebar: false,
   wideContent: false,
-  showLive2D: true,
-  showAssistantTools: true,
   showHeader: true,
 });
 

@@ -1,6 +1,6 @@
 ﻿<template>
   <div class="admin-page">
-    <DefaultLayout wide-content :show-live2-d="false" :show-assistant-tools="false">
+    <DefaultLayout wide-content>
       <div class="admin-container">
         <div class="admin-header">
           <div class="title">
