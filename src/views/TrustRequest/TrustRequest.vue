@@ -1,5 +1,5 @@
 <template>
-  <DefaultLayout :show-live2-d="false">
+  <DefaultLayout>
     <template #hero>
       <PageHero
         title="好友申请"

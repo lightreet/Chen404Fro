@@ -1,14 +1,14 @@
 <template>
   <div
-    v-if="isVisible"
     class="live2d-container"
-    :class="{ dragging: isDragging }"
+    :class="{ dragging: isDragging, 'is-compact': compactView }"
     :style="containerStyle"
   >
     <Live2DChatPanel
       v-if="panelVisible"
       class="chat-panel-shell"
-      :class="chatPanelPlacementClass"
+      :class="panelVerticalPlacementClass"
+      :style="panelHorizontalStyle"
       :messages="chatMessages"
       :suggestions="panelSuggestions"
       :is-loading="isChatLoading"
@@ -20,14 +20,16 @@
 
     <Live2DMusicPanel
       v-if="musicPanelVisible"
+      ref="musicPanelRef"
       class="music-panel-shell"
-      :class="chatPanelPlacementClass"
-      @close="musicPanelVisible = false"
+      :class="panelVerticalPlacementClass"
+      :style="panelHorizontalStyle"
+      @close="closeMusicPanel"
     />
 
-    <div class="live2d-wrapper">
+    <div class="live2d-wrapper" :class="{ 'is-compact': compactView }">
       <div
-        v-if="visibleSpeechText"
+        v-if="!compactView && visibleSpeechText"
         class="speech-bubble"
         :class="speechBubblePlacementClass"
         @click="clearSpeech"
@@ -36,6 +38,7 @@
       </div>
 
       <div
+        v-if="!compactView"
         class="live2d-canvas"
         @pointerdown="startDrag"
         @mousemove="handlePointerMove"
@@ -65,37 +68,81 @@
         </div>
       </div>
 
-      <div class="live2d-tools">
-        <button class="tool-btn" type="button" aria-label="对话" @click="handleChat">
-          <UiIcon name="ChatDotRound" />
-        </button>
-        <button
-          class="tool-btn"
-          :class="{ 'is-active': musicPanelVisible || musicPlayer.playing }"
-          type="button"
-          aria-label="音乐"
-          @click="handleMusic"
+      <div
+        class="live2d-tools"
+        :class="{ 'is-compact': compactView }"
+        role="toolbar"
+        aria-label="Lyra 工具栏"
+      >
+        <div
+          v-if="compactView"
+          class="assistant-identity"
+          aria-label="拖动 Lyra 工具栏"
+          title="拖动 Lyra 工具栏"
+          @pointerdown="startDrag"
         >
-          <UiIcon name="Headset" />
-        </button>
-        <button class="tool-btn" type="button" aria-label="换装" @click="handleChange">
-          <UiIcon name="Refresh" />
-        </button>
-        <button class="tool-btn" type="button" aria-label="截图" @click="handleScreenshot">
-          <UiIcon name="Camera" />
-        </button>
-        <button class="tool-btn close-btn" type="button" aria-label="关闭" @click="handleClose">
-          <UiIcon name="Close" />
-        </button>
+          <span class="assistant-identity__mark" aria-hidden="true">Lyra</span>
+          <span
+            v-if="musicPlayer.playing"
+            class="assistant-identity__playing"
+            aria-label="音乐正在播放"
+          >
+            <i></i>
+            <i></i>
+            <i></i>
+          </span>
+        </div>
+
+        <UiTooltip content="和 Lyra 对话">
+          <button class="tool-btn" type="button" aria-label="和 Lyra 对话" @click="handleChat">
+            <UiIcon name="ChatDotRound" />
+          </button>
+        </UiTooltip>
+        <UiTooltip :content="musicPlayer.playing ? '打开播放器，音乐正在播放' : '打开音乐播放器'">
+          <button
+            ref="musicTriggerRef"
+            class="tool-btn"
+            :class="{ 'is-active': musicPanelVisible || musicPlayer.playing }"
+            type="button"
+            aria-label="打开音乐播放器"
+            aria-controls="live2d-music-panel"
+            :aria-expanded="musicPanelVisible"
+            :aria-pressed="musicPanelVisible"
+            @click="handleMusic"
+          >
+            <UiIcon name="Headset" />
+          </button>
+        </UiTooltip>
+        <UiTooltip content="切换看板娘装扮">
+          <button class="tool-btn" type="button" aria-label="切换看板娘装扮" @click="handleChange">
+            <UiIcon name="Refresh" />
+          </button>
+        </UiTooltip>
+        <UiTooltip content="截取当前页面">
+          <button class="tool-btn" type="button" aria-label="截取当前页面" @click="handleScreenshot">
+            <UiIcon name="Camera" />
+          </button>
+        </UiTooltip>
+        <UiTooltip v-if="!compactOnly" :content="compactView ? '展开看板娘' : '收起看板娘'">
+          <button
+            class="tool-btn display-toggle-btn"
+            type="button"
+            :aria-label="compactView ? '展开看板娘' : '收起看板娘'"
+            :aria-expanded="!compactView"
+            @click="handleDisplayToggle"
+          >
+            <UiIcon :name="compactView ? 'ArrowUp' : 'ArrowDown'" />
+          </button>
+        </UiTooltip>
       </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from 'vue';
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
-import { UiIcon } from '@/components/ui';
+import { UiIcon, UiTooltip } from '@/components/ui';
 import { notify } from '@/lib/feedback';
 import Live2DChatPanel from './Live2DChatPanel.vue';
 import Live2DMusicPanel from './Live2DMusicPanel.vue';
@@ -111,14 +158,25 @@ import type {
 } from '@/types';
 
 const STORAGE_KEY = 'chen404.live2d.position';
+const COMPACT_POSITION_STORAGE_KEY = 'chen404.live2d.position.compact.v1';
+const DISPLAY_MODE_STORAGE_KEY = 'chen404.live2d.display-mode';
 const CHAT_SESSION_STORAGE_KEY = 'chen404.live2d.chat.session';
 const CHAT_VISITOR_STORAGE_KEY = 'chen404.live2d.chat.visitor';
 const LIVE2D_SCALE = 2 / 3;
 const VIEWPORT_PADDING = 52;
-const BASE_WIDGET_WIDTH = 252;
-const BASE_WIDGET_HEIGHT = 456;
-const WIDGET_WIDTH = Math.round(BASE_WIDGET_WIDTH * LIVE2D_SCALE);
+const EXPANDED_TOOLBAR_WIDTH = 298;
+const EXPANDED_TOOLBAR_HEIGHT = 66;
+const EXPANDED_TOOLBAR_OFFSET_Y = 428;
+const EXPANDED_WRAPPER_WIDTH = EXPANDED_TOOLBAR_WIDTH;
+const BASE_WIDGET_HEIGHT = EXPANDED_TOOLBAR_OFFSET_Y + EXPANDED_TOOLBAR_HEIGHT;
+const WIDGET_WIDTH = Math.round(EXPANDED_WRAPPER_WIDTH * LIVE2D_SCALE);
 const WIDGET_HEIGHT = Math.round(BASE_WIDGET_HEIGHT * LIVE2D_SCALE);
+const COMPACT_WIDGET_WIDTH = 224;
+const COMPACT_WIDGET_HEIGHT = 44;
+const MOBILE_COMPACT_WIDGET_HEIGHT = 58;
+const PANEL_ESTIMATED_WIDTH = 420;
+const PANEL_VIEWPORT_MARGIN = 12;
+const PANEL_WIDGET_GAP = 14;
 const BUBBLE_MAX_CHARS = 36;
 const LONG_REPLY_BUBBLE_TEXT = '我整理好了，打开聊天框看详细内容吧。';
 const STREAMING_BUBBLE_TEXT = '我在整理，详细内容会放进聊天框。';
@@ -133,7 +191,13 @@ interface ChatPanelMessage {
   suggestions?: string[];
 }
 
-const isVisible = ref(true);
+const props = withDefaults(defineProps<{
+  compactOnly?: boolean;
+}>(), {
+  compactOnly: false,
+});
+
+const isCompact = ref(window.localStorage.getItem(DISPLAY_MODE_STORAGE_KEY) === 'compact');
 const isDragging = ref(false);
 const speechText = ref('');
 const panelVisible = ref(false);
@@ -143,6 +207,8 @@ const tiltX = ref(0);
 const tiltY = ref(0);
 const positionX = ref(92);
 const positionY = ref(120);
+const viewportWidth = ref(window.innerWidth);
+const viewportHeight = ref(window.innerHeight);
 const suppressClick = ref(false);
 const activeSessionId = ref('');
 const visitorId = ref('');
@@ -150,8 +216,22 @@ const chatMessages = ref<ChatPanelMessage[]>([]);
 const activeStreamMessageId = ref('');
 const activeAbortController = ref<AbortController | null>(null);
 const sessionRestoreLoaded = ref(false);
+const musicPanelRef = ref<InstanceType<typeof Live2DMusicPanel> | null>(null);
+const musicTriggerRef = ref<HTMLButtonElement | null>(null);
 const route = useRoute();
 const musicPlayer = useMusicPlayerStore();
+const compactOnly = computed(() => props.compactOnly);
+const compactView = computed(() => compactOnly.value || isCompact.value);
+const getCompactWidgetHeight = () => (
+  viewportWidth.value < 1024 ? MOBILE_COMPACT_WIDGET_HEIGHT : COMPACT_WIDGET_HEIGHT
+);
+const currentWidgetWidth = computed(() => compactView.value ? COMPACT_WIDGET_WIDTH : WIDGET_WIDTH);
+const currentWidgetHeight = computed(() => {
+  if (!compactView.value) {
+    return WIDGET_HEIGHT;
+  }
+  return getCompactWidgetHeight();
+});
 
 const speeches = [
   '欢迎来到 Chen404 的博客魔法屋。',
@@ -167,8 +247,22 @@ const containerStyle = computed(() => ({
   left: `${positionX.value}px`,
   top: `${positionY.value}px`,
   '--live2d-scale': String(LIVE2D_SCALE),
-  '--live2d-width': `${WIDGET_WIDTH}px`,
-  '--live2d-height': `${WIDGET_HEIGHT}px`,
+  '--live2d-wrapper-width': `${EXPANDED_WRAPPER_WIDTH}px`,
+  '--live2d-width': `${currentWidgetWidth.value}px`,
+  '--live2d-height': `${currentWidgetHeight.value}px`,
+  '--live2d-panel-space-above': `${Math.max(180, positionY.value - 24)}px`,
+  '--live2d-panel-space-below': `${Math.max(
+    180,
+    viewportHeight.value - positionY.value - currentWidgetHeight.value - 24,
+  )}px`,
+  '--live2d-panel-space-to-widget-bottom': `${Math.max(
+    180,
+    positionY.value + currentWidgetHeight.value - 24,
+  )}px`,
+  '--live2d-panel-space-from-widget-top': `${Math.max(
+    180,
+    viewportHeight.value - positionY.value - 24,
+  )}px`,
 }));
 
 const currentPageContext = computed(() => {
@@ -215,8 +309,30 @@ const panelSuggestions = computed(() => {
   return ['随便陪我聊聊', '今天适合看什么', '给我一句打气的话'];
 });
 
-const chatPanelPlacementClass = computed(() => {
-  return positionX.value > 360 ? 'panel-left' : 'panel-right';
+const panelHorizontalStyle = computed(() => {
+  const spaceLeft = positionX.value - PANEL_WIDGET_GAP;
+  const spaceRight = viewportWidth.value
+    - positionX.value
+    - currentWidgetWidth.value
+    - PANEL_WIDGET_GAP;
+  const preferredLeft = spaceRight >= PANEL_ESTIMATED_WIDTH || spaceRight >= spaceLeft
+    ? positionX.value + currentWidgetWidth.value + PANEL_WIDGET_GAP
+    : positionX.value - PANEL_ESTIMATED_WIDTH - PANEL_WIDGET_GAP;
+  const maxLeft = Math.max(
+    PANEL_VIEWPORT_MARGIN,
+    viewportWidth.value - PANEL_ESTIMATED_WIDTH - PANEL_VIEWPORT_MARGIN,
+  );
+  const clampedLeft = Math.min(Math.max(PANEL_VIEWPORT_MARGIN, preferredLeft), maxLeft);
+  return {
+    right: 'auto',
+    left: `${clampedLeft - positionX.value}px`,
+  };
+});
+
+const panelVerticalPlacementClass = computed(() => {
+  const spaceAbove = positionY.value;
+  const spaceBelow = viewportHeight.value - positionY.value - currentWidgetHeight.value;
+  return spaceAbove >= spaceBelow ? 'panel-above' : 'panel-below';
 });
 
 const speechBubblePlacementClass = computed(() => {
@@ -524,24 +640,60 @@ const resetPointerTilt = () => {
 };
 
 const clampPosition = (x: number, y: number) => {
-  const maxX = Math.max(VIEWPORT_PADDING, window.innerWidth - WIDGET_WIDTH - VIEWPORT_PADDING);
-  const maxY = Math.max(VIEWPORT_PADDING, window.innerHeight - WIDGET_HEIGHT - VIEWPORT_PADDING);
+  const maxX = Math.max(VIEWPORT_PADDING, window.innerWidth - currentWidgetWidth.value - VIEWPORT_PADDING);
+  const maxY = Math.max(VIEWPORT_PADDING, window.innerHeight - currentWidgetHeight.value - VIEWPORT_PADDING);
   return {
     x: Math.min(Math.max(VIEWPORT_PADDING, x), maxX),
     y: Math.min(Math.max(VIEWPORT_PADDING, y), maxY),
   };
 };
 
+const getToolbarLayout = (compact: boolean) => {
+  if (compact) {
+    return {
+      offsetX: 0,
+      offsetY: 0,
+      width: COMPACT_WIDGET_WIDTH,
+      height: getCompactWidgetHeight(),
+    };
+  }
+
+  return {
+    offsetX: (EXPANDED_WRAPPER_WIDTH - EXPANDED_TOOLBAR_WIDTH) * LIVE2D_SCALE / 2,
+    offsetY: EXPANDED_TOOLBAR_OFFSET_Y * LIVE2D_SCALE,
+    width: EXPANDED_TOOLBAR_WIDTH * LIVE2D_SCALE,
+    height: EXPANDED_TOOLBAR_HEIGHT * LIVE2D_SCALE,
+  };
+};
+
+const getToolbarAnchor = (x: number, y: number, compact: boolean) => {
+  const layout = getToolbarLayout(compact);
+  return {
+    toolbarCenterX: x + layout.offsetX + layout.width / 2,
+    toolbarBottomY: y + layout.offsetY + layout.height,
+  };
+};
+
+const positionFromToolbarAnchor = (toolbarCenterX: number, toolbarBottomY: number) => {
+  const layout = getToolbarLayout(compactView.value);
+  return clampPosition(
+    toolbarCenterX - layout.offsetX - layout.width / 2,
+    toolbarBottomY - layout.offsetY - layout.height,
+  );
+};
+
 const persistPosition = () => {
   window.localStorage.setItem(
     STORAGE_KEY,
-    JSON.stringify({ x: positionX.value, y: positionY.value })
+    JSON.stringify(getToolbarAnchor(positionX.value, positionY.value, compactView.value)),
   );
 };
 
 const applyDefaultPosition = () => {
-  const defaultX = 92;
-  const defaultY = Math.max(96, window.innerHeight - WIDGET_HEIGHT - 36);
+  const defaultX = compactView.value
+    ? Math.max(VIEWPORT_PADDING, window.innerWidth - currentWidgetWidth.value - VIEWPORT_PADDING)
+    : 92;
+  const defaultY = Math.max(96, window.innerHeight - currentWidgetHeight.value - 36);
   const next = clampPosition(defaultX, defaultY);
   positionX.value = next.x;
   positionY.value = next.y;
@@ -549,21 +701,48 @@ const applyDefaultPosition = () => {
 
 const restorePosition = () => {
   const saved = window.localStorage.getItem(STORAGE_KEY);
-  if (!saved) {
-    applyDefaultPosition();
-    return;
+  if (saved) {
+    try {
+      const parsed = JSON.parse(saved) as {
+        toolbarCenterX?: number;
+        toolbarBottomY?: number;
+      };
+      if (
+        typeof parsed.toolbarCenterX === 'number'
+        && typeof parsed.toolbarBottomY === 'number'
+      ) {
+        const next = positionFromToolbarAnchor(parsed.toolbarCenterX, parsed.toolbarBottomY);
+        positionX.value = next.x;
+        positionY.value = next.y;
+        return;
+      }
+    } catch {
+      // Fall through to the legacy mode-specific position below.
+    }
   }
-  try {
-    const parsed = JSON.parse(saved) as { x?: number; y?: number };
-    const next = clampPosition(parsed.x ?? 92, parsed.y ?? 120);
-    positionX.value = next.x;
-    positionY.value = next.y;
-  } catch {
-    applyDefaultPosition();
+
+  const legacyKey = compactView.value ? COMPACT_POSITION_STORAGE_KEY : STORAGE_KEY;
+  const legacySaved = window.localStorage.getItem(legacyKey);
+  if (legacySaved) {
+    try {
+      const parsed = JSON.parse(legacySaved) as { x?: number; y?: number };
+      if (typeof parsed.x === 'number' && typeof parsed.y === 'number') {
+        const next = clampPosition(parsed.x, parsed.y);
+        positionX.value = next.x;
+        positionY.value = next.y;
+        return;
+      }
+    } catch {
+      // Use the mode's default position when stored data is invalid.
+    }
   }
+
+  applyDefaultPosition();
 };
 
 const handleResize = () => {
+  viewportWidth.value = window.innerWidth;
+  viewportHeight.value = window.innerHeight;
   const next = clampPosition(positionX.value, positionY.value);
   positionX.value = next.x;
   positionY.value = next.y;
@@ -623,42 +802,71 @@ const handleChat = () => {
   openChatPanel();
 };
 
+const closeMusicPanel = async () => {
+  musicPanelVisible.value = false;
+  await nextTick();
+  musicTriggerRef.value?.focus();
+};
+
 const handleMusic = async () => {
   if (musicPanelVisible.value) {
-    musicPanelVisible.value = false;
+    await closeMusicPanel();
     return;
   }
   panelVisible.value = false;
   musicPanelVisible.value = true;
-  try {
-    if (!musicPlayer.hasQueue) {
-      await musicPlayer.loadPublicQueue();
-    }
-    speechText.value = musicPlayer.playing ? '音乐馆已经打开啦。' : '音乐馆已经准备好啦，点播放按钮就能开始。';
-    setTimeout(clearSpeech, 2200);
-  } catch {
-    speechText.value = '这次音乐没有接上，等一下再试试。';
-    setTimeout(clearSpeech, 2200);
-  }
+  speechText.value = musicPlayer.playing ? '播放器已经打开啦。' : '想听什么，可以直接在播放器里点歌。';
+  setTimeout(clearSpeech, 2200);
+  await nextTick();
+  const panelElement = musicPanelRef.value?.$el as HTMLElement | undefined;
+  panelElement?.querySelector<HTMLElement>('input:not([disabled])')?.focus();
 };
 
 const handleChange = () => {
   speechText.value = '换装魔法还在准备中，先让我披着这件斗篷陪你。';
+  if (compactView.value) {
+    notify.info('换装功能正在准备中');
+  }
   setTimeout(clearSpeech, 2200);
 };
 
 const handleScreenshot = () => {
   speechText.value = '截图功能还在制作中，我先帮你把灵感记下来。';
+  if (compactView.value) {
+    notify.info('截图功能正在制作中');
+  }
   setTimeout(clearSpeech, 2200);
 };
 
-const handleClose = () => {
-  isVisible.value = false;
+const handleDisplayToggle = async () => {
+  if (compactOnly.value) {
+    return;
+  }
+  if (suppressClick.value) {
+    suppressClick.value = false;
+    return;
+  }
+
+  persistPosition();
+  isCompact.value = !isCompact.value;
+  window.localStorage.setItem(DISPLAY_MODE_STORAGE_KEY, isCompact.value ? 'compact' : 'expanded');
   panelVisible.value = false;
   musicPanelVisible.value = false;
+  clearSpeech();
+
+  await nextTick();
+  restorePosition();
 };
 
 let speechTimer: number | null = null;
+
+watch(
+  () => props.compactOnly,
+  async () => {
+    await nextTick();
+    restorePosition();
+  },
+);
 
 onMounted(() => {
   restorePosition();
@@ -689,7 +897,7 @@ onUnmounted(() => {
   width: var(--live2d-width);
   height: var(--live2d-height);
   pointer-events: auto;
-  touch-action: none;
+  touch-action: auto;
 }
 
 .live2d-container.dragging {
@@ -710,14 +918,32 @@ onUnmounted(() => {
   animation: panel-fade-in 260ms ease;
 }
 
-.chat-panel-shell.panel-left,
-.music-panel-shell.panel-left {
-  left: -372px;
+.live2d-container.is-compact .chat-panel-shell.panel-above,
+.live2d-container.is-compact .music-panel-shell.panel-above {
+  top: auto;
+  bottom: calc(100% + 12px);
+  max-height: var(--live2d-panel-space-above) !important;
 }
 
-.chat-panel-shell.panel-right,
-.music-panel-shell.panel-right {
-  left: calc(var(--live2d-width) + 20px);
+.live2d-container.is-compact .chat-panel-shell.panel-below,
+.live2d-container.is-compact .music-panel-shell.panel-below {
+  top: calc(100% + 12px);
+  bottom: auto;
+  max-height: var(--live2d-panel-space-below) !important;
+}
+
+.live2d-container:not(.is-compact) .chat-panel-shell.panel-above,
+.live2d-container:not(.is-compact) .music-panel-shell.panel-above {
+  top: auto;
+  bottom: 0;
+  max-height: var(--live2d-panel-space-to-widget-bottom) !important;
+}
+
+.live2d-container:not(.is-compact) .chat-panel-shell.panel-below,
+.live2d-container:not(.is-compact) .music-panel-shell.panel-below {
+  top: 0;
+  bottom: auto;
+  max-height: var(--live2d-panel-space-from-widget-top) !important;
 }
 
 .live2d-wrapper {
@@ -725,9 +951,14 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   align-items: center;
-  width: 252px;
+  width: var(--live2d-wrapper-width, 298px);
   transform: scale(var(--live2d-scale));
   transform-origin: top left;
+}
+
+.live2d-wrapper.is-compact {
+  width: 100%;
+  transform: none;
 }
 
 .speech-bubble {
@@ -788,6 +1019,7 @@ onUnmounted(() => {
   height: 420px;
   overflow: visible;
   cursor: grab;
+  touch-action: none;
 }
 
 .live2d-container.dragging .live2d-canvas {
@@ -933,43 +1165,137 @@ onUnmounted(() => {
 }
 
 .live2d-tools {
+  display: flex;
   width: max-content;
   margin-top: 8px;
-  display: flex;
   justify-content: center;
   gap: 8px;
+  padding: 0 4px;
+  border: 1px solid rgba(236, 219, 226, 0.56);
+  border-radius: 12px;
+  background: rgba(255, 253, 254, 0.44);
+  backdrop-filter: blur(14px) saturate(112%);
+  box-shadow: 0 4px 8px rgba(84, 60, 73, 0.08);
+}
+
+.live2d-tools:not(.is-compact) {
+  gap: 10px;
+  padding: 8px;
+}
+
+.live2d-tools.is-compact {
+  align-items: center;
+  width: 100%;
+  min-height: 44px;
+  margin-top: 0;
+  padding: 4px 6px;
+  gap: 2px;
+}
+
+.assistant-identity {
+  display: inline-flex;
+  flex: 0 0 auto;
+  min-width: 0;
+  height: 32px;
+  align-items: center;
+  gap: 5px;
+  padding: 0 5px 0 6px;
+  color: #6b505d;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+
+.live2d-container.dragging .assistant-identity {
+  cursor: grabbing;
+}
+
+.assistant-identity__mark {
+  display: inline-grid;
+  flex: 0 0 36px;
+  width: 36px;
+  height: 26px;
+  place-items: center;
+  border-radius: 8px;
+  background: var(--primary, #fb7299);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+}
+
+.assistant-identity__playing {
+  display: inline-flex;
+  height: 14px;
+  align-items: flex-end;
+  gap: 2px;
+  color: #e45c8c;
+}
+
+.assistant-identity__playing i {
+  width: 2px;
+  height: 6px;
+  border-radius: 2px;
+  background: currentColor;
+  animation: playing-bar 720ms ease-in-out infinite alternate;
+}
+
+.assistant-identity__playing i:nth-child(2) {
+  height: 11px;
+  animation-delay: 160ms;
+}
+
+.assistant-identity__playing i:nth-child(3) {
+  height: 8px;
+  animation-delay: 320ms;
 }
 
 .tool-btn {
-  width: 34px;
-  height: 34px;
+  width: 32px;
+  height: 32px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   border: none;
   border-radius: 999px;
-  background: rgba(255, 251, 253, 0.96);
+  background: transparent;
   color: #8e7280;
-  box-shadow:
-    0 10px 22px rgba(84, 60, 73, 0.12),
-    inset 0 1px 0 rgba(255, 255, 255, 0.82);
   cursor: pointer;
-  transition: transform 0.24s ease, background 0.24s ease, color 0.24s ease;
+  transition: transform 180ms ease-out, background 180ms ease-out, color 180ms ease-out;
 
   &:hover {
     transform: translateY(-2px);
-    background: linear-gradient(135deg, #f48aac, #fb7299);
+    background: #fb7299;
     color: #fff;
   }
 
   &.is-active {
-    background: linear-gradient(135deg, #fb7299, #ff95b7);
+    background: #fb7299;
     color: #fff;
+  }
+
+  &:focus-visible {
+    outline: 2px solid #d94378;
+    outline-offset: 2px;
   }
 }
 
-.close-btn:hover {
-  background: linear-gradient(135deg, #ee7c9f, #e85d83);
+.live2d-tools:not(.is-compact) .tool-btn {
+  width: 48px;
+  height: 48px;
+  font-size: 24px;
+}
+
+.live2d-tools.is-compact .tool-btn {
+  flex: 0 0 30px;
+  width: 30px;
+  height: 30px;
+}
+
+.live2d-tools.is-compact .tool-btn:hover,
+.live2d-tools.is-compact .tool-btn.is-active {
+  background: #fb7299;
+  color: #fff;
 }
 
 @keyframes panel-fade-in {
@@ -1051,14 +1377,79 @@ onUnmounted(() => {
   }
 }
 
-@media (max-width: 768px) {
+@keyframes playing-bar {
+  from {
+    transform: scaleY(0.55);
+  }
+  to {
+    transform: scaleY(1);
+  }
+}
+
+@media (max-width: 1023px) {
+  .live2d-container.is-compact {
+    right: 12px;
+    bottom: max(12px, env(safe-area-inset-bottom));
+    left: 12px !important;
+    top: auto !important;
+    width: auto !important;
+    height: 58px !important;
+  }
+
+  .live2d-tools.is-compact {
+    min-height: 58px;
+    padding: 7px;
+    border-radius: 16px;
+  }
+
+  .live2d-tools.is-compact .tool-btn {
+    flex-basis: 44px;
+    width: 44px;
+    height: 44px;
+    font-size: 17px;
+  }
+
   .chat-panel-shell,
   .music-panel-shell {
     position: fixed;
-    left: 50% !important;
-    top: auto;
-    bottom: 116px;
-    transform: translateX(-50%);
+    right: 12px !important;
+    left: 12px !important;
+    top: auto !important;
+    bottom: calc(82px + env(safe-area-inset-bottom)) !important;
+    width: auto !important;
+    max-width: none;
+    max-height: calc(100dvh - 112px) !important;
+    transform: none;
+  }
+}
+
+@media (max-width: 420px) {
+  .assistant-identity {
+    flex: 0 0 40px;
+    padding-inline: 0;
+  }
+
+  .assistant-identity__playing {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chat-panel-shell,
+  .music-panel-shell,
+  .speech-bubble,
+  .figure-shadow,
+  .figure-aura,
+  .maid-motion,
+  .magic-orb,
+  .sparkle,
+  .assistant-identity__playing i {
+    animation: none;
+  }
+
+  .maid-figure,
+  .tool-btn {
+    transition-duration: 0.01ms;
   }
 }
 </style>

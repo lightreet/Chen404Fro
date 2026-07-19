@@ -10,7 +10,7 @@
           <div
             v-if="modelValue"
             class="ui-dialog"
-            :class="[`ui-dialog--${size}`]"
+            :class="[`ui-dialog--${size}`, panelClass]"
             role="dialog"
             aria-modal="true"
             :style="widthStyle"
@@ -56,6 +56,8 @@ const props = withDefaults(
     size?: 'sm' | 'md' | 'lg' | 'xl'
     /** 自定义宽度，如 '720px' */
     width?: string
+    /** 业务弹窗面板类名 */
+    panelClass?: string
     showClose?: boolean
     /** 点遮罩关闭 */
     closeOnClickModal?: boolean

@@ -85,9 +85,9 @@
             <div class="form-agreement">
               <UiCheckbox v-model="agreement">
                 我已阅读并同意
-                <a href="#" @click.prevent="agreementDialogVisible = true">《用户协议》</a>
+                <a href="#" @click.prevent="openLegalDocument('agreement')">《用户协议》</a>
                 和
-                <a href="#" @click.prevent="privacyDialogVisible = true">《隐私政策》</a>
+                <a href="#" @click.prevent="openLegalDocument('privacy')">《隐私政策》</a>
               </UiCheckbox>
             </div>
 
@@ -120,50 +120,23 @@
     </div>
 
     <UiDialog
-      v-model="agreementDialogVisible"
-      title="用户协议"
-      width="720px"
-      class="legal-modal legal-modal--agreement"
+      v-model="legalDialogVisible"
+      :title="activeLegalDocument.title"
+      width="760px"
+      panel-class="legal-modal"
     >
-      <div class="legal-dialog">
-        <div class="legal-hero">
-          <span class="legal-badge">Chen404 约定</span>
-          <h3>欢迎来到我们的小宇宙</h3>
-          <p class="legal-lead">
-            欢迎来到 Chen404。下面这份协议是我们的核心原则，希望你能认真阅读并遵守。
-          </p>
-        </div>
-        <section v-for="section in agreementSections" :key="section.title" class="legal-section">
-          <h4>{{ section.title }}</h4>
-          <p v-for="paragraph in section.paragraphs" :key="paragraph">{{ paragraph }}</p>
-        </section>
-      </div>
-      <template #footer>
-        <UiButton variant="secondary" @click="agreementDialogVisible = false">我知道了</UiButton>
-      </template>
-    </UiDialog>
+      <div class="legal-document">
+        <p class="legal-summary">{{ activeLegalDocument.summary }}</p>
 
-    <UiDialog
-      v-model="privacyDialogVisible"
-      title="隐私政策"
-      width="720px"
-      class="legal-modal legal-modal--privacy"
-    >
-      <div class="legal-dialog">
-        <div class="legal-hero">
-          <span class="legal-badge">Chen404 隐私说明</span>
-          <h3>你的信息会被温柔对待</h3>
-          <p class="legal-lead">
-            我们尊重你的隐私，也不打算把你的信息变成全网漂流瓶。下面会说明我们收集什么、为什么收集，以及怎么保护这些信息。
-          </p>
+        <div class="legal-sections">
+          <section v-for="section in activeLegalDocument.sections" :key="section.title" class="legal-section">
+            <h3>{{ section.title }}</h3>
+            <p v-for="paragraph in section.paragraphs" :key="paragraph">{{ paragraph }}</p>
+          </section>
         </div>
-        <section v-for="section in privacySections" :key="section.title" class="legal-section">
-          <h4>{{ section.title }}</h4>
-          <p v-for="paragraph in section.paragraphs" :key="paragraph">{{ paragraph }}</p>
-        </section>
       </div>
       <template #footer>
-        <UiButton variant="secondary" @click="privacyDialogVisible = false">明白了</UiButton>
+        <UiButton variant="secondary" @click="legalDialogVisible = false">关闭</UiButton>
       </template>
     </UiDialog>
   </div>
@@ -190,8 +163,8 @@ const agreement = ref(false);
 const codeSending = ref(false);
 const codeCountdown = ref(0);
 const countdownTimer = ref<number | null>(null);
-const agreementDialogVisible = ref(false);
-const privacyDialogVisible = ref(false);
+const legalDialogVisible = ref(false);
+const activeLegalType = ref<'agreement' | 'privacy'>('agreement');
 
 const form = reactive({
   username: '',
@@ -292,6 +265,25 @@ const privacySections = [
     ],
   },
 ];
+
+const legalDocuments = {
+  agreement: {
+    title: '用户协议',
+    summary: '使用 Chen404 前，请了解账号、内容发布与社区互动的基本规则。',
+    sections: agreementSections,
+  },
+  privacy: {
+    title: '隐私政策',
+    summary: '了解我们会收集哪些信息、为什么使用，以及你拥有的相关权利。',
+    sections: privacySections,
+  },
+};
+const activeLegalDocument = computed(() => legalDocuments[activeLegalType.value]);
+
+function openLegalDocument(type: 'agreement' | 'privacy') {
+  activeLegalType.value = type;
+  legalDialogVisible.value = true;
+}
 
 const rules = {
   username: createUsernameRules(),
@@ -635,122 +627,52 @@ onBeforeUnmount(() => {
   }
 }
 
-.legal-dialog {
-  position: relative;
-  max-height: 62vh;
+.legal-document {
+  max-height: min(62vh, 640px);
   overflow-y: auto;
-  padding: 4px 8px 4px 2px;
-  scrollbar-width: thin;
-  scrollbar-color: rgba(251, 114, 153, 0.45) transparent;
-
-  &::-webkit-scrollbar {
-    width: 6px;
-  }
-
-  &::-webkit-scrollbar-thumb {
-    background: rgba(251, 114, 153, 0.4);
-    border-radius: 999px;
-  }
-
-  &::-webkit-scrollbar-track {
-    background: transparent;
-  }
+  padding-right: 16px;
+  scrollbar-gutter: stable;
 }
 
-.legal-hero {
-  position: relative;
-  margin-bottom: 20px;
-  padding: 22px 22px 18px;
-  border-radius: 20px;
-  background:
-    radial-gradient(circle at top right, rgba(255, 255, 255, 0.9), transparent 34%),
-    linear-gradient(135deg, rgba(251, 114, 153, 0.18), rgba(255, 133, 167, 0.1));
-  border: 1px solid rgba(251, 114, 153, 0.16);
-  box-shadow: 0 14px 32px rgba(251, 114, 153, 0.12);
-  overflow: hidden;
-
-  &::after {
-    content: '';
-    position: absolute;
-    right: -28px;
-    bottom: -28px;
-    width: 110px;
-    height: 110px;
-    border-radius: 50%;
-    background: rgba(251, 114, 153, 0.1);
-  }
-
-  h3 {
-    position: relative;
-    z-index: 1;
-    margin: 0 0 10px;
-    font-size: 24px;
-    color: var(--text-primary);
-    line-height: 1.3;
-  }
-}
-
-.legal-badge {
-  position: relative;
-  z-index: 1;
-  display: inline-flex;
-  align-items: center;
-  margin-bottom: 12px;
-  padding: 6px 12px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.82);
-  border: 1px solid rgba(251, 114, 153, 0.18);
-  color: var(--primary-dark);
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-}
-
-.legal-lead {
-  position: relative;
-  z-index: 1;
-  margin: 0;
-  color: var(--text-secondary);
-  line-height: 1.85;
+.legal-summary {
+  margin: 0 0 4px;
+  padding: 14px 16px;
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--primary) 7%, var(--color-surface));
+  color: var(--color-text-secondary);
   font-size: 14px;
+  line-height: 1.7;
+  text-wrap: pretty;
 }
 
-.legal-section + .legal-section {
-  margin-top: 14px;
+.legal-sections {
+  max-width: 70ch;
 }
 
 .legal-section {
-  padding: 18px 20px;
-  border-radius: 18px;
-  background: rgba(255, 255, 255, 0.88);
-  border: 1px solid rgba(251, 114, 153, 0.1);
-  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.05);
+  padding: 22px 2px;
+  border-bottom: 1px solid var(--color-border-light);
 
-  h4 {
-    display: flex;
-    align-items: center;
-    gap: 10px;
+  &:last-child {
+    border-bottom: 0;
+  }
+
+  h3 {
     margin: 0 0 12px;
+    color: var(--color-text-primary);
     font-size: 16px;
-    color: var(--text-primary);
-    line-height: 1.4;
-
-    &::before {
-      content: '';
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      background: linear-gradient(135deg, var(--primary), var(--primary-light));
-      box-shadow: 0 0 0 5px rgba(251, 114, 153, 0.12);
-      flex-shrink: 0;
-    }
+    font-weight: 650;
+    line-height: 1.45;
+    text-wrap: balance;
   }
 
   p {
     margin: 0;
-    color: var(--text-secondary);
-    line-height: 1.9;
-    font-size: 14px;
+    padding-left: 24px;
+    color: var(--color-text-secondary);
+    font-size: 15px;
+    line-height: 1.8;
+    text-wrap: pretty;
   }
 
   p + p {
@@ -758,78 +680,37 @@ onBeforeUnmount(() => {
   }
 }
 
-.legal-modal {
-  :deep(.el-overlay-dialog) {
-    backdrop-filter: blur(10px);
-  }
-
-  :deep(.el-dialog) {
-    border-radius: 24px;
-    overflow: hidden;
-    border: 1px solid rgba(251, 114, 153, 0.14);
-    box-shadow: 0 24px 64px rgba(34, 34, 34, 0.16);
-    background:
-      linear-gradient(180deg, rgba(255, 249, 251, 0.98), rgba(255, 255, 255, 0.98));
-  }
-
-  :deep(.el-dialog__header) {
-    margin-right: 0;
-    padding: 22px 24px 14px;
-    background:
-      radial-gradient(circle at top left, rgba(255, 255, 255, 0.92), transparent 42%),
-      linear-gradient(135deg, rgba(251, 114, 153, 0.18), rgba(255, 133, 167, 0.08));
-    border-bottom: 1px solid rgba(251, 114, 153, 0.12);
-  }
-
-  :deep(.el-dialog__title) {
-    font-size: 22px;
-    font-weight: 700;
-    color: var(--text-primary);
-    letter-spacing: 0.01em;
-  }
-
-  :deep(.el-dialog__headerbtn) {
-    top: 18px;
-    right: 18px;
-    width: 36px;
-    height: 36px;
-    border-radius: 50%;
-    background: rgba(255, 255, 255, 0.75);
-    transition: all 0.25s ease;
-  }
-
-  :deep(.el-dialog__headerbtn:hover) {
-    background: rgba(251, 114, 153, 0.12);
-  }
-
-  :deep(.el-dialog__body) {
-    padding: 22px 24px 18px;
-  }
-
-  :deep(.el-dialog__footer) {
-    padding: 0 24px 24px;
-  }
-
-  :deep(.ui-button) {
-    min-width: 116px;
-    border-radius: 999px;
-  }
+:global(.legal-modal.ui-dialog) {
+  overflow: hidden;
+  border: 0;
+  border-radius: var(--radius-lg);
+  box-shadow: 0 16px 40px rgba(34, 24, 30, 0.2);
 }
 
-.legal-modal--agreement {
-  :deep(.el-dialog__header) {
-    background:
-      radial-gradient(circle at top left, rgba(255, 255, 255, 0.92), transparent 42%),
-      linear-gradient(135deg, rgba(251, 114, 153, 0.2), rgba(255, 176, 201, 0.1));
-  }
+:global(.legal-modal .ui-dialog__header) {
+  flex-shrink: 0;
+  padding: 22px 28px 18px;
+  border-bottom: 1px solid var(--color-border-light);
 }
 
-.legal-modal--privacy {
-  :deep(.el-dialog__header) {
-    background:
-      radial-gradient(circle at top left, rgba(255, 255, 255, 0.92), transparent 42%),
-      linear-gradient(135deg, rgba(255, 168, 204, 0.18), rgba(255, 220, 228, 0.16));
-  }
+:global(.legal-modal .ui-dialog__title) {
+  color: var(--color-text-primary);
+  font-size: 20px;
+  font-weight: 650;
+}
+
+:global(.legal-modal .ui-dialog__body) {
+  padding: 20px 28px 0;
+  overflow: hidden;
+}
+
+:global(.legal-modal .ui-dialog__footer) {
+  flex-shrink: 0;
+  padding: 16px 28px 20px;
+}
+
+:global(.legal-modal .ui-dialog__footer .ui-button) {
+  min-width: 88px;
 }
 
 @media (max-width: 768px) {
@@ -859,39 +740,38 @@ onBeforeUnmount(() => {
     padding: 32px 24px;
   }
 
-  .legal-dialog {
-    max-height: 52vh;
-    padding-right: 2px;
+  .legal-document {
+    max-height: 56vh;
+    padding-right: 8px;
   }
 
-  .legal-hero {
-    padding: 18px 16px 16px;
-
-    h3 {
-      font-size: 20px;
-    }
+  .legal-summary {
+    padding: 12px 14px;
   }
 
   .legal-section {
-    padding: 16px;
+    padding: 18px 0;
+
+    p {
+      padding-left: 18px;
+      font-size: 14px;
+    }
   }
 
-  .legal-modal {
-    :deep(.el-dialog) {
-      width: calc(100vw - 24px) !important;
-    }
+  :global(.legal-modal.ui-dialog) {
+    width: calc(100vw - 24px) !important;
+  }
 
-    :deep(.el-dialog__header) {
-      padding: 18px 18px 12px;
-    }
+  :global(.legal-modal .ui-dialog__header) {
+    padding: 18px 18px 14px;
+  }
 
-    :deep(.el-dialog__body) {
-      padding: 18px;
-    }
+  :global(.legal-modal .ui-dialog__body) {
+    padding: 16px 18px 0;
+  }
 
-    :deep(.el-dialog__footer) {
-      padding: 0 18px 18px;
-    }
+  :global(.legal-modal .ui-dialog__footer) {
+    padding: 14px 18px 18px;
   }
 }
 </style>

@@ -32,8 +32,6 @@
 
     <!-- 底部 -->
     <Footer />
-
-    <Live2D v-if="showLive2D && !isMobile" />
   </div>
 </template>
 
@@ -42,7 +40,6 @@ import { computed } from 'vue';
 import { useRoute } from 'vue-router';
 import Header from '@/components/Header/Header.vue';
 import Footer from '@/components/Footer/Footer.vue';
-import Live2D from '@/components/Live2D/Live2D.vue';
 import SakuraOverlay from '@/components/SakuraOverlay/SakuraOverlay.vue';
 import { useLayoutMobile } from '@/composables/useLayoutMobile';
 
@@ -74,14 +71,12 @@ const sakuraSceneMode = computed<SakuraSceneMode>(() => {
 interface Props {
   showRightSidebar?: boolean;
   wideContent?: boolean;
-  showLive2D?: boolean;
   showHeader?: boolean;
 }
 
 withDefaults(defineProps<Props>(), {
   showRightSidebar: false,
   wideContent: false,
-  showLive2D: true,
   showHeader: true,
 });
 
