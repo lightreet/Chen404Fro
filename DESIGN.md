@@ -294,6 +294,12 @@ Chen404 now has its own design system in code. This doc describes *intent*; the 
 - **Message list:** replies should nest visibly but softly. Like/reply/delete actions should be small, consistent, and keyboard reachable.
 - **Tone:** warm and conversational, not admin-comment-table.
 
+### Lyra Companion
+
+- **Compact identity:** show one `Lyra` badge in Sakura Signal (`var(--primary)`), without a second Lyra label or a `404` replacement mark.
+- **Compact spacing:** keep the identity and tool actions in one centered group. Do not use `flex-grow` as a spacer between them; keep only a small deliberate group gap and trim unused outer width.
+- **Touch targets:** visual density must not reduce mobile tool buttons below the established 44px touch target.
+
 ### Memory Map
 
 - **Role:** public-to-private travel atlas.

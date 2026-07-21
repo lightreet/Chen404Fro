@@ -6,9 +6,14 @@
     @keydown.esc.stop="emit('close')"
   >
     <header class="music-panel__header">
-      <div>
-        <strong>音乐播放器</strong>
-        <span>不离开当前页面，也能随时点歌</span>
+      <div class="music-panel__identity">
+        <span class="music-panel__identity-mark" aria-hidden="true">
+          <UiIcon name="Headset" />
+        </span>
+        <div>
+          <strong>Lyra Music</strong>
+          <span>随身播放器</span>
+        </div>
       </div>
       <button type="button" class="icon-btn" aria-label="关闭音乐播放器" @click="emit('close')">
         <UiIcon name="Close" />
@@ -17,35 +22,66 @@
 
     <section class="now-playing" aria-label="当前播放">
       <div class="now-playing__cover" :class="{ 'is-playing': player.playing }">
-        <img v-if="track?.coverUrl" :src="track.coverUrl" :alt="`${track.title}封面`" />
-        <UiIcon v-else name="mdi:music-note" />
+        <img
+          v-if="displayTrack?.coverUrl"
+          :src="displayTrack.coverUrl"
+          :alt="`${displayTrack.title}封面`"
+        />
+        <span v-else class="now-playing__cover-fallback" aria-hidden="true">
+          <small>LYRA</small>
+          <strong>MUSIC</strong>
+        </span>
+        <span class="now-playing__state">
+          {{ track ? (player.playing ? '播放中' : '已暂停') : '待播放' }}
+        </span>
       </div>
 
       <div class="now-playing__content">
         <div class="now-playing__meta">
-          <div>
-            <strong>{{ track?.title || '还没有选择歌曲' }}</strong>
-            <p>{{ currentTrackDescription }}</p>
-          </div>
-          <span v-if="player.currentPlaylist?.name" class="playlist-label">
-            {{ player.currentPlaylist.name }}
+          <span class="now-playing__eyebrow">
+            {{ player.currentPlaylist?.name || (track ? '当前曲目' : '为你推荐') }}
           </span>
+          <strong>{{ displayTrack?.title || '准备听点什么？' }}</strong>
+          <p>{{ displayTrackDescription }}</p>
         </div>
 
         <div class="music-panel__controls">
-          <button type="button" class="round-btn" aria-label="上一首" @click="player.previous">
+          <button
+            type="button"
+            class="round-btn"
+            aria-label="上一首"
+            :disabled="!player.hasQueue"
+            @click="player.previous"
+          >
             <UiIcon name="Back" />
           </button>
           <button
             type="button"
             class="round-btn round-btn--primary"
-            :aria-label="player.playing ? '暂停播放' : '开始播放'"
+            :aria-label="primaryPlaybackLabel"
             @click="togglePlay"
           >
             <UiIcon :name="player.playing ? 'VideoPause' : 'VideoPlay'" />
           </button>
-          <button type="button" class="round-btn" aria-label="下一首" @click="player.next">
+          <button
+            type="button"
+            class="round-btn"
+            aria-label="下一首"
+            :disabled="!player.hasQueue"
+            @click="player.next"
+          >
             <UiIcon name="Right" />
+          </button>
+          <button
+            type="button"
+            class="round-btn"
+            :class="{ 'is-active': settingsVisible }"
+            aria-label="播放设置"
+            :aria-expanded="settingsVisible"
+            aria-controls="live2d-playback-settings"
+            @click="settingsVisible = !settingsVisible"
+          >
+            <UiIcon name="Setting" />
           </button>
         </div>
       </div>
@@ -64,7 +100,12 @@
       <span>{{ formatTime(player.duration) }}</span>
     </div>
 
-    <div class="playback-settings">
+    <div
+      v-if="settingsVisible"
+      id="live2d-playback-settings"
+      class="playback-settings"
+      aria-label="播放设置"
+    >
       <div class="volume-control">
         <UiIcon :name="player.volume === 0 ? 'mdi:volume-off' : 'mdi:volume-high'" />
         <UiSlider
@@ -94,10 +135,12 @@
     <nav class="music-panel__tabs" role="tablist" aria-label="音乐功能">
       <button
         v-for="tab in tabs"
+        :id="`music-tab-${tab.value}`"
         :key="tab.value"
         type="button"
         role="tab"
         :aria-selected="activeTab === tab.value"
+        :aria-controls="`music-panel-${tab.value}`"
         :class="{ 'is-active': activeTab === tab.value }"
         @click="activeTab = tab.value"
       >
@@ -106,8 +149,14 @@
       </button>
     </nav>
 
-    <div class="music-panel__body">
-      <section v-if="activeTab === 'catalog'" class="catalog-panel" role="tabpanel">
+    <div ref="panelBodyRef" class="music-panel__body">
+      <section
+        v-if="activeTab === 'catalog'"
+        id="music-panel-catalog"
+        class="catalog-panel"
+        role="tabpanel"
+        aria-labelledby="music-tab-catalog"
+      >
         <UiInput
           v-model="catalog.keyword.value"
           prefix-icon="search"
@@ -136,6 +185,11 @@
           </button>
         </div>
 
+        <div class="catalog-panel__heading">
+          <strong>{{ catalogHeading }}</strong>
+          <span>共 {{ catalog.filteredTracks.value.length }} 首</span>
+        </div>
+
         <UiLoadingState
           :loading="catalog.loading.value"
           message="正在整理曲库"
@@ -160,7 +214,7 @@
 
           <div v-else class="track-list" aria-label="点歌列表">
             <button
-              v-for="item in catalog.filteredTracks.value"
+              v-for="item in visibleCatalogTracks"
               :key="item.id"
               type="button"
               class="track-row"
@@ -175,7 +229,6 @@
                 <strong>{{ item.title }}</strong>
                 <small>{{ item.artist }}<template v-if="item.album"> · {{ item.album }}</template></small>
               </span>
-              <span v-if="item.genre" class="track-row__genre">{{ item.genre }}</span>
               <UiIcon
                 class="track-row__action"
                 :name="player.currentTrack?.id === item.id && player.playing ? 'VideoPause' : 'VideoPlay'"
@@ -184,13 +237,29 @@
           </div>
         </UiLoadingState>
 
-        <RouterLink class="music-hall-link" to="/music">
-          进入音乐馆
-          <UiIcon name="ArrowRight" />
-        </RouterLink>
+        <div v-if="!catalog.loading.value && !catalog.error.value" class="catalog-actions">
+          <button
+            v-if="remainingTrackCount > 0"
+            type="button"
+            class="catalog-actions__more"
+            @click="showMoreTracks"
+          >
+            再显示 {{ Math.min(CATALOG_PAGE_SIZE, remainingTrackCount) }} 首
+          </button>
+          <RouterLink class="music-hall-link" to="/music">
+            完整音乐馆
+            <UiIcon name="ArrowRight" />
+          </RouterLink>
+        </div>
       </section>
 
-      <section v-else-if="activeTab === 'queue'" class="queue-panel" role="tabpanel">
+      <section
+        v-else-if="activeTab === 'queue'"
+        id="music-panel-queue"
+        class="queue-panel"
+        role="tabpanel"
+        aria-labelledby="music-tab-queue"
+      >
         <UiEmpty
           v-if="player.queue.length === 0"
           size="sm"
@@ -224,7 +293,13 @@
         </div>
       </section>
 
-      <section v-else class="lyrics-panel" role="tabpanel">
+      <section
+        v-else
+        id="music-panel-lyrics"
+        class="lyrics-panel"
+        role="tabpanel"
+        aria-labelledby="music-tab-lyrics"
+      >
         <div class="lyrics-panel__head">
           <strong>{{ track?.title || '当前歌词' }}</strong>
           <span>{{ track?.lyricType === 'lrc' ? '随播放进度滚动' : '歌词预览' }}</span>
@@ -254,7 +329,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { UiEmpty, UiIcon, UiInput, UiLoadingState, UiSlider } from '@/components/ui'
 import { usePublicMusicCatalog } from '@/composables/usePublicMusicCatalog'
 import { useMusicPlayerStore, type MusicPlayMode } from '@/stores/music-player'
@@ -266,14 +341,35 @@ const emit = defineEmits<{
 
 type MusicPanelTab = 'catalog' | 'queue' | 'lyrics'
 
+const CATALOG_PAGE_SIZE = 6
 const player = useMusicPlayerStore()
 const catalog = usePublicMusicCatalog()
 const activeTab = ref<MusicPanelTab>('catalog')
+const settingsVisible = ref(false)
+const visibleTrackLimit = ref(CATALOG_PAGE_SIZE)
+const panelBodyRef = ref<HTMLElement | null>(null)
 const track = computed(() => player.currentTrack)
-const currentTrackDescription = computed(() => {
-  if (!track.value) return '从下方曲库里挑一首喜欢的歌。'
-  return [track.value.artist, track.value.album].filter(Boolean).join(' · ')
+const displayTrack = computed(() => track.value ?? catalog.tracks.value[0] ?? null)
+const displayTrackDescription = computed(() => {
+  if (!displayTrack.value) return '曲库加载后，会在这里为你留一张唱片。'
+  const details = [displayTrack.value.artist, displayTrack.value.album].filter(Boolean)
+  if (!track.value) details.push('点击播放开始')
+  return details.join(' · ')
 })
+const primaryPlaybackLabel = computed(() => {
+  if (player.playing) return '暂停播放'
+  return displayTrack.value ? `播放 ${displayTrack.value.title}` : '开始播放'
+})
+const catalogHeading = computed(() => {
+  if (catalog.keyword.value.trim()) return '搜索结果'
+  return catalog.selectedPlaylist.value?.name || '推荐点歌'
+})
+const visibleCatalogTracks = computed(() =>
+  catalog.filteredTracks.value.slice(0, visibleTrackLimit.value),
+)
+const remainingTrackCount = computed(() =>
+  Math.max(0, catalog.filteredTracks.value.length - visibleCatalogTracks.value.length),
+)
 const currentLyricLines = computed<LyricLine[]>(() => getTrackLyricLines(track.value, player.playbackTime))
 
 const tabs: Array<{ label: string; value: MusicPanelTab }> = [
@@ -299,7 +395,25 @@ onMounted(() => {
   void catalog.loadCatalog()
 })
 
+watch(activeTab, async () => {
+  await nextTick()
+  if (panelBodyRef.value) {
+    panelBodyRef.value.scrollTop = 0
+  }
+})
+
+watch([catalog.keyword, catalog.selectedPlaylistId], () => {
+  visibleTrackLimit.value = CATALOG_PAGE_SIZE
+  if (panelBodyRef.value) {
+    panelBodyRef.value.scrollTop = 0
+  }
+})
+
 async function togglePlay() {
+  if (!track.value && displayTrack.value) {
+    await player.playTrack(displayTrack.value, catalog.tracks.value)
+    return
+  }
   await player.toggle()
 }
 
@@ -320,6 +434,10 @@ async function playQueuedTrack(item: MusicTrack) {
     return
   }
   await player.playTrack(item)
+}
+
+function showMoreTracks() {
+  visibleTrackLimit.value += CATALOG_PAGE_SIZE
 }
 
 function handleSeek(value: number | number[]) {
@@ -397,18 +515,19 @@ function parseLrc(input: string): LyricLine[] {
 
 <style scoped lang="scss">
 .music-panel {
-  --music-accent-strong: #bd3569;
-  --music-text-muted: #75616b;
+  --music-accent-strong: var(--color-accent-strong, var(--primary-dark, #e44d78));
+  --music-text-muted: var(--color-text-secondary, #75616b);
 
   display: flex;
-  width: 420px;
+  width: 404px;
   max-width: calc(100vw - 24px);
-  max-height: min(720px, calc(100dvh - 32px));
+  max-height: min(680px, calc(100dvh - 32px));
   flex-direction: column;
   overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--primary) 14%, var(--color-border, #eee1e6));
   border-radius: 16px;
   background: var(--color-surface, #fff);
-  box-shadow: 0 18px 44px rgba(65, 45, 56, 0.2);
+  box-shadow: 0 18px 44px rgba(65, 45, 56, 0.18);
   color: var(--color-text-primary, #4f3c46);
 }
 
@@ -431,22 +550,42 @@ function parseLrc(input: string): LyricLine[] {
   flex: 0 0 auto;
   justify-content: space-between;
   gap: 12px;
-  padding: 16px 18px 12px;
+  padding: 10px 10px 6px 16px;
 }
 
-.music-panel__header strong,
-.music-panel__header span {
+.music-panel__identity {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 9px;
+}
+
+.music-panel__identity-mark {
+  display: grid;
+  flex: 0 0 34px;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border-radius: 11px;
+  background: var(--color-accent-soft, color-mix(in srgb, var(--primary) 14%, transparent));
+  color: var(--music-accent-strong);
+  font-size: 17px;
+}
+
+.music-panel__identity strong,
+.music-panel__identity span {
   display: block;
 }
 
-.music-panel__header strong {
-  font-size: 16px;
+.music-panel__identity strong {
+  font-size: 14px;
+  letter-spacing: 0.01em;
 }
 
-.music-panel__header span {
-  margin-top: 2px;
+.music-panel__identity div > span {
+  margin-top: 1px;
   color: var(--color-text-secondary, #7c6872);
-  font-size: 12px;
+  font-size: 11px;
 }
 
 .icon-btn,
@@ -461,11 +600,11 @@ function parseLrc(input: string): LyricLine[] {
 
 .icon-btn {
   display: grid;
-  flex: 0 0 34px;
-  width: 34px;
-  height: 34px;
+  flex: 0 0 44px;
+  width: 44px;
+  height: 44px;
   place-items: center;
-  border-radius: 10px;
+  border-radius: 12px;
   background: transparent;
   color: var(--color-text-secondary, #7c6872);
 }
@@ -477,21 +616,24 @@ function parseLrc(input: string): LyricLine[] {
 }
 
 .now-playing {
-  gap: 14px;
-  padding: 4px 18px 12px;
+  align-items: stretch;
+  gap: 16px;
+  padding: 6px 18px 12px;
 }
 
 .now-playing__cover {
+  position: relative;
   display: grid;
-  flex: 0 0 68px;
-  width: 68px;
-  height: 68px;
+  flex: 0 0 96px;
+  width: 96px;
+  height: 96px;
   overflow: hidden;
   place-items: center;
-  border-radius: 12px;
+  border: 1px solid color-mix(in srgb, var(--primary) 18%, var(--color-border, #eee1e6));
+  border-radius: 16px;
   background: var(--color-surface-muted, #fff3f7);
-  color: var(--primary, #fb7299);
-  font-size: 26px;
+  color: var(--music-accent-strong);
+  box-shadow: 0 10px 24px color-mix(in srgb, var(--primary) 13%, transparent);
 }
 
 .now-playing__cover img {
@@ -504,20 +646,47 @@ function parseLrc(input: string): LyricLine[] {
   animation: cover-breathe 3s ease-in-out infinite;
 }
 
+.now-playing__cover-fallback {
+  display: grid;
+  place-items: center;
+  line-height: 1;
+  text-align: center;
+}
+
+.now-playing__cover-fallback small {
+  font-size: 9px;
+  letter-spacing: 0.22em;
+}
+
+.now-playing__cover-fallback strong {
+  margin-top: 5px;
+  font-size: 17px;
+  letter-spacing: 0.04em;
+}
+
+.now-playing__state {
+  position: absolute;
+  bottom: 6px;
+  left: 6px;
+  padding: 3px 6px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 2px 8px rgba(65, 45, 56, 0.12);
+  color: var(--music-accent-strong);
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
 .now-playing__content {
+  display: flex;
   flex: 1;
   min-width: 0;
+  flex-direction: column;
+  justify-content: space-between;
 }
 
 .now-playing__meta {
-  display: flex;
-  min-width: 0;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 8px;
-}
-
-.now-playing__meta > div {
   min-width: 0;
 }
 
@@ -529,7 +698,9 @@ function parseLrc(input: string): LyricLine[] {
 .now-playing__meta strong {
   display: block;
   overflow: hidden;
-  font-size: 14px;
+  margin-top: 3px;
+  font-size: 16px;
+  line-height: 1.35;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -538,55 +709,61 @@ function parseLrc(input: string): LyricLine[] {
   margin-top: 4px;
   overflow: hidden;
   color: var(--color-text-secondary, #7c6872);
-  font-size: 12px;
+  font-size: 11px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.playlist-label {
-  flex: 0 0 auto;
-  max-width: 92px;
-  overflow: hidden;
-  padding: 3px 8px;
-  border-radius: 999px;
-  background: var(--color-surface-muted, #fff3f7);
+.now-playing__eyebrow {
+  display: block;
   color: var(--music-accent-strong);
   font-size: 10px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  font-weight: 700;
+  letter-spacing: 0.08em;
 }
 
 .music-panel__controls {
-  gap: 8px;
-  margin-top: 10px;
+  gap: 5px;
+  margin-top: 8px;
 }
 
 .round-btn {
   display: grid;
-  width: 34px;
-  height: 34px;
+  flex: 0 0 44px;
+  width: 44px;
+  height: 44px;
   place-items: center;
   border-radius: 999px;
-  background: var(--color-surface-muted, #fff4f8);
+  background: transparent;
   color: var(--color-text-secondary, #7c6872);
 }
 
 .round-btn--primary {
-  width: 40px;
-  height: 40px;
+  flex-basis: 46px;
+  width: 46px;
+  height: 46px;
   background: var(--music-accent-strong);
   color: #fff;
+  box-shadow: 0 8px 18px color-mix(in srgb, var(--primary) 26%, transparent);
 }
 
-.round-btn:hover,
-.round-btn:focus-visible {
+.round-btn:not(:disabled):hover,
+.round-btn:not(:disabled):focus-visible,
+.round-btn.is-active {
+  background: var(--color-surface-muted, #fff4f8);
   color: var(--music-accent-strong);
-  transform: translateY(-1px);
 }
 
 .round-btn--primary:hover,
 .round-btn--primary:focus-visible {
+  background: var(--music-accent-strong);
   color: #fff;
+  transform: translateY(-1px);
+}
+
+.round-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.36;
 }
 
 .music-panel__progress {
@@ -594,7 +771,7 @@ function parseLrc(input: string): LyricLine[] {
   flex: 0 0 auto;
   grid-template-columns: 36px minmax(0, 1fr) 36px;
   gap: 8px;
-  padding: 0 18px;
+  padding: 0 18px 8px;
   color: var(--music-text-muted);
   font-size: 11px;
 }
@@ -606,28 +783,32 @@ function parseLrc(input: string): LyricLine[] {
 .playback-settings {
   flex: 0 0 auto;
   justify-content: space-between;
-  gap: 14px;
-  padding: 8px 18px 12px;
+  gap: 12px;
+  margin: 0 14px 10px;
+  padding: 6px 8px 6px 10px;
+  border: 1px solid color-mix(in srgb, var(--primary) 10%, var(--color-border, #eee1e6));
+  border-radius: 13px;
+  background: var(--color-surface-muted, #fff7fa);
 }
 
 .volume-control {
   display: grid;
   flex: 1;
-  grid-template-columns: 18px minmax(90px, 1fr);
+  grid-template-columns: 18px minmax(72px, 1fr);
   gap: 8px;
   color: var(--color-text-secondary, #7c6872);
 }
 
 .mode-control {
-  gap: 2px;
+  gap: 0;
 }
 
 .mode-control button {
   display: grid;
-  width: 30px;
-  height: 30px;
+  width: 44px;
+  height: 44px;
   place-items: center;
-  border-radius: 8px;
+  border-radius: 11px;
   background: transparent;
   color: var(--music-text-muted);
 }
@@ -641,8 +822,8 @@ function parseLrc(input: string): LyricLine[] {
 
 .music-panel__tabs {
   flex: 0 0 auto;
-  gap: 4px;
-  padding: 0 18px;
+  gap: 2px;
+  padding: 0 14px;
   border-top: 1px solid var(--color-border, #eee1e6);
   border-bottom: 1px solid var(--color-border, #eee1e6);
 }
@@ -650,10 +831,10 @@ function parseLrc(input: string): LyricLine[] {
 .music-panel__tabs button {
   position: relative;
   display: inline-flex;
-  min-height: 42px;
+  min-height: 44px;
   align-items: center;
   gap: 5px;
-  padding: 0 13px;
+  padding: 0 14px;
   background: transparent;
   color: var(--color-text-secondary, #7c6872);
   font-size: 13px;
@@ -691,21 +872,22 @@ function parseLrc(input: string): LyricLine[] {
 
 .music-panel__body {
   min-height: 0;
-  flex: 1 1 230px;
+  flex: 1 1 280px;
   overflow: auto;
   overscroll-behavior: contain;
+  scrollbar-gutter: stable;
 }
 
 .catalog-panel,
 .queue-panel,
 .lyrics-panel {
-  padding: 14px 18px 16px;
+  padding: 12px 14px 14px;
 }
 
 .playlist-filter {
   display: flex;
   gap: 6px;
-  margin: 10px 0 12px;
+  margin: 8px 0 10px;
   padding-bottom: 2px;
   overflow-x: auto;
   scrollbar-width: thin;
@@ -713,12 +895,30 @@ function parseLrc(input: string): LyricLine[] {
 
 .playlist-filter button {
   flex: 0 0 auto;
-  min-height: 30px;
-  padding: 0 11px;
+  min-height: 40px;
+  padding: 0 12px;
   border-radius: 999px;
   background: var(--color-surface-muted, #fff4f8);
   color: var(--color-text-secondary, #7c6872);
   font-size: 12px;
+}
+
+.catalog-panel__heading {
+  display: flex;
+  min-height: 28px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 4px;
+}
+
+.catalog-panel__heading strong {
+  font-size: 12px;
+}
+
+.catalog-panel__heading span {
+  color: var(--music-text-muted);
+  font-size: 11px;
 }
 
 .playlist-filter button:hover,
@@ -731,6 +931,9 @@ function parseLrc(input: string): LyricLine[] {
 .track-list,
 .queue-list {
   min-height: 120px;
+  overflow: hidden;
+  border: 1px solid var(--color-border, #eee1e6);
+  border-radius: 12px;
 }
 
 .track-row,
@@ -746,28 +949,39 @@ function parseLrc(input: string): LyricLine[] {
 
 .track-row {
   display: grid;
-  grid-template-columns: 40px minmax(0, 1fr) auto 24px;
+  min-height: 60px;
+  grid-template-columns: 42px minmax(0, 1fr) 44px;
   gap: 10px;
-  padding: 9px 6px;
+  padding: 8px 4px 8px 9px;
 }
 
 .track-row:hover,
-.track-row:focus-visible,
 .queue-row:hover,
+.track-row:focus-visible,
 .queue-row:focus-visible {
-  outline: none;
   background: var(--color-surface-muted, #fff7fa);
+}
+
+.track-row:focus-visible,
+.queue-row:focus-visible,
+.catalog-actions a:focus-visible,
+.catalog-actions button:focus-visible {
+  position: relative;
+  z-index: 1;
+  outline: 2px solid var(--music-accent-strong);
+  outline-offset: -2px;
 }
 
 .track-row.is-current,
 .queue-row.is-current {
+  background: var(--color-accent-soft, color-mix(in srgb, var(--primary) 12%, transparent));
   color: var(--music-accent-strong);
 }
 
 .track-row__cover {
   display: grid;
-  width: 40px;
-  height: 40px;
+  width: 42px;
+  height: 42px;
   overflow: hidden;
   place-items: center;
   border-radius: 9px;
@@ -783,6 +997,7 @@ function parseLrc(input: string): LyricLine[] {
 
 .track-row__meta {
   min-width: 0;
+  align-self: center;
 }
 
 .track-row__meta strong,
@@ -810,17 +1025,11 @@ function parseLrc(input: string): LyricLine[] {
   white-space: nowrap;
 }
 
-.track-row__genre {
-  max-width: 72px;
-  overflow: hidden;
-  color: var(--music-text-muted);
-  font-size: 11px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
 .track-row__action {
+  justify-self: center;
+  align-self: center;
   color: var(--primary, #fb7299);
+  font-size: 18px;
 }
 
 .catalog-message {
@@ -860,24 +1069,49 @@ function parseLrc(input: string): LyricLine[] {
   font-size: 12px;
 }
 
+.catalog-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.catalog-actions__more,
 .music-hall-link {
   display: inline-flex;
-  margin-top: 12px;
+  min-height: 44px;
   align-items: center;
+  justify-content: center;
   gap: 5px;
-  color: var(--music-accent-strong);
+  border: 1px solid var(--color-border, #eee1e6);
+  border-radius: 11px;
+  background: transparent;
+  color: var(--color-text-secondary, #7c6872);
   font-size: 12px;
   font-weight: 600;
   text-decoration: none;
 }
 
+.catalog-actions__more {
+  cursor: pointer;
+}
+
+.catalog-actions > .music-hall-link:only-child {
+  grid-column: 1 / -1;
+}
+
+.catalog-actions__more:hover,
+.catalog-actions__more:focus-visible,
 .music-hall-link:hover,
 .music-hall-link:focus-visible {
-  text-decoration: underline;
+  border-color: color-mix(in srgb, var(--primary) 45%, var(--color-border, #eee1e6));
+  background: var(--color-surface-muted, #fff7fa);
+  color: var(--music-accent-strong);
 }
 
 .queue-row {
   display: grid;
+  min-height: 60px;
   grid-template-columns: 34px minmax(0, 1fr) auto;
   gap: 8px;
   padding: 10px 6px;
@@ -980,31 +1214,29 @@ function parseLrc(input: string): LyricLine[] {
 
 @media (max-height: 560px) {
   .music-panel__header {
-    padding-top: 10px;
-    padding-bottom: 8px;
+    padding-top: 6px;
+    padding-bottom: 4px;
   }
 
   .now-playing {
-    padding-bottom: 8px;
+    gap: 12px;
+    padding-top: 2px;
+    padding-bottom: 6px;
   }
 
   .now-playing__cover {
-    flex-basis: 52px;
-    width: 52px;
-    height: 52px;
+    flex-basis: 78px;
+    width: 78px;
+    height: 78px;
+    border-radius: 14px;
   }
 
   .music-panel__controls {
-    margin-top: 5px;
+    margin-top: 2px;
   }
 
   .playback-settings {
-    padding-top: 4px;
-    padding-bottom: 7px;
-  }
-
-  .music-panel__tabs button {
-    min-height: 36px;
+    margin-bottom: 6px;
   }
 }
 
@@ -1022,17 +1254,13 @@ function parseLrc(input: string): LyricLine[] {
   }
 
   .now-playing__cover {
-    flex-basis: 58px;
-    width: 58px;
-    height: 58px;
+    flex-basis: 84px;
+    width: 84px;
+    height: 84px;
   }
 
   .track-row {
-    grid-template-columns: 38px minmax(0, 1fr) 24px;
-  }
-
-  .track-row__genre {
-    display: none;
+    grid-template-columns: 40px minmax(0, 1fr) 44px;
   }
 
   .volume-control {
