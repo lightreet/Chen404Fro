@@ -27,7 +27,7 @@ Chen404 has one emotional universe, but every surface needs a different intensit
 | Editorial reading | `/`, `/category`, `/category/:id`, `/archive`, `/article/:id`, `/tag`, `/tag/:id` | Help readers find and read content | Balanced to expressive | Clear hierarchy, calm article rhythm, enough personality to feel owned |
 | Social note | `/guestbook` | Let visitors leave a short message and read others | Balanced | Warm, legible, conversational, not a plain form dump |
 | Companion listening | `/music` | Let readers browse and play Sakura Radio | Expressive product UI | Tactile, musical, familiar controls, no nightclub or dashboard mood |
-| Travel atlas | `/memory-map`, `/memory-map/detail/:id` | Let public readers browse public places, while trusted friends can see more private routes, photos, and memories | Expressive but structured | Travel atlas first, scrapbook second, clear map/detail relationship |
+| Travel atlas | `/memory-map` | Let public readers browse public places, while trusted friends can see more private routes, photos, and memories | Expressive but structured | Travel atlas first, scrapbook second, clear map/detail relationship |
 | Personal workspace | `/profile`, `/trust-request` | Let users manage identity and request status | Calm | Task-shaped, readable, emotionally soft but not decorative |
 | Owner workbench | editors and `/admin` | Let the owner create and maintain content | Quiet and efficient | Fast scanning, stable actions, consistent controls |
 

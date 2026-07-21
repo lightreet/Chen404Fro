@@ -51,7 +51,7 @@ const sakuraSceneMode = computed<SakuraSceneMode>(() => {
   const path = route.path;
 
   if (path === '/') return 'hero';
-  if (/^\/article\/[^/]+$/.test(path) || path.startsWith('/memory-map/detail/')) {
+  if (/^\/article\/[^/]+$/.test(path)) {
     return 'reading';
   }
   if (

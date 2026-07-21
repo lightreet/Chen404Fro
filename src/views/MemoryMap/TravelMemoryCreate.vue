@@ -1333,7 +1333,7 @@ async function handleSave() {
       ? await updateTravelMemory(editingId.value, payload)
       : await createTravelMemory(payload)
     notify.success(isEditMode.value ? '旅行地点更新成功' : '旅行地点创建成功')
-    router.push({ name: 'TravelMemoryDetail', params: { id: saved.id } })
+    router.push({ name: 'MemoryMap', query: { focus: String(saved.id) } })
   } catch (error) {
     notify.error(resolveSaveErrorMessage(error))
   } finally {
