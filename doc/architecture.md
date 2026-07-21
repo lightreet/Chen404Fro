@@ -126,7 +126,7 @@ Route / Page -> Feature -> components/app (App*) -> components/ui (Ui*) -> desig
 /trust-request            好友申请（公开入口，提交时要求登录）
 /admin                    后台管理（管理员）
 /memory-map               旅行纪念地图（公开入口，内容按权限展示）
-/memory-map/detail/:id    旅行详情页（管理员/知友）
+/memory-map/detail/:id    旧详情链接兼容入口，重定向到 /memory-map?focus=:id
 /memory-map/create        旅行地点创建（管理员）
 /memory-map/edit/:id      旅行地点编辑（管理员）
 /music                    Sakura Radio 音乐馆
@@ -256,7 +256,6 @@ trust-request / home / archive / memory-map / music / category / about / guestbo
 相关文件：
 
 - `views/MemoryMap/MemoryMap.vue`
-- `views/MemoryMap/TravelMemoryDetail.vue`
 - `views/MemoryMap/TravelMemoryCreate.vue`
 - `components/TravelMemoryMap/TravelMemoryMap.vue`
 - `api/travel-memory.ts`
@@ -266,7 +265,7 @@ trust-request / home / archive / memory-map / music / category / about / guestbo
 - `/memory-map` 是公开入口，但真实地点内容只对管理员或知友展示；无权限用户会先看到 `FeatureAccessCover`
 - 主页面已经收敛为“三栏 atlas 工作区”：左侧旅行索引、中间地图主画布、右侧当前地点详情
 - 展示态地图优先使用高德真实底图；缺少 Key、脚本失败或网络异常时，会回退到城市/省级 GeoJSON + 基础 SVG
-- 独立详情页提供照片 hero、片段列表、位置概览、迷你地图、相册和上一篇/下一篇导航，并在返回地图时带回当前 `focus`
+- 地点详情直接在右侧面板展示；片段以可横向滚动的标签切换，地点选择通过 `focus` 查询参数保留，旧详情链接会重定向到对应地点
 - 创建/编辑页采用 `location + stops + entries` 结构，支持地图点选、自动定位、地点搜索、图片上传、EXIF 辅助坐标回填
 - 当前前端主要维护地点级展示坐标；片段日期按 `stop.visitedAt` 保存，照片拍摄时间默认跟随片段日期，片段未填日期时回退到地点日期
 

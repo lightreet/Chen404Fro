@@ -198,7 +198,6 @@ refactor/ui-memory-map-migration
 
 - `views/Music/Music.vue`
 - `views/MemoryMap/MemoryMap.vue`
-- `views/MemoryMap/TravelMemoryDetail.vue`
 - `views/Article/ArticleDetail.vue`
 
 ## 5. 当前 Element Plus 依赖盘点
@@ -582,7 +581,6 @@ src/composables/useMotionPreset.ts
 1. `Music.vue`
 2. `ArticleDetail.vue`
 3. `MemoryMap.vue`
-4. `TravelMemoryDetail.vue`
 
 ### 重点
 
@@ -809,8 +807,7 @@ src/composables/useMotionPreset.ts
 **阶段 5（展示型长页面）**
 - `Music.vue`：页面层已完成 `UiIcon` / `UiButton` / `UiInput` / `UiPagination` / `UiSlider` 收口
 - `ArticleDetail.vue`：页面层已完成 `UiIcon` / `UiButton` / `UiSkeleton` 收口；标签与内容区域保留页面专属展示样式
-- `MemoryMap.vue`：页面层已完成 `UiIcon` / `UiButton` 收口；地图层与旅行画布保留专题实现
-- `TravelMemoryDetail.vue`：页面层已完成 `UiIcon` / `UiTooltip` / `UiButton` / `UiSkeleton` 收口
+- `MemoryMap.vue`：页面层已完成 `UiIcon` / `UiButton` 收口；地图层、旅行画布与右侧片段详情保留专题实现
 - `Archive.vue`、`Category.vue`、`CategoryDetail.vue`、`TagDetail.vue`、`Home.vue`、`NotFound.vue`：展示层和列表尾部动作已迁移到 `Ui*`
 
 **阶段 6（其余页面收尾）**

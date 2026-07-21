@@ -74,8 +74,7 @@ VITE_AMAP_SECURITY_CODE=
 | `/profile` | 个人中心 | 登录用户 | 资料、我的内容、知友状态 |
 | `/trust-request` | 好友申请 | 公开 | 页面公开，提交申请时要求登录 |
 | `/admin` | 后台管理 | 管理员 | 分类、站点配置（含 AI 助手）、表情包、文件、好友申请 |
-| `/memory-map` | 旅行纪念地图 | 公开入口 | 页面可进入，具体内容仅管理员或知友可见 |
-| `/memory-map/detail/:id` | 旅行详情页 | 管理员或知友 | 独立旅行游记页 |
+| `/memory-map` | 旅行纪念地图 | 公开入口 | 页面可进入，具体内容仅管理员或知友可见；片段在右侧详情面板内切换浏览 |
 | `/memory-map/create` `/memory-map/edit/:id` | 旅行编辑工作台 | 管理员 | 地点创建/编辑 |
 | `/music` | Sakura Radio 音乐馆 | 公开 | 公开播放、歌单浏览、共享播放器 |
 | `/music/tracks/new` `/music/tracks/:id/edit` | 音乐编辑工作台 | 管理员 | 歌曲编辑、上传、AI 匹配 |
@@ -92,7 +91,7 @@ VITE_AMAP_SECURITY_CODE=
 - 文件管理：文件列表、详情、统计、引用状态筛选
 - 表情包：公开下发、后台维护、ZIP 导入
 - 好友申请：提交、查询、后台审批
-- 旅行纪念地图：公开入口 + 访问封面、管理员/知友受限内容、三栏 atlas 浏览、独立旅行游记页、多片段编辑、图片 EXIF 辅助定位
+- 旅行纪念地图：公开入口 + 访问封面、管理员/知友受限内容、三栏 atlas 浏览、右侧面板片段切换浏览、多片段编辑、图片 EXIF 辅助定位
 - Sakura Radio：公开歌曲/歌单、默认播放队列、后台歌曲/歌单维护、AI 曲目信息补全
 - Lyra：同步聊天、SSE 流式聊天、会话恢复、引用、相关推荐、建议按钮
 - AI 后台配置：模型参数、Lyra 人设、聊天检索、小气泡配置、连接测试
@@ -140,7 +139,7 @@ src/
 
 ### 旅行纪念地图
 
-- 页面：`src/views/MemoryMap/MemoryMap.vue`、`TravelMemoryDetail.vue`、`TravelMemoryCreate.vue`
+- 页面：`src/views/MemoryMap/MemoryMap.vue`、`TravelMemoryCreate.vue`
 - 地图组件：`src/components/TravelMemoryMap/TravelMemoryMap.vue`
 - 访问模型：`/memory-map` 公开进入，但内容仅管理员或知友可见；管理员可进入创建/编辑工作台
 - 展示地图：优先使用高德真实底图，缺少 Key 或脚本失败时回退到城市/省级 GeoJSON + 基础 SVG

@@ -209,20 +209,66 @@
                   <UiButton variant="secondary" class="journal-action journal-action--retry" @click="retryActiveDetail">重新加载</UiButton>
                 </div>
 
-                <div class="travel-journal__media">
+                <nav
+                  v-if="journalStops.length"
+                  class="travel-journal__stops"
+                  role="tablist"
+                  aria-label="旅行片段"
+                >
+                  <button
+                    v-for="(stop, index) in journalStops"
+                    :key="stop.key"
+                    type="button"
+                    class="stop-tab"
+                    :class="{ 'is-active': index === activeStopIndex }"
+                    role="tab"
+                    :id="stopTabId(index)"
+                    :aria-controls="stopPanelId(index)"
+                    :aria-selected="index === activeStopIndex"
+                    :tabindex="index === activeStopIndex ? 0 : -1"
+                    @click="selectStop(index)"
+                    @keydown.left.prevent="moveStopSelection(index, -1)"
+                    @keydown.right.prevent="moveStopSelection(index, 1)"
+                    @keydown.home.prevent="focusStop(0)"
+                    @keydown.end.prevent="focusStop(journalStops.length - 1)"
+                  >
+                    <span class="stop-tab__index" aria-hidden="true">{{ index + 1 }}</span>
+                    <span class="stop-tab__title">{{ stop.title }}</span>
+                  </button>
+                </nav>
+
+                <div
+                  v-if="activeStop"
+                  :id="stopPanelId(activeStopIndex)"
+                  :key="activeStop.key"
+                  class="travel-journal__stop"
+                  role="tabpanel"
+                  :aria-labelledby="stopTabId(activeStopIndex)"
+                  tabindex="0"
+                >
+                  <div class="stop-meta">
+                    <span v-if="activeStopDate" class="stop-meta__item">
+                      <UiIcon name="Calendar" />
+                      <span>{{ activeStopDate }}</span>
+                    </span>
+                    <span class="stop-meta__item stop-meta__item--count">{{ activeStop.entries.length }} 张照片</span>
+                  </div>
+
+                  <p v-if="activeStop.storyNote" class="stop-note">{{ activeStop.storyNote }}</p>
+
                   <div class="travel-journal__cover">
                     <img class="travel-journal__tape" :src="tapeCornerAsset" alt="" aria-hidden="true" />
                     <img
-                      v-if="journalCoverImage"
-                      :src="journalCoverImage"
-                      :alt="journalCoverAlt"
+                      v-if="activeStopCover"
+                      :src="activeStopCover.imageUrl"
+                      :alt="activeStopCover.remark || activeStop.title"
                     />
                     <div v-else class="travel-journal__cover-empty">等待封面图片</div>
                   </div>
 
-                  <div class="travel-journal__entries">
+                  <div v-if="activeStopCards.length" class="travel-journal__entries">
                     <article
-                      v-for="note in journalNotes"
+                      v-for="note in activeStopCards"
                       :key="note.key"
                       class="journal-note"
                     >
@@ -232,10 +278,13 @@
                       </div>
                       <div class="journal-note__body">
                         <h4>{{ note.title }}</h4>
-                        <p>{{ note.copy }}</p>
+                        <p v-if="note.copy">{{ note.copy }}</p>
                       </div>
                     </article>
                   </div>
+                </div>
+                <div v-else class="travel-journal__stop travel-journal__stop--empty">
+                  <div class="journal-empty-state">{{ loadingDetail ? '旅行片段加载中...' : '这个地点还没有旅行片段' }}</div>
                 </div>
 
                 <div class="travel-journal__footer">
@@ -244,9 +293,6 @@
                   </div>
 
                   <div v-if="activeDetail" class="travel-journal__actions travel-journal__actions--note">
-                    <UiButton variant="primary" icon="eye" class="journal-action journal-action--detail-view" @click="openCurrentDetailPage">
-                      查看游记
-                    </UiButton>
                     <div v-if="canManage" class="travel-journal__manage">
                       <UiButton variant="secondary" icon="edit" class="journal-action journal-action--manage" @click="editGalleryLocation(activeDetail.id)">
                         编辑地点
@@ -284,7 +330,7 @@ import { deleteTravelMemory, getTravelMemories, getTravelMemoryDetail } from '@/
 import { useSiteConfig } from '@/composables/useSiteConfig'
 import { resolveFeatureHero } from '@/modules/feature-access/constants'
 import { useUserStore } from '@/stores/user'
-import type { TravelMemoryEntry, TravelMemoryLocationDetail, TravelMemoryLocationListItem, TravelMemoryStop } from '@/types'
+import type { TravelMemoryEntry, TravelMemoryLocationDetail, TravelMemoryLocationListItem } from '@/types'
 import { isAdminUser, isFriendUser } from '@/utils/permission'
 import tapeCornerAsset from '@/assets/memory-map/tape-corner.svg'
 
@@ -354,34 +400,95 @@ interface JournalNote {
   date?: string
 }
 
-const journalNotes = computed<JournalNote[]>(() => {
+interface JournalStopView {
+  key: string
+  title: string
+  storyNote: string
+  visitedAt?: string
+  entries: TravelMemoryEntry[]
+}
+
+const activeStopIndex = ref(0)
+
+const journalStops = computed<JournalStopView[]>(() => {
   const detail = activeDetail.value
   if (!detail) return []
-  const stops = (detail.stops || []).filter((stop) => stop.entries?.length)
-  if (!stops.length) {
-    return noteEntries.value.map((entry, index) => buildEntryJournalNote(entry, index, detail.title, detail.visitedAt))
+
+  const stops = (detail.stops || [])
+    .filter((stop) => stop.entries?.length || stop.storyNote?.trim())
+    .slice()
+    .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
+
+  if (stops.length) {
+    return stops.map((stop, index) => ({
+      key: `stop-${stop.id ?? index}`,
+      title: stop.title?.trim() || `第 ${index + 1} 站`,
+      storyNote: stop.storyNote?.trim() || '',
+      visitedAt: stop.visitedAt,
+      entries: (stop.entries || []).slice().sort((a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0)),
+    }))
   }
 
-  const notes: JournalNote[] = []
-  const usedEntries = new Set<TravelMemoryEntry>()
-  stops.slice(0, 3).forEach((stop, stopIndex) => {
-    const entry = stopCoverEntry(stop)
-    if (!entry) return
-    usedEntries.add(entry)
-    notes.push(buildStopJournalNote(stop, entry, stopIndex, detail.title, detail.visitedAt))
-  })
-
-  const overflowEntries = stops
-    .flatMap((stop) => stop.entries.map((entry) => ({ stop, entry })))
-    .filter(({ entry }) => !usedEntries.has(entry))
-
-  for (const { stop, entry } of overflowEntries) {
-    if (notes.length >= 3) break
-    notes.push(buildStopJournalNote(stop, entry, notes.length, detail.title, detail.visitedAt))
-  }
-
-  return notes.slice(0, 3)
+  // 没有划分片段的地点：把散照片合成一个默认片段，菜单栏始终可用
+  const flatEntries = (detail.entries || []).slice().sort((a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0))
+  if (!flatEntries.length) return []
+  return [
+    {
+      key: 'stop-all',
+      title: '全部照片',
+      storyNote: '',
+      visitedAt: detail.visitedAt,
+      entries: flatEntries,
+    },
+  ]
 })
+
+const activeStop = computed<JournalStopView | null>(() => {
+  const stops = journalStops.value
+  if (!stops.length) return null
+  return stops[Math.min(activeStopIndex.value, stops.length - 1)]
+})
+
+const activeStopCover = computed<TravelMemoryEntry | null>(() => {
+  const entries = activeStop.value?.entries || []
+  return entries.find((entry) => entry.stopCover) || entries.find((entry) => entry.cover) || entries[0] || null
+})
+
+const activeStopCards = computed<JournalNote[]>(() => {
+  const stop = activeStop.value
+  if (!stop) return []
+  const cover = activeStopCover.value
+  return stop.entries
+    .filter((entry) => entry !== cover)
+    .map((entry, index) => buildEntryJournalNote(entry, index, stop.title, stop.visitedAt))
+})
+
+const activeStopDate = computed(() => formatDate(activeStop.value?.visitedAt))
+
+function selectStop(index: number) {
+  const lastIndex = journalStops.value.length - 1
+  activeStopIndex.value = Math.min(Math.max(index, 0), lastIndex)
+}
+
+function stopTabId(index: number) {
+  return `travel-stop-tab-${activeId.value ?? 'none'}-${index}`
+}
+
+function stopPanelId(index: number) {
+  return `travel-stop-panel-${activeId.value ?? 'none'}-${index}`
+}
+
+function focusStop(index: number) {
+  if (!journalStops.value.length) return
+  selectStop(index)
+  void nextTick(() => document.getElementById(stopTabId(activeStopIndex.value))?.focus())
+}
+
+function moveStopSelection(index: number, offset: number) {
+  const stopCount = journalStops.value.length
+  if (!stopCount) return
+  focusStop((index + offset + stopCount) % stopCount)
+}
 const totalPhotoCount = computed(() =>
   locations.value.reduce((sum, location) => sum + Number(location.entryCount || 0), 0),
 )
@@ -405,8 +512,6 @@ const journalDateRange = computed(() =>
   formatDateRange(activeDetail.value?.visitedAt, activeDetail.value?.visitedEndAt),
 )
 const journalStampLabel = computed(() => currentLocationName.value)
-const journalCoverImage = computed(() => coverEntry.value?.imageUrl || activeDetail.value?.coverImage || '')
-const journalCoverAlt = computed(() => coverEntry.value?.remark || activeDetail.value?.title || '旅行封面')
 const journalQuote = computed(() => {
   const summary = activeDetail.value?.summaryNote?.trim()
   if (summary) return summary
@@ -454,6 +559,9 @@ async function handleSelectLocation(id: number, options: { syncGallery?: boolean
   const requestVersion = ++detailRequestVersion
   const cachedDetail = detailCache.value[id]
   const summary = locations.value.find((location) => location.id === id)
+  if (activeId.value !== id) {
+    activeStopIndex.value = 0
+  }
   activeId.value = id
   detailLoadError.value = ''
   activeDetail.value = cachedDetail || (summary ? buildPendingDetail(summary) : null)
@@ -509,14 +617,6 @@ function retryMemoryList() {
   void loadMemories(resolveRouteFocusId())
 }
 
-function openCurrentDetailPage() {
-  if (!activeDetail.value) {
-    notify.info('先选择一个地点，再查看游记。')
-    return
-  }
-  router.push({ name: 'TravelMemoryDetail', params: { id: activeDetail.value.id } })
-}
-
 function editGalleryLocation(id: number) {
   router.push({ name: 'TravelMemoryEdit', params: { id } })
 }
@@ -553,33 +653,24 @@ function formatLocation(location?: { province?: string; city?: string }) {
   return [location.province, location.city].filter(Boolean).join(' · ') || '未标注地点'
 }
 
-function stopCoverEntry(stop: TravelMemoryStop) {
-  return stop.entries.find((entry) => entry.stopCover) || stop.entries[0] || null
-}
-
-function buildStopJournalNote(
-  stop: TravelMemoryStop,
-  entry: TravelMemoryEntry,
-  index: number,
-  fallbackTitle: string,
-  fallbackDate?: string,
-): JournalNote {
-  const title = stop.title?.trim() || fallbackTitle?.trim() || `第 ${index + 1} 站`
-  return {
-    key: `stop-${stop.id || index}-${entry.id || entry.imageUrl || index}`,
-    imageUrl: entry.imageUrl,
-    title,
-    copy: entry.remark?.trim() || stop.storyNote?.trim() || entry.thanksNote?.trim() || '把这一刻写进记忆里，留给未来再次翻阅。',
-    date: stop.visitedAt || entry.shotAt || fallbackDate,
-  }
-}
-
 function selectGalleryLocation(id: number) {
   void handleSelectLocation(id)
+  syncRouteFocus(id)
 }
 
 function selectMapLocation(id: number) {
   void handleSelectLocation(id)
+  syncRouteFocus(id)
+}
+
+function syncRouteFocus(id: number) {
+  if (resolveRouteFocusId() === id) return
+  void router.replace({
+    query: {
+      ...route.query,
+      focus: String(id),
+    },
+  })
 }
 
 function buildEntryJournalNote(
@@ -592,7 +683,7 @@ function buildEntryJournalNote(
     key: `entry-${entry.id || entry.imageUrl || index}`,
     imageUrl: entry.imageUrl,
     title: entry.remark?.trim() || fallbackTitle || '旅途碎片',
-    copy: entry.thanksNote?.trim() || '把这一刻写进记忆里，留给未来再次翻阅。',
+    copy: entry.thanksNote?.trim() || '',
     date: entry.shotAt || fallbackDate,
   }
 }
@@ -1246,11 +1337,122 @@ watch(canViewFriendMemoryMap, () => {
   font-size: 24px;
 }
 
-.travel-journal__media {
-  display: grid;
-  gap: 16px;
+.travel-journal__stops {
+  display: flex;
+  gap: 8px;
   width: 100%;
-  margin-top: 0;
+  padding-bottom: 4px;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+
+.travel-journal__stops::-webkit-scrollbar {
+  height: 6px;
+}
+
+.travel-journal__stops::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: rgba(196, 178, 160, 0.5);
+}
+
+.stop-tab {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 14px 0 6px;
+  border: 1px solid var(--memory-line);
+  border-radius: 999px;
+  background: var(--memory-surface);
+  color: #7f626e;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.2;
+  cursor: pointer;
+  transition:
+    background 0.2s ease,
+    border-color 0.2s ease,
+    color 0.2s ease;
+}
+
+.stop-tab:hover {
+  border-color: rgba(215, 95, 135, 0.28);
+  color: #5a3d47;
+}
+
+.stop-tab:focus-visible {
+  outline: none;
+  border-color: var(--atlas-route);
+  box-shadow: 0 0 0 3px rgba(215, 95, 135, 0.16);
+}
+
+.stop-tab__index {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  background: rgba(255, 241, 246, 0.9);
+  color: #c6829d;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.stop-tab__title {
+  max-width: 12em;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.stop-tab.is-active {
+  background: var(--colors-surface-rose, #fff1f6);
+  border-color: rgba(215, 95, 135, 0.32);
+  color: var(--atlas-route);
+}
+
+.stop-tab.is-active .stop-tab__index {
+  background: var(--atlas-route);
+  color: #fff;
+}
+
+.travel-journal__stop {
+  display: grid;
+  gap: 12px;
+  width: 100%;
+}
+
+.travel-journal__stop--empty {
+  flex: 1;
+}
+
+.stop-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 14px;
+}
+
+.stop-meta__item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #7f626e;
+  font-size: 12.5px;
+  line-height: 1.4;
+}
+
+.stop-meta__item .el-icon {
+  color: #df8aa8;
+  font-size: 13px;
+}
+
+.stop-note {
+  margin: 0;
+  color: var(--atlas-ink);
+  font-size: 13.5px;
+  line-height: 1.7;
 }
 
 .travel-journal__cover {
@@ -1482,11 +1684,6 @@ watch(canViewFriendMemoryMap, () => {
 
 .journal-action--manage {
   color: #7a5f6d;
-}
-
-.journal-action--detail-view {
-  width: 100%;
-  padding-inline: 16px;
 }
 
 .journal-action--retry {

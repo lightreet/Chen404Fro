@@ -63,6 +63,16 @@ const routes: RouteRecordRaw[] = [
     },
   },
   {
+    path: '/memory-map/detail/:id',
+    redirect: to => ({
+      name: 'MemoryMap',
+      query: {
+        ...to.query,
+        focus: String(to.params.id),
+      },
+    }),
+  },
+  {
     path: '/music',
     name: 'Music',
     component: () => import('@/views/Music/Music.vue'),
@@ -88,14 +98,6 @@ const routes: RouteRecordRaw[] = [
       title: '编辑歌曲',
       requiresAuth: true,
       requiresAdmin: true,
-    },
-  },
-  {
-    path: '/memory-map/detail/:id',
-    name: 'TravelMemoryDetail',
-    component: () => import('@/views/MemoryMap/TravelMemoryDetail.vue'),
-    meta: {
-      title: '旅行游记',
     },
   },
   {
