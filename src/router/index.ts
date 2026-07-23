@@ -246,12 +246,15 @@ const routes: RouteRecordRaw[] = [
 const router = createRouter({
   history: createWebHistory(),
   routes,
-  scrollBehavior(_to, _from, savedPosition) {
+  scrollBehavior(to, from, savedPosition) {
     if (savedPosition) {
       return savedPosition;
-    } else {
-      return { top: 0 };
     }
+    // 同一路径下仅 query/hash 变化（如旅行地图 ?focus=、个人中心 ?tab=）属于页面内状态切换，保持当前滚动位置
+    if (to.path === from.path) {
+      return false;
+    }
+    return { top: 0 };
   },
 });
 
