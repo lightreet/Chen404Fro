@@ -5,7 +5,7 @@
     </transition>
   </router-view>
 
-  <Live2D v-if="showAssistant" :compact-only="isMobile || compactOnlyRoute" />
+  <Live2D v-if="showAssistant" :compact-only="isMobile" />
 </template>
 
 <script setup lang="ts">
@@ -28,8 +28,6 @@ const showAssistant = computed(() => {
     || path === '/forgot-password'
   );
 });
-
-const compactOnlyRoute = computed(() => route.path === '/memory-map');
 
 // 在子页面挂载前恢复本地展示偏好，避免主题或樱花强度闪烁
 appStore.initDisplayPreferences();
