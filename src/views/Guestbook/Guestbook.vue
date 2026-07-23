@@ -7,7 +7,7 @@
         subtitle="留下一句话，也留下此刻的你"
         :bg-image="heroBgImage"
         :bg-position="heroBgPosition"
-        min-height="70vh"
+        min-height="64vh"
         compact
       />
     </template>

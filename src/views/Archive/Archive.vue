@@ -7,7 +7,7 @@
         subtitle="把写过的内容，交给时间排序。"
         :bg-image="heroBgImage"
         :bg-position="heroBgPosition"
-        min-height="62vh"
+        min-height="64vh"
         compact
         scroll-target="#archive-content"
       >

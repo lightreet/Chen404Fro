@@ -8,7 +8,7 @@
         subtitle="一个写技术、听音乐，也珍藏旅途与朋友的小站"
         :bg-image="heroBgImage"
         :bg-position="heroBgPosition"
-        min-height="52vh"
+        min-height="64vh"
         compact
       />
     </template>

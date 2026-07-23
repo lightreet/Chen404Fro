@@ -7,7 +7,7 @@
         subtitle="从每一次提交里，回看 Chen404 的成长轨迹。"
         :bg-image="heroBgImage"
         :bg-position="heroBgPosition"
-        min-height="62vh"
+        min-height="64vh"
         compact
         scroll-target="#development-history-content"
       >
