@@ -7,7 +7,7 @@
         subtitle="在柔和的樱色光影里，翻开一位成员留下的小小名片。"
         :bg-image="heroBgImage"
         :bg-position="heroBgPosition"
-        min-height="56vh"
+        min-height="64vh"
         compact
       />
     </template>

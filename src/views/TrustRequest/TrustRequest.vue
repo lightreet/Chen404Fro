@@ -7,7 +7,7 @@
         subtitle="如果你想查看知友可见的内容，可以先在这里了解说明，再决定是否登录并提交好友申请。"
         :bg-image="heroBgImage"
         :bg-position="heroBgPosition"
-        min-height="66vh"
+        min-height="64vh"
         compact
       />
     </template>

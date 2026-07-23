@@ -7,7 +7,7 @@
         subtitle="按分类整理每一首值得回放的歌。"
         :bg-image="heroBgImage"
         :bg-position="heroBgPosition"
-        min-height="56vh"
+        min-height="64vh"
         :wave-height="132"
         compact
       />

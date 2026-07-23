@@ -55,6 +55,7 @@ declare module 'vue' {
     UiForm: typeof import('./components/ui/form/UiForm.vue')['default']
     UiFormField: typeof import('./components/ui/form-field/UiFormField.vue')['default']
     UiIcon: typeof import('./components/ui/icon/UiIcon.vue')['default']
+    UiImageViewer: typeof import('./components/ui/image-viewer/UiImageViewer.vue')['default']
     UiInput: typeof import('./components/ui/input/UiInput.vue')['default']
     UiLoadingState: typeof import('./components/ui/loading-state/UiLoadingState.vue')['default']
     UiNumberField: typeof import('./components/ui/number-field/UiNumberField.vue')['default']

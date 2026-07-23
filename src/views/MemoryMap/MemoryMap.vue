@@ -7,7 +7,7 @@
         subtitle="把途经的城市、光影与心情，整理成一张可以慢慢翻阅的旅行地图。"
         :bg-image="heroBgImage"
         :bg-position="heroBgPosition"
-        min-height="70vh"
+        min-height="64vh"
         compact
       />
     </template>
@@ -246,23 +246,51 @@
                   :aria-labelledby="stopTabId(activeStopIndex)"
                   tabindex="0"
                 >
-                  <div class="stop-meta">
-                    <span v-if="activeStopDate" class="stop-meta__item">
+                  <div class="stop-heading">
+                    <svg
+                      v-if="activeStop.storyNote"
+                      class="stop-heading__petal"
+                      viewBox="0 0 20 20"
+                      preserveAspectRatio="none"
+                      aria-hidden="true"
+                      focusable="false"
+                    >
+                      <defs>
+                        <linearGradient id="stop-petal-fill" x1="0.22" y1="0.05" x2="0.72" y2="0.95">
+                          <stop offset="0" stop-color="#f7b3ca" />
+                          <stop offset="1" stop-color="#d75f87" />
+                        </linearGradient>
+                      </defs>
+                      <path
+                        d="M10 0.4 C13 0.7 15.6 2.8 17.2 5.6 C19 9 19.3 13 17.8 15.2 C16.6 16.6 13.8 17.9 11.4 18.4 C10.55 18.68 10.2 18.95 10 19.12 C9.78 18.92 9.4 18.65 8.5 18.35 C6 17.8 3.2 16.4 2.1 15 C0.6 12.6 1 8.8 3.1 5.4 C4.7 2.6 7.3 0.7 10 0.4 Z"
+                        fill="url(#stop-petal-fill)"
+                      />
+                    </svg>
+                    <p v-if="activeStop.storyNote" class="stop-note">{{ activeStop.storyNote }}</p>
+                    <span class="stop-count">
+                      <UiIcon name="image" :label="`${activeStop.entries.length} 张照片`" />
+                      <span aria-hidden="true">{{ activeStop.entries.length }}</span>
+                    </span>
+                    <span v-if="activeStopDate" class="stop-meta__item stop-meta__item--date">
                       <UiIcon name="Calendar" />
                       <span>{{ activeStopDate }}</span>
                     </span>
-                    <span class="stop-meta__item stop-meta__item--count">{{ activeStop.entries.length }} 张照片</span>
                   </div>
-
-                  <p v-if="activeStop.storyNote" class="stop-note">{{ activeStop.storyNote }}</p>
 
                   <div class="travel-journal__cover">
                     <img class="travel-journal__tape" :src="tapeCornerAsset" alt="" aria-hidden="true" />
-                    <img
+                    <button
                       v-if="activeStopCover"
-                      :src="activeStopCover.imageUrl"
-                      :alt="activeStopCover.remark || activeStop.title"
-                    />
+                      type="button"
+                      class="travel-journal__cover-trigger"
+                      :aria-label="`查看大图：${activeStopCover.remark || activeStop.title}`"
+                      @click="openStopPhoto(activeStopCover.imageUrl)"
+                    >
+                      <img
+                        :src="activeStopCover.imageUrl"
+                        :alt="activeStopCover.remark || activeStop.title"
+                      />
+                    </button>
                     <div v-else class="travel-journal__cover-empty">等待封面图片</div>
                   </div>
 
@@ -273,7 +301,15 @@
                       class="journal-note"
                     >
                       <div class="journal-note__thumb">
-                        <img v-if="note.imageUrl" :src="note.imageUrl" :alt="note.title" />
+                        <button
+                          v-if="note.imageUrl"
+                          type="button"
+                          class="journal-note__thumb-trigger"
+                          :aria-label="`查看大图：${note.title}`"
+                          @click="openStopPhoto(note.imageUrl)"
+                        >
+                          <img :src="note.imageUrl" :alt="note.title" />
+                        </button>
                         <div v-else class="journal-note__thumb--placeholder" />
                       </div>
                       <div class="journal-note__body">
@@ -313,6 +349,12 @@
           </aside>
       </section>
     </div>
+
+    <UiImageViewer
+      v-model="photoViewerVisible"
+      :urls="stopPhotoUrls"
+      :initial-index="photoViewerIndex"
+    />
   </DefaultLayout>
 </template>
 
@@ -325,7 +367,7 @@ import { notify, confirmDelete } from '@/lib/feedback'
 import DefaultLayout from '@/layouts/DefaultLayout.vue'
 import PageHero from '@/components/PageHero/PageHero.vue'
 import TravelMemoryMap from '@/components/TravelMemoryMap/TravelMemoryMap.vue'
-import { UiButton, UiIcon } from '@/components/ui'
+import { UiButton, UiIcon, UiImageViewer } from '@/components/ui'
 import { deleteTravelMemory, getTravelMemories, getTravelMemoryDetail } from '@/api/travel-memory'
 import { useSiteConfig } from '@/composables/useSiteConfig'
 import { resolveFeatureHero } from '@/modules/feature-access/constants'
@@ -464,6 +506,25 @@ const activeStopCards = computed<JournalNote[]>(() => {
 })
 
 const activeStopDate = computed(() => formatDate(activeStop.value?.visitedAt))
+
+/** 当前片段的全部可预览图片，供大图查看器左右切换 */
+const stopPhotoUrls = computed<string[]>(() => (
+  (activeStop.value?.entries || [])
+    .map((entry) => entry.imageUrl)
+    .filter((url): url is string => Boolean(url))
+))
+
+const photoViewerVisible = ref(false)
+const photoViewerIndex = ref(0)
+
+/** 打开大图查看器，并定位到被点击的那张照片 */
+function openStopPhoto(imageUrl?: string | null) {
+  if (!imageUrl) return
+  const index = stopPhotoUrls.value.indexOf(imageUrl)
+  if (index < 0 && !stopPhotoUrls.value.length) return
+  photoViewerIndex.value = Math.max(index, 0)
+  photoViewerVisible.value = true
+}
 
 function selectStop(index: number) {
   const lastIndex = journalStops.value.length - 1
@@ -850,7 +911,7 @@ watch(canViewFriendMemoryMap, () => {
 .memory-spread {
   position: relative;
   display: grid;
-  grid-template-columns: minmax(372px, 438px) minmax(0, 1.8fr) minmax(328px, 372px);
+  grid-template-columns: minmax(324px, 372px) minmax(0, 2fr) minmax(328px, 372px);
   gap: clamp(16px, 1.1vw, 24px);
   min-height: 840px;
   overflow: visible;
@@ -972,11 +1033,10 @@ watch(canViewFriendMemoryMap, () => {
   gap: 16px;
   padding: clamp(16px, 1.1vw, 20px);
   border-radius: var(--memory-radius-panel);
-  background: var(--memory-surface);
+  /* 与左右面板同一纸面材质，避免中间白卡浮起的割裂感 */
+  background: var(--memory-rail-fill);
   border: 1px solid var(--memory-line);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.9),
-    0 18px 42px rgba(74, 43, 55, 0.13);
+  box-shadow: none;
 }
 
 .spread-map-card__hero {
@@ -1256,7 +1316,7 @@ watch(canViewFriendMemoryMap, () => {
 
 .travel-journal__headline {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 10px;
 }
 
@@ -1264,7 +1324,6 @@ watch(canViewFriendMemoryMap, () => {
   color: var(--atlas-route);
   font-size: 20px;
   line-height: 1;
-  transform: translateY(6px);
 }
 
 .travel-journal__headline h2 {
@@ -1359,14 +1418,14 @@ watch(canViewFriendMemoryMap, () => {
   flex: 0 0 auto;
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  min-height: 44px;
-  padding: 0 14px 0 6px;
+  gap: 7px;
+  min-height: 34px;
+  padding: 0 12px 0 5px;
   border: 1px solid var(--memory-line);
   border-radius: 999px;
   background: var(--memory-surface);
   color: #7f626e;
-  font-size: 13px;
+  font-size: 12.5px;
   font-weight: 600;
   line-height: 1.2;
   cursor: pointer;
@@ -1390,12 +1449,12 @@ watch(canViewFriendMemoryMap, () => {
 .stop-tab__index {
   display: grid;
   place-items: center;
-  width: 28px;
-  height: 28px;
+  width: 22px;
+  height: 22px;
   border-radius: 999px;
   background: rgba(255, 241, 246, 0.9);
   color: #c6829d;
-  font-size: 11px;
+  font-size: 10.5px;
   font-weight: 700;
 }
 
@@ -1408,13 +1467,14 @@ watch(canViewFriendMemoryMap, () => {
 
 .stop-tab.is-active {
   background: var(--colors-surface-rose, #fff1f6);
-  border-color: rgba(215, 95, 135, 0.32);
-  color: var(--atlas-route);
+  border-color: rgba(215, 95, 135, 0.26);
+  /* 选中态用安静的梅子色而非饱和路线粉，保住可读性的同时降低视觉强度 */
+  color: #a05a74;
 }
 
 .stop-tab.is-active .stop-tab__index {
-  background: var(--atlas-route);
-  color: #fff;
+  background: rgba(215, 95, 135, 0.18);
+  color: #964663;
 }
 
 .travel-journal__stop {
@@ -1427,11 +1487,21 @@ watch(canViewFriendMemoryMap, () => {
   flex: 1;
 }
 
-.stop-meta {
+.stop-heading {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 8px 14px;
+  gap: 6px 8px;
+}
+
+.stop-heading__petal {
+  width: 11px;
+  height: 16px;
+  flex-shrink: 0;
+  /* 旋转后的可视区域会向左溢出约 3px，用外边距补回，保持与上下内容同一条列线 */
+  margin-left: 3px;
+  transform: rotate(32deg);
+  transform-origin: center;
 }
 
 .stop-meta__item {
@@ -1443,16 +1513,43 @@ watch(canViewFriendMemoryMap, () => {
   line-height: 1.4;
 }
 
-.stop-meta__item .el-icon {
+.stop-meta__item--date {
+  margin-left: auto;
+}
+
+.stop-meta__item .el-icon,
+.stop-meta__item .ui-icon {
   color: #df8aa8;
   font-size: 13px;
 }
 
 .stop-note {
   margin: 0;
+  min-width: 0;
   color: var(--atlas-ink);
   font-size: 13.5px;
-  line-height: 1.7;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  line-height: 1.6;
+}
+
+.stop-count {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-left: 2px;
+  padding: 2px 10px;
+  border: 1px solid rgba(215, 95, 135, 0.2);
+  border-radius: 999px;
+  background: var(--colors-surface-rose, #fff1f6);
+  color: var(--atlas-route);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.6;
+}
+
+.stop-count .ui-icon {
+  font-size: 12px;
 }
 
 .travel-journal__cover {
@@ -1469,7 +1566,23 @@ watch(canViewFriendMemoryMap, () => {
     inset 0 1px 0 rgba(255, 255, 255, 0.78);
 }
 
-.travel-journal__cover img:last-child {
+.travel-journal__cover-trigger {
+  display: block;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: none;
+  border-radius: 10px;
+  background: none;
+  cursor: zoom-in;
+}
+
+.travel-journal__cover-trigger:focus-visible {
+  outline: 2px solid var(--atlas-route);
+  outline-offset: 2px;
+}
+
+.travel-journal__cover-trigger img {
   width: 100%;
   height: 100%;
   object-fit: cover;
@@ -1531,6 +1644,21 @@ watch(canViewFriendMemoryMap, () => {
   height: 100%;
   min-height: 96px;
   background: rgba(249, 244, 247, 0.86);
+}
+
+.journal-note__thumb-trigger {
+  display: block;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: zoom-in;
+}
+
+.journal-note__thumb-trigger:focus-visible {
+  outline: 2px solid var(--atlas-route);
+  outline-offset: -2px;
 }
 
 .journal-note__thumb img {
@@ -1991,13 +2119,13 @@ watch(canViewFriendMemoryMap, () => {
   }
 
   .memory-spread {
-    grid-template-columns: minmax(336px, 390px) minmax(0, 1.64fr) minmax(316px, 350px);
+    grid-template-columns: minmax(308px, 344px) minmax(0, 1.8fr) minmax(316px, 350px);
   }
 }
 
 @media (max-width: 1280px) {
   .memory-spread {
-    grid-template-columns: minmax(320px, 356px) minmax(0, 1.34fr) minmax(300px, 332px);
+    grid-template-columns: minmax(292px, 320px) minmax(0, 1.5fr) minmax(300px, 332px);
     gap: 16px;
   }
 }
@@ -2103,6 +2231,17 @@ watch(canViewFriendMemoryMap, () => {
     width: auto;
     flex-basis: auto;
     max-width: 100%;
+  }
+
+  /* 触屏下恢复 44px 触控目标 */
+  .stop-tab {
+    min-height: 44px;
+    padding: 0 14px 0 7px;
+  }
+
+  .stop-tab__index {
+    width: 28px;
+    height: 28px;
   }
 
   :deep(.travel-map-stage) {
