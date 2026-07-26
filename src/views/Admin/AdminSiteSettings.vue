@@ -134,7 +134,17 @@
               <section class="runtime-row">
                 <div>
                   <h4>评论审核</h4>
-                  <p>开启后，普通用户的新评论先进入待审核状态。</p>
+                  <p>开启后，普通用户和游客的新评论会进入待审核状态。</p>
+                  <UiButton
+                    v-if="form.commentAudit"
+                    class="review-entry"
+                    variant="text"
+                    size="sm"
+                    icon="comment"
+                    @click="goToCommentReview"
+                  >
+                    前往评论审核
+                  </UiButton>
                 </div>
                 <UiSwitch
                   v-model="form.commentAudit"
@@ -220,6 +230,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue';
+import { useRouter } from 'vue-router';
 import { notify } from '@/lib/feedback';
 import { UiPanel, UiButton, UiTabs, UiForm, UiFormField, UiInput, UiLoadingState, UiSwitch, UiTextarea, UiUpload } from '@/components/ui';
 import type { UiTabItem } from '@/components/ui';
@@ -270,6 +281,7 @@ const HERO_DEFAULT_POSITIONS: Record<HeroKey, string> = {
 };
 
 const { setSiteConfig } = useSiteConfig();
+const router = useRouter();
 
 const activeTab = ref('basic');
 const activeTabManagesOwnActions = computed(() =>
@@ -472,6 +484,16 @@ function clearHeroImage(key: HeroKey) {
   heroImagePositions[key] = HERO_DEFAULT_POSITIONS[key];
 }
 
+function goToCommentReview() {
+  void router.push({
+    path: '/admin',
+    query: {
+      tab: 'comments',
+      status: '0',
+    },
+  });
+}
+
 async function saveConfig() {
   const payload = toPayload();
   if (!validatePayload(payload)) return;
@@ -616,6 +638,11 @@ onMounted(() => {
     font-size: 12px;
     line-height: 1.6;
   }
+}
+
+.review-entry {
+  margin-top: var(--space-xs);
+  margin-left: -8px;
 }
 
 .form-grid {
