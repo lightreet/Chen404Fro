@@ -21,12 +21,17 @@
               >
                 <UiIcon :name="item.icon" class="admin-menu__icon" />
                 <span>{{ item.label }}</span>
+                <span v-if="item.badge" class="admin-menu__badge">{{ item.badge }}</span>
               </button>
             </nav>
           </aside>
 
           <section class="admin-content">
             <AdminCategories v-if="activeMenu === 'categories'" />
+            <AdminComments
+              v-else-if="activeMenu === 'comments'"
+              @stats-change="handleCommentStats"
+            />
             <AdminSiteSettings v-else-if="activeMenu === 'site-settings'" />
             <AdminEmojiManager v-else-if="activeMenu === 'emoji'" />
             <AdminFiles v-else-if="activeMenu === 'files'" />
@@ -39,11 +44,14 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { getAdminCommentStats } from '@/api/admin-comment'
+import type { AdminCommentStats } from '@/api/admin-comment'
 import DefaultLayout from '@/layouts/DefaultLayout.vue'
 import { UiIcon } from '@/components/ui'
 import AdminCategories from './AdminCategories.vue'
+import AdminComments from './AdminComments.vue'
 import AdminEmojiManager from './AdminEmojiManager.vue'
 import AdminFiles from './AdminFiles.vue'
 import AdminSiteSettings from './AdminSiteSettings.vue'
@@ -51,14 +59,21 @@ import AdminTrustRequests from './AdminTrustRequests.vue'
 
 const route = useRoute()
 const router = useRouter()
+const pendingCommentCount = ref(0)
 
-const menuItems = [
+const menuItems = computed(() => [
   { key: 'categories', label: '分类管理', icon: 'category' },
+  {
+    key: 'comments',
+    label: '评论审核',
+    icon: 'comment',
+    badge: pendingCommentCount.value || undefined,
+  },
   { key: 'site-settings', label: '站点配置', icon: 'settings' },
   { key: 'emoji', label: '表情包管理', icon: 'image' },
   { key: 'files', label: '文件管理', icon: 'files' },
   { key: 'trust-requests', label: '好友申请', icon: 'postcard' },
-] as const
+])
 
 const normalizeTab = (tab?: string) => {
   if (tab === 'hero') return 'site-settings'
@@ -72,6 +87,23 @@ const handleSelect = (key: string) => {
   activeMenu.value = key
   router.replace({ path: '/admin', query: currentTabQuery.value })
 }
+
+const handleCommentStats = (stats: AdminCommentStats) => {
+  pendingCommentCount.value = stats.pendingCount
+}
+
+watch(
+  () => route.query.tab,
+  (tab) => {
+    activeMenu.value = normalizeTab(tab as string | undefined)
+  },
+)
+
+onMounted(() => {
+  void getAdminCommentStats()
+    .then(handleCommentStats)
+    .catch(() => undefined)
+})
 </script>
 
 <style scoped lang="scss">
@@ -171,6 +203,19 @@ const handleSelect = (key: string) => {
 .admin-menu__icon {
   font-size: 18px;
   flex-shrink: 0;
+}
+
+.admin-menu__badge {
+  min-width: 22px;
+  margin-left: auto;
+  padding: 2px 7px;
+  border-radius: var(--radius-pill);
+  background: var(--color-warning-soft, #fff4d6);
+  color: var(--color-warning);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.4;
+  text-align: center;
 }
 
 .admin-content {
