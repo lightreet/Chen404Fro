@@ -60,4 +60,12 @@ const onChange = (value: RadioValue) => emit('change', value)
 .ui-radio-group {
   width: fit-content;
 }
+
+.ui-radio-group--button :deep(.el-radio-button__inner) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: var(--control-height-md);
+  padding-block: 0;
+}
 </style>

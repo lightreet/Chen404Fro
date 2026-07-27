@@ -102,6 +102,7 @@ Route / Page -> Feature -> components/app (App*) -> components/ui (Ui*) -> desig
 - `requiresAuth`：要求登录
 - `requiresAdmin`：要求管理员
 - `requiresFriend`：要求管理员或知友
+- `requiresCapability`：要求当前用户具备指定的文章、旅行或音乐创作能力
 - `guest`：仅游客场景，例如登录/注册
 
 ### 当前主要路由
@@ -110,7 +111,7 @@ Route / Page -> Feature -> components/app (App*) -> components/ui (Ui*) -> desig
 /                         首页
 /home                     首页兼容路径（重定向到 /）
 /article/:id              文章详情
-/article/edit/:id?        文章编辑（管理员）
+/article/edit/:id?        文章编辑（article:create）
 /archive                  文章记录
 /development-history      开发历程
 /category                 分类总览
@@ -122,16 +123,17 @@ Route / Page -> Feature -> components/app (App*) -> components/ui (Ui*) -> desig
 /user/:id                 公开用户主页
 /login                    登录
 /register                 注册
-/profile                  个人中心
+/profile                  个人中心（资料与“我的创作”）
+/studio                   旧创作中心兼容入口，重定向到 /profile?tab=creations
 /trust-request            好友申请（公开入口，提交时要求登录）
 /admin                    后台管理（管理员）
 /memory-map               旅行纪念地图（公开入口，内容按权限展示）
 /memory-map/detail/:id    旧详情链接兼容入口，重定向到 /memory-map?focus=:id
-/memory-map/create        旅行地点创建（管理员）
-/memory-map/edit/:id      旅行地点编辑（管理员）
+/memory-map/create        旅行地点创建（travel:create）
+/memory-map/edit/:id      旅行地点编辑（travel:create）
 /music                    Sakura Radio 音乐馆
-/music/tracks/new         歌曲创建工作台（管理员）
-/music/tracks/:id/edit    歌曲编辑工作台（管理员）
+/music/tracks/new         歌曲创建工作台（music:create）
+/music/tracks/:id/edit    歌曲编辑工作台（music:create）
 ```
 
 ### 路由守卫行为
@@ -315,7 +317,7 @@ trust-request / home / archive / memory-map / music / category / about / guestbo
 - 文件管理
 - 好友申请
 
-音乐馆管理和旅行纪念地图管理没有塞进传统 `/admin` 菜单，而是放在各自业务页面中提供管理员入口与工作台。
+文章、旅行地点和音乐的个人记录统一收敛到 `/profile?tab=creations`，再从 `文章 / 旅行 / 音乐` 分栏进入对应编辑器。`/admin` 保留站点级审核、配置与运营能力，不承担个人创作记录管理。
 
 ## 8. 典型业务流
 
@@ -328,7 +330,7 @@ trust-request / home / archive / memory-map / music / category / about / guestbo
 
 ### 旅行地点创建
 
-1. 管理员在 `TravelMemoryCreate.vue` 选择坐标或搜索地点
+1. 具备 `travel:create` 能力的用户在 `TravelMemoryCreate.vue` 选择坐标或搜索地点
 2. 上传图片后拿到后端返回的 URL、拍摄时间和可能的 EXIF 坐标
 3. 页面按 `CreateTravelMemoryCommand` 的 `stops` 结构整理旅途片段、封面、备注和时间
 4. 照片 `shotAt` 当前默认跟随片段日期，片段没填日期时回退到地点日期；片段级坐标字段在契约中保留，但当前前端主流程仍以地点级展示坐标为准
@@ -336,7 +338,7 @@ trust-request / home / archive / memory-map / music / category / about / guestbo
 
 ### 歌曲维护
 
-1. 管理员上传音频/封面
+1. 具备 `music:create` 能力的用户上传音频/封面
 2. 工作台保存歌曲元数据与歌词
 3. 可选调用 `/admin/music/tracks/ai/suggest` 获取候选元数据
 4. 保存后返回音乐馆继续维护歌单

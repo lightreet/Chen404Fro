@@ -1,21 +1,26 @@
 <template>
   <div class="ui-tabs" :class="[`ui-tabs--${variant}`]">
-    <div class="ui-tabs__nav" role="tablist">
-      <button
-        v-for="item in items"
-        :key="item.value"
-        type="button"
-        role="tab"
-        class="ui-tabs__tab"
-        :class="{ 'is-active': item.value === modelValue, 'is-disabled': item.disabled }"
-        :aria-selected="item.value === modelValue"
-        :disabled="item.disabled"
-        @click="select(item)"
-      >
-        <UiIcon v-if="item.icon" :name="item.icon" class="ui-tabs__tab-icon" />
-        <span>{{ item.label }}</span>
-        <span v-if="item.badge != null" class="ui-tabs__tab-badge">{{ item.badge }}</span>
-      </button>
+    <div class="ui-tabs__bar">
+      <div class="ui-tabs__nav" role="tablist">
+        <button
+          v-for="item in items"
+          :key="item.value"
+          type="button"
+          role="tab"
+          class="ui-tabs__tab"
+          :class="{ 'is-active': item.value === modelValue, 'is-disabled': item.disabled }"
+          :aria-selected="item.value === modelValue"
+          :disabled="item.disabled"
+          @click="select(item)"
+        >
+          <UiIcon v-if="item.icon" :name="item.icon" class="ui-tabs__tab-icon" />
+          <span>{{ item.label }}</span>
+          <span v-if="item.badge != null" class="ui-tabs__tab-badge">{{ item.badge }}</span>
+        </button>
+      </div>
+      <div v-if="$slots.actions" class="ui-tabs__actions">
+        <slot name="actions" />
+      </div>
     </div>
     <div class="ui-tabs__panel">
       <slot />
@@ -44,10 +49,25 @@ const select = (item: UiTabItem) => {
 </script>
 
 <style scoped lang="scss">
+.ui-tabs__bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-md);
+  min-width: 0;
+}
+
 .ui-tabs__nav {
   display: flex;
   align-items: center;
   gap: 4px;
+  min-width: 0;
+}
+
+.ui-tabs__actions {
+  display: flex;
+  align-items: center;
+  flex: 0 0 auto;
 }
 
 .ui-tabs__tab {
@@ -92,8 +112,12 @@ const select = (item: UiTabItem) => {
 
 // ---- line 变体 ----
 .ui-tabs--line {
-  .ui-tabs__nav {
+  .ui-tabs__bar {
     border-bottom: 1px solid var(--color-border-light);
+  }
+
+  .ui-tabs__nav {
+    flex: 1 1 auto;
     gap: 18px;
   }
   .ui-tabs__tab {

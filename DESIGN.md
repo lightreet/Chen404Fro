@@ -272,11 +272,15 @@ Chen404 now has its own design system in code. This doc describes *intent*; the 
 
 - **Style:** soft fill, clear border on focus, readable placeholder.
 - **Validation:** error text must appear near the field and use plain language.
+- **Contextual help:** stable, non-critical helper copy such as format limits or visibility consequences should use the shared information-icon tooltip immediately beside the relevant label, never beside the field control. Keep validation errors, upload progress, permission state, and other time-sensitive feedback directly visible. Tooltip triggers must be keyboard-focusable and carry a specific accessible label.
+- **Boolean controls:** inside an existing form or settings surface, present a simple switch directly beneath or beside its label. Do not wrap each switch in another bordered, rounded, tinted container unless that container represents a real grouped setting.
 - **Guestbook composer:** avatar/name, textarea, emoji, counter, and submit action should form one coherent composer, not scattered controls.
 
 ### Chips / Filters / Tabs
 
 - **Style:** pills with stable height and clear selected state.
+- **Filter toolbar order:** follow the left-to-right reading flow. Place filters first and search immediately after them; when search is the only control, keep it at the leading edge rather than pushing it to the far right. Let the row wrap before changing this order.
+- **Filter toolbar sizing:** segmented filters, search fields, selects, and adjacent actions on the same toolbar must use the same control-height token and align on one vertical centerline.
 - **Music filters:** status, category, card/list toggle, and playback mode must share one segmented-control vocabulary.
 - **Category/tag chips:** avoid excessive color variation. Count and label hierarchy matter more than decoration.
 
@@ -324,6 +328,13 @@ Chen404 now has its own design system in code. This doc describes *intent*; the 
 
 - **Role:** task completion.
 - **Style:** calm, dense, consistent. Compose from the project's own `Ui*` primitives and `App*` shells; do not fall back to raw Element Plus visuals.
+- **Personal creation hierarchy:** creation management belongs inside the personal center under one `我的创作` destination. Use peer tabs for `文章 / 旅行 / 音乐`; place the active tab's create action at the far right of the same tab bar and switch its label and route with the active content type. Do not duplicate a global `创作中心` entry in the header or account menu.
+- **Personal-center canvas:** keep the route-level personal-center wrapper transparent so the shared site background remains continuous. A constrained wrapper must not paint an exposed rectangular backdrop around or above its content cards.
+- **Creation permissions:** a user may keep historical records after losing a create capability. Preserve those records in read-only form, hide create/edit actions, and explain the current limitation without treating the history as an error.
+- **Creation toolbar copy:** tabs, filters, records, and the primary create button already communicate the workflow. Do not add helper sentences that merely repeat “manage, continue editing, or create”; remove them instead of moving them into a tooltip.
+- **Creation search:** place status filters and search in one compact, transparent row directly below the content tabs. Article, travel, and music views all provide search in the same position, using fields appropriate to each content type; do not wrap the row in a broad gray background.
+- **Creation pagination:** personal article management uses 5 records per page. Travel and music management use 10 records per page and paginate the filtered result, returning to page 1 whenever a new search is applied.
+- **Compatibility:** legacy `/studio` links may redirect to `/profile?tab=creations`; they must not create a second navigation concept or a second workbench layout.
 - **Settings actions:** every configuration tab uses the shared bottom-right settings footer for reset, test/sync, and save commands. Headers carry identity and status only; never duplicate save actions at the top or inside a sub-pane.
 - **Settings structure:** use whitespace, alignment, and at most one quiet group surface before adding dividers. Do not place borders around the outer panel, every section, every status cell, and the footer at the same time.
 - **Settings color:** quiet does not mean grayscale. In light admin screens, avoid broad neutral-gray and charcoal work surfaces; use restrained rose, lavender, blue, and mint tints to distinguish operational summaries and setting modes while keeping primary actions pink.

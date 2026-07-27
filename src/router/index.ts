@@ -123,13 +123,14 @@ const routes: RouteRecordRaw[] = [
   },
   {
     path: '/studio',
-    name: 'Studio',
-    component: () => import('@/views/Studio/Studio.vue'),
-    meta: {
-      title: '创作中心',
-      requiresAuth: true,
-      requiresAnyCreatorCapability: true,
-    },
+    redirect: to => ({
+      path: '/profile',
+      query: {
+        ...to.query,
+        tab: 'creations',
+        content: typeof to.query.content === 'string' ? to.query.content : 'articles',
+      },
+    }),
   },
   {
     path: '/category',
@@ -353,20 +354,6 @@ router.beforeEach(async (to, _from, next) => {
     const capability = to.meta.requiresCapability as UserCapability;
     if (!ok || !hasCapability(userStore.user, capability)) {
       notify.error('当前账号没有这项创作权限');
-      next({ path: '/' });
-      return;
-    }
-  }
-
-  if (to.meta.requiresAnyCreatorCapability) {
-    const ok = await userStore.syncAuthState();
-    const canCreate = ok && (
-      hasCapability(userStore.user, 'article:create')
-      || hasCapability(userStore.user, 'travel:create')
-      || hasCapability(userStore.user, 'music:create')
-    );
-    if (!canCreate) {
-      notify.error('创作中心仅对知友与管理员开放');
       next({ path: '/' });
       return;
     }

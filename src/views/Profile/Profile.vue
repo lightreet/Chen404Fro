@@ -50,52 +50,7 @@
                 </div>
               </template>
 
-              <div v-if="activeMenu === 'articles'" class="article-panel">
-                <div class="section-toolbar section-toolbar--controls">
-                  <div class="content-actions content-actions--stacked">
-                    <UiRadioGroup
-                      v-model="articleStatus"
-                      class="status-radio"
-                      variant="button"
-                      :options="articleStatusOptions"
-                      @change="loadMyArticles(1)"
-                    />
-                    <UiSearchBar
-                      v-model="articleKeyword"
-                      class="article-search"
-                      placeholder="搜索文章..."
-                      @search="loadMyArticles(1)"
-                    />
-                  </div>
-                </div>
-
-                <UiSkeleton v-if="articleLoading" :rows="6" />
-                <div v-else-if="myArticles.length === 0" class="empty-state">还没有文章，去写下第一篇吧。</div>
-                <div v-else class="article-list-shell">
-                  <div class="article-scroll-area">
-                    <div class="article-list">
-                      <ArticleCard
-                        v-for="(article, idx) in myArticles"
-                        :key="String(article.id)"
-                        :article="article"
-                        :index="idx"
-                        mode="manage"
-                        compact
-                        @edit="handleEditArticle"
-                        @delete="handleDeleteArticle"
-                      />
-                    </div>
-                  </div>
-                  <div class="pager">
-                    <UiPagination
-                      :current="articlePage"
-                      :page-size="articlePageSize"
-                      :total="articleTotal"
-                      @change="loadMyArticles"
-                    />
-                  </div>
-                </div>
-              </div>
+              <ProfileCreationPanel v-if="activeMenu === 'creations'" />
 
               <div v-else-if="activeMenu === 'likes'" class="article-panel">
                 <UiSkeleton v-if="likedLoading" :rows="6" />
@@ -162,8 +117,13 @@
                           {{ String(profileForm.nickname || user.username || 'U').charAt(0) }}
                         </UiAvatar>
                         <div class="avatar-edit-copy">
-                          <div class="avatar-edit-title">上传新的头像</div>
-                          <div class="avatar-edit-hint">建议使用清晰的正方形图片，最大支持 10MB，上传后会自动压缩。</div>
+                          <div class="avatar-edit-title-row">
+                            <div class="avatar-edit-title">上传新的头像</div>
+                            <UiHintTooltip
+                              content="建议使用清晰的正方形图片，最大支持 10MB，上传后会自动压缩。"
+                              aria-label="查看头像上传说明"
+                            />
+                          </div>
                           <UiUpload
                             :show-file-list="false"
                             :before-upload="beforeAvatarUpload"
@@ -211,21 +171,33 @@
                     </UiFormField>
 
                     <div class="form-grid privacy-grid">
-                      <UiFormField label="公开成员资料">
-                        <div class="privacy-control">
-                          <UiSwitch v-model="profileForm.profileVisible" />
-                          <span>开启后，其他访客可以在成员列表和个人主页找到你。</span>
-                        </div>
-                      </UiFormField>
-                      <UiFormField label="公开邮箱">
-                        <div class="privacy-control">
-                          <UiSwitch
-                            v-model="profileForm.emailPublic"
-                            :disabled="!profileForm.profileVisible"
+                      <div class="privacy-field">
+                        <div class="privacy-field__label">
+                          <span id="profile-visibility-label">公开成员资料</span>
+                          <UiHintTooltip
+                            content="开启后，其他访客可以在成员列表和个人主页找到你。"
+                            aria-label="查看成员资料公开说明"
                           />
-                          <span>仅在资料公开时生效；关闭后邮箱只在你自己的个人中心可见。</span>
                         </div>
-                      </UiFormField>
+                        <UiSwitch
+                          v-model="profileForm.profileVisible"
+                          aria-labelledby="profile-visibility-label"
+                        />
+                      </div>
+                      <div class="privacy-field">
+                        <div class="privacy-field__label">
+                          <span id="email-visibility-label">公开邮箱</span>
+                          <UiHintTooltip
+                            content="仅在资料公开时生效；关闭后邮箱只在你自己的个人中心可见。"
+                            aria-label="查看邮箱公开说明"
+                          />
+                        </div>
+                        <UiSwitch
+                          v-model="profileForm.emailPublic"
+                          :disabled="!profileForm.profileVisible"
+                          aria-labelledby="email-visibility-label"
+                        />
+                      </div>
                     </div>
 
                     <div class="profile-form-actions">
@@ -285,8 +257,8 @@
 
 <script setup lang="ts">
 import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue'
-import { notify, confirmDelete } from '@/lib/feedback'
-import { UiPanel, UiAvatar, UiButton, UiDialog, UiForm, UiFormField, UiIcon, UiInput, UiPagination, UiRadioGroup, UiSearchBar, UiSkeleton, UiSwitch, UiTextarea, UiUpload } from '@/components/ui'
+import { notify } from '@/lib/feedback'
+import { UiPanel, UiAvatar, UiButton, UiDialog, UiForm, UiFormField, UiHintTooltip, UiIcon, UiInput, UiPagination, UiSkeleton, UiSwitch, UiTextarea, UiUpload } from '@/components/ui'
 import { useRoute, useRouter } from 'vue-router'
 import DefaultLayout from '@/layouts/DefaultLayout.vue'
 import { useUserStore } from '@/stores/user'
@@ -296,8 +268,9 @@ import { getTrustLevelLabel } from '@/utils/permission'
 import { AVATAR_MAX_MB, createConfirmPasswordRule, validateImageFile } from '@/utils/validation'
 import type { FormItemRule } from '@/utils/validation'
 import { notifyAuthFailure } from '@/utils/authFeedback'
-import { deleteArticle, getMyArticles, getMyFavoriteArticles, getMyLikedArticles } from '@/api/article'
+import { getMyFavoriteArticles, getMyLikedArticles } from '@/api/article'
 import ArticleCard from '@/components/ArticleCard/ArticleCard.vue'
+import ProfileCreationPanel from './ProfileCreationPanel.vue'
 import ProfileTrustRequestPanel from './ProfileTrustRequestPanel.vue'
 
 const userStore = useUserStore()
@@ -305,30 +278,22 @@ const router = useRouter()
 const route = useRoute()
 
 const user = ref(userStore.user)
-const activeMenu = ref<'articles' | 'likes' | 'favorites' | 'settings' | 'trust'>('settings')
+type ProfileMenu = 'creations' | 'likes' | 'favorites' | 'settings' | 'trust'
+
+const activeMenu = ref<ProfileMenu>('settings')
 const roleText = computed(() => getTrustLevelLabel(user.value))
 const trustLevelText = computed(() => (user.value ? getTrustLevelLabel(user.value) : '--'))
 
 const panelTitle = computed(() => {
-  if (activeMenu.value === 'articles') return '我的文章'
+  if (activeMenu.value === 'creations') return '我的创作'
   if (activeMenu.value === 'likes') return '我的点赞'
   if (activeMenu.value === 'favorites') return '我的收藏'
   if (activeMenu.value === 'trust') return '好友申请'
   return '个人中心'
 })
 
-const panelSubtitle = computed(() => {
-  if (activeMenu.value === 'articles') return '记录你的创作与成长轨迹，管理已发布与草稿内容。'
-  if (activeMenu.value === 'likes') return '把喜欢过的内容安静收好，随时回来继续阅读。'
-  if (activeMenu.value === 'favorites') return '整理值得反复回看的文章，保留你的专属灵感清单。'
-  if (activeMenu.value === 'trust') return '在这里提交好友申请，并查看申请状态、附件与审核反馈。'
-  return '在这里更新头像、昵称与个人简介，让你的角色名片更完整。'
-})
-
-void panelSubtitle
-
 const panelBadge = computed(() => {
-  if (activeMenu.value === 'articles') return `共 ${articleTotal.value} 篇`
+  if (activeMenu.value === 'creations') return '内容管理'
   if (activeMenu.value === 'likes') return `共 ${likedTotal.value} 篇`
   if (activeMenu.value === 'favorites') return `共 ${favTotal.value} 篇`
   if (activeMenu.value === 'trust') return '好友申请'
@@ -336,7 +301,7 @@ const panelBadge = computed(() => {
 })
 
 const panelIcon = computed(() => {
-  if (activeMenu.value === 'articles') return 'Document'
+  if (activeMenu.value === 'creations') return 'edit'
   if (activeMenu.value === 'likes') return 'Medal'
   if (activeMenu.value === 'favorites') return 'Star'
   if (activeMenu.value === 'trust') return 'Postcard'
@@ -345,7 +310,7 @@ const panelIcon = computed(() => {
 
 const navItems: Array<{ index: string; icon: string; label: string }> = [
   { index: 'settings', icon: 'User', label: '个人中心' },
-  { index: 'articles', icon: 'Document', label: '我的文章' },
+  { index: 'creations', icon: 'edit', label: '我的创作' },
   { index: 'likes', icon: 'Medal', label: '我的点赞' },
   { index: 'favorites', icon: 'Star', label: '我的收藏' },
 ]
@@ -389,19 +354,6 @@ const passwordRules: Record<string, FormItemRule[]> = {
   ],
 }
 
-const articleStatus = ref(-1)
-const articleKeyword = ref('')
-const articleLoading = ref(false)
-const myArticles = ref<any[]>([])
-const articlePage = ref(1)
-const articlePageSize = 2
-const articleTotal = ref(0)
-const articleStatusOptions = [
-  { label: '全部', value: -1 },
-  { label: '草稿', value: 0 },
-  { label: '已发布', value: 1 },
-]
-
 const likedLoading = ref(false)
 const myLikedArticles = ref<any[]>([])
 const likedPage = ref(1)
@@ -442,16 +394,32 @@ const loadUser = async () => {
 }
 
 const handleMenuSelect = (index: string) => {
-  activeMenu.value = index as typeof activeMenu.value
-  router.replace({ query: { ...route.query, tab: index } })
+  const menu = index as ProfileMenu
+  activeMenu.value = menu
+  const { content: currentContent, ...query } = route.query
+  router.replace({
+    query: menu === 'creations'
+      ? { ...query, tab: menu, content: currentContent ?? 'articles' }
+      : { ...query, tab: menu },
+  })
+}
+
+const resolveProfileMenu = (tab: unknown): ProfileMenu => {
+  if (tab === 'articles' || tab === 'creations') return 'creations'
+  if (tab === 'likes' || tab === 'favorites' || tab === 'settings' || tab === 'trust') return tab
+  return 'settings'
 }
 
 const syncActiveMenuFromRoute = () => {
-  const tab = route.query.tab
-  if (tab === 'articles' || tab === 'likes' || tab === 'favorites' || tab === 'settings' || tab === 'trust') {
-    activeMenu.value = tab
-  } else {
-    activeMenu.value = 'settings'
+  activeMenu.value = resolveProfileMenu(route.query.tab)
+  if (route.query.tab === 'articles') {
+    void router.replace({
+      query: {
+        ...route.query,
+        tab: 'creations',
+        content: route.query.content ?? 'articles',
+      },
+    })
   }
 }
 
@@ -511,25 +479,6 @@ const openPasswordDialog = () => {
   nextTick(() => passwordFormRef.value?.clearValidate())
 }
 
-const loadMyArticles = async (page = 1) => {
-  articlePage.value = page
-  articleLoading.value = true
-  try {
-    const res = await getMyArticles({
-      page,
-      size: articlePageSize,
-      status: articleStatus.value === -1 ? undefined : articleStatus.value,
-      keyword: articleKeyword.value || undefined,
-    })
-    myArticles.value = res?.list ?? []
-    articleTotal.value = res?.total ?? 0
-  } catch (err) {
-    console.error('加载我的文章失败', err)
-  } finally {
-    articleLoading.value = false
-  }
-}
-
 const loadMyLikedArticles = async (page = 1) => {
   likedPage.value = page
   likedLoading.value = true
@@ -555,20 +504,6 @@ const loadMyFavoriteArticles = async (page = 1) => {
     console.error('加载收藏文章失败', err)
   } finally {
     favLoading.value = false
-  }
-}
-
-const handleEditArticle = (id: number | string) => router.push(`/article/edit/${String(id)}`)
-
-const handleDeleteArticle = async (id: number | string) => {
-  const confirmed = await confirmDelete('确定要删除这篇文章吗？删除后将无法恢复。')
-  if (!confirmed) return
-  try {
-    await deleteArticle(String(id))
-    notify.success('删除成功')
-    loadMyArticles(articlePage.value)
-  } catch {
-    // noop
   }
 }
 
@@ -603,12 +538,9 @@ const handleChangePassword = async () => {
 watch(
   () => route.query.tab,
   (tab) => {
-    if (tab === 'articles' || tab === 'likes' || tab === 'favorites' || tab === 'settings' || tab === 'trust') {
-      activeMenu.value = tab
-      if (tab === 'articles') loadMyArticles(1)
-      if (tab === 'likes') loadMyLikedArticles(1)
-      if (tab === 'favorites') loadMyFavoriteArticles(1)
-    }
+    syncActiveMenuFromRoute()
+    if (tab === 'likes') loadMyLikedArticles(1)
+    if (tab === 'favorites') loadMyFavoriteArticles(1)
   },
 )
 
@@ -619,7 +551,6 @@ onMounted(() => {
   }
   syncActiveMenuFromRoute()
   loadUser()
-  if (activeMenu.value === 'articles') loadMyArticles(1)
   if (activeMenu.value === 'likes') loadMyLikedArticles(1)
   if (activeMenu.value === 'favorites') loadMyFavoriteArticles(1)
 })
@@ -627,7 +558,6 @@ onMounted(() => {
 
 <style scoped lang="scss">
 .profile-page {
-  --profile-page-bg: #f7f8fc;
   --profile-sakura: #f59bbc;
   --profile-sakura-soft: #fff1f6;
   --profile-mist: #c7bdd9;
@@ -636,10 +566,7 @@ onMounted(() => {
   --profile-muted: #9ca0b3;
   margin-top: 0;
   padding: clamp(72px, 7vh, 88px) 0 var(--spacing-xl);
-  background:
-    radial-gradient(circle at top left, rgba(245, 155, 188, 0.08), transparent 26%),
-    radial-gradient(circle at top right, rgba(199, 189, 217, 0.12), transparent 30%),
-    var(--profile-page-bg);
+  background: transparent;
 }
 
 .profile-center {
@@ -927,20 +854,6 @@ onMounted(() => {
   margin: 0 auto;
 }
 
-.panel-heading {
-  display: flex;
-  align-items: flex-start;
-  justify-content: flex-start;
-  gap: 16px;
-  flex-wrap: wrap;
-}
-
-.panel-title-group {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
 .panel-title-inline {
   display: inline-flex;
   align-items: center;
@@ -965,19 +878,6 @@ onMounted(() => {
   color: var(--profile-title);
 }
 
-.panel-subtitle {
-  margin: 0;
-  max-width: 560px;
-  font-size: 14px;
-  line-height: 1.75;
-  color: var(--profile-muted);
-}
-
-.panel-heading--compact {
-  align-items: flex-start;
-  justify-content: flex-start;
-}
-
 .article-total {
   display: inline-flex;
   align-items: center;
@@ -994,95 +894,6 @@ onMounted(() => {
 
 .article-total--inline {
   margin-left: 2px;
-}
-
-.section-toolbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  flex-wrap: wrap;
-  margin-bottom: 16px;
-}
-
-.section-toolbar--controls {
-  justify-content: space-between;
-  margin-bottom: 18px;
-}
-
-.content-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px 16px;
-  align-items: center;
-  justify-content: flex-start;
-}
-
-.content-actions--stacked {
-  width: 100%;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px 16px;
-  padding: 8px 10px;
-  border-radius: 20px;
-  border: 1px solid rgba(245, 155, 188, 0.1);
-  background:
-    linear-gradient(135deg, rgba(255, 248, 251, 0.96), rgba(250, 248, 255, 0.92)),
-    rgba(255, 255, 255, 0.88);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.82),
-    0 10px 24px rgba(245, 155, 188, 0.05);
-}
-
-.status-radio {
-  display: inline-flex;
-  gap: 6px;
-  align-items: center;
-  padding: 3px;
-  border-radius: 999px;
-  background: rgba(255, 250, 252, 0.96);
-  border: none;
-  box-shadow: none;
-}
-
-.status-radio :deep(.el-radio-button__inner) {
-  border: none;
-  border-radius: 999px;
-  box-shadow: none;
-  min-width: 64px;
-  height: 32px;
-  padding: 0 15px;
-  background: transparent;
-  color: var(--profile-text);
-  font-size: 14px;
-  font-weight: 600;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  line-height: 1;
-  transition:
-    color 0.22s ease,
-    background 0.22s ease,
-    box-shadow 0.22s ease,
-    transform 0.22s ease;
-}
-
-.status-radio :deep(.el-radio-button__original-radio:checked + .el-radio-button__inner) {
-  background: linear-gradient(135deg, rgba(245, 155, 188, 0.96), rgba(255, 198, 220, 0.96));
-  color: #fff;
-  box-shadow:
-    0 10px 22px rgba(245, 155, 188, 0.2),
-    inset 0 1px 0 rgba(255, 255, 255, 0.24);
-}
-
-.status-radio :deep(.el-radio-button:not(.is-active):hover .el-radio-button__inner) {
-  color: var(--profile-sakura);
-  background: rgba(255, 241, 246, 0.72);
-}
-
-.article-search {
-  flex: 0 1 280px;
-  min-width: 180px;
 }
 
 .article-list-shell,
@@ -1133,22 +944,23 @@ onMounted(() => {
   gap: 0 18px;
 }
 
-.privacy-control {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  gap: 12px;
-  align-items: start;
-  min-height: 44px;
-  padding: 12px 14px;
-  border: 1px solid color-mix(in srgb, var(--color-border) 72%, transparent);
-  border-radius: 14px;
-  background: color-mix(in srgb, var(--color-surface) 88%, var(--color-accent-soft));
+.privacy-field {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  min-width: 0;
+  margin-bottom: 18px;
+}
 
-  span {
-    color: var(--color-text-secondary);
-    font-size: 13px;
-    line-height: 1.65;
-  }
+.privacy-field__label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 28px;
+  color: var(--color-text-primary);
+  font-weight: 600;
+  line-height: 1.4;
 }
 
 .avatar-edit-row {
@@ -1175,15 +987,16 @@ onMounted(() => {
   gap: 8px;
 }
 
+.avatar-edit-title-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
 .avatar-edit-title {
   font-size: 22px;
   font-weight: 700;
   color: var(--text-primary);
-}
-
-.avatar-edit-hint {
-  color: var(--text-tertiary);
-  line-height: 1.7;
 }
 
 .profile-form-actions {
@@ -1241,25 +1054,10 @@ onMounted(() => {
     align-items: flex-start;
   }
 
-  .info-card :deep(.el-card__header),
-  .info-card :deep(.el-card__body) {
+  .info-card :deep(.ui-panel__header),
+  .info-card :deep(.ui-panel__body) {
     padding-left: 18px;
     padding-right: 18px;
-  }
-
-  .content-actions--stacked {
-    flex-direction: column;
-    align-items: stretch;
-    padding: 0;
-    background: transparent;
-    border: none;
-    box-shadow: none;
-  }
-
-  .status-radio,
-  .article-search {
-    width: 100%;
-    flex-basis: auto;
   }
 }
 </style>

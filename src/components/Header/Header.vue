@@ -61,18 +61,6 @@
 
           <!-- 右侧操作区 -->
           <div class="header-actions">
-            <!-- 创作中心入口（知友与管理员显示） -->
-            <UiButton
-              v-if="isLoggedIn && canCreateAny"
-              size="sm"
-              variant="ghost"
-              icon="edit"
-              class="write-btn write-link rounded-full"
-              @click="router.push('/studio')"
-            >
-              <span>创作</span>
-            </UiButton>
-
             <UiDropdown
               trigger="click"
               placement="bottom"
@@ -176,10 +164,6 @@
                   <UiDropdownItem divided command="profile">
                     <UiIcon name="User" />
                     个人中心
-                  </UiDropdownItem>
-                  <UiDropdownItem v-if="canCreateAny" command="studio">
-                    <UiIcon name="edit" />
-                    创作中心
                   </UiDropdownItem>
                   <UiDropdownItem v-if="isAdmin" command="notifications">
                     <UiIcon name="bell" />
@@ -333,15 +317,6 @@
             <span>个人中心</span>
           </router-link>
           <router-link
-            v-if="canCreateAny"
-            to="/studio"
-            class="mobile-nav-item"
-            @click="closeMobileMenu"
-          >
-            <UiIcon name="edit" />
-            <span>创作中心</span>
-          </router-link>
-          <router-link
             v-if="isAdmin"
             to="/admin?tab=notifications"
             class="mobile-nav-item"
@@ -359,15 +334,6 @@
           >
             <UiIcon name="Setting" />
             <span>后台管理</span>
-          </router-link>
-          <router-link
-            v-if="canCreateArticle"
-            to="/article/edit"
-            class="mobile-nav-item"
-            @click="closeMobileMenu"
-          >
-            <UiIcon name="EditPen" />
-            <span>编写文章</span>
           </router-link>
           <div class="mobile-menu-divider"></div>
           <div class="mobile-nav-item" @click="handleLogout">
@@ -414,7 +380,7 @@ import { useUserStore } from '@/stores/user';
 import { storeToRefs } from 'pinia';
 import { logout as logoutApi } from '@/api/auth';
 import { useSiteConfig } from '@/composables/useSiteConfig';
-import { getTrustLevelLabel, hasAnyCreatorCapability, hasCapability, isAdminUser } from '@/utils/permission';
+import { getTrustLevelLabel, isAdminUser } from '@/utils/permission';
 import { resolveSiteLogo, resolveSiteName } from '@/utils/siteConfig';
 import { useLayoutMobile } from '@/composables/useLayoutMobile';
 import { useAdminNotificationStore } from '@/stores/admin-notification';
@@ -480,8 +446,6 @@ const roleText = computed(() => getTrustLevelLabel(user.value));
 // 是否为管理员
 const isAdmin = computed(() => isAdminUser(user.value));
 
-const canCreateAny = computed(() => hasAnyCreatorCapability(user.value));
-const canCreateArticle = computed(() => hasCapability(user.value, 'article:create'));
 const unreadCountLabel = computed(() => (unreadCount.value > 99 ? '99+' : String(unreadCount.value)));
 
 interface NavItem {
@@ -627,9 +591,6 @@ const handleUserCommand = (command: string | number | object) => {
   switch (command) {
     case 'profile':
       router.push('/profile');
-      break;
-    case 'studio':
-      router.push('/studio');
       break;
     case 'notifications':
       router.push({ path: '/admin', query: { tab: 'notifications' } });
@@ -898,63 +859,6 @@ const handleLogout = async () => {
 .site-display-trigger__petal.is-off {
   opacity: 0;
   transform: rotate(-28deg) scale(0.4);
-}
-
-// 编写按钮
-.write-btn {
-  text-decoration: none;
-}
-
-.write-link {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 5px;
-  border-radius: 999px;
-  color: #564f57;
-  background: transparent;
-  border: none;
-  padding: 0 16px;
-  height: 36px;
-  line-height: 1;
-  box-shadow: none;
-  transition: all 0.28s ease;
-
-  :deep(span) {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 5px;
-    height: 100%;
-    line-height: 1;
-  }
-
-  .el-icon {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 14px;
-  }
-
-  :deep(span > span) {
-    font-size: 14px;
-    font-weight: 500;
-    line-height: 1;
-  }
-
-  &:hover {
-    color: #ff7faa;
-    background: rgba(255, 255, 255, 0.38);
-    box-shadow: inset 0 0 0 1px rgba(255, 224, 235, 0.34);
-    transform: translateY(-1px);
-  }
-}
-
-.write-link:hover,
-.write-link:focus {
-  border: none;
-  color: #ff7faa;
-  background: rgba(255, 255, 255, 0.38);
 }
 
 // 登录按钮
