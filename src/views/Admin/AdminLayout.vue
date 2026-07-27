@@ -27,7 +27,8 @@
           </aside>
 
           <section class="admin-content">
-            <AdminCategories v-if="activeMenu === 'categories'" />
+            <AdminNotifications v-if="activeMenu === 'notifications'" />
+            <AdminCategories v-else-if="activeMenu === 'categories'" />
             <AdminComments
               v-else-if="activeMenu === 'comments'"
               @stats-change="handleCommentStats"
@@ -44,24 +45,33 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, defineAsyncComponent, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { getAdminCommentStats } from '@/api/admin-comment'
 import type { AdminCommentStats } from '@/api/admin-comment'
 import DefaultLayout from '@/layouts/DefaultLayout.vue'
 import { UiIcon } from '@/components/ui'
-import AdminCategories from './AdminCategories.vue'
-import AdminComments from './AdminComments.vue'
-import AdminEmojiManager from './AdminEmojiManager.vue'
-import AdminFiles from './AdminFiles.vue'
-import AdminSiteSettings from './AdminSiteSettings.vue'
-import AdminTrustRequests from './AdminTrustRequests.vue'
+const AdminCategories = defineAsyncComponent(() => import('./AdminCategories.vue'))
+const AdminComments = defineAsyncComponent(() => import('./AdminComments.vue'))
+const AdminEmojiManager = defineAsyncComponent(() => import('./AdminEmojiManager.vue'))
+const AdminFiles = defineAsyncComponent(() => import('./AdminFiles.vue'))
+const AdminSiteSettings = defineAsyncComponent(() => import('./AdminSiteSettings.vue'))
+const AdminTrustRequests = defineAsyncComponent(() => import('./AdminTrustRequests.vue'))
+const AdminNotifications = defineAsyncComponent(() => import('./AdminNotifications.vue'))
+import { useAdminNotificationStore } from '@/stores/admin-notification'
 
 const route = useRoute()
 const router = useRouter()
 const pendingCommentCount = ref(0)
+const notificationStore = useAdminNotificationStore()
 
 const menuItems = computed(() => [
+  {
+    key: 'notifications',
+    label: '消息中心',
+    icon: 'bell',
+    badge: notificationStore.unreadCount || undefined,
+  },
   { key: 'categories', label: '分类管理', icon: 'category' },
   {
     key: 'comments',
@@ -100,6 +110,7 @@ watch(
 )
 
 onMounted(() => {
+  void notificationStore.refreshUnreadCount()
   void getAdminCommentStats()
     .then(handleCommentStats)
     .catch(() => undefined)

@@ -23,24 +23,33 @@ export interface PageResult<T> {
 // ==================== 用户相关类型 ====================
 
 export interface User {
-  id: number;
+  id: number | string;
   username: string;
   nickname: string;
   email?: string;
   phone?: string;
   avatar: string;
   bio?: string;
+  profileVisible?: boolean;
+  emailPublic?: boolean;
   role: UserRole;
   roleCode?: UserRoleCode;
   roleName?: string;
   trustLevel?: UserTrustLevel;
   trustLevelName?: string;
   memberLabel?: string;
+  capabilities?: UserCapability[];
   status: UserStatus;
   createTime: string;
   lastLoginTime?: string;
   lastLoginIp?: string;
 }
+
+export type UserCapability =
+  | 'friend-content:view'
+  | 'article:create'
+  | 'travel:create'
+  | 'music:create';
 
 export enum UserRole {
   USER = 0,
@@ -115,6 +124,8 @@ export interface UpdateProfileParams {
   nickname: string;
   avatar: string;
   bio?: string;
+  profileVisible?: boolean;
+  emailPublic?: boolean;
 }
 // ==================== 首页相关类型 ====================
 
@@ -168,7 +179,7 @@ export interface Banner {
 
 // 热门文章
 export interface HotArticle {
-  id: number;
+  id: number | string;
   title: string;
   viewCount: number;
 }
@@ -179,7 +190,7 @@ export interface RecentComment {
   content: string;
   authorName: string;
   authorAvatar: string;
-  articleId: number;
+  articleId: number | string;
   articleTitle: string;
   createTime: string;
 }
@@ -237,6 +248,9 @@ export interface TravelMemoryLocationListItem {
   visitedEndAt?: string;
   entryCount?: number;
   visibility?: TravelMemoryVisibility;
+  creator?: ArticleAuthorSummary;
+  canEdit?: boolean;
+  canDelete?: boolean;
 }
 
 export interface TravelMemoryLocationDetail extends TravelMemoryLocationListItem {
@@ -303,6 +317,8 @@ export type MusicLyricType = 'plain' | 'lrc';
 
 export interface MusicTrack {
   id: number;
+  contributorId?: number | string;
+  contributor?: ArticleAuthorSummary;
   title: string;
   artist: string;
   album?: string;
@@ -311,9 +327,9 @@ export interface MusicTrack {
   language?: string;
   genre?: string;
   tags: string[];
-  audioFileId?: number;
+  audioFileId?: number | string;
   audioUrl: string;
-  coverFileId?: number;
+  coverFileId?: number | string;
   coverUrl?: string;
   lyricType: MusicLyricType;
   lyrics?: string;
@@ -322,6 +338,8 @@ export interface MusicTrack {
   moodText?: string;
   status: MusicTrackStatus;
   sortOrder?: number;
+  canEdit?: boolean;
+  canDelete?: boolean;
   createTime?: string;
   updateTime?: string;
 }
@@ -349,9 +367,9 @@ export interface MusicTrackUpsertCommand {
   language?: string;
   genre?: string;
   tags: string[];
-  audioFileId?: number;
+  audioFileId?: number | string;
   audioUrl: string;
-  coverFileId?: number;
+  coverFileId?: number | string;
   coverUrl?: string;
   lyricType: MusicLyricType;
   lyrics?: string;
@@ -405,6 +423,41 @@ export interface MusicPlaylistUpsertCommand {
 
 export interface MusicPlaylistTracksCommand {
   trackIds: number[];
+}
+
+// ==================== 管理员消息相关类型 ====================
+
+export type AdminNotificationEventType =
+  | 'ARTICLE_CREATED'
+  | 'ARTICLE_PUBLISHED'
+  | 'TRAVEL_MEMORY_CREATED'
+  | 'MUSIC_TRACK_CREATED'
+  | 'MUSIC_TRACK_PUBLISHED'
+  | 'TRUST_REQUEST_CREATED';
+
+export type AdminNotificationResourceType =
+  | 'ARTICLE'
+  | 'TRAVEL_MEMORY'
+  | 'MUSIC_TRACK'
+  | 'TRUST_REQUEST';
+
+export interface AdminNotificationActor {
+  id: number | string;
+  nickname: string;
+  avatar?: string;
+}
+
+export interface AdminNotification {
+  id: number | string;
+  eventType: AdminNotificationEventType;
+  title: string;
+  summary: string;
+  actor?: AdminNotificationActor;
+  resourceType: AdminNotificationResourceType;
+  resourceId: number | string;
+  read: boolean;
+  readTime?: string;
+  createTime: string;
 }
 
 // ==================== 文章相关类型 ====================
@@ -764,7 +817,7 @@ export enum TrustRequestStatus {
 }
 
 export interface TrustRequestAttachment {
-  id: number;
+  id: number | string;
   fileName: string;
   fileUrl: string;
   fileSize?: number;

@@ -61,16 +61,17 @@
 
           <!-- 右侧操作区 -->
           <div class="header-actions">
-            <!-- 编写文章按钮（仅管理员显示） -->
-            <router-link
-              v-if="isLoggedIn && canCreateArticle"
-              to="/article/edit"
-              class="write-btn"
+            <!-- 创作中心入口（知友与管理员显示） -->
+            <UiButton
+              v-if="isLoggedIn && canCreateAny"
+              size="sm"
+              variant="ghost"
+              icon="edit"
+              class="write-btn write-link rounded-full"
+              @click="router.push('/studio')"
             >
-              <UiButton size="sm" variant="ghost" icon="edit" class="write-link rounded-full">
-                <span>编写</span>
-              </UiButton>
-            </router-link>
+              <span>创作</span>
+            </UiButton>
 
             <UiDropdown
               trigger="click"
@@ -137,11 +138,16 @@
             </UiDropdown>
 
             <!-- 未登录显示登录按钮 -->
-            <router-link v-if="!isLoggedIn" to="/login" class="login-link">
-              <UiButton variant="primary" size="sm" icon="user" class="login-btn rounded-full">
-                <span>登录</span>
-              </UiButton>
-            </router-link>
+            <UiButton
+              v-if="!isLoggedIn"
+              variant="primary"
+              size="sm"
+              icon="user"
+              class="login-link login-btn rounded-full"
+              @click="router.push('/login')"
+            >
+              <span>登录</span>
+            </UiButton>
 
             <!-- 已登录显示用户菜单 -->
             <UiDropdown v-if="isLoggedIn" @command="handleUserCommand" class="user-menu">
@@ -153,6 +159,13 @@
                 >
                   {{ user?.nickname?.charAt(0) || user?.username?.charAt(0) || 'U' }}
                 </UiAvatar>
+                <span
+                  v-if="isAdmin && unreadCount > 0"
+                  class="user-notification-badge"
+                  :aria-label="`有 ${unreadCount} 条未读管理员消息`"
+                >
+                  {{ unreadCountLabel }}
+                </span>
               </div>
               <template #dropdown>
                 <UiDropdownMenu>
@@ -163,6 +176,15 @@
                   <UiDropdownItem divided command="profile">
                     <UiIcon name="User" />
                     个人中心
+                  </UiDropdownItem>
+                  <UiDropdownItem v-if="canCreateAny" command="studio">
+                    <UiIcon name="edit" />
+                    创作中心
+                  </UiDropdownItem>
+                  <UiDropdownItem v-if="isAdmin" command="notifications">
+                    <UiIcon name="bell" />
+                    <span>消息中心</span>
+                    <span v-if="unreadCount > 0" class="dropdown-unread-count">{{ unreadCountLabel }}</span>
                   </UiDropdownItem>
                   <UiDropdownItem v-if="isAdmin" command="admin">
                     <UiIcon name="Setting" />
@@ -311,6 +333,25 @@
             <span>个人中心</span>
           </router-link>
           <router-link
+            v-if="canCreateAny"
+            to="/studio"
+            class="mobile-nav-item"
+            @click="closeMobileMenu"
+          >
+            <UiIcon name="edit" />
+            <span>创作中心</span>
+          </router-link>
+          <router-link
+            v-if="isAdmin"
+            to="/admin?tab=notifications"
+            class="mobile-nav-item"
+            @click="closeMobileMenu"
+          >
+            <UiIcon name="bell" />
+            <span>消息中心</span>
+            <span v-if="unreadCount > 0" class="mobile-unread-count">{{ unreadCountLabel }}</span>
+          </router-link>
+          <router-link
             v-if="isAdmin"
             to="/admin?tab=categories"
             class="mobile-nav-item"
@@ -373,17 +414,20 @@ import { useUserStore } from '@/stores/user';
 import { storeToRefs } from 'pinia';
 import { logout as logoutApi } from '@/api/auth';
 import { useSiteConfig } from '@/composables/useSiteConfig';
-import { getTrustLevelLabel, isAdminUser } from '@/utils/permission';
+import { getTrustLevelLabel, hasAnyCreatorCapability, hasCapability, isAdminUser } from '@/utils/permission';
 import { resolveSiteLogo, resolveSiteName } from '@/utils/siteConfig';
 import { useLayoutMobile } from '@/composables/useLayoutMobile';
+import { useAdminNotificationStore } from '@/stores/admin-notification';
 
 const router = useRouter();
 const route = useRoute();
 const appStore = useAppStore();
 const userStore = useUserStore();
+const adminNotificationStore = useAdminNotificationStore();
 userStore.initUser();
 const { theme, sakuraEffect } = storeToRefs(appStore);
 const { isLoggedIn, user } = storeToRefs(userStore);
+const { unreadCount } = storeToRefs(adminNotificationStore);
 const { siteConfig, loadSiteConfig } = useSiteConfig();
 const siteName = computed(() => resolveSiteName(siteConfig.value));
 const siteLogo = computed(() => resolveSiteLogo(siteConfig.value));
@@ -436,12 +480,9 @@ const roleText = computed(() => getTrustLevelLabel(user.value));
 // 是否为管理员
 const isAdmin = computed(() => isAdminUser(user.value));
 
-
-// 是否可以创建文章（仅管理员）
-const canCreateArticle = computed(() => {
-  if (!user.value) return false;
-  return isAdminUser(user.value);
-});
+const canCreateAny = computed(() => hasAnyCreatorCapability(user.value));
+const canCreateArticle = computed(() => hasCapability(user.value, 'article:create'));
+const unreadCountLabel = computed(() => (unreadCount.value > 99 ? '99+' : String(unreadCount.value)));
 
 interface NavItem {
   key: string;
@@ -524,12 +565,32 @@ const { isMobile } = useLayoutMobile();
 
 onMounted(() => {
   window.addEventListener('scroll', handleScroll);
+  window.addEventListener('focus', handleWindowFocus);
   void loadSiteConfig();
+  if (isAdmin.value) {
+    adminNotificationStore.startPolling();
+  }
 });
 
 onUnmounted(() => {
   window.removeEventListener('scroll', handleScroll);
+  window.removeEventListener('focus', handleWindowFocus);
+  adminNotificationStore.stopPolling();
   document.body.style.overflow = '';
+});
+
+const handleWindowFocus = () => {
+  if (isAdmin.value) {
+    void adminNotificationStore.refreshUnreadCount();
+  }
+};
+
+watch(isAdmin, (admin) => {
+  if (admin) {
+    adminNotificationStore.startPolling();
+  } else {
+    adminNotificationStore.reset();
+  }
 });
 
 // 移动端菜单
@@ -566,6 +627,12 @@ const handleUserCommand = (command: string | number | object) => {
   switch (command) {
     case 'profile':
       router.push('/profile');
+      break;
+    case 'studio':
+      router.push('/studio');
+      break;
+    case 'notifications':
+      router.push({ path: '/admin', query: { tab: 'notifications' } });
       break;
     case 'admin':
       router.push({ path: '/admin', query: { tab: 'categories' } });
@@ -928,6 +995,7 @@ const handleLogout = async () => {
 }
 
 .user-avatar-wrapper {
+  position: relative;
   padding: 2px;
   border-radius: 50%;
   transition: all 0.28s ease;
@@ -942,6 +1010,34 @@ const handleLogout = async () => {
 
 .user-avatar {
   border: 2px solid rgba(255, 255, 255, 0.7);
+}
+
+.user-notification-badge,
+.dropdown-unread-count,
+.mobile-unread-count {
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--color-danger, #ef476f);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 18px;
+  text-align: center;
+}
+
+.user-notification-badge {
+  position: absolute;
+  top: -6px;
+  right: -8px;
+  border: 2px solid var(--color-surface, #fff);
+  box-sizing: content-box;
+}
+
+.dropdown-unread-count,
+.mobile-unread-count {
+  margin-left: auto;
 }
 
 .dropdown-user-info {

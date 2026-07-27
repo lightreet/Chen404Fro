@@ -30,20 +30,28 @@ export function getAdminMusicTrack(id: number | string): Promise<MusicTrack> {
   return get(`/admin/music/tracks/${String(id)}`)
 }
 
+export function getMyMusicTracks(): Promise<MusicTrack[]> {
+  return get('/music/tracks/mine')
+}
+
+export function getManageableMusicTrack(id: number | string): Promise<MusicTrack> {
+  return get(`/music/tracks/mine/${String(id)}`)
+}
+
 export function createMusicTrack(data: MusicTrackUpsertCommand): Promise<MusicTrack> {
-  return post('/admin/music/tracks', data)
+  return post('/music/tracks', data)
 }
 
 export function updateMusicTrack(id: number | string, data: MusicTrackUpsertCommand): Promise<MusicTrack> {
-  return put(`/admin/music/tracks/${String(id)}`, data)
+  return put(`/music/tracks/${String(id)}`, data)
 }
 
 export function updateMusicTrackStatus(id: number | string, status: MusicTrackStatus): Promise<MusicTrack> {
-  return patch(`/admin/music/tracks/${String(id)}/status`, undefined, { params: { status } })
+  return patch(`/music/tracks/${String(id)}/status`, undefined, { params: { status } })
 }
 
 export function deleteMusicTrack(id: number | string): Promise<void> {
-  return del(`/admin/music/tracks/${String(id)}`)
+  return del(`/music/tracks/${String(id)}`)
 }
 
 export function suggestMusicTrack(data: MusicTrackAiSuggestRequest): Promise<MusicTrackAiSuggestResponse> {

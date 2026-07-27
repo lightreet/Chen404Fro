@@ -26,15 +26,15 @@ import { toPreciseId } from '@/utils/preciseId';
  * 获取文章列表
  */
 export async function getArticles(params?: ArticleQueryParams): Promise<PageResult<ArticleListItem>> {
-  return unwrapResult(await Service.getArticles({
+  return get('/articles', {
     page: params?.page,
     size: params?.size,
     status: params?.status,
     categoryId: params?.categoryId,
     tagId: params?.tagId,
-    authorId: params?.authorId ? Number(params.authorId) : undefined,
+    authorId: params?.authorId,
     keyword: params?.keyword,
-  })) as PageResult<ArticleListItem>;
+  });
 }
 
 /**

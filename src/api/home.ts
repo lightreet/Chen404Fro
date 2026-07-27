@@ -3,7 +3,7 @@
  * 读取类接口优先走 generated SDK，减少与后端 Controller 的长期漂移。
  */
 
-import { put } from './request';
+import { get, put } from './request';
 import type {
   HomeData,
   SiteStats,
@@ -45,9 +45,7 @@ export async function getSiteMembers(): Promise<SiteMember[]> {
 }
 
 export async function getSiteUser(id: number | string): Promise<SiteMember> {
-  return unwrapResult(await Service.getSiteUser({
-    id: Number(id),
-  })) as SiteMember;
+  return get(`/site/users/${String(id)}`);
 }
 
 export function updateSiteConfig(data: Partial<SiteConfig>): Promise<SiteConfig> {
@@ -71,13 +69,13 @@ export async function getRecentComments(limit: number = 5): Promise<RecentCommen
 }
 
 export async function getRecommendArticles(limit: number = 6): Promise<{
-  id: number;
+  id: number | string;
   title: string;
   coverImage?: string;
   summary?: string;
 }[]> {
   return unwrapResult(await Service.getRecommendArticles({ limit })) as {
-    id: number;
+    id: number | string;
     title: string;
     coverImage?: string;
     summary?: string;

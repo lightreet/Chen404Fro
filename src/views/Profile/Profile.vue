@@ -210,6 +210,24 @@
                       />
                     </UiFormField>
 
+                    <div class="form-grid privacy-grid">
+                      <UiFormField label="公开成员资料">
+                        <div class="privacy-control">
+                          <UiSwitch v-model="profileForm.profileVisible" />
+                          <span>开启后，其他访客可以在成员列表和个人主页找到你。</span>
+                        </div>
+                      </UiFormField>
+                      <UiFormField label="公开邮箱">
+                        <div class="privacy-control">
+                          <UiSwitch
+                            v-model="profileForm.emailPublic"
+                            :disabled="!profileForm.profileVisible"
+                          />
+                          <span>仅在资料公开时生效；关闭后邮箱只在你自己的个人中心可见。</span>
+                        </div>
+                      </UiFormField>
+                    </div>
+
                     <div class="profile-form-actions">
                       <UiButton variant="primary" :loading="profileSaving" @click="handleSaveProfile">保存资料</UiButton>
                       <UiButton variant="secondary" @click="resetProfileForm">重置</UiButton>
@@ -268,7 +286,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue'
 import { notify, confirmDelete } from '@/lib/feedback'
-import { UiPanel, UiAvatar, UiButton, UiDialog, UiForm, UiFormField, UiIcon, UiInput, UiPagination, UiRadioGroup, UiSearchBar, UiSkeleton, UiTextarea, UiUpload } from '@/components/ui'
+import { UiPanel, UiAvatar, UiButton, UiDialog, UiForm, UiFormField, UiIcon, UiInput, UiPagination, UiRadioGroup, UiSearchBar, UiSkeleton, UiSwitch, UiTextarea, UiUpload } from '@/components/ui'
 import { useRoute, useRouter } from 'vue-router'
 import DefaultLayout from '@/layouts/DefaultLayout.vue'
 import { useUserStore } from '@/stores/user'
@@ -339,7 +357,13 @@ type SimpleFormInstance = {
 
 const profileFormRef = ref<SimpleFormInstance>()
 const profileSaving = ref(false)
-const profileForm = reactive({ nickname: '', avatar: '', bio: '' })
+const profileForm = reactive({
+  nickname: '',
+  avatar: '',
+  bio: '',
+  profileVisible: false,
+  emailPublic: false,
+})
 const profileRules: Record<string, FormItemRule[]> = {
   nickname: [
     { required: true, message: '请输入昵称', trigger: 'blur' },
@@ -402,6 +426,8 @@ const syncProfileForm = (nextUser = user.value) => {
   profileForm.nickname = nextUser.nickname || nextUser.username || ''
   profileForm.avatar = nextUser.avatar || ''
   profileForm.bio = nextUser.bio || ''
+  profileForm.profileVisible = Boolean(nextUser.profileVisible)
+  profileForm.emailPublic = Boolean(nextUser.emailPublic)
 }
 
 const loadUser = async () => {
@@ -443,6 +469,8 @@ const handleSaveProfile = async () => {
       nickname: profileForm.nickname.trim(),
       avatar: profileForm.avatar,
       bio: profileForm.bio.trim(),
+      profileVisible: profileForm.profileVisible,
+      emailPublic: profileForm.profileVisible && profileForm.emailPublic,
     })
     userStore.setUser(updated)
     user.value = updated
@@ -1103,6 +1131,24 @@ onMounted(() => {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0 18px;
+}
+
+.privacy-control {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 12px;
+  align-items: start;
+  min-height: 44px;
+  padding: 12px 14px;
+  border: 1px solid color-mix(in srgb, var(--color-border) 72%, transparent);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--color-surface) 88%, var(--color-accent-soft));
+
+  span {
+    color: var(--color-text-secondary);
+    font-size: 13px;
+    line-height: 1.65;
+  }
 }
 
 .avatar-edit-row {

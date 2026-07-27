@@ -486,8 +486,8 @@ import { useRoute, useRouter } from 'vue-router'
 import TravelMemoryMap from '@/components/TravelMemoryMap/TravelMemoryMap.vue'
 import {
   createTravelMemory,
-  getAdminTravelMemoryDetail,
-  getAdminTravelMemories,
+  getManageableTravelMemoryDetail,
+  getTravelMemories,
   updateTravelMemory,
 } from '@/api/travel-memory'
 import { uploadTravelMemoryImage } from '@/api/upload'
@@ -498,6 +498,7 @@ import type {
   TravelMemoryEntry,
   TravelMemoryEntryUpsertCommand,
   TravelMemoryLocationDetail,
+  TravelMemoryLocationListItem,
   TravelMemoryStopUpsertCommand,
 } from '@/types'
 import { reverseGeocodeLocation } from '@/utils/amap'
@@ -514,7 +515,7 @@ const router = useRouter()
 const { siteConfig, loadSiteConfig } = useSiteConfig()
 const pickerMapRef = ref<InstanceType<typeof TravelMemoryMap> | null>(null)
 
-const list = ref<TravelMemoryLocationDetail[]>([])
+const list = ref<TravelMemoryLocationListItem[]>([])
 const loading = ref(false)
 const saving = ref(false)
 const uploading = ref(false)
@@ -767,7 +768,7 @@ async function focusCurrentMapTarget() {
 async function loadList() {
   const requestVersion = ++listRequestVersion
   try {
-    const nextList = await getAdminTravelMemories()
+    const nextList = await getTravelMemories()
     if (requestVersion !== listRequestVersion) return
     list.value = nextList
   } catch {
@@ -789,7 +790,7 @@ async function loadEditingDetail() {
   }
 
   try {
-    const detail = await getAdminTravelMemoryDetail(editingId.value)
+    const detail = await getManageableTravelMemoryDetail(editingId.value)
     if (requestVersion !== detailRequestVersion) return
     editingDetail.value = detail
     editorLoadError.value = ''

@@ -329,7 +329,7 @@
                   </div>
 
                   <div v-if="activeDetail" class="travel-journal__actions travel-journal__actions--note">
-                    <div v-if="canManage" class="travel-journal__manage">
+                    <div v-if="canManageActiveMemory" class="travel-journal__manage">
                       <UiButton variant="secondary" icon="edit" class="journal-action journal-action--manage" @click="editGalleryLocation(activeDetail.id)">
                         编辑地点
                       </UiButton>
@@ -373,7 +373,7 @@ import { useSiteConfig } from '@/composables/useSiteConfig'
 import { resolveFeatureHero } from '@/modules/feature-access/constants'
 import { useUserStore } from '@/stores/user'
 import type { TravelMemoryEntry, TravelMemoryLocationDetail, TravelMemoryLocationListItem } from '@/types'
-import { isAdminUser, isFriendUser } from '@/utils/permission'
+import { hasCapability, isAdminUser, isFriendUser } from '@/utils/permission'
 import tapeCornerAsset from '@/assets/memory-map/tape-corner.svg'
 
 const INITIAL_GALLERY_VISIBLE_COUNT = 6
@@ -403,7 +403,10 @@ const galleryCardRefs = new Map<number, HTMLElement>()
 let detailRequestVersion = 0
 let memoryLoadVersion = 0
 let hasInitializedAccessState = false
-const canManage = computed(() => isAdminUser(user.value))
+const canManage = computed(() => hasCapability(user.value, 'travel:create'))
+const canManageActiveMemory = computed(() =>
+  isAdminUser(user.value) || Boolean(activeDetail.value?.canEdit),
+)
 const canViewFriendMemoryMap = computed(() => isAdminUser(user.value) || isFriendUser(user.value))
 const showPublicEmptyNotice = computed(() =>
   authReady.value
@@ -587,7 +590,7 @@ async function loadMemories(preferredId?: number | null) {
   detailLoadError.value = ''
   memoryLoadError.value = ''
   try {
-    const list = await getTravelMemories()
+    const list = await getTravelMemories(resolveRouteCreatorId())
     if (requestVersion !== memoryLoadVersion) return
     if (list?.length) {
       locations.value = list
@@ -691,7 +694,7 @@ async function deleteGalleryLocation(location: Pick<TravelMemoryLocationListItem
     await deleteTravelMemory(location.id)
     notify.success('地点已删除')
     detailCache.value = {}
-    await loadMemories()
+    await loadMemories(resolveRouteFocusId())
   } catch {
     notify.error('删除地点失败')
   }
@@ -826,6 +829,12 @@ function resolveRouteFocusId() {
   return Number.isFinite(numericId) ? numericId : null
 }
 
+function resolveRouteCreatorId() {
+  const rawValue = Array.isArray(route.query.creatorId) ? route.query.creatorId[0] : route.query.creatorId
+  const creatorId = String(rawValue || '').trim()
+  return /^\d+$/.test(creatorId) && creatorId !== '0' ? creatorId : undefined
+}
+
 onMounted(async () => {
   await Promise.all([
     userStore.syncAuthState().catch(() => false),
@@ -851,6 +860,15 @@ watch(
     const targetId = Array.isArray(focus) ? Number(focus[0]) : Number(focus)
     if (!Number.isFinite(targetId) || targetId === activeId.value) return
     void handleSelectLocation(targetId)
+  },
+)
+
+watch(
+  () => route.query.creatorId,
+  () => {
+    if (!hasInitializedAccessState) return
+    detailCache.value = {}
+    void syncMemoryContent()
   },
 )
 

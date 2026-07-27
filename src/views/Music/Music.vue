@@ -128,7 +128,7 @@
                 {{ option.label }}
               </button>
             </div>
-            <div v-if="canManage" class="shelf-heading__buttons">
+            <div v-if="canCreateTrack" class="shelf-heading__buttons">
               <UiButton class="shelf-heading__add" variant="primary" icon="add" @click="openCreateTrack">新增歌曲</UiButton>
               <UiButton class="shelf-heading__refresh" variant="secondary" icon="refresh" @click="loadMusic">刷新</UiButton>
             </div>
@@ -143,7 +143,7 @@
         </div>
         <div v-else-if="tracks.length === 0" class="music-state">
           这里还没有公开歌曲。
-          <UiButton v-if="canManage" variant="text" @click="openCreateTrack">现在新增</UiButton>
+          <UiButton v-if="canCreateTrack" variant="text" @click="openCreateTrack">现在新增</UiButton>
         </div>
         <div v-else class="music-category-workbench">
           <aside class="playlist-categories">
@@ -289,7 +289,7 @@
                         <img v-if="track.coverUrl" :src="track.coverUrl" :alt="track.title" />
                         <span v-else class="music-track-card__fallback">Music</span>
                         <span class="music-track-card__duration">{{ getTrackDurationLabel(track) }}</span>
-                        <span v-if="canManage" class="music-track-card__status">{{ statusLabel(track.status) }}</span>
+                        <span v-if="canEditTrack(track)" class="music-track-card__status">{{ statusLabel(track.status) }}</span>
                         <button type="button" class="music-track-card__play" title="播放" @click="playTrack(track)">
                           <UiIcon name="VideoPlay" />
                         </button>
@@ -323,7 +323,7 @@
                           <button type="button" title="播放" @click="playTrack(track)">
                             <UiIcon name="VideoPlay" />
                           </button>
-                          <button v-if="canManage" type="button" title="编辑歌曲" @click="openEditTrack(track)">
+                          <button v-if="canEditTrack(track)" type="button" title="编辑歌曲" @click="openEditTrack(track)">
                             <UiIcon name="Edit" />
                           </button>
                           <button
@@ -345,7 +345,7 @@
                             <UiIcon name="Close" />
                           </button>
                           <button
-                            v-if="canManage"
+                            v-if="canEditTrack(track)"
                             type="button"
                             class="is-danger"
                             title="删除歌曲"
@@ -442,7 +442,7 @@
                       <transition name="track-detail-fade">
                         <div v-if="expandedManagedTrackId === track.id" class="track-detail category-track-detail-card">
                           <div class="track-detail__action-bar">
-                            <button v-if="canManage" type="button" class="track-detail__icon-btn" title="编辑歌曲" @click="openEditTrack(track)">
+                            <button v-if="canEditTrack(track)" type="button" class="track-detail__icon-btn" title="编辑歌曲" @click="openEditTrack(track)">
                               <UiIcon name="Edit" />
                             </button>
                             <button
@@ -466,7 +466,7 @@
                               <UiIcon name="Close" />
                             </button>
                             <button
-                              v-if="canManage"
+                              v-if="canEditTrack(track)"
                               type="button"
                               class="track-detail__icon-btn track-detail__icon-btn--danger"
                               title="删除歌曲"
@@ -504,7 +504,7 @@
                               <p class="track-detail__note">{{ track.recommendation || '这首歌还没有推荐语。' }}</p>
 
                               <div class="track-detail__tags">
-                                <span v-if="canManage" class="track-detail__status">{{ statusLabel(track.status) }}</span>
+                                <span v-if="canEditTrack(track)" class="track-detail__status">{{ statusLabel(track.status) }}</span>
                                 <span v-if="track.genre">{{ track.genre }}</span>
                                 <span v-if="track.language">{{ track.language }}</span>
                                 <span v-for="tag in track.tags.slice(0, 4)" :key="tag">{{ tag }}</span>
@@ -614,7 +614,7 @@ import { useMusicPlayerStore } from '@/stores/music-player'
 import { useSiteConfig } from '@/composables/useSiteConfig'
 import { resolveFeatureHero } from '@/modules/feature-access/constants'
 import { useUserStore } from '@/stores/user'
-import { isAdminUser } from '@/utils/permission'
+import { hasCapability, isAdminUser } from '@/utils/permission'
 import type { MusicPlaylist, MusicPlaylistUpsertCommand, MusicTrack, MusicTrackStatus } from '@/types'
 
 interface LyricLine {
@@ -681,9 +681,12 @@ let spectrumBandPeaks = createSpectrumProfile(0.16)
 const { user } = storeToRefs(userStore)
 const { loadSiteConfig } = useSiteConfig()
 const canManage = computed(() => isAdminUser(user.value))
+const canCreateTrack = computed(() => hasCapability(user.value, 'music:create'))
 const activeTrack = computed(() => player.currentTrack)
 const isDraggingTrack = computed(() => draggedTrackId.value != null)
 const activeAudioUrl = computed(() => activeTrack.value?.audioUrl || '')
+
+const canEditTrack = (track: MusicTrack) => canManage.value || Boolean(track.canEdit)
 
 const playlistStatusOptions: Array<{ label: string; value: PlaylistStatusFilter }> = [
   { label: '全部', value: 'all' },

@@ -11,8 +11,12 @@ const publicTravelMemoryRequestConfig: RequestConfig = {
   suppressErrorMessage: true,
 }
 
-export function getTravelMemories(): Promise<TravelMemoryLocationListItem[]> {
-  return get('/travel-memories', undefined, publicTravelMemoryRequestConfig)
+export function getTravelMemories(creatorId?: number | string): Promise<TravelMemoryLocationListItem[]> {
+  return get(
+    '/travel-memories',
+    creatorId == null ? undefined : { creatorId },
+    publicTravelMemoryRequestConfig,
+  )
 }
 
 export function getTravelMemoryDetail(id: number | string): Promise<TravelMemoryLocationDetail> {
@@ -27,17 +31,25 @@ export function getAdminTravelMemoryDetail(id: number | string): Promise<TravelM
   return get(`/admin/travel-memories/${String(id)}`)
 }
 
+export function getMyTravelMemories(): Promise<TravelMemoryLocationDetail[]> {
+  return get('/travel-memories/mine')
+}
+
+export function getManageableTravelMemoryDetail(id: number | string): Promise<TravelMemoryLocationDetail> {
+  return get(`/travel-memories/mine/${String(id)}`)
+}
+
 export function createTravelMemory(data: CreateTravelMemoryCommand): Promise<TravelMemoryLocationDetail> {
-  return post('/admin/travel-memories', data)
+  return post('/travel-memories', data)
 }
 
 export function updateTravelMemory(
   id: number | string,
   data: UpdateTravelMemoryCommand,
 ): Promise<TravelMemoryLocationDetail> {
-  return put(`/admin/travel-memories/${String(id)}`, data)
+  return put(`/travel-memories/${String(id)}`, data)
 }
 
 export function deleteTravelMemory(id: number | string): Promise<void> {
-  return del(`/admin/travel-memories/${String(id)}`)
+  return del(`/travel-memories/${String(id)}`)
 }

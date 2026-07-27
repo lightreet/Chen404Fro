@@ -1,4 +1,4 @@
-import type { User } from '@/types';
+import type { User, UserCapability } from '@/types';
 import { UserRole, UserRoleCode, UserTrustLevel } from '@/types';
 
 export function isAdminUser(user: User | null | undefined): boolean {
@@ -9,6 +9,21 @@ export function isAdminUser(user: User | null | undefined): boolean {
 export function isFriendUser(user: User | null | undefined): boolean {
   if (!user) return false;
   return isAdminUser(user) || user.trustLevel === UserTrustLevel.FRIEND;
+}
+
+export function hasCapability(
+  user: User | null | undefined,
+  capability: UserCapability,
+): boolean {
+  return Boolean(user?.capabilities?.includes(capability));
+}
+
+export function hasAnyCreatorCapability(user: User | null | undefined): boolean {
+  return (
+    hasCapability(user, 'article:create')
+    || hasCapability(user, 'travel:create')
+    || hasCapability(user, 'music:create')
+  );
 }
 
 export function getTrustLevelLabel(user: User | null | undefined): string {

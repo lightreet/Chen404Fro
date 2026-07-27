@@ -60,8 +60,8 @@
             <strong>{{ totalArticles }}</strong>
           </article>
           <article class="profile-metric">
-            <span>邮箱状态</span>
-            <strong>{{ emailLabel }}</strong>
+            <span>旅行地点</span>
+            <strong>{{ travelMemories.length }}</strong>
           </article>
           <article class="profile-metric">
             <span>成员身份</span>
@@ -103,6 +103,43 @@
             </RouterLink>
           </div>
         </section>
+
+        <section class="profile-section">
+          <div class="profile-section__head">
+            <div>
+              <span class="profile-eyebrow">Travel Footprints</span>
+              <h2>旅行足迹</h2>
+            </div>
+            <RouterLink
+              v-if="travelMemories.length"
+              class="profile-count profile-count--link"
+              :to="{ path: '/memory-map', query: { creatorId: userId } }"
+            >
+              在地图查看全部
+            </RouterLink>
+          </div>
+
+          <div v-if="travelLoading" class="profile-state profile-state--inline">正在加载旅行足迹...</div>
+          <div v-else-if="!travelMemories.length" class="profile-empty">
+            <p>这位成员暂时还没有公开旅行地点。</p>
+            <span>以后落下的城市、照片和旅途故事，会在这里连成一张地图。</span>
+          </div>
+          <div v-else class="profile-article-list">
+            <RouterLink
+              v-for="memory in travelMemories.slice(0, 6)"
+              :key="memory.id"
+              class="profile-article"
+              :to="{ path: '/memory-map', query: { creatorId: userId, focus: String(memory.id) } }"
+            >
+              <div class="profile-article__content">
+                <span class="profile-article__date">{{ formatDate(memory.visitedAt) || '旅行记录' }}</span>
+                <h3>{{ memory.title }}</h3>
+                <p>{{ formatLocation(memory) }}</p>
+              </div>
+              <span class="profile-article__arrow">→</span>
+            </RouterLink>
+          </div>
+        </section>
       </template>
     </main>
   </DefaultLayout>
@@ -115,8 +152,9 @@ import { useRoute } from 'vue-router';
 import DefaultLayout from '@/layouts/DefaultLayout.vue';
 import PageHero from '@/components/PageHero/PageHero.vue';
 import { getArticles } from '@/api/article';
+import { getTravelMemories } from '@/api/travel-memory';
 import { getSiteOwner, getSiteUser, type SiteMember } from '@/api/home';
-import type { Article, SiteOwner } from '@/types';
+import type { Article, SiteOwner, TravelMemoryLocationListItem } from '@/types';
 import { useSiteConfig } from '@/composables/useSiteConfig';
 import { resolveHeroImage, resolveHeroImagePosition } from '@/utils/siteConfig';
 
@@ -131,10 +169,12 @@ const { loadSiteConfig } = useSiteConfig();
 
 const loading = ref(true);
 const articlesLoading = ref(false);
+const travelLoading = ref(false);
 const profile = ref<SiteMember | null>(null);
 const owner = ref<SiteOwner | null>(null);
 const articles = ref<Article[]>([]);
 const totalArticles = ref(0);
+const travelMemories = ref<TravelMemoryLocationListItem[]>([]);
 const heroBgImage = ref(DEFAULT_PROFILE_HERO);
 const heroBgPosition = ref(DEFAULT_PROFILE_HERO_POSITION);
 
@@ -150,7 +190,6 @@ const identityLabel = computed(() => {
 });
 const bioText = computed(() => profile.value?.bio?.trim() || '这个人还没有留下介绍。');
 const joinText = computed(() => formatDate(profile.value?.createTime) || '未知');
-const emailLabel = computed(() => (profile.value?.email ? '已公开' : '未公开'));
 const avatarUrl = computed(() => {
   const avatar = profile.value?.avatar?.trim();
   if (!avatar || avatar === LEGACY_DEFAULT_AVATAR) return DEFAULT_MEMBER_AVATAR;
@@ -188,13 +227,26 @@ async function loadProfile() {
   loading.value = true;
   articles.value = [];
   totalArticles.value = 0;
+  travelMemories.value = [];
   try {
     profile.value = await getSiteUser(userId.value);
-    await loadArticles();
+    await Promise.all([loadArticles(), loadTravelMemories()]);
   } catch {
     profile.value = null;
   } finally {
     loading.value = false;
+  }
+}
+
+async function loadTravelMemories() {
+  if (!profile.value) return;
+  travelLoading.value = true;
+  try {
+    travelMemories.value = await getTravelMemories(profile.value.id);
+  } catch {
+    travelMemories.value = [];
+  } finally {
+    travelLoading.value = false;
   }
 }
 
@@ -228,6 +280,10 @@ function formatDate(value?: string) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return '';
   return `${date.getFullYear()}.${String(date.getMonth() + 1).padStart(2, '0')}.${String(date.getDate()).padStart(2, '0')}`;
+}
+
+function formatLocation(memory: TravelMemoryLocationListItem) {
+  return [memory.province, memory.city].filter(Boolean).join(' · ') || '未标注地点';
 }
 </script>
 
@@ -475,6 +531,15 @@ function formatDate(value?: string) {
   flex: 0 0 auto;
   color: #9f6a83;
   font-size: 14px;
+}
+
+.profile-count--link {
+  text-decoration: none;
+  transition: color 0.2s ease;
+
+  &:hover {
+    color: #7f4f66;
+  }
 }
 
 .profile-article-list {

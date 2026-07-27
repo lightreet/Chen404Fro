@@ -9,7 +9,7 @@ import type { RequestConfig } from './request'
 import { post } from './request'
 
 export interface UploadResult {
-  id?: number
+  id?: number | string
   url: string
   name: string
   size?: string
@@ -19,7 +19,7 @@ export interface UploadResult {
 }
 
 type UploadPayload = {
-  id?: number
+  id?: number | string
   url?: string
   name?: string
   size?: string

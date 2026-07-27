@@ -36,6 +36,7 @@
                   <div class="title-field">
                     <UiInput v-model="form.title" maxlength="120" placeholder="例如：夜に駆ける" />
                     <UiButton
+                      v-if="isAdmin"
                       class="ai-suggest-button"
                       :loading="suggestingTrack"
                       :disabled="!form.title.trim() || suggestingTrack"
@@ -360,13 +361,17 @@ import { notify } from '@/lib/feedback'
 import { UiButton, UiDateField, UiEmpty, UiForm, UiFormField, UiIcon, UiInput, UiLoadingState, UiSegmented, UiSwitch, UiTextarea, UiTooltip, UiUpload } from '@/components/ui'
 import type { UploadRequestOptions } from '@/components/ui'
 import { useRoute, useRouter } from 'vue-router'
-import { createMusicTrack, getAdminMusicTrack, suggestMusicTrack, updateMusicTrack } from '@/api/music'
+import { createMusicTrack, getManageableMusicTrack, suggestMusicTrack, updateMusicTrack } from '@/api/music'
 import { uploadMusicAudio, uploadMusicCover, type UploadResult } from '@/api/upload'
+import { useUserStore } from '@/stores/user'
+import { isAdminUser } from '@/utils/permission'
 import type { ParsedMusicMetadata } from '@/modules/music-metadata/metadata'
 import type { MusicTrack, MusicTrackAiCandidate, MusicTrackStatus, MusicTrackUpsertCommand } from '@/types'
 
 const route = useRoute()
 const router = useRouter()
+const userStore = useUserStore()
+const isAdmin = computed(() => isAdminUser(userStore.user))
 type UploadError = Parameters<UploadRequestOptions['onError']>[0]
 type LyricSummaryTone = 'empty' | 'success' | 'warning'
 type TrackStatusOption = {
@@ -587,7 +592,7 @@ watch(
 async function loadTrack(id: number) {
   loading.value = true
   try {
-    const track = await getAdminMusicTrack(id)
+    const track = await getManageableMusicTrack(id)
     fillFormFromTrack(track)
   } catch (error) {
     notify.error(error instanceof Error ? error.message : '歌曲加载失败')

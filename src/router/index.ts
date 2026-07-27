@@ -2,7 +2,8 @@ import { createRouter, createWebHistory } from 'vue-router';
 import type { RouteRecordRaw } from 'vue-router';
 import { confirmAction, notify } from '@/lib/feedback';
 import { useSiteConfig } from '@/composables/useSiteConfig';
-import { isAdminUser, isFriendUser } from '@/utils/permission';
+import { hasCapability, isAdminUser, isFriendUser } from '@/utils/permission';
+import type { UserCapability } from '@/types';
 import { applySiteMeta } from '@/utils/siteConfig';
 import { useUserStore } from '@/stores/user';
 
@@ -35,7 +36,7 @@ const routes: RouteRecordRaw[] = [
     meta: {
       title: '编写文章',
       requiresAuth: true,
-      requiresAdmin: true,
+      requiresCapability: 'article:create',
     },
   },
   {
@@ -87,7 +88,7 @@ const routes: RouteRecordRaw[] = [
     meta: {
       title: '新增歌曲',
       requiresAuth: true,
-      requiresAdmin: true,
+      requiresCapability: 'music:create',
     },
   },
   {
@@ -97,7 +98,7 @@ const routes: RouteRecordRaw[] = [
     meta: {
       title: '编辑歌曲',
       requiresAuth: true,
-      requiresAdmin: true,
+      requiresCapability: 'music:create',
     },
   },
   {
@@ -107,8 +108,7 @@ const routes: RouteRecordRaw[] = [
     meta: {
       title: '新增旅游地点',
       requiresAuth: true,
-      requiresFriend: true,
-      requiresAdmin: true,
+      requiresCapability: 'travel:create',
     },
   },
   {
@@ -118,8 +118,17 @@ const routes: RouteRecordRaw[] = [
     meta: {
       title: '编辑旅游地点',
       requiresAuth: true,
-      requiresFriend: true,
-      requiresAdmin: true,
+      requiresCapability: 'travel:create',
+    },
+  },
+  {
+    path: '/studio',
+    name: 'Studio',
+    component: () => import('@/views/Studio/Studio.vue'),
+    meta: {
+      title: '创作中心',
+      requiresAuth: true,
+      requiresAnyCreatorCapability: true,
     },
   },
   {
@@ -334,6 +343,30 @@ router.beforeEach(async (to, _from, next) => {
     const ok = await userStore.syncAuthState();
     if (!ok || !isFriendUser(userStore.user)) {
       notify.error('仅管理员与知友可访问');
+      next({ path: '/' });
+      return;
+    }
+  }
+
+  if (to.meta.requiresCapability) {
+    const ok = await userStore.syncAuthState();
+    const capability = to.meta.requiresCapability as UserCapability;
+    if (!ok || !hasCapability(userStore.user, capability)) {
+      notify.error('当前账号没有这项创作权限');
+      next({ path: '/' });
+      return;
+    }
+  }
+
+  if (to.meta.requiresAnyCreatorCapability) {
+    const ok = await userStore.syncAuthState();
+    const canCreate = ok && (
+      hasCapability(userStore.user, 'article:create')
+      || hasCapability(userStore.user, 'travel:create')
+      || hasCapability(userStore.user, 'music:create')
+    );
+    if (!canCreate) {
+      notify.error('创作中心仅对知友与管理员开放');
       next({ path: '/' });
       return;
     }
