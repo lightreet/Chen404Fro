@@ -548,6 +548,12 @@ onMounted(async () => {
 
 .article-list {
   gap: var(--space-md);
+
+  :deep(.article-card.compact.manage-mode) {
+    width: 100%;
+    margin-right: 0;
+    margin-left: 0;
+  }
 }
 
 .creation-pager {
