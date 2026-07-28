@@ -103,6 +103,15 @@
               >
                 <span class="creation-record__icon is-travel">
                   <UiIcon name="location" />
+                  <img
+                    v-if="memory.coverImage"
+                    class="creation-record__cover"
+                    :src="memory.coverImage"
+                    :alt="`${memory.title}旅行封面`"
+                    decoding="async"
+                    @load="handleCoverImageLoad"
+                    @error="handleCoverImageError"
+                  />
                 </span>
                 <div class="creation-record__copy">
                   <strong>{{ memory.title }}</strong>
@@ -158,6 +167,15 @@
               >
                 <span class="creation-record__icon is-music">
                   <UiIcon name="music" />
+                  <img
+                    v-if="track.coverUrl"
+                    class="creation-record__cover"
+                    :src="track.coverUrl"
+                    :alt="`${track.title}音乐封面`"
+                    decoding="async"
+                    @load="handleCoverImageLoad"
+                    @error="handleCoverImageError"
+                  />
                 </span>
                 <div class="creation-record__copy">
                   <strong>{{ track.title }}</strong>
@@ -468,6 +486,16 @@ const handleDeleteArticle = async (id: number | string) => {
 
 const formatDate = (value?: string) => (value ? dayjs(value).format('YYYY-MM-DD') : '刚刚')
 
+const handleCoverImageLoad = (event: Event) => {
+  const image = event.currentTarget as HTMLImageElement
+  image.hidden = false
+}
+
+const handleCoverImageError = (event: Event) => {
+  const image = event.currentTarget as HTMLImageElement
+  image.hidden = true
+}
+
 const musicStatusLabel = (status: MusicTrackStatus) => {
   if (status === 'published') return '已发布'
   if (status === 'archived') return '已归档'
@@ -589,10 +617,12 @@ onMounted(async () => {
 }
 
 .creation-record__icon {
+  position: relative;
   display: grid;
   place-items: center;
-  width: 40px;
-  height: 40px;
+  width: 48px;
+  height: 48px;
+  overflow: hidden;
   border-radius: var(--radius-lg);
   background: var(--color-info-soft);
   color: var(--color-info);
@@ -602,6 +632,16 @@ onMounted(async () => {
     background: var(--color-warning-soft);
     color: var(--color-warning);
   }
+}
+
+.creation-record__cover {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
 }
 
 .creation-record__copy {

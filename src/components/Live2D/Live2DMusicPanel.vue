@@ -573,7 +573,7 @@ function parseLrc(input: string): LyricLine[] {
 }
 
 .music-panel__identity strong,
-.music-panel__identity span {
+.music-panel__identity div > span {
   display: block;
 }
 

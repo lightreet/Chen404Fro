@@ -52,7 +52,7 @@
 
               <ProfileCreationPanel v-if="activeMenu === 'creations'" />
 
-              <div v-else-if="activeMenu === 'likes'" class="article-panel">
+              <div v-else-if="activeMenu === 'likes'" class="article-panel article-panel--content-width">
                 <UiSkeleton v-if="likedLoading" :rows="6" />
                 <div v-else-if="myLikedArticles.length === 0" class="empty-state">还没有点赞过文章。</div>
                 <div v-else class="article-list-shell">
@@ -80,7 +80,7 @@
                 </div>
               </div>
 
-              <div v-else-if="activeMenu === 'favorites'" class="article-panel">
+              <div v-else-if="activeMenu === 'favorites'" class="article-panel article-panel--content-width">
                 <UiSkeleton v-if="favLoading" :rows="6" />
                 <div v-else-if="myFavoriteArticles.length === 0" class="empty-state">还没有收藏的文章。</div>
                 <div v-else class="article-list-shell">
@@ -852,6 +852,18 @@ onMounted(() => {
 .article-panel {
   width: min(100%, 620px);
   margin: 0 auto;
+}
+
+.article-panel--content-width {
+  width: 100%;
+
+  .article-list {
+    :deep(.article-card.compact.profile-feed) {
+      width: 100%;
+      margin-right: 0;
+      margin-left: 0;
+    }
+  }
 }
 
 .panel-title-inline {
