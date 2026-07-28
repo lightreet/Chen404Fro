@@ -15,95 +15,245 @@
 
     <div class="music-page">
       <section class="radio-panel">
-        <div class="radio-panel__visual">
-          <div class="radio-panel__cover" :class="{ 'is-playing': player.playing }">
-            <div class="record-disc">
-              <div class="record-disc__rings"></div>
-              <img v-if="activeTrack?.coverUrl" :src="activeTrack.coverUrl" :alt="activeTrack.title" />
-              <div v-else class="radio-panel__cover-empty">Music<br />Hall</div>
+        <div class="radio-panel__primary">
+          <div class="radio-panel__visual">
+            <div class="radio-panel__cover" :class="{ 'is-playing': player.playing }">
+              <div class="record-disc">
+                <div class="record-disc__rings"></div>
+                <img v-if="activeTrack?.coverUrl" :src="activeTrack.coverUrl" :alt="activeTrack.title" />
+                <div v-else class="radio-panel__cover-empty">Music<br />Hall</div>
+              </div>
+            </div>
+            <div class="tone-arm" :class="{ 'is-playing': player.playing }">
+              <span class="tone-arm__base"></span>
+              <span class="tone-arm__needle"></span>
+            </div>
+            <div class="audio-visualizer" :class="{ 'is-active': player.playing }" aria-label="Audio spectrum visualizer">
+              <span
+                v-for="(barHeight, index) in spectrumBars"
+                :key="index"
+                class="audio-visualizer__bar"
+                :style="{ '--bar-height': `${barHeight}px`, '--bar-delay': `${index * 18}ms` }"
+                aria-hidden="true"
+              ></span>
             </div>
           </div>
-          <div class="tone-arm" :class="{ 'is-playing': player.playing }">
-            <span class="tone-arm__base"></span>
-            <span class="tone-arm__needle"></span>
-          </div>
-          <div class="audio-visualizer" :class="{ 'is-active': player.playing }" aria-label="Audio spectrum visualizer">
-            <span
-              v-for="(barHeight, index) in spectrumBars"
-              :key="index"
-              class="audio-visualizer__bar"
-              :style="{ '--bar-height': `${barHeight}px`, '--bar-delay': `${index * 18}ms` }"
-              aria-hidden="true"
-            ></span>
+
+          <div class="radio-panel__body">
+            <div class="radio-panel__topline">
+              <span class="eyebrow">Now Playing</span>
+            </div>
+
+            <div class="radio-panel__title-row">
+              <div>
+                <h2>{{ activeTrack?.title || '音乐馆' }}</h2>
+                <p>{{ activeTrack ? `${activeTrack.artist}${activeTrack.album ? ` · ${activeTrack.album}` : ''}` : '等待第一首歌开始播放。' }}</p>
+              </div>
+              <span v-if="player.currentPlaylist?.name" class="playlist-badge">{{ player.currentPlaylist.name }}</span>
+            </div>
+
+            <div class="radio-panel__meta">
+              <span>{{ activeTrack?.genre || '音乐馆' }}</span>
+              <span>{{ activeTrack?.language || 'Lyra Select' }}</span>
+              <button
+                type="button"
+                class="radio-panel__queue-chip"
+                :class="{ 'is-active': activePlayerPanel === 'queue' }"
+                :aria-pressed="activePlayerPanel === 'queue'"
+                @click="activePlayerPanel = 'queue'"
+              >
+                <UiIcon name="sequence-play" />
+                {{ player.queue.length }} 首在队列
+              </button>
+            </div>
+
+            <p class="radio-panel__recommendation">
+              {{ activeTrack?.recommendation || player.currentPlaylist?.description || '点一首歌，让今晚从这一段旋律开始。' }}
+            </p>
+
+            <div class="player-controls">
+              <button type="button" class="control-btn" title="上一首" @click="handlePreviousTrack">
+                <UiIcon name="Back" />
+              </button>
+              <button type="button" class="control-btn control-btn--primary" title="播放/暂停" @click="handleTogglePlayback">
+                <UiIcon :name="player.playing ? 'VideoPause' : 'VideoPlay'" />
+              </button>
+              <button type="button" class="control-btn" title="下一首" @click="handleNextTrack">
+                <UiIcon name="Right" />
+              </button>
+            </div>
+
+            <div class="progress-row">
+              <span>{{ formatTime(player.playbackTime) }}</span>
+              <UiSlider
+                class="progress-slider"
+                :model-value="player.playbackTime"
+                :max="Math.max(player.duration, 1)"
+                :show-tooltip="false"
+                @input="handleSeekPreview"
+                @change="handleSeek"
+              />
+              <span>{{ formatTime(player.duration) }}</span>
+            </div>
+
+            <div class="player-subcontrols">
+              <span>音量</span>
+              <UiSlider
+                class="volume-slider"
+                :model-value="Math.round(player.volume * 100)"
+                :max="100"
+                :show-tooltip="false"
+                @change="handleVolumeChange"
+              />
+              <span>{{ Math.round(player.volume * 100) }}%</span>
+            </div>
           </div>
         </div>
 
-        <div class="radio-panel__body">
-          <div class="radio-panel__topline">
-            <span class="eyebrow">Now Playing</span>
-          </div>
+        <div class="player-context-panel">
+            <div class="player-context-panel__header">
+              <div class="player-context-tabs" role="tablist" aria-label="播放器信息">
+                <button
+                  id="player-context-tab-lyrics"
+                  type="button"
+                  role="tab"
+                  :aria-selected="activePlayerPanel === 'lyrics'"
+                  aria-controls="player-context-lyrics"
+                  :class="{ 'is-active': activePlayerPanel === 'lyrics' }"
+                  @click="activePlayerPanel = 'lyrics'"
+                  @keydown.right.prevent="activePlayerPanel = 'queue'"
+                >
+                  歌词
+                </button>
+                <button
+                  id="player-context-tab-queue"
+                  type="button"
+                  role="tab"
+                  :aria-selected="activePlayerPanel === 'queue'"
+                  aria-controls="player-context-queue"
+                  :class="{ 'is-active': activePlayerPanel === 'queue' }"
+                  @click="activePlayerPanel = 'queue'"
+                  @keydown.left.prevent="activePlayerPanel = 'lyrics'"
+                >
+                  播放队列
+                  <span>{{ player.queue.length }}</span>
+                </button>
+              </div>
 
-          <div class="radio-panel__title-row">
-            <div>
-              <h2>{{ activeTrack?.title || '音乐馆' }}</h2>
-              <p>{{ activeTrack ? `${activeTrack.artist}${activeTrack.album ? ` · ${activeTrack.album}` : ''}` : '等待第一首歌开始播放。' }}</p>
+              <div v-if="activePlayerPanel === 'queue'" class="player-context-panel__tools">
+                <div class="player-context-panel__mode" aria-label="播放模式">
+                  <button
+                    type="button"
+                    :class="{ 'is-active': player.mode === 'sequence' || player.mode === 'single' }"
+                    title="顺序播放"
+                    @click="setPlayMode('sequence')"
+                  >
+                    <UiIcon name="sequence-play" />
+                  </button>
+                  <button
+                    type="button"
+                    :class="{ 'is-active': player.mode === 'shuffle' }"
+                    title="随机播放"
+                    @click="setPlayMode('shuffle')"
+                  >
+                    <UiIcon name="shuffle" />
+                  </button>
+                </div>
+                <button
+                  v-if="upcomingQueueTracks.length"
+                  type="button"
+                  class="player-context-panel__clear"
+                  @click="clearUpcomingQueue"
+                >
+                  清空后续
+                </button>
+              </div>
             </div>
-            <span v-if="player.currentPlaylist?.name" class="playlist-badge">{{ player.currentPlaylist.name }}</span>
-          </div>
 
-          <div class="radio-panel__meta">
-            <span>{{ activeTrack?.genre || '音乐馆' }}</span>
-            <span>{{ activeTrack?.language || 'Lyra Select' }}</span>
-            <span>{{ player.queue.length }} 首在队列</span>
-          </div>
+            <div
+              v-if="activePlayerPanel === 'lyrics'"
+              id="player-context-lyrics"
+              ref="lyricWindowRef"
+              class="player-context-panel__body lyric-window"
+              role="tabpanel"
+              aria-labelledby="player-context-tab-lyrics"
+            >
+              <p v-if="activeLyricLines.length === 0">这首歌还没有写下歌词。</p>
+              <p v-for="line in activeLyricLines" :key="line.key" :class="{ 'is-current': line.current }">
+                {{ line.text }}
+              </p>
+            </div>
 
-          <p class="radio-panel__recommendation">
-            {{ activeTrack?.recommendation || player.currentPlaylist?.description || '点一首歌，让今晚从这一段旋律开始。' }}
-          </p>
+            <div
+              v-else
+              id="player-context-queue"
+              class="player-context-panel__body queue-window"
+              role="tabpanel"
+              aria-labelledby="player-context-tab-queue"
+            >
+              <div v-if="!activeTrack" class="queue-window__empty">
+                <UiIcon name="headset" />
+                <strong>播放队列还是空的</strong>
+                <span>从下方曲库播放或加入一首歌。</span>
+              </div>
+              <template v-else>
+                <div class="queue-window__section">
+                  <span class="queue-window__label">正在播放</span>
+                  <div class="queue-track is-current">
+                    <button type="button" class="queue-track__main" @click="playQueuedTrack(activeTrack)">
+                      <span class="queue-track__state">
+                        <UiIcon :name="player.playing ? 'mdi:volume-high' : 'play'" />
+                      </span>
+                      <span class="queue-track__cover">
+                        <img v-if="activeTrack.coverUrl" :src="activeTrack.coverUrl" alt="" />
+                        <UiIcon v-else name="music" />
+                      </span>
+                      <span class="queue-track__copy">
+                        <strong>{{ activeTrack.title }}</strong>
+                        <small>{{ activeTrack.artist }}</small>
+                      </span>
+                      <span class="queue-track__duration">{{ getTrackDurationLabel(activeTrack) }}</span>
+                    </button>
+                  </div>
+                </div>
 
-          <div class="player-controls">
-            <button type="button" class="control-btn" title="上一首" @click="handlePreviousTrack">
-              <UiIcon name="Back" />
-            </button>
-            <button type="button" class="control-btn control-btn--primary" title="播放/暂停" @click="handleTogglePlayback">
-              <UiIcon :name="player.playing ? 'VideoPause' : 'VideoPlay'" />
-            </button>
-            <button type="button" class="control-btn" title="下一首" @click="handleNextTrack">
-              <UiIcon name="Right" />
-            </button>
-          </div>
+                <div v-if="upcomingQueueTracks.length" class="queue-window__section">
+                  <span class="queue-window__label">接下来 {{ upcomingQueueTracks.length }} 首</span>
+                  <div
+                    v-for="(item, index) in upcomingQueueTracks"
+                    :key="item.id"
+                    class="queue-track"
+                  >
+                    <button type="button" class="queue-track__main" @click="playQueuedTrack(item)">
+                      <span class="queue-track__state">{{ String(index + 1).padStart(2, '0') }}</span>
+                      <span class="queue-track__cover">
+                        <img v-if="item.coverUrl" :src="item.coverUrl" alt="" />
+                        <UiIcon v-else name="music" />
+                      </span>
+                      <span class="queue-track__copy">
+                        <strong>{{ item.title }}</strong>
+                        <small>{{ item.artist }}</small>
+                      </span>
+                      <span class="queue-track__duration">{{ getTrackDurationLabel(item) }}</span>
+                    </button>
+                    <button
+                      type="button"
+                      class="queue-track__remove"
+                      title="移出播放队列"
+                      @click="removeQueuedTrack(item)"
+                    >
+                      <UiIcon name="close" />
+                    </button>
+                  </div>
+                </div>
 
-          <div class="progress-row">
-            <span>{{ formatTime(player.playbackTime) }}</span>
-            <UiSlider
-              class="progress-slider"
-              :model-value="player.playbackTime"
-              :max="Math.max(player.duration, 1)"
-              :show-tooltip="false"
-              @input="handleSeekPreview"
-              @change="handleSeek"
-            />
-            <span>{{ formatTime(player.duration) }}</span>
-          </div>
-
-          <div class="player-subcontrols">
-            <span>音量</span>
-            <UiSlider
-              class="volume-slider"
-              :model-value="Math.round(player.volume * 100)"
-              :max="100"
-              :show-tooltip="false"
-              @change="handleVolumeChange"
-            />
-            <span>{{ Math.round(player.volume * 100) }}%</span>
-          </div>
-
-          <div class="lyric-window">
-            <p v-if="activeLyricLines.length === 0">这首歌还没有写下歌词。</p>
-            <p v-for="line in activeLyricLines" :key="line.key" :class="{ 'is-current': line.current }">
-              {{ line.text }}
-            </p>
-          </div>
+                <div v-else class="queue-window__finished">
+                  <span>后面暂时没有歌曲</span>
+                  <small>可以继续从下方曲库加入。</small>
+                </div>
+              </template>
+            </div>
+            <span class="sr-only" role="status" aria-live="polite">{{ queueStatusMessage }}</span>
         </div>
       </section>
 
@@ -132,6 +282,26 @@
               <UiButton class="shelf-heading__add" variant="primary" icon="add" @click="openCreateTrack">新增歌曲</UiButton>
               <UiButton class="shelf-heading__refresh" variant="secondary" icon="refresh" @click="loadMusic">刷新</UiButton>
             </div>
+            <div class="music-view-toggle shelf-heading__view-toggle" aria-label="歌曲展示方式">
+              <button
+                type="button"
+                :class="{ 'is-active': musicDisplayMode === 'rows' }"
+                title="列表展示"
+                @click="setMusicDisplayMode('rows')"
+              >
+                <UiIcon name="List" />
+                列表
+              </button>
+              <button
+                type="button"
+                :class="{ 'is-active': musicDisplayMode === 'cards' }"
+                title="卡片展示"
+                @click="setMusicDisplayMode('cards')"
+              >
+                <UiIcon name="Grid" />
+                卡片
+              </button>
+            </div>
           </div>
         </div>
 
@@ -147,25 +317,38 @@
         </div>
         <div v-else class="music-category-workbench">
           <aside class="playlist-categories">
-            <button
-              type="button"
+            <div
               class="playlist-category-card"
               :class="{ 'is-editing': selectedCategoryId == null }"
-              @click="selectCategory(null)"
             >
-              <span class="playlist-category-card__marker">
-                <UiIcon name="Folder" />
-              </span>
-              <span class="playlist-category-card__copy">
-                <strong>全部分类</strong>
-                <small>{{ tracks.length }} 首</small>
-              </span>
-            </button>
+              <button
+                type="button"
+                class="playlist-category-card__select"
+                @click="selectCategory(null)"
+              >
+                <span class="playlist-category-card__marker">
+                  <UiIcon name="Folder" />
+                </span>
+                <span class="playlist-category-card__copy">
+                  <strong>全部分类</strong>
+                  <small>{{ tracks.length }} 首</small>
+                </span>
+              </button>
+              <button
+                type="button"
+                class="playlist-category-card__play"
+                :disabled="!hasPlayableCategoryTracks(null)"
+                title="播放全部分类"
+                aria-label="播放全部分类"
+                @click.stop="playCategory(null)"
+              >
+                <UiIcon name="VideoPlay" :size="17" />
+              </button>
+            </div>
 
-            <button
+            <div
               v-for="playlist in categoryPlaylists"
               :key="playlist.id || playlist.name"
-              type="button"
               class="playlist-category-card"
               :class="{
                 'is-editing': selectedCategoryId === playlist.id,
@@ -174,20 +357,35 @@
                 'is-drop-disabled': isDraggingTrack && !canDropTrackToCategory(playlist),
               }"
               :title="canManage ? `拖拽歌曲到“${playlist.name}”可快速分类` : undefined"
-              @click="selectCategory(playlist.id ?? null)"
               @dragenter="handleCategoryDragEnter($event, playlist)"
               @dragover="handleCategoryDragOver($event, playlist)"
               @dragleave="handleCategoryDragLeave(playlist)"
               @drop="handleCategoryDrop($event, playlist)"
             >
-              <span class="playlist-category-card__marker">
-                <UiIcon name="Folder" />
-              </span>
-              <span class="playlist-category-card__copy">
-                <strong>{{ playlist.name }}</strong>
-                <small>{{ playlist.tracks?.length ?? 0 }} 首</small>
-              </span>
-            </button>
+              <button
+                type="button"
+                class="playlist-category-card__select"
+                @click="selectCategory(playlist.id ?? null)"
+              >
+                <span class="playlist-category-card__marker">
+                  <UiIcon name="Folder" />
+                </span>
+                <span class="playlist-category-card__copy">
+                  <strong>{{ playlist.name }}</strong>
+                  <small>{{ playlist.tracks?.length ?? 0 }} 首</small>
+                </span>
+              </button>
+              <button
+                type="button"
+                class="playlist-category-card__play"
+                :disabled="!hasPlayableCategoryTracks(playlist)"
+                :title="`播放“${playlist.name}”`"
+                :aria-label="`播放“${playlist.name}”`"
+                @click.stop="playCategory(playlist)"
+              >
+                <UiIcon name="VideoPlay" :size="17" />
+              </button>
+            </div>
 
             <div v-if="canManage" class="playlist-categories__create">
               <template v-if="creatingCategory">
@@ -208,67 +406,6 @@
 
           <main class="playlist-workspace">
             <section class="category-track-board">
-              <div class="category-track-board__head">
-                <div>
-                  <strong>{{ selectedCategoryName }}</strong>
-                  <span>{{ filteredCategoryTracks.length }} 首歌曲</span>
-                </div>
-                <div class="category-track-board__toolbar">
-                  <div class="play-mode-toggle" aria-label="播放模式">
-                    <button
-                      type="button"
-                      :class="{ 'is-active': player.mode === 'sequence' || player.mode === 'single' }"
-                      :title="player.mode === 'single' ? '当前为单曲循环，点击切回顺序播放' : '顺序播放'"
-                      @click="setPlayMode('sequence')"
-                    >
-                      <UiIcon name="sequence-play" :size="18" />
-                    </button>
-                    <button
-                      type="button"
-                      :class="{ 'is-active': player.mode === 'shuffle' }"
-                      title="随机播放"
-                      @click="setPlayMode('shuffle')"
-                    >
-                      <UiIcon name="shuffle" :size="18" />
-                    </button>
-                  </div>
-                  <div
-                    v-if="canManage && selectedCategory"
-                    class="category-track-board__actions"
-                    aria-label="分类管理"
-                  >
-                    <button type="button" @click="renameCategory">
-                      <UiIcon name="Edit" />
-                      编辑分类
-                    </button>
-                    <button type="button" class="is-danger" @click="removeCategory">
-                      <UiIcon name="Delete" />
-                      删除分类
-                    </button>
-                  </div>
-                  <div class="music-view-toggle" aria-label="歌曲展示方式">
-                    <button
-                      type="button"
-                      :class="{ 'is-active': musicDisplayMode === 'cards' }"
-                      title="卡片展示"
-                      @click="setMusicDisplayMode('cards')"
-                    >
-                      <UiIcon name="Grid" />
-                      卡片
-                    </button>
-                    <button
-                      type="button"
-                      :class="{ 'is-active': musicDisplayMode === 'rows' }"
-                      title="列表展示"
-                      @click="setMusicDisplayMode('rows')"
-                    >
-                      <UiIcon name="List" />
-                      列表
-                    </button>
-                  </div>
-                </div>
-              </div>
-
               <div class="category-track-board__content">
                 <div v-if="filteredCategoryTracks.length === 0" class="playlist-library__empty">
                   当前分类下还没有歌曲。
@@ -290,9 +427,21 @@
                         <span v-else class="music-track-card__fallback">Music</span>
                         <span class="music-track-card__duration">{{ getTrackDurationLabel(track) }}</span>
                         <span v-if="canEditTrack(track)" class="music-track-card__status">{{ statusLabel(track.status) }}</span>
-                        <button type="button" class="music-track-card__play" title="播放" @click="playTrack(track)">
-                          <UiIcon name="VideoPlay" />
-                        </button>
+                        <div class="music-track-card__cover-actions">
+                          <button type="button" class="music-track-card__play" title="播放" aria-label="播放" @click="playTrack(track)">
+                            <UiIcon name="VideoPlay" />
+                          </button>
+                          <button
+                            type="button"
+                            class="music-track-card__enqueue"
+                            title="加入播放队列"
+                            aria-label="加入播放队列"
+                            :disabled="!track.audioUrl"
+                            @click.stop="enqueueTrack(track)"
+                          >
+                            <UiIcon name="Plus" />
+                          </button>
+                        </div>
                       </div>
 
                       <div class="music-track-card__body">
@@ -320,9 +469,6 @@
                           {{ track.releaseYear || '年份未知' }}
                         </span>
                         <div class="music-track-card__actions">
-                          <button type="button" title="播放" @click="playTrack(track)">
-                            <UiIcon name="VideoPlay" />
-                          </button>
                           <button v-if="canEditTrack(track)" type="button" title="编辑歌曲" @click="openEditTrack(track)">
                             <UiIcon name="Edit" />
                           </button>
@@ -376,7 +522,7 @@
                       <span>专辑</span>
                       <span>分类</span>
                       <span>时长</span>
-                      <span>播放</span>
+                      <span>控制</span>
                       <span>详情</span>
                     </div>
 
@@ -418,20 +564,19 @@
                             type="button"
                             class="category-track-row__play"
                             :class="{ 'is-active': activeTrack?.id === track.id && player.playing }"
-                            title="播放"
-                            @click.stop="playTrack(track, false)"
+                            :title="activeTrack?.id === track.id && player.playing ? '暂停' : '播放'"
+                            @click.stop="toggleTrackPlayback(track)"
                           >
-                            <UiIcon name="VideoPlay" />
+                            <UiIcon :name="activeTrack?.id === track.id && player.playing ? 'VideoPause' : 'VideoPlay'" />
                           </button>
                           <button
                             type="button"
-                            class="category-track-row__play category-track-row__play--pause"
-                            :class="{ 'is-active': activeTrack?.id === track.id && !player.playing }"
-                            :disabled="activeTrack?.id !== track.id"
-                            title="暂停"
-                            @click.stop="pauseTrack(track)"
+                            class="category-track-row__play category-track-row__play--queue"
+                            title="加入播放队列"
+                            :disabled="!track.audioUrl"
+                            @click.stop="enqueueTrack(track)"
                           >
-                            <UiIcon name="VideoPause" />
+                            <UiIcon name="sequence-play" />
                           </button>
                         </span>
                         <span class="category-track-row__expand">
@@ -591,16 +736,15 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
-import { notify, confirmDelete, confirmInput } from '@/lib/feedback'
+import { notify, confirmDelete } from '@/lib/feedback'
 import { useRouter } from 'vue-router'
 import DefaultLayout from '@/layouts/DefaultLayout.vue'
 import PageHero from '@/components/PageHero/PageHero.vue'
 import { UiButton, UiIcon, UiInput, UiPagination, UiSlider } from '@/components/ui'
 import {
   createMusicPlaylist,
-  deleteMusicPlaylist,
   deleteMusicTrack,
   getAdminMusicPlaylists,
   getAdminMusicTracks,
@@ -608,14 +752,13 @@ import {
   getPublicMusicPlaylists,
   getPublicMusicTracks,
   saveMusicPlaylistTracks,
-  updateMusicPlaylist,
 } from '@/api/music'
 import { useMusicPlayerStore } from '@/stores/music-player'
 import { useSiteConfig } from '@/composables/useSiteConfig'
 import { resolveFeatureHero } from '@/modules/feature-access/constants'
 import { useUserStore } from '@/stores/user'
 import { hasCapability, isAdminUser } from '@/utils/permission'
-import type { MusicPlaylist, MusicPlaylistUpsertCommand, MusicTrack, MusicTrackStatus } from '@/types'
+import type { MusicPlaylist, MusicTrack, MusicTrackStatus } from '@/types'
 
 interface LyricLine {
   key: string
@@ -662,9 +805,13 @@ const creatingCategory = ref(false)
 const categoryDraft = ref('')
 const playlistSearch = ref('')
 type PlaylistStatusFilter = 'all' | MusicTrackStatus
+type PlayerPanel = 'lyrics' | 'queue'
 
 const playlistStatusFilter = ref<PlaylistStatusFilter>('all')
-const musicDisplayMode = ref<'cards' | 'rows'>('cards')
+const activePlayerPanel = ref<PlayerPanel>('lyrics')
+const queueStatusMessage = ref('')
+const lyricWindowRef = ref<HTMLElement | null>(null)
+const musicDisplayMode = ref<'cards' | 'rows'>('rows')
 const musicCardPageSize = 8
 const musicCardPage = ref(1)
 const musicRowPageSize = 10
@@ -683,6 +830,12 @@ const { loadSiteConfig } = useSiteConfig()
 const canManage = computed(() => isAdminUser(user.value))
 const canCreateTrack = computed(() => hasCapability(user.value, 'music:create'))
 const activeTrack = computed(() => player.currentTrack)
+const upcomingQueueTracks = computed(() => {
+  if (player.currentIndex < 0) {
+    return player.queue
+  }
+  return player.queue.slice(player.currentIndex + 1)
+})
 const isDraggingTrack = computed(() => draggedTrackId.value != null)
 const activeAudioUrl = computed(() => activeTrack.value?.audioUrl || '')
 
@@ -702,8 +855,6 @@ const selectedCategory = computed(() => {
   if (selectedCategoryId.value == null) return null
   return adminPlaylists.value.find((playlist) => playlist.id === selectedCategoryId.value) ?? null
 })
-
-const selectedCategoryName = computed(() => selectedCategory.value?.name || '全部分类')
 
 const categoryBaseTracks = computed(() => {
   const category = selectedCategory.value
@@ -743,7 +894,7 @@ const activeLyricLines = computed<LyricLine[]>(() => {
   const lyrics = track?.lyrics?.trim()
   if (!lyrics) return []
   if (track?.lyricType !== 'lrc') {
-    return lyrics.split('\n').filter(Boolean).slice(0, 8).map((text, index) => ({
+    return lyrics.split('\n').filter(Boolean).map((text, index) => ({
       key: `plain-${index}`,
       text,
       current: index === 0,
@@ -755,11 +906,36 @@ const activeLyricLines = computed<LyricLine[]>(() => {
   for (let i = 0; i < lines.length; i++) {
     if ((lines[i].time ?? 0) <= player.playbackTime) currentIndex = i
   }
-  return lines.slice(Math.max(0, currentIndex - 1), currentIndex + 3).map((line, offset) => ({
+  return lines.map((line, index) => ({
     ...line,
-    current: Math.max(0, currentIndex - 1) + offset === currentIndex,
+    current: index === currentIndex,
   }))
 })
+
+const currentLyricKey = computed(() => activeLyricLines.value.find((line) => line.current)?.key ?? '')
+
+watch(
+  [() => activeTrack.value?.id, currentLyricKey, activePlayerPanel],
+  async () => {
+    if (activePlayerPanel.value !== 'lyrics') return
+    await nextTick()
+    const container = lyricWindowRef.value
+    const currentLine = container?.querySelector<HTMLElement>('.is-current')
+    if (!container || !currentLine) return
+    const containerRect = container.getBoundingClientRect()
+    const currentLineRect = currentLine.getBoundingClientRect()
+    const targetTop = container.scrollTop
+      + currentLineRect.top
+      - containerRect.top
+      - (container.clientHeight - currentLineRect.height) / 2
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    container.scrollTo({
+      top: Math.max(0, targetTop),
+      behavior: reduceMotion ? 'auto' : 'smooth',
+    })
+  },
+  { flush: 'post' },
+)
 
 function getTrackLyricPreview(track: MusicTrack): LyricLine[] {
   const lyrics = track.lyrics?.trim()
@@ -1121,10 +1297,8 @@ async function loadMusic() {
     adminPlaylists.value = canManage.value ? categoryRows : await hydratePublicCategories(categoryRows)
     void primeTrackDurations(trackRows)
     ensureSelectedCategoryExists()
-    if (!player.hasQueue) {
-      const publishedTracks = trackRows.filter((track) => track.status === 'published')
-      player.setQueue(publishedTracks.length ? publishedTracks : trackRows, null)
-    }
+    const publishedTracks = trackRows.filter((track) => track.status === 'published')
+    await player.initializePersistence(publishedTracks.length ? publishedTracks : trackRows)
   } catch (error) {
     loadError.value = error instanceof Error ? error.message : '网络有点不稳定，稍后再试试。'
   } finally {
@@ -1252,9 +1426,76 @@ async function playTrack(track: MusicTrack, expandRow = true) {
   }
 }
 
-function pauseTrack(track: MusicTrack) {
-  if (activeTrack.value?.id !== track.id) return
-  player.pause()
+function enqueueTrack(track: MusicTrack) {
+  activePlayerPanel.value = 'queue'
+  const enqueueResult = player.enqueue(track)
+  if (enqueueResult === 'unplayable') {
+    queueStatusMessage.value = `《${track.title}》暂时没有可播放音频`
+    notify.info(queueStatusMessage.value)
+    return
+  }
+  if (enqueueResult === 'duplicate') {
+    queueStatusMessage.value = `《${track.title}》已经在播放队列中`
+    notify.info(queueStatusMessage.value)
+    return
+  }
+  if (enqueueResult === 'full') {
+    queueStatusMessage.value = '播放队列最多保留 200 首，请先移除部分歌曲'
+    notify.info(queueStatusMessage.value)
+    return
+  }
+  queueStatusMessage.value = `已将《${track.title}》加入播放队列`
+  notify.success(queueStatusMessage.value)
+}
+
+function hasPlayableCategoryTracks(category: MusicPlaylist | null) {
+  const categoryTracks = category ? (category.tracks ?? []) : tracks.value
+  return categoryTracks.some((track) => Boolean(track.audioUrl))
+}
+
+async function playCategory(category: MusicPlaylist | null) {
+  const categoryName = category?.name || '全部分类'
+  const categoryTracks = category ? (category.tracks ?? []) : tracks.value
+  const playableTracks = categoryTracks.filter((track) => Boolean(track.audioUrl))
+  activePlayerPanel.value = 'queue'
+
+  if (!playableTracks.length) {
+    queueStatusMessage.value = `“${categoryName}”暂时没有可播放歌曲`
+    notify.info(queueStatusMessage.value)
+    return
+  }
+
+  const firstTrack = playableTracks[0]
+  await primeSpectrumRuntimeForUserGesture(firstTrack.audioUrl)
+  await player.playTrack(firstTrack, playableTracks, category)
+  queueStatusMessage.value = `正在播放“${categoryName}”，共 ${playableTracks.length} 首`
+  notify.success(queueStatusMessage.value)
+}
+
+async function playQueuedTrack(track: MusicTrack) {
+  await primeSpectrumRuntimeForUserGesture(track.audioUrl)
+  await player.playTrack(track)
+  if (player.playing) {
+    await primeSpectrumRuntimeForUserGesture(track.audioUrl)
+  }
+}
+
+function removeQueuedTrack(track: MusicTrack) {
+  if (!player.removeFromQueue(track.id)) return
+  queueStatusMessage.value = `已将《${track.title}》移出播放队列`
+}
+
+function clearUpcomingQueue() {
+  player.clearUpcoming()
+  queueStatusMessage.value = '已清空后续播放歌曲'
+}
+
+async function toggleTrackPlayback(track: MusicTrack) {
+  if (activeTrack.value?.id === track.id && player.playing) {
+    player.pause()
+    return
+  }
+  await playTrack(track, false)
 }
 
 async function handleTogglePlayback() {
@@ -1375,65 +1616,6 @@ async function saveCategory() {
     notify.success('分类已新增')
     cancelCreateCategory()
     await loadMusic()
-  } finally {
-    playlistSaving.value = false
-  }
-}
-
-async function renameCategory() {
-  const category = selectedCategory.value
-  if (!category?.id || playlistSaving.value) return
-
-  const value = await confirmInput({
-    message: '修改当前分类名称，歌曲归属不会受影响。',
-    title: '编辑分类',
-    confirmText: '保存',
-    cancelText: '取消',
-    inputValue: category.name,
-    placeholder: '分类名称，例如 夜读',
-    validator: (input) => Boolean(input.trim()) || '分类名称不能为空',
-  })
-  if (value === null) return
-
-  const name = value.trim()
-  if (!name || name === category.name.trim()) return
-
-  try {
-    playlistSaving.value = true
-    const saved = await updateMusicPlaylist(category.id, buildCategoryPayload(category, name))
-    if (player.currentPlaylist?.id === saved.id) {
-      player.setQueue(player.queue, saved)
-    }
-    notify.success('分类已更新')
-    await loadMusic()
-  } catch (error) {
-    notify.error(error instanceof Error ? error.message : '分类更新失败')
-  } finally {
-    playlistSaving.value = false
-  }
-}
-
-async function removeCategory() {
-  const category = selectedCategory.value
-  if (!category?.id || playlistSaving.value) return
-
-  const confirmed = await confirmDelete(
-    `确定删除分类“${category.name}”吗？这只会移除分类和歌曲归属，不会删除歌曲本身。`,
-    { title: '删除分类' },
-  )
-  if (!confirmed) return
-
-  try {
-    playlistSaving.value = true
-    await deleteMusicPlaylist(category.id)
-    if (player.currentPlaylist?.id === category.id) {
-      player.setQueue(player.queue, null)
-    }
-    selectedCategoryId.value = null
-    notify.success('分类已删除')
-    await loadMusic()
-  } catch (error) {
-    notify.error(error instanceof Error ? error.message : '分类删除失败')
   } finally {
     playlistSaving.value = false
   }
@@ -1611,19 +1793,6 @@ function statusLabel(status: MusicTrackStatus) {
   return '草稿'
 }
 
-function buildCategoryPayload(category: MusicPlaylist, name = category.name): MusicPlaylistUpsertCommand {
-  return {
-    name,
-    description: category.description,
-    coverFileId: category.coverFileId,
-    coverUrl: category.coverUrl,
-    openingText: category.openingText,
-    defaultPlaylist: category.defaultPlaylist,
-    publicPlaylist: category.publicPlaylist,
-    sortOrder: category.sortOrder,
-  }
-}
-
 function parseLrc(input: string): LyricLine[] {
   return input.split('\n').map((raw, index) => {
     const match = raw.match(/^\[(\d{1,2}):(\d{2})(?:\.(\d{1,3}))?](.*)$/)
@@ -1662,10 +1831,9 @@ function handlePlaylistSearchSubmit() {
 .radio-panel {
   position: relative;
   display: grid;
-  grid-template-columns: repeat(2, minmax(320px, 520px));
-  justify-content: center;
-  align-items: center;
-  gap: clamp(24px, 3.4vw, 56px);
+  grid-template-columns: minmax(0, 0.95fr) minmax(440px, 1.05fr);
+  align-items: stretch;
+  gap: clamp(24px, 3vw, 40px);
   padding: clamp(18px, 2.3vw, 28px);
   border-radius: 30px;
   border: 1px solid rgba(255, 220, 232, 0.66);
@@ -1686,9 +1854,20 @@ function handlePlaylistSearchSubmit() {
   pointer-events: none;
 }
 
+.radio-panel__primary {
+  position: relative;
+  z-index: 1;
+  min-width: 0;
+  min-height: 0;
+  display: grid;
+  grid-template-rows: auto auto;
+  align-content: start;
+  gap: 20px;
+}
+
 .radio-panel__visual {
   position: relative;
-  width: min(100%, 520px);
+  width: 100%;
   min-width: 0;
   display: grid;
   align-content: center;
@@ -1802,12 +1981,13 @@ function handlePlaylistSearchSubmit() {
 .radio-panel__body {
   position: relative;
   z-index: 1;
-  width: min(100%, 520px);
+  width: 100%;
   display: grid;
-  gap: 14px;
+  gap: 12px;
   align-content: start;
+  justify-items: center;
   min-width: 0;
-  justify-self: center;
+  text-align: center;
 }
 
 .radio-panel__meta,
@@ -1829,10 +2009,12 @@ function handlePlaylistSearchSubmit() {
 
 .radio-panel__meta {
   flex-wrap: wrap;
+  justify-content: center;
   gap: 8px;
 }
 
-.radio-panel__meta span {
+.radio-panel__meta span,
+.radio-panel__queue-chip {
   padding: 6px 10px;
   border-radius: 999px;
   color: #9a6b7e;
@@ -1840,6 +2022,24 @@ function handlePlaylistSearchSubmit() {
   border: 1px solid rgba(239, 216, 226, 0.72);
   font-size: 12px;
   line-height: 1;
+}
+
+.radio-panel__queue-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: color 0.18s ease, border-color 0.18s ease, background 0.18s ease;
+}
+
+.radio-panel__queue-chip:hover,
+.radio-panel__queue-chip:focus-visible,
+.radio-panel__queue-chip.is-active {
+  border-color: rgba(251, 114, 153, 0.48);
+  color: #d95683;
+  background: rgba(255, 241, 247, 0.96);
+  outline: none;
 }
 
 .radio-panel__topline,
@@ -1850,6 +2050,17 @@ function handlePlaylistSearchSubmit() {
   justify-content: space-between;
   align-items: center;
   gap: 16px;
+}
+
+.radio-panel__topline,
+.radio-panel__title-row {
+  width: 100%;
+  justify-content: center;
+}
+
+.radio-panel__title-row {
+  flex-direction: column;
+  gap: 8px;
 }
 
 .shelf-heading__actions {
@@ -1893,6 +2104,10 @@ function handlePlaylistSearchSubmit() {
   display: flex;
   align-items: center;
   gap: 12px;
+  margin-left: 0;
+}
+
+.shelf-heading__view-toggle {
   margin-left: auto;
 }
 
@@ -1921,6 +2136,11 @@ function handlePlaylistSearchSubmit() {
   line-height: 1.7;
 }
 
+.radio-panel__recommendation {
+  max-width: 48ch;
+  margin-top: 0;
+}
+
 .playlist-badge {
   flex: 0 0 auto;
   padding: 8px 12px;
@@ -1935,6 +2155,7 @@ function handlePlaylistSearchSubmit() {
 .player-controls {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 10px;
   margin-top: 4px;
 }
@@ -2019,7 +2240,7 @@ function handlePlaylistSearchSubmit() {
   grid-template-columns: auto minmax(96px, 180px) auto;
   gap: 10px;
   align-items: center;
-  justify-content: start;
+  justify-content: center;
   color: #9b8792;
   font-size: 12px;
 }
@@ -2028,22 +2249,157 @@ function handlePlaylistSearchSubmit() {
   width: 100%;
 }
 
-.lyric-window {
-  width: min(880px, 100%);
-  min-height: 144px;
-  max-height: 190px;
+.player-context-panel {
+  position: relative;
+  z-index: 1;
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  min-height: 640px;
+  max-height: none;
+  padding-block: 20px 24px;
+  align-self: stretch;
+  overflow: hidden;
+  border: 0;
+  border-radius: 0;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  background: transparent;
+  box-shadow: none;
+}
+
+.player-context-panel__header {
+  min-height: 48px;
+  padding: 7px 10px 7px 12px;
+  border-bottom: 1px solid rgba(241, 222, 230, 0.78);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: rgba(255, 251, 253, 0.9);
+}
+
+.player-context-tabs,
+.player-context-panel__tools,
+.player-context-panel__mode {
+  display: inline-flex;
+  align-items: center;
+}
+
+.player-context-tabs {
+  gap: 4px;
+}
+
+.player-context-tabs button,
+.player-context-panel__mode button,
+.player-context-panel__clear {
+  border: 0;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.player-context-tabs button {
+  min-height: 34px;
+  padding: 0 12px;
+  border-radius: 9px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: #786a72;
+  background: transparent;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.player-context-tabs button span {
+  min-width: 20px;
+  padding: 2px 6px;
+  border-radius: 999px;
+  color: #9b7485;
+  background: rgba(244, 233, 239, 0.9);
+  font-size: 11px;
+  line-height: 1.2;
+}
+
+.player-context-tabs button:hover,
+.player-context-tabs button:focus-visible {
+  color: #d95683;
+  outline: none;
+}
+
+.player-context-tabs button.is-active {
+  color: #d95683;
+  background: rgba(255, 238, 245, 0.92);
+}
+
+.player-context-tabs button.is-active span {
+  color: #d95683;
+  background: rgba(255, 255, 255, 0.82);
+}
+
+.player-context-panel__tools {
+  gap: 10px;
+}
+
+.player-context-panel__mode {
+  gap: 2px;
+  padding: 2px;
+  border-radius: 9px;
+  background: rgba(246, 239, 243, 0.9);
+}
+
+.player-context-panel__mode button {
+  width: 30px;
+  height: 30px;
+  border-radius: 7px;
+  display: grid;
+  place-items: center;
+  color: #96838d;
+  background: transparent;
+}
+
+.player-context-panel__mode button:hover,
+.player-context-panel__mode button:focus-visible,
+.player-context-panel__mode button.is-active {
+  color: #d95683;
+  background: #fff;
+  outline: none;
+}
+
+.player-context-panel__clear {
+  min-height: 32px;
+  padding: 0 8px;
+  color: #8a7580;
+  background: transparent;
+  font-size: 12px;
+}
+
+.player-context-panel__clear:hover,
+.player-context-panel__clear:focus-visible {
+  color: #d95683;
+  outline: none;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.player-context-panel__body {
+  min-height: 0;
   overflow: auto;
-  padding: 18px 20px;
-  border-radius: 22px;
+}
+
+.lyric-window {
+  padding: 18px 20px 24px;
+  text-align: center;
+  scrollbar-gutter: stable both-edges;
+  scroll-behavior: smooth;
   background:
     linear-gradient(180deg, rgba(255, 252, 253, 0.82), rgba(255, 247, 251, 0.68)),
     repeating-linear-gradient(180deg, transparent 0 33px, rgba(225, 197, 210, 0.25) 34px 35px);
-  border: 1px solid rgba(241, 222, 230, 0.86);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.78);
 }
 
 .lyric-window p {
-  margin: 0;
+  max-width: 36ch;
+  margin: 0 auto;
   color: #8d7b84;
   line-height: 1.9;
 }
@@ -2051,6 +2407,199 @@ function handlePlaylistSearchSubmit() {
 .lyric-window p.is-current {
   color: #e44d78;
   font-weight: 800;
+}
+
+.queue-window {
+  padding: 10px 12px 16px;
+  background: rgba(255, 253, 254, 0.82);
+  scrollbar-gutter: stable;
+}
+
+.queue-window__section {
+  display: grid;
+  gap: 4px;
+}
+
+.queue-window__section + .queue-window__section {
+  margin-top: 12px;
+}
+
+.queue-window__label {
+  padding: 4px 8px;
+  color: #8b7882;
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.queue-track {
+  min-width: 0;
+  border-radius: 10px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 34px;
+  align-items: center;
+  transition: background 0.18s ease;
+}
+
+.queue-track:hover,
+.queue-track:focus-within {
+  background: rgba(255, 243, 248, 0.88);
+}
+
+.queue-track.is-current {
+  grid-template-columns: minmax(0, 1fr);
+  background: rgba(255, 238, 245, 0.92);
+}
+
+.queue-track__main {
+  min-width: 0;
+  min-height: 54px;
+  padding: 6px 8px;
+  border: 0;
+  display: grid;
+  grid-template-columns: 28px 40px minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  color: inherit;
+  background: transparent;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.queue-track__main:focus-visible,
+.queue-track__remove:focus-visible {
+  border-radius: 8px;
+  outline: 2px solid rgba(251, 114, 153, 0.48);
+  outline-offset: -2px;
+}
+
+.queue-track__state {
+  color: #a08c96;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
+.queue-track.is-current .queue-track__state {
+  color: #e44d78;
+}
+
+.queue-track__cover {
+  width: 40px;
+  height: 40px;
+  overflow: hidden;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  color: #c66e90;
+  background: rgba(248, 234, 241, 0.96);
+}
+
+.queue-track__cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.queue-track__copy {
+  min-width: 0;
+}
+
+.queue-track__copy strong,
+.queue-track__copy small {
+  overflow: hidden;
+  display: block;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.queue-track__copy strong {
+  color: #4f3c46;
+  font-size: 13px;
+}
+
+.queue-track__copy small {
+  margin-top: 3px;
+  color: #8a7a84;
+  font-size: 12px;
+}
+
+.queue-track__duration {
+  color: #8a7a84;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.queue-track__remove {
+  width: 30px;
+  height: 30px;
+  border: 0;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  color: #9b8792;
+  background: transparent;
+  cursor: pointer;
+  opacity: 0;
+  transition: color 0.18s ease, background 0.18s ease, opacity 0.18s ease;
+}
+
+.queue-track:hover .queue-track__remove,
+.queue-track:focus-within .queue-track__remove {
+  opacity: 1;
+}
+
+.queue-track__remove:hover {
+  color: #d95683;
+  background: rgba(255, 255, 255, 0.92);
+}
+
+.queue-window__empty,
+.queue-window__finished {
+  min-height: 100%;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 8px;
+  color: #8a7a84;
+  text-align: center;
+}
+
+.queue-window__empty > .ui-icon {
+  color: #d984a5;
+  font-size: 26px;
+}
+
+.queue-window__empty strong {
+  color: #5c4953;
+  font-size: 14px;
+}
+
+.queue-window__empty span,
+.queue-window__finished small {
+  font-size: 12px;
+}
+
+.queue-window__finished {
+  min-height: 92px;
+}
+
+.queue-window__finished span {
+  color: #6f5c66;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 .playlist-strip {
@@ -2743,17 +3292,64 @@ function handlePlaylistSearchSubmit() {
   width: 100%;
   min-height: 60px;
   display: grid;
-  grid-template-columns: 36px minmax(0, 1fr);
-  gap: 10px;
+  grid-template-columns: minmax(0, 1fr) 40px;
+  gap: 2px;
   align-items: center;
-  padding: 10px 11px 10px 12px;
   border: 0;
   border-radius: 14px;
   text-align: left;
   color: inherit;
   background: transparent;
-  cursor: pointer;
   transition: background 0.2s ease, box-shadow 0.2s ease, color 0.2s ease, transform 0.2s ease;
+}
+
+.playlist-category-card__select {
+  min-width: 0;
+  min-height: 60px;
+  padding: 10px 4px 10px 12px;
+  border: 0;
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+  color: inherit;
+  background: transparent;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.playlist-category-card__play {
+  width: 40px;
+  height: 40px;
+  border: 0;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  color: #a37f8f;
+  background: transparent;
+  cursor: pointer;
+  transition: color 0.18s ease, background 0.18s ease, transform 0.18s ease;
+}
+
+.playlist-category-card__play:hover,
+.playlist-category-card__play:focus-visible {
+  color: #d95683;
+  background: rgba(255, 255, 255, 0.84);
+  outline: none;
+  transform: scale(1.04);
+}
+
+.playlist-category-card__play:focus-visible {
+  box-shadow: 0 0 0 2px rgba(251, 114, 153, 0.26);
+}
+
+.playlist-category-card__play:disabled {
+  color: #c9bac1;
+  background: transparent;
+  cursor: not-allowed;
+  opacity: 0.56;
+  transform: none;
 }
 
 .playlist-category-card::before {
@@ -2884,6 +3480,10 @@ function handlePlaylistSearchSubmit() {
 
 .playlist-category-card.is-editing .playlist-category-card__copy small {
   color: #d98aa8;
+}
+
+.playlist-category-card.is-editing .playlist-category-card__play {
+  color: #d95683;
 }
 
 .playlist-library-track__body small,
@@ -3376,122 +3976,6 @@ function handlePlaylistSearchSubmit() {
   flex-direction: column;
 }
 
-.category-track-board__head {
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 8px 4px 18px;
-  background: transparent;
-}
-
-.category-track-board__head::after {
-  content: '';
-  position: absolute;
-  right: 0;
-  bottom: 0;
-  left: 0;
-  height: 1px;
-  background: linear-gradient(90deg, rgba(238, 218, 226, 0.72), rgba(238, 218, 226, 0.18));
-}
-
-.category-track-board__head > div:first-child {
-  min-width: 0;
-  display: grid;
-  gap: 4px;
-}
-
-.category-track-board__head strong {
-  color: #4f3c46;
-  font-size: 18px;
-}
-
-.category-track-board__head span {
-  color: #9b8792;
-  font-size: 12px;
-}
-
-.category-track-board__toolbar {
-  flex: 0 0 auto;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 0;
-  border: 0;
-  border-radius: 0;
-  background: transparent;
-  box-shadow: none;
-}
-
-.play-mode-toggle {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  position: relative;
-  padding: 3px;
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.24);
-}
-
-.play-mode-toggle::after {
-  display: none;
-}
-
-.play-mode-toggle button {
-  width: 36px;
-  height: 36px;
-  border: 0;
-  border-radius: 10px;
-  display: grid;
-  place-items: center;
-  color: #8c7782;
-  background: transparent;
-  cursor: pointer;
-  transition: color 0.18s ease, background 0.18s ease;
-}
-
-.play-mode-toggle button:hover {
-  color: #d56f95;
-}
-
-.play-mode-toggle button.is-active {
-  color: #d56f95;
-  background: rgba(255, 239, 246, 0.72);
-  box-shadow: none;
-}
-
-.category-track-board__actions {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.category-track-board__actions button {
-  min-height: 34px;
-  padding: 0 12px;
-  border: 0;
-  border-radius: 10px;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  color: #8c7782;
-  background: rgba(255, 255, 255, 0.28);
-  font-size: 12px;
-  font-weight: 700;
-  cursor: pointer;
-  transition: color 0.18s ease, background 0.18s ease;
-}
-
-.category-track-board__actions button:hover {
-  color: #d56f95;
-  background: rgba(255, 239, 246, 0.64);
-}
-
-.category-track-board__actions button.is-danger:hover {
-  color: #db5c7f;
-}
-
 .music-view-toggle {
   flex: 0 0 auto;
   display: inline-flex;
@@ -3671,20 +4155,62 @@ function handlePlaylistSearchSubmit() {
   background: rgba(255, 255, 255, 0.86);
 }
 
-.music-track-card__play {
+.music-track-card__cover-actions {
   position: absolute;
   right: 12px;
   bottom: 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.music-track-card__play,
+.music-track-card__enqueue {
+  box-sizing: border-box;
   width: 42px;
   height: 42px;
-  border: 0;
+  border: 1px solid transparent;
   border-radius: 999px;
   display: grid;
   place-items: center;
+  cursor: pointer;
+}
+
+.music-track-card__play {
   color: #fff;
   background: linear-gradient(135deg, #fb7299, #ffa3c0);
   box-shadow: 0 14px 24px rgba(251, 114, 153, 0.32);
-  cursor: pointer;
+}
+
+.music-track-card__enqueue {
+  border-color: rgba(217, 86, 131, 0.46);
+  color: #d95683;
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: none;
+  transition: color 0.18s ease, border-color 0.18s ease, background 0.18s ease, transform 0.18s ease;
+}
+
+.music-track-card__enqueue:hover,
+.music-track-card__enqueue:focus-visible {
+  border-color: #fb7299;
+  color: #fff;
+  background: #fb7299;
+  outline: none;
+  transform: translateY(-1px);
+}
+
+.music-track-card__enqueue:focus-visible {
+  box-shadow:
+    0 0 0 3px rgba(255, 255, 255, 0.82),
+    0 0 0 5px rgba(251, 114, 153, 0.34);
+}
+
+.music-track-card__enqueue:disabled {
+  color: #bfaeb6;
+  background: rgba(255, 255, 255, 0.72);
+  cursor: not-allowed;
+  opacity: 0.62;
+  transform: none;
 }
 
 .music-track-card__body {
@@ -4079,10 +4605,6 @@ function handlePlaylistSearchSubmit() {
   box-shadow: 0 13px 24px rgba(251, 114, 153, 0.24);
 }
 
-.category-track-row__play--pause {
-  color: #9d7688;
-}
-
 .category-track-row__play:disabled {
   opacity: 0.38;
   cursor: not-allowed;
@@ -4234,6 +4756,51 @@ function handlePlaylistSearchSubmit() {
   .audio-visualizer__bar {
     transition: none;
   }
+
+  .lyric-window {
+    scroll-behavior: auto;
+  }
+}
+
+@media (min-width: 1180px) and (min-height: 760px) {
+  .radio-panel {
+    height: clamp(720px, 78vh, 860px);
+    align-items: stretch;
+  }
+
+  .radio-panel__primary {
+    height: 100%;
+    grid-template-rows: minmax(0, 1fr) auto;
+    gap: 16px;
+    overflow: hidden;
+  }
+
+  .radio-panel__visual {
+    height: 100%;
+    padding-block: 12px 0;
+    grid-template-rows: minmax(0, 1fr) auto;
+    align-content: stretch;
+  }
+
+  .radio-panel__cover {
+    width: min(100%, 310px);
+    align-self: center;
+  }
+
+  .audio-visualizer {
+    align-self: end;
+  }
+
+  .radio-panel__body {
+    padding: 0 8px 8px;
+    gap: 10px;
+  }
+
+  .player-context-panel {
+    height: 100%;
+    min-height: 0;
+    max-height: none;
+  }
 }
 
 @media (max-width: 860px) {
@@ -4244,6 +4811,11 @@ function handlePlaylistSearchSubmit() {
 
   .radio-panel {
     grid-template-columns: 1fr;
+    min-height: auto;
+  }
+
+  .radio-panel__primary {
+    gap: 18px;
   }
 
   .radio-panel__cover {
@@ -4251,13 +4823,39 @@ function handlePlaylistSearchSubmit() {
     justify-self: center;
   }
 
-  .radio-panel__topline,
   .radio-panel__title-row,
   .shelf-heading,
   .playlist-manager__header,
   .playlist-library__header,
   .playlist-selected__header {
     flex-direction: column;
+  }
+
+  .radio-panel__body {
+    height: auto;
+    grid-template-rows: none;
+  }
+
+  .player-context-panel {
+    min-height: 300px;
+    max-height: 340px;
+    padding-block: 12px 16px;
+  }
+
+  .player-context-panel__header {
+    align-items: flex-start;
+  }
+
+  .player-context-panel__tools {
+    gap: 4px;
+  }
+
+  .player-context-panel__clear {
+    padding-inline: 4px;
+  }
+
+  .queue-track__remove {
+    opacity: 1;
   }
 
   .playlist-form-grid,
@@ -4383,25 +4981,6 @@ function handlePlaylistSearchSubmit() {
     min-height: auto;
   }
 
-  .category-track-board__head {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .category-track-board__toolbar {
-    justify-content: space-between;
-    flex-wrap: wrap;
-  }
-
-  .play-mode-toggle {
-    order: 1;
-    padding: 4px;
-  }
-
-  .play-mode-toggle::after {
-    display: none;
-  }
-
   .music-view-toggle {
     width: fit-content;
   }
@@ -4461,6 +5040,36 @@ function handlePlaylistSearchSubmit() {
 
   .category-track-detail__title {
     flex-direction: column;
+  }
+}
+
+@media (max-width: 520px) {
+  .player-context-panel {
+    min-height: 320px;
+    max-height: 380px;
+  }
+
+  .player-context-panel__header {
+    flex-wrap: wrap;
+  }
+
+  .player-context-panel__tools {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .queue-track__main {
+    grid-template-columns: 24px 36px minmax(0, 1fr);
+    gap: 8px;
+  }
+
+  .queue-track__cover {
+    width: 36px;
+    height: 36px;
+  }
+
+  .queue-track__duration {
+    display: none;
   }
 }
 </style>

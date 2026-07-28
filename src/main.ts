@@ -7,6 +7,7 @@ import App from './App.vue'
 import router, { CHUNK_RELOAD_KEY } from './router'
 import { loadEmojiRegistry } from '@/emoji/provider'
 import { useUserStore } from './stores/user'
+import { useMusicPlayerStore } from './stores/music-player'
 import { installMessageDefaults } from '@/utils/message'
 
 // 全局样式
@@ -19,6 +20,7 @@ const pinia = createPinia()
 
 app.use(pinia)
 const userStore = useUserStore()
+const musicPlayerStore = useMusicPlayerStore()
 userStore.initUser()
 
 app.use(router)
@@ -44,6 +46,7 @@ async function bootstrap() {
   } catch (e) {
     console.warn('[Chen404] 启动同步登录态失败（已用本地缓存继续）', e)
   }
+  await musicPlayerStore.initializePersistence()
 }
 
 void bootstrap()

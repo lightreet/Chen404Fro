@@ -76,68 +76,123 @@
         <section class="profile-section">
           <div class="profile-section__head">
             <div>
-              <span class="profile-eyebrow">Recent Writing</span>
-              <h2>公开文章</h2>
-            </div>
-            <span class="profile-count">{{ totalArticles }} 篇</span>
-          </div>
-
-          <div v-if="articlesLoading" class="profile-state profile-state--inline">正在加载文章...</div>
-          <div v-else-if="!articles.length" class="profile-empty">
-            <p>这位成员暂时还没有公开文章。</p>
-            <span>等下一篇心情或灵感落下来的时候，这里会先亮起来。</span>
-          </div>
-          <div v-else class="profile-article-list">
-            <RouterLink
-              v-for="article in articles"
-              :key="article.id"
-              class="profile-article"
-              :to="`/article/${article.id}`"
-            >
-              <div class="profile-article__content">
-                <span class="profile-article__date">{{ formatDate(article.publishTime || article.createTime) }}</span>
-                <h3>{{ article.title }}</h3>
-                <p>{{ article.summary || '这篇文章还没有摘要。' }}</p>
+              <span class="profile-eyebrow">Recent Activity</span>
+              <div class="profile-activity-title-tabs" role="tablist" aria-label="成员动态">
+                <button
+                  id="profile-activity-tab-articles"
+                  type="button"
+                  class="profile-activity-title-tab"
+                  :class="{ 'is-active': activeActivity === 'articles' }"
+                  role="tab"
+                  :aria-selected="activeActivity === 'articles'"
+                  aria-controls="profile-activity-panel"
+                  @click="switchActivity('articles')"
+                >
+                  公开文章
+                </button>
+                <button
+                  id="profile-activity-tab-travel"
+                  type="button"
+                  class="profile-activity-title-tab"
+                  :class="{ 'is-active': activeActivity === 'travel' }"
+                  role="tab"
+                  :aria-selected="activeActivity === 'travel'"
+                  aria-controls="profile-activity-panel"
+                  @click="switchActivity('travel')"
+                >
+                  旅行足迹
+                </button>
               </div>
-              <span class="profile-article__arrow">→</span>
-            </RouterLink>
-          </div>
-        </section>
-
-        <section class="profile-section">
-          <div class="profile-section__head">
-            <div>
-              <span class="profile-eyebrow">Travel Footprints</span>
-              <h2>旅行足迹</h2>
             </div>
-            <RouterLink
-              v-if="travelMemories.length"
-              class="profile-count profile-count--link"
-              :to="{ path: '/memory-map', query: { creatorId: userId } }"
-            >
-              在地图查看全部
-            </RouterLink>
+            <span class="profile-count profile-count--activity">
+              {{ activeActivity === 'articles' ? `${totalArticles} 篇` : `${travelMemories.length} 处` }}
+            </span>
           </div>
 
-          <div v-if="travelLoading" class="profile-state profile-state--inline">正在加载旅行足迹...</div>
-          <div v-else-if="!travelMemories.length" class="profile-empty">
-            <p>这位成员暂时还没有公开旅行地点。</p>
-            <span>以后落下的城市、照片和旅途故事，会在这里连成一张地图。</span>
-          </div>
-          <div v-else class="profile-article-list">
-            <RouterLink
-              v-for="memory in travelMemories.slice(0, 6)"
-              :key="memory.id"
-              class="profile-article"
-              :to="{ path: '/memory-map', query: { creatorId: userId, focus: String(memory.id) } }"
-            >
-              <div class="profile-article__content">
-                <span class="profile-article__date">{{ formatDate(memory.visitedAt) || '旅行记录' }}</span>
-                <h3>{{ memory.title }}</h3>
-                <p>{{ formatLocation(memory) }}</p>
+          <div
+            id="profile-activity-panel"
+            class="profile-activity-panel"
+            role="tabpanel"
+            :aria-labelledby="`profile-activity-tab-${activeActivity}`"
+          >
+            <template v-if="activeActivity === 'articles'">
+              <div v-if="articlesLoading" class="profile-state profile-state--inline">正在加载文章...</div>
+              <div v-else-if="!articles.length" class="profile-empty">
+                <p>这位成员暂时还没有公开文章。</p>
+                <span>等下一篇心情或灵感落下来的时候，这里会先亮起来。</span>
               </div>
-              <span class="profile-article__arrow">→</span>
-            </RouterLink>
+              <div v-else class="profile-article-list profile-article-list--cards">
+                <ArticleCard
+                  v-for="(article, index) in articles"
+                  :key="String(article.id)"
+                  :article="article"
+                  :index="index"
+                  mode="home"
+                  compact
+                  profile-feed
+                />
+              </div>
+              <UiPagination
+                v-if="totalArticles > ACTIVITY_PAGE_SIZE"
+                :current="articlePage"
+                :page-size="ACTIVITY_PAGE_SIZE"
+                :total="totalArticles"
+                :show-total="false"
+                class="profile-activity-pager"
+                @change="changeArticlePage"
+              />
+            </template>
+
+            <template v-else>
+              <div v-if="travelLoading" class="profile-state profile-state--inline">正在加载旅行足迹...</div>
+              <div v-else-if="!travelMemories.length" class="profile-empty">
+                <p>这位成员暂时还没有公开旅行地点。</p>
+                <span>以后落下的城市、照片和旅途故事，会在这里连成一张地图。</span>
+              </div>
+              <div v-else class="profile-article-list">
+                <RouterLink
+                  v-for="memory in paginatedTravelMemories"
+                  :key="memory.id"
+                  class="profile-article"
+                  :to="{ path: '/memory-map', query: { creatorId: userId, focus: String(memory.id) } }"
+                >
+                  <div class="profile-article__cover">
+                    <img
+                      v-if="hasTravelCover(memory)"
+                      :src="memory.coverImage"
+                      :alt="`${memory.title}封面`"
+                      loading="lazy"
+                      decoding="async"
+                      @error="markTravelCoverFailed(memory.id)"
+                    />
+                    <span v-else class="profile-article__cover-fallback" aria-hidden="true">
+                      <UiIcon name="location" :size="24" />
+                    </span>
+                  </div>
+                  <div class="profile-article__content">
+                    <div class="profile-article__meta">
+                      <span class="profile-article__date">{{ formatDate(memory.visitedAt) || '旅行记录' }}</span>
+                      <span v-if="memory.entryCount" class="profile-article__entry-count">
+                        {{ memory.entryCount }} 个片段
+                      </span>
+                    </div>
+                    <h3>{{ memory.title }}</h3>
+                    <p class="profile-article__location">{{ formatLocation(memory) }}</p>
+                    <p v-if="memory.summaryNote" class="profile-article__summary">{{ memory.summaryNote }}</p>
+                  </div>
+                  <span class="profile-article__arrow">→</span>
+                </RouterLink>
+              </div>
+              <UiPagination
+                v-if="travelMemories.length > ACTIVITY_PAGE_SIZE"
+                :current="travelPage"
+                :page-size="ACTIVITY_PAGE_SIZE"
+                :total="travelMemories.length"
+                :show-total="false"
+                class="profile-activity-pager"
+                @change="changeTravelPage"
+              />
+            </template>
           </div>
         </section>
       </template>
@@ -151,6 +206,8 @@ import { notify } from '@/lib/feedback';
 import { useRoute } from 'vue-router';
 import DefaultLayout from '@/layouts/DefaultLayout.vue';
 import PageHero from '@/components/PageHero/PageHero.vue';
+import ArticleCard from '@/components/ArticleCard/ArticleCard.vue';
+import { UiIcon, UiPagination } from '@/components/ui';
 import { getArticles } from '@/api/article';
 import { getTravelMemories } from '@/api/travel-memory';
 import { getSiteOwner, getSiteUser, type SiteMember } from '@/api/home';
@@ -163,6 +220,9 @@ const DEFAULT_PROFILE_HERO =
 const DEFAULT_PROFILE_HERO_POSITION = '50% 42%';
 const DEFAULT_MEMBER_AVATAR = '/default-member-avatar.svg';
 const LEGACY_DEFAULT_AVATAR = '/default-avatar.jpg';
+const ACTIVITY_PAGE_SIZE = 5;
+
+type ProfileActivity = 'articles' | 'travel';
 
 const route = useRoute();
 const { loadSiteConfig } = useSiteConfig();
@@ -175,6 +235,10 @@ const owner = ref<SiteOwner | null>(null);
 const articles = ref<Article[]>([]);
 const totalArticles = ref(0);
 const travelMemories = ref<TravelMemoryLocationListItem[]>([]);
+const activeActivity = ref<ProfileActivity>('articles');
+const articlePage = ref(1);
+const travelPage = ref(1);
+const failedTravelCoverIds = ref<Set<number>>(new Set());
 const heroBgImage = ref(DEFAULT_PROFILE_HERO);
 const heroBgPosition = ref(DEFAULT_PROFILE_HERO_POSITION);
 
@@ -199,6 +263,10 @@ const bannerVars = computed(() => ({
   '--profile-banner-image': `url("${heroBgImage.value}")`,
   '--profile-banner-position': heroBgPosition.value,
 }));
+const paginatedTravelMemories = computed(() => {
+  const start = (travelPage.value - 1) * ACTIVITY_PAGE_SIZE;
+  return travelMemories.value.slice(start, start + ACTIVITY_PAGE_SIZE);
+});
 
 onMounted(() => {
   void loadSharedData();
@@ -228,6 +296,10 @@ async function loadProfile() {
   articles.value = [];
   totalArticles.value = 0;
   travelMemories.value = [];
+  failedTravelCoverIds.value = new Set();
+  activeActivity.value = 'articles';
+  articlePage.value = 1;
+  travelPage.value = 1;
   try {
     profile.value = await getSiteUser(userId.value);
     await Promise.all([loadArticles(), loadTravelMemories()]);
@@ -250,11 +322,12 @@ async function loadTravelMemories() {
   }
 }
 
-async function loadArticles() {
+async function loadArticles(page = 1) {
   if (!profile.value) return;
+  articlePage.value = page;
   articlesLoading.value = true;
   try {
-    const result = await getArticles({ page: 1, size: 6, authorId: profile.value.id });
+    const result = await getArticles({ page, size: ACTIVITY_PAGE_SIZE, authorId: profile.value.id });
     articles.value = result.list ?? [];
     totalArticles.value = result.total ?? 0;
   } catch {
@@ -263,6 +336,26 @@ async function loadArticles() {
   } finally {
     articlesLoading.value = false;
   }
+}
+
+function switchActivity(activity: ProfileActivity) {
+  activeActivity.value = activity;
+}
+
+function changeArticlePage(page: number) {
+  void loadArticles(page);
+}
+
+function changeTravelPage(page: number) {
+  travelPage.value = page;
+}
+
+function hasTravelCover(memory: TravelMemoryLocationListItem) {
+  return Boolean(memory.coverImage && !failedTravelCoverIds.value.has(memory.id));
+}
+
+function markTravelCoverFailed(id: number) {
+  failedTravelCoverIds.value = new Set([...failedTravelCoverIds.value, id]);
 }
 
 async function copyEmail() {
@@ -503,24 +596,21 @@ function formatLocation(memory: TravelMemoryLocationListItem) {
 }
 
 .profile-section {
-  padding: 28px;
+  padding: 32px 28px 28px;
 }
 
 .profile-section__head {
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
-  gap: 16px;
-  margin-bottom: 20px;
-
-  h2 {
-    margin: 6px 0 0;
-    color: #5f4654;
-    font-size: 28px;
-  }
+  gap: 24px;
+  margin-bottom: 32px;
+  padding-inline: 2px;
 }
 
 .profile-eyebrow {
+  display: block;
+  margin-bottom: 13px;
   font-size: 12px;
   letter-spacing: 0.18em;
   text-transform: uppercase;
@@ -529,16 +619,67 @@ function formatLocation(memory: TravelMemoryLocationListItem) {
 
 .profile-count {
   flex: 0 0 auto;
+  padding-bottom: 10px;
   color: #9f6a83;
   font-size: 14px;
 }
 
-.profile-count--link {
-  text-decoration: none;
-  transition: color 0.2s ease;
+.profile-activity-title-tabs {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 24px;
+}
+
+.profile-activity-title-tab {
+  position: relative;
+  padding: 0 0 10px;
+  border: 0;
+  background: transparent;
+  color: rgba(117, 88, 104, 0.5);
+  font: inherit;
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 1.2;
+  text-wrap: balance;
+  cursor: pointer;
+  transition:
+    color 0.2s ease,
+    opacity 0.2s ease;
 
   &:hover {
-    color: #7f4f66;
+    color: rgba(95, 70, 84, 0.78);
+  }
+
+  &:focus-visible {
+    outline: 2px solid rgba(229, 104, 151, 0.52);
+    outline-offset: 4px;
+  }
+
+  &.is-active {
+    color: #5f4654;
+  }
+
+  &.is-active::after {
+    content: '';
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    height: 2px;
+    border-radius: 999px;
+    background: rgba(229, 104, 151, 0.58);
+  }
+}
+
+.profile-activity-panel {
+  min-width: 0;
+}
+
+.profile-activity-pager {
+  margin-top: 22px;
+
+  :deep(.ui-pagination) {
+    justify-content: center;
   }
 }
 
@@ -547,13 +688,24 @@ function formatLocation(memory: TravelMemoryLocationListItem) {
   gap: 14px;
 }
 
+.profile-article-list--cards {
+  gap: 16px;
+
+  :deep(.article-card.compact.profile-feed) {
+    width: 100%;
+    margin-right: 0;
+    margin-left: 0;
+  }
+}
+
 .profile-article {
-  display: flex;
+  display: grid;
+  grid-template-columns: 184px minmax(0, 1fr) auto;
   align-items: center;
-  justify-content: space-between;
-  gap: 18px;
-  padding: 20px 22px;
-  border-radius: 24px;
+  gap: 22px;
+  min-height: 152px;
+  padding: 16px 20px 16px 16px;
+  border-radius: 20px;
   background:
     linear-gradient(145deg, rgba(255, 255, 255, 0.88), rgba(255, 248, 251, 0.68)),
     radial-gradient(circle at right center, rgba(245, 214, 228, 0.2), transparent 38%);
@@ -572,12 +724,56 @@ function formatLocation(memory: TravelMemoryLocationListItem) {
   min-width: 0;
 }
 
+.profile-article__cover {
+  position: relative;
+  width: 184px;
+  height: 120px;
+  overflow: hidden;
+  border-radius: 14px;
+  background: linear-gradient(145deg, rgba(249, 222, 233, 0.78), rgba(229, 224, 242, 0.72));
+
+  img,
+  .profile-article__cover-fallback {
+    width: 100%;
+    height: 100%;
+  }
+
+  img {
+    display: block;
+    object-fit: cover;
+    transition: transform 0.28s ease;
+  }
+}
+
+.profile-article:hover .profile-article__cover img {
+  transform: scale(1.035);
+}
+
+.profile-article__cover-fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(134, 92, 112, 0.72);
+}
+
+.profile-article__meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 9px;
+}
+
 .profile-article__date {
-  display: inline-block;
-  margin-bottom: 10px;
   color: #c28aa2;
   font-size: 12px;
   letter-spacing: 0.08em;
+}
+
+.profile-article__entry-count {
+  flex: 0 0 auto;
+  color: rgba(120, 96, 111, 0.66);
+  font-size: 11px;
 }
 
 .profile-article h3 {
@@ -587,11 +783,22 @@ function formatLocation(memory: TravelMemoryLocationListItem) {
   line-height: 1.4;
 }
 
-.profile-article p {
+.profile-article__location {
   margin: 8px 0 0;
   color: rgba(101, 79, 93, 0.74);
   font-size: 14px;
   line-height: 1.72;
+}
+
+.profile-article__summary {
+  display: -webkit-box;
+  margin: 5px 0 0;
+  overflow: hidden;
+  color: rgba(109, 90, 102, 0.62);
+  font-size: 12px;
+  line-height: 1.6;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 
 .profile-article__arrow {
@@ -626,6 +833,13 @@ function formatLocation(memory: TravelMemoryLocationListItem) {
     color: rgba(109, 85, 100, 0.66);
     font-size: 13px;
     line-height: 1.7;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .profile-activity-title-tab,
+  .profile-article__cover img {
+    transition: none;
   }
 }
 
@@ -683,10 +897,60 @@ function formatLocation(memory: TravelMemoryLocationListItem) {
     padding: 22px 18px;
   }
 
-  .profile-section__head,
-  .profile-article {
+  .profile-section__head {
     align-items: flex-start;
     flex-direction: column;
+    gap: 10px;
+    margin-bottom: 26px;
+  }
+
+  .profile-activity-title-tabs {
+    gap: 18px;
+  }
+
+  .profile-activity-title-tab {
+    font-size: 22px;
+  }
+
+  .profile-count {
+    padding-bottom: 0;
+  }
+
+  .profile-article {
+    grid-template-columns: 96px minmax(0, 1fr);
+    gap: 14px;
+    min-height: 128px;
+    padding: 14px;
+  }
+
+  .profile-article__cover {
+    width: 96px;
+    height: 100px;
+    border-radius: 12px;
+  }
+
+  .profile-article__arrow {
+    display: none;
+  }
+
+  .profile-article__meta {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 3px;
+    margin-bottom: 6px;
+  }
+
+  .profile-article h3 {
+    font-size: 16px;
+  }
+
+  .profile-article__location {
+    margin-top: 5px;
+    font-size: 12px;
+  }
+
+  .profile-article__summary {
+    -webkit-line-clamp: 1;
   }
 }
 </style>

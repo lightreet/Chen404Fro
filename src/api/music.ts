@@ -1,6 +1,8 @@
 import { AI_REQUEST_TIMEOUT_MESSAGE, AI_REQUEST_TIMEOUT_MS, del, get, patch, post, put } from './request'
 import type {
   MusicPlaylist,
+  MusicPlayerState,
+  MusicPlayerStateCommand,
   MusicPlaylistTracksCommand,
   MusicPlaylistUpsertCommand,
   MusicTrack,
@@ -20,6 +22,27 @@ export function getPublicMusicPlaylists(): Promise<MusicPlaylist[]> {
 
 export function getPublicMusicPlaylist(id: number | string): Promise<MusicPlaylist> {
   return get(`/music/playlists/${String(id)}`)
+}
+
+export function getMusicPlayerState(): Promise<MusicPlayerState | null> {
+  return get('/music/player/state', undefined, {
+    suppressErrorMessage: true,
+    skipAuthRedirect: true,
+  })
+}
+
+export function saveMusicPlayerState(data: MusicPlayerStateCommand): Promise<void> {
+  return put('/music/player/state', data, {
+    suppressErrorMessage: true,
+    skipAuthRedirect: true,
+  })
+}
+
+export function clearMusicPlayerState(): Promise<void> {
+  return del('/music/player/state', {
+    suppressErrorMessage: true,
+    skipAuthRedirect: true,
+  })
 }
 
 export function getAdminMusicTracks(): Promise<MusicTrack[]> {

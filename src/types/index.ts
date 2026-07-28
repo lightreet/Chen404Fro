@@ -314,6 +314,18 @@ export enum TravelMemoryVisibility {
 
 export type MusicTrackStatus = 'draft' | 'published' | 'archived';
 export type MusicLyricType = 'plain' | 'lrc';
+export type MusicPlayMode = 'sequence' | 'shuffle' | 'single';
+
+export interface MusicPlayerStateCommand {
+  trackIds: number[];
+  currentTrackId?: number;
+  currentTime: number;
+  mode: MusicPlayMode;
+}
+
+export interface MusicPlayerState extends MusicPlayerStateCommand {
+  updatedAt?: string;
+}
 
 export interface MusicTrack {
   id: number;
