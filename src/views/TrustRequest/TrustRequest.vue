@@ -4,7 +4,7 @@
       <PageHero
         title="好友申请"
         eyebrow="Friend Request"
-        subtitle="如果你想查看知友可见的内容，可以先在这里了解说明，再决定是否登录并提交好友申请。"
+        subtitle="如果你想查看知友可见的内容，或发布文章、旅行和音乐，可以先在这里了解说明，再决定是否登录并提交好友申请。"
         :bg-image="heroBgImage"
         :bg-position="heroBgPosition"
         min-height="64vh"

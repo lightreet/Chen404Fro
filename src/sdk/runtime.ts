@@ -1,6 +1,9 @@
 import axios from 'axios';
 import { OpenAPI } from './generated';
-import { installGeneratedSdkInterceptors } from '@/api/request';
+import {
+  DEFAULT_REQUEST_TIMEOUT_MS,
+  installGeneratedSdkInterceptors,
+} from '@/api/request';
 
 export interface ResultEnvelope<T> {
   code?: number;
@@ -14,6 +17,7 @@ export interface ResultEnvelope<T> {
 export function configureGeneratedSdk() {
   OpenAPI.BASE = import.meta.env.VITE_API_BASE_URL || '/api';
   OpenAPI.TOKEN = async () => localStorage.getItem('token') || '';
+  axios.defaults.timeout = DEFAULT_REQUEST_TIMEOUT_MS;
   installGeneratedSdkInterceptors(axios);
 }
 
