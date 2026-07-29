@@ -2392,9 +2392,7 @@ function handlePlaylistSearchSubmit() {
   text-align: center;
   scrollbar-gutter: stable both-edges;
   scroll-behavior: smooth;
-  background:
-    linear-gradient(180deg, rgba(255, 252, 253, 0.82), rgba(255, 247, 251, 0.68)),
-    repeating-linear-gradient(180deg, transparent 0 33px, rgba(225, 197, 210, 0.25) 34px 35px);
+  background: linear-gradient(180deg, rgba(255, 252, 253, 0.82), rgba(255, 247, 251, 0.68));
 }
 
 .lyric-window p {

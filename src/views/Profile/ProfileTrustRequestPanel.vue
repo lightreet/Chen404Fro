@@ -206,9 +206,11 @@ onMounted(() => {
 
 <style scoped lang="scss">
 .trust-panel {
-  display: flex;
-  flex-direction: column;
-  gap: 18px;
+  :deep(.ui-loading-state__content) {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md, 16px);
+  }
 }
 
 .trust-hero,

@@ -288,7 +288,7 @@ const panelTitle = computed(() => {
   if (activeMenu.value === 'creations') return '我的创作'
   if (activeMenu.value === 'likes') return '我的点赞'
   if (activeMenu.value === 'favorites') return '我的收藏'
-  if (activeMenu.value === 'trust') return '好友申请'
+  if (activeMenu.value === 'trust') return '好友与权限'
   return '个人中心'
 })
 
@@ -296,7 +296,7 @@ const panelBadge = computed(() => {
   if (activeMenu.value === 'creations') return '内容管理'
   if (activeMenu.value === 'likes') return `共 ${likedTotal.value} 篇`
   if (activeMenu.value === 'favorites') return `共 ${favTotal.value} 篇`
-  if (activeMenu.value === 'trust') return '好友申请'
+  if (activeMenu.value === 'trust') return trustLevelText.value
   return trustLevelText.value
 })
 
@@ -310,6 +310,7 @@ const panelIcon = computed(() => {
 
 const navItems: Array<{ index: string; icon: string; label: string }> = [
   { index: 'settings', icon: 'User', label: '个人中心' },
+  { index: 'trust', icon: 'Postcard', label: '好友与权限' },
   { index: 'creations', icon: 'edit', label: '我的创作' },
   { index: 'likes', icon: 'Medal', label: '我的点赞' },
   { index: 'favorites', icon: 'Star', label: '我的收藏' },

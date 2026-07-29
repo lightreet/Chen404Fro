@@ -15,7 +15,7 @@ export function hasCapability(
   user: User | null | undefined,
   capability: UserCapability,
 ): boolean {
-  return Boolean(user?.capabilities?.includes(capability));
+  return isAdminUser(user) || Boolean(user?.capabilities?.includes(capability));
 }
 
 export function hasAnyCreatorCapability(user: User | null | undefined): boolean {
