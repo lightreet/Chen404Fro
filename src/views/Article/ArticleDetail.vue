@@ -76,7 +76,13 @@
         <!-- 文章内容：优先后端 contentHtml，否则用 MdPreview 渲染 Markdown -->
         <div class="article-body">
           <div v-if="article.contentHtml" class="markdown-content" v-html="renderedContentHtml"></div>
-          <MdPreview v-else :model-value="renderedMarkdownContent" :theme="previewTheme" class="markdown-preview" />
+          <MdPreview
+            v-else
+            :model-value="renderedMarkdownContent"
+            :theme="previewTheme"
+            :sanitize="normalizeArticleHeadingHierarchy"
+            class="markdown-preview"
+          />
         </div>
 
         <!-- 文章标签 -->
@@ -161,8 +167,37 @@ const renderedMarkdownContent = computed(() => {
   return renderArticleText(article.value?.content ?? '');
 });
 
+/**
+ * 文章标题是详情页唯一的一级标题。
+ * 正文由独立 Markdown/HTML 文档嵌入时，将其一级标题降为二级，
+ * 保留原有属性，并标记来源层级供桌面与移动端分别控制视觉样式。
+ */
+const normalizeArticleHeadingHierarchy = (html: string) => {
+  const normalizedOpeningTags = html.replace(
+    /<h1\b([^>]*)>/gi,
+    (_tag, rawAttributes: string) => {
+      const attributes = rawAttributes ?? '';
+      const classPattern = /\sclass=(["'])(.*?)\1/i;
+
+      if (classPattern.test(attributes)) {
+        return `<h2${attributes.replace(
+          classPattern,
+          (_classAttribute, quote: string, classNames: string) =>
+            ` class=${quote}${classNames} article-section-heading--from-h1${quote}`,
+        )}>`;
+      }
+
+      return `<h2${attributes} class="article-section-heading--from-h1">`;
+    },
+  );
+
+  return normalizedOpeningTags.replace(/<\/h1\s*>/gi, '</h2>');
+};
+
 const renderedContentHtml = computed(() => {
-  return renderArticleText(article.value?.contentHtml ?? '');
+  return normalizeArticleHeadingHierarchy(
+    renderArticleText(article.value?.contentHtml ?? ''),
+  );
 });
 
 /** 详情页展示用摘要（与卡片一致走表情渲染；无内容则不占行） */
@@ -268,6 +303,9 @@ watch(
 }
 
 .article-content-wrapper {
+  --article-content-width: 840px;
+  --article-prose-width: 760px;
+
   background: var(--bg-secondary);
   border-radius: var(--radius-lg);
   padding: 32px;
@@ -305,6 +343,7 @@ watch(
   color: var(--text-primary);
   margin: 16px 0;
   line-height: 1.4;
+  text-wrap: balance;
 }
 
 .article-meta {
@@ -382,6 +421,11 @@ watch(
 
 .article-body {
   margin-bottom: 32px;
+
+  :deep(.article-section-heading--from-h1) {
+    font-size: 32px;
+    line-height: 1.6;
+  }
 }
 
 .markdown-content {
@@ -499,6 +543,43 @@ watch(
 
   &:hover {
     color: var(--primary);
+  }
+}
+
+@media (min-width: 769px) {
+  .article-header,
+  .article-summary-lead,
+  .article-body,
+  .article-tags,
+  .article-nav,
+  :deep(.comment-section) {
+    width: 100%;
+    max-width: var(--article-content-width);
+    margin-inline: auto;
+  }
+
+  .article-title {
+    font-size: 36px;
+    font-weight: 700;
+    line-height: 1.25;
+  }
+
+  .article-body {
+    :deep(p),
+    :deep(h2),
+    :deep(h3),
+    :deep(h4),
+    :deep(ul),
+    :deep(ol),
+    :deep(blockquote) {
+      max-width: var(--article-prose-width);
+      margin-inline: auto;
+    }
+
+    :deep(.article-section-heading--from-h1) {
+      font-size: 24px;
+      line-height: 1.4;
+    }
   }
 }
 

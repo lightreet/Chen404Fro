@@ -218,10 +218,13 @@ const routes: RouteRecordRaw[] = [
   {
     path: '/trust-request',
     name: 'TrustRequest',
-    component: () => import('@/views/TrustRequest/TrustRequest.vue'),
-    meta: {
-      title: '好友申请',
-    },
+    redirect: to => ({
+      path: '/profile',
+      query: {
+        ...to.query,
+        tab: 'trust',
+      },
+    }),
   },
   {
     path: '/profile',

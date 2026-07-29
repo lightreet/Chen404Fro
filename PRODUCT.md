@@ -28,14 +28,14 @@ Chen404 has one emotional universe, but every surface needs a different intensit
 | Social note | `/guestbook` | Let visitors leave a short message and read others | Balanced | Warm, legible, conversational, not a plain form dump |
 | Companion listening | `/music` | Let readers browse and play Sakura Radio | Expressive product UI | Tactile, musical, familiar controls, no nightclub or dashboard mood |
 | Travel atlas | `/memory-map` | Let public readers browse public places, while trusted friends can see more private routes, photos, and memories | Expressive but structured | Travel atlas first, scrapbook second, clear map/detail relationship |
-| Personal workspace | `/profile`, `/trust-request` | Let users manage identity, creation records, and request status | Calm | Task-shaped, readable, emotionally soft but not decorative |
+| Personal workspace | `/profile` | Let users manage identity, creation records, friend access, and request status | Calm | Task-shaped, readable, emotionally soft but not decorative |
 | Creation editors | article, travel, and music editors | Let capable trusted friends and the owner create or maintain their own content | Quiet and efficient | Fast scanning, stable actions, consistent controls |
 | Administration | `/admin` | Let the owner review site activity and operate shared site settings | Quiet and efficient | Clear oversight, stable actions, consistent controls |
 
 ## Current Product Surface
 
 - Public reading: home, article detail, archive, category, tag, guestbook, about, public user page.
-- Trust layer: trust request flow, public travel map browsing, friend-only travel memories, profile-side request status, and capability-based creation.
+- Trust layer: friend access requests and status live inside `/profile?tab=trust`; public travel map browsing, friend-only travel memories, and capability-based creation remain connected to that account relationship.
 - Personal creation workspace: `/profile?tab=creations` unifies the user's article, travel, and music records; each content tab exposes its own create action only when permitted.
 - Creation editors: article editor, travel memory editor, and music track editor are available to users with the matching capability.
 - Administration: admin tabs cover recent site activity, categories, site config, AI assistant, emojis, files, and trust requests.

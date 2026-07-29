@@ -165,6 +165,10 @@
                     <UiIcon name="User" />
                     个人中心
                   </UiDropdownItem>
+                  <UiDropdownItem v-if="!isAdmin" command="trust">
+                    <UiIcon name="Postcard" />
+                    好友与权限
+                  </UiDropdownItem>
                   <UiDropdownItem v-if="isAdmin" command="notifications">
                     <UiIcon name="bell" />
                     <span>消息中心</span>
@@ -242,7 +246,13 @@
             </template>
           </UiDropdown>
 
-          <button class="action-btn menu-btn" @click="toggleMobileMenu">
+          <button
+            type="button"
+            class="action-btn menu-btn"
+            :aria-label="isMobileMenuOpen ? '关闭导航菜单' : '打开导航菜单'"
+            :aria-expanded="isMobileMenuOpen"
+            @click="toggleMobileMenu"
+          >
             <UiIcon name="Menu" />
           </button>
         </div>
@@ -262,18 +272,18 @@
               type="button"
               class="mobile-nav-item mobile-nav-group-trigger"
               :class="{ 'is-active': isNavItemActive(item) }"
-              :aria-expanded="mobileTimelineOpen"
-              @click="mobileTimelineOpen = !mobileTimelineOpen"
+              :aria-expanded="isMobileNavGroupOpen(item.key)"
+              @click="toggleMobileNavGroup(item.key)"
             >
               <UiIcon :name="item.icon" />
               <span>{{ item.name }}</span>
               <UiIcon
                 name="arrow-down"
                 class="mobile-nav-chevron"
-                :class="{ 'is-open': mobileTimelineOpen }"
+                :class="{ 'is-open': isMobileNavGroupOpen(item.key) }"
               />
             </button>
-            <div v-show="mobileTimelineOpen" class="mobile-nav-children">
+            <div v-show="isMobileNavGroupOpen(item.key)" class="mobile-nav-children">
               <router-link
                 v-for="child in item.children"
                 :key="child.key"
@@ -315,6 +325,15 @@
           >
             <UiIcon name="User" />
             <span>个人中心</span>
+          </router-link>
+          <router-link
+            v-if="!isAdmin"
+            :to="{ path: '/profile', query: { tab: 'trust' } }"
+            class="mobile-nav-item"
+            @click="closeMobileMenu"
+          >
+            <UiIcon name="Postcard" />
+            <span>好友与权限</span>
           </router-link>
           <router-link
             v-if="isAdmin"
@@ -482,16 +501,16 @@ const navItems = computed<NavItem[]>(() => [
   { key: 'memory-map', name: '旅行地图', path: '/memory-map', to: '/memory-map', icon: 'Place' },
   { key: 'music', name: '音乐馆', path: '/music', to: '/music', icon: 'Headset' },
   {
-    key: 'trust-request',
-    name: '好友申请',
-    path: '/trust-request',
-    to: '/trust-request',
-    icon: 'Postcard',
-    activeWhen: (currentPath: string, currentTab?: string | null) =>
-      currentPath === '/trust-request' || (currentPath === '/profile' && currentTab === 'trust'),
+    key: 'more',
+    name: '更多',
+    path: '/guestbook',
+    to: '/guestbook',
+    icon: 'more',
+    children: [
+      { key: 'guestbook', name: '留言板', path: '/guestbook', to: '/guestbook', icon: 'ChatDotRound' },
+      { key: 'about', name: '关于本站', path: '/about', to: '/about', icon: 'InfoFilled' },
+    ],
   },
-  { key: 'guestbook', name: '留言板', path: '/guestbook', to: '/guestbook', icon: 'ChatDotRound' },
-  { key: 'about', name: '关于', path: '/about', to: '/about', icon: 'InfoFilled' },
 ]);
 
 const currentRouteTab = computed(() => {
@@ -559,12 +578,28 @@ watch(isAdmin, (admin) => {
 
 // 移动端菜单
 const isMobileMenuOpen = ref(false);
-const mobileTimelineOpen = ref(false);
+const openMobileNavGroups = ref(new Set<string>());
+
+const isMobileNavGroupOpen = (key: string) => openMobileNavGroups.value.has(key);
+
+const toggleMobileNavGroup = (key: string) => {
+  const nextOpenGroups = new Set(openMobileNavGroups.value);
+  if (nextOpenGroups.has(key)) {
+    nextOpenGroups.delete(key);
+  } else {
+    nextOpenGroups.add(key);
+  }
+  openMobileNavGroups.value = nextOpenGroups;
+};
 
 const toggleMobileMenu = () => {
   isMobileMenuOpen.value = !isMobileMenuOpen.value;
   if (isMobileMenuOpen.value) {
-    mobileTimelineOpen.value = route.path === '/archive' || route.path === '/development-history';
+    openMobileNavGroups.value = new Set(
+      navItems.value
+        .filter((item) => item.children?.some((child) => child.path === route.path))
+        .map((item) => item.key),
+    );
   }
 };
 
@@ -591,6 +626,9 @@ const handleUserCommand = (command: string | number | object) => {
   switch (command) {
     case 'profile':
       router.push('/profile');
+      break;
+    case 'trust':
+      router.push({ path: '/profile', query: { tab: 'trust' } });
       break;
     case 'notifications':
       router.push({ path: '/admin', query: { tab: 'notifications' } });

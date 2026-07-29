@@ -250,6 +250,8 @@ Chen404 now has its own design system in code. This doc describes *intent*; the 
 - **State:** selected route uses sakura tint and clear text contrast.
 - **Constraint:** navigation must not feel louder than the current page task.
 - **Hierarchy:** when a concept groups multiple peer destinations, expose the parent in global navigation and keep each child as a standalone route. Do not repeat that cross-page choice as a selector inside page content.
+- **Top-level scope:** keep frequent public destinations at the top level. Group secondary public destinations such as `留言板 / 关于本站` under `更多` on desktop, while mobile may expose their child links directly inside the navigation drawer.
+- **Account tasks:** friend access requests and permission status belong inside the personal center under `好友与权限`, with an optional account-menu shortcut. Do not place this low-frequency authenticated task beside public content destinations. Keep legacy `/trust-request` links as redirects to `/profile?tab=trust`.
 
 ### Buttons
 
@@ -330,6 +332,7 @@ Chen404 now has its own design system in code. This doc describes *intent*; the 
 - **Role:** task completion.
 - **Style:** calm, dense, consistent. Compose from the project's own `Ui*` primitives and `App*` shells; do not fall back to raw Element Plus visuals.
 - **Personal creation hierarchy:** creation management belongs inside the personal center under one `我的创作` destination. Use peer tabs for `文章 / 旅行 / 音乐`; place the active tab's create action at the far right of the same tab bar and switch its label and route with the active content type. Do not duplicate a global `创作中心` entry in the header or account menu.
+- **Personal access hierarchy:** friend application, review status, and current friend capability summary belong under one `好友与权限` personal-center destination. Admin review remains an administration task and must not add an applicant-facing header entry.
 - **Personal-center canvas:** keep the route-level personal-center wrapper transparent so the shared site background remains continuous. A constrained wrapper must not paint an exposed rectangular backdrop around or above its content cards.
 - **Personal interaction lists:** liked and favorite article cards should use the available personal-center content width and align with the panel header. Apply this as a page-context override while preserving the reusable compact card's default width for genuinely narrow feeds.
 - **Creation permissions:** a user may keep historical records after losing a create capability. Preserve those records in read-only form, hide create/edit actions, and explain the current limitation without treating the history as an error.
