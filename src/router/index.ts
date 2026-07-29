@@ -227,6 +227,24 @@ const routes: RouteRecordRaw[] = [
     }),
   },
   {
+    path: '/bookshelf',
+    name: 'Bookshelf',
+    component: () => import('@/views/Reader/Bookshelf.vue'),
+    meta: {
+      title: '我的书架',
+      requiresAuth: true,
+    },
+  },
+  {
+    path: '/reader/:bookId',
+    name: 'NovelReader',
+    component: () => import('@/views/Reader/Reader.vue'),
+    meta: {
+      title: '小说阅读',
+      requiresAuth: true,
+    },
+  },
+  {
     path: '/profile',
     name: 'Profile',
     component: () => import('@/views/Profile/Profile.vue'),

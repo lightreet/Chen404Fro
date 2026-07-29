@@ -165,6 +165,10 @@
                     <UiIcon name="User" />
                     个人中心
                   </UiDropdownItem>
+                  <UiDropdownItem command="bookshelf">
+                    <UiIcon name="book" />
+                    我的书架
+                  </UiDropdownItem>
                   <UiDropdownItem v-if="!isAdmin" command="trust">
                     <UiIcon name="Postcard" />
                     好友与权限
@@ -325,6 +329,14 @@
           >
             <UiIcon name="User" />
             <span>个人中心</span>
+          </router-link>
+          <router-link
+            to="/bookshelf"
+            class="mobile-nav-item"
+            @click="closeMobileMenu"
+          >
+            <UiIcon name="book" />
+            <span>我的书架</span>
           </router-link>
           <router-link
             v-if="!isAdmin"
@@ -500,6 +512,9 @@ const navItems = computed<NavItem[]>(() => [
   },
   { key: 'memory-map', name: '旅行地图', path: '/memory-map', to: '/memory-map', icon: 'Place' },
   { key: 'music', name: '音乐馆', path: '/music', to: '/music', icon: 'Headset' },
+  ...(isLoggedIn.value
+    ? [{ key: 'bookshelf', name: '书架', path: '/bookshelf', to: '/bookshelf', icon: 'book' }]
+    : []),
   {
     key: 'more',
     name: '更多',
@@ -629,6 +644,9 @@ const handleUserCommand = (command: string | number | object) => {
       break;
     case 'trust':
       router.push({ path: '/profile', query: { tab: 'trust' } });
+      break;
+    case 'bookshelf':
+      router.push('/bookshelf');
       break;
     case 'notifications':
       router.push({ path: '/admin', query: { tab: 'notifications' } });
