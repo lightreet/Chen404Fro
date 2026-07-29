@@ -5,7 +5,7 @@
     </transition>
   </router-view>
 
-  <Live2D v-if="showAssistant" :compact-only="isMobile" />
+  <Live2D v-if="showAssistant" />
 </template>
 
 <script setup lang="ts">
@@ -20,6 +20,8 @@ const route = useRoute();
 const { isMobile } = useLayoutMobile();
 
 const showAssistant = computed(() => {
+  if (isMobile.value) return false;
+
   const path = route.path;
   return !(
     path.startsWith('/admin')

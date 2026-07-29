@@ -9,10 +9,12 @@ export interface RequestConfig extends AxiosRequestConfig {
   timeoutErrorMessage?: string;
 }
 
+export const DEFAULT_REQUEST_TIMEOUT_MS = 10000;
+
 // 创建 axios 实例
 const request: AxiosInstance = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL || '/api',
-  timeout: 10000,
+  timeout: DEFAULT_REQUEST_TIMEOUT_MS,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -22,7 +24,10 @@ export const AI_REQUEST_TIMEOUT_MS = 60000;
 export const AI_REQUEST_TIMEOUT_MESSAGE = 'AI 生成耗时较久已超时，请稍后重试，或补充更多条件后再试。';
 
 let isRefreshing = false;
-let refreshWaiters: Array<(token: string) => void> = [];
+let refreshWaiters: Array<{
+  resolve: (token: string) => void;
+  reject: (error: unknown) => void;
+}> = [];
 let loginRedirectPrompt: Promise<boolean> | null = null;
 let isLoginRedirecting = false;
 
@@ -36,9 +41,20 @@ interface InterceptorInstallOptions {
   unwrapBusinessData: boolean;
 }
 
-function notifyRefreshWaiters(token: string) {
-  refreshWaiters.forEach((cb) => cb(token));
+function resolveRefreshWaiters(token: string) {
+  refreshWaiters.forEach(({ resolve }) => resolve(token));
   refreshWaiters = [];
+}
+
+function rejectRefreshWaiters(error: unknown) {
+  refreshWaiters.forEach(({ reject }) => reject(error));
+  refreshWaiters = [];
+}
+
+function createBusinessRequestError(message?: string, code?: number) {
+  const error = new Error(message || '请求失败') as Error & { businessCode?: number };
+  error.businessCode = code;
+  return error;
 }
 
 function shouldSuppressError(config?: AxiosRequestConfig) {
@@ -167,7 +183,7 @@ function installRequestInterceptors(client: AxiosInstance, options: InterceptorI
         if (!shouldSuppressError(response.config)) {
           notify.error(message || '请求失败');
         }
-        return Promise.reject(new Error(message));
+        return Promise.reject(createBusinessRequestError(message, code));
       }
 
       return data;
@@ -210,17 +226,9 @@ function installRequestInterceptors(client: AxiosInstance, options: InterceptorI
               originalConfig._retry = true;
 
               if (isRefreshing) {
-                const newToken = await new Promise<string>((resolve) => {
-                  refreshWaiters.push(resolve);
+                const newToken = await new Promise<string>((resolve, reject) => {
+                  refreshWaiters.push({ resolve, reject });
                 });
-                if (!newToken) {
-                  if (shouldSkipAuthRedirect(originalConfig)) {
-                    return Promise.reject(error);
-                  }
-                  clearStoredAuth();
-                  await promptLoginRedirect('登录状态已过期，需要重新登录后继续。');
-                  return Promise.reject(error);
-                }
                 originalConfig.headers = originalConfig.headers || {};
                 (originalConfig.headers as Record<string, unknown>).Authorization = `Bearer ${newToken}`;
                 return client(originalConfig);
@@ -234,15 +242,15 @@ function installRequestInterceptors(client: AxiosInstance, options: InterceptorI
                 }
                 localStorage.setItem('token', res.token);
                 if (res.refreshToken) localStorage.setItem('refreshToken', res.refreshToken);
-                notifyRefreshWaiters(res.token);
+                resolveRefreshWaiters(res.token);
 
                 originalConfig.headers = originalConfig.headers || {};
                 (originalConfig.headers as Record<string, unknown>).Authorization = `Bearer ${res.token}`;
                 return client(originalConfig);
               } catch (refreshError) {
-                notifyRefreshWaiters('');
+                rejectRefreshWaiters(refreshError);
                 if (shouldSkipAuthRedirect(originalConfig)) {
-                  return Promise.reject(error);
+                  return Promise.reject(refreshError);
                 }
                 clearStoredAuth();
                 await promptLoginRedirect('登录状态已过期，需要重新登录后继续。');

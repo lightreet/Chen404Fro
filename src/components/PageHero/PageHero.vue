@@ -194,10 +194,6 @@ function normalizeMinHeight(value: string) {
   padding-bottom: 3.75rem;
 }
 
-.page-hero--with-wave {
-  margin-bottom: -28px;
-}
-
 .page-hero--left {
   text-align: left;
 
@@ -547,10 +543,6 @@ function normalizeMinHeight(value: string) {
   .page-hero--compact {
     min-height: min(40vh, var(--page-hero-min-height));
     padding-bottom: 1.8rem;
-  }
-
-  .page-hero--with-wave {
-    margin-bottom: -20px;
   }
 
   .page-hero--left .page-hero__content {

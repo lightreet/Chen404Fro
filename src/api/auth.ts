@@ -3,7 +3,7 @@
  * 优先通过 generated SDK 对齐后端契约；refresh/logout 这类特殊流程仍保留手写 request。
  */
 
-import { post, type RequestConfig } from './request';
+import { get, post, type RequestConfig } from './request';
 import type {
   LoginParams,
   LoginResult,
@@ -57,8 +57,8 @@ export function logout(): Promise<void> {
 /**
  * 获取当前登录用户信息
  */
-export async function getUserInfo(_config?: RequestConfig): Promise<User> {
-  return unwrapResult(await Service.getUserInfo()) as User;
+export function getUserInfo(config?: RequestConfig): Promise<User> {
+  return get('/auth/info', undefined, config);
 }
 
 /**

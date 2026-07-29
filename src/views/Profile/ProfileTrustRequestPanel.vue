@@ -3,7 +3,7 @@
     <section class="trust-hero">
       <div>
         <h3>好友申请</h3>
-        <p>用于申请查看“知友可见”的内容，不包含文章发布权限。</p>
+        <p>申请成为知友后，可以查看“知友可见”的内容，也可以发布文章、旅行和音乐。</p>
       </div>
       <UiBadge :tone="statusTone">{{ statusLabel }}</UiBadge>
     </section>
@@ -15,7 +15,7 @@
 
     <section v-else-if="isFriend" class="trust-state trust-state--done">
       <h4>你已经是知友</h4>
-      <p>现在可以查看设置为“知友可见”的文章和内容。</p>
+      <p>现在可以查看设置为“知友可见”的内容，也可以发布文章、旅行和音乐。</p>
     </section>
 
     <template v-else>

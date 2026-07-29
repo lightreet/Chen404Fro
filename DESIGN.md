@@ -241,6 +241,7 @@ Chen404 now has its own design system in code. This doc describes *intent*; the 
 - **Role:** route entrance, not the whole page identity.
 - **Image:** use route-relevant imagery. Home can be cinematic. Category/archive should be quieter. Music can show listening atmosphere. Travel map should show atlas, map paper, route, station, city, ticket, or real journey material, not unrelated underwater mood.
 - **Transition:** the hero-to-content wave must visually attach to the next section. If the next section is a product workspace, use a shorter hero and faster handoff.
+- **Content clearance:** the wave may overlap imagery inside the hero, but it must not pull the following section into its fog or mask with a negative outer margin. Preserve at least `20px` of visible clearance between the hero boundary and the first heading, control, or card on desktop and mobile.
 - **Copy:** one title, one useful subtitle, optional one-line metadata. No repeated emotional slogans.
 
 ### Navigation

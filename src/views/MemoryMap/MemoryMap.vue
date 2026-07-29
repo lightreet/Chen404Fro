@@ -157,8 +157,9 @@
               </div>
 
               <div v-if="canManage" class="spread-map-actions">
-                <UiButton variant="ghost" icon="location" class="journal-action journal-action--primary map-action" @click="openCreateDialog">
+                <UiButton variant="ghost" class="journal-action journal-action--primary map-action" @click="openCreateDialog">
                   <span class="map-action__lead">
+                    <UiIcon name="location" />
                     <span>新增旅游地点</span>
                   </span>
                   <span class="map-action__arrow" aria-hidden="true">→</span>
@@ -270,10 +271,6 @@
                     <span class="stop-count">
                       <UiIcon name="image" :label="`${activeStop.entries.length} 张照片`" />
                       <span aria-hidden="true">{{ activeStop.entries.length }}</span>
-                    </span>
-                    <span v-if="activeStopDate" class="stop-meta__item stop-meta__item--date">
-                      <UiIcon name="Calendar" />
-                      <span>{{ activeStopDate }}</span>
                     </span>
                   </div>
 
@@ -442,14 +439,12 @@ interface JournalNote {
   imageUrl: string
   title: string
   copy: string
-  date?: string
 }
 
 interface JournalStopView {
   key: string
   title: string
   storyNote: string
-  visitedAt?: string
   entries: TravelMemoryEntry[]
 }
 
@@ -469,7 +464,6 @@ const journalStops = computed<JournalStopView[]>(() => {
       key: `stop-${stop.id ?? index}`,
       title: stop.title?.trim() || `第 ${index + 1} 站`,
       storyNote: stop.storyNote?.trim() || '',
-      visitedAt: stop.visitedAt,
       entries: (stop.entries || []).slice().sort((a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0)),
     }))
   }
@@ -482,7 +476,6 @@ const journalStops = computed<JournalStopView[]>(() => {
       key: 'stop-all',
       title: '全部照片',
       storyNote: '',
-      visitedAt: detail.visitedAt,
       entries: flatEntries,
     },
   ]
@@ -505,10 +498,8 @@ const activeStopCards = computed<JournalNote[]>(() => {
   const cover = activeStopCover.value
   return stop.entries
     .filter((entry) => entry !== cover)
-    .map((entry, index) => buildEntryJournalNote(entry, index, stop.title, stop.visitedAt))
+    .map((entry, index) => buildEntryJournalNote(entry, index, stop.title))
 })
-
-const activeStopDate = computed(() => formatDate(activeStop.value?.visitedAt))
 
 /** 当前片段的全部可预览图片，供大图查看器左右切换 */
 const stopPhotoUrls = computed<string[]>(() => (
@@ -741,14 +732,12 @@ function buildEntryJournalNote(
   entry: TravelMemoryEntry,
   index: number,
   fallbackTitle: string,
-  fallbackDate?: string,
 ): JournalNote {
   return {
     key: `entry-${entry.id || entry.imageUrl || index}`,
     imageUrl: entry.imageUrl,
     title: entry.remark?.trim() || fallbackTitle || '旅途碎片',
     copy: entry.thanksNote?.trim() || '',
-    date: entry.shotAt || fallbackDate,
   }
 }
 
@@ -1522,25 +1511,6 @@ watch(canViewFriendMemoryMap, () => {
   transform-origin: center;
 }
 
-.stop-meta__item {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  color: #7f626e;
-  font-size: 12.5px;
-  line-height: 1.4;
-}
-
-.stop-meta__item--date {
-  margin-left: auto;
-}
-
-.stop-meta__item .el-icon,
-.stop-meta__item .ui-icon {
-  color: #df8aa8;
-  font-size: 13px;
-}
-
 .stop-note {
   margin: 0;
   min-width: 0;
@@ -2228,15 +2198,31 @@ watch(canViewFriendMemoryMap, () => {
   }
 
   .spread-map-card {
+    display: flex;
+    flex-direction: column;
     padding: 18px;
     border-radius: 24px;
   }
 
+  .spread-map-card__hero {
+    order: 1;
+  }
+
   .spread-map-actions {
-    justify-content: center;
+    order: 2;
+    width: 100%;
+    margin-top: 0;
+    padding-top: 0;
+    justify-content: stretch;
+  }
+
+  :deep(.travel-map-shell) {
+    order: 3;
+    flex: 0 0 auto;
   }
 
   .public-map-notice {
+    order: 4;
     grid-template-columns: 1fr;
   }
 
@@ -2246,9 +2232,15 @@ watch(canViewFriendMemoryMap, () => {
   }
 
   .map-action {
-    width: auto;
-    flex-basis: auto;
-    max-width: 100%;
+    width: 100%;
+    min-height: 44px;
+    flex-basis: 100%;
+    background: rgba(255, 241, 246, 0.94) !important;
+    box-shadow: none !important;
+  }
+
+  .map-action :deep(.ui-button__label) {
+    width: 100%;
   }
 
   /* 触屏下恢复 44px 触控目标 */
@@ -2288,11 +2280,23 @@ watch(canViewFriendMemoryMap, () => {
   }
 
   .travel-journal__cover {
-    height: 220px;
+    height: clamp(280px, 82vw, 420px);
+  }
+
+  .travel-journal__cover-trigger {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(249, 244, 247, 0.72);
+  }
+
+  .travel-journal__cover-trigger img {
+    object-fit: contain;
   }
 
   .journal-note {
     grid-template-columns: 108px minmax(0, 1fr);
+    height: 108px;
   }
 
   .journal-note__thumb {
@@ -2329,10 +2333,22 @@ watch(canViewFriendMemoryMap, () => {
 
   .journal-note {
     grid-template-columns: 1fr;
+    height: auto;
   }
 
   .journal-note__thumb {
-    min-height: 156px;
+    min-height: 0;
+    aspect-ratio: 4 / 3;
+  }
+
+  .journal-note__thumb-trigger {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .journal-note__thumb img {
+    object-fit: contain;
   }
 
   .travel-journal__actions--note {

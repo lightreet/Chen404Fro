@@ -467,7 +467,7 @@ const navItems = computed<NavItem[]>(() => [
     name: '时光轴',
     path: '/archive',
     to: '/archive',
-    icon: 'Folder',
+    icon: 'clock',
     children: [
       { key: 'archive', name: '文章记录', path: '/archive', to: '/archive', icon: 'article' },
       {

@@ -812,7 +812,7 @@ const activePlayerPanel = ref<PlayerPanel>('lyrics')
 const queueStatusMessage = ref('')
 const lyricWindowRef = ref<HTMLElement | null>(null)
 const musicDisplayMode = ref<'cards' | 'rows'>('rows')
-const musicCardPageSize = 8
+const musicCardPageSize = 10
 const musicCardPage = ref(1)
 const musicRowPageSize = 10
 const musicRowPage = ref(1)
@@ -3837,7 +3837,7 @@ function handlePlaylistSearchSubmit() {
 }
 
 .playlist-categories {
-  min-height: calc(100vh - 132px);
+  min-height: 0;
 }
 
 :deep(.playlist-manager__search .el-input__wrapper) {
@@ -3952,7 +3952,7 @@ function handlePlaylistSearchSubmit() {
 
 .category-track-board {
   position: relative;
-  min-height: calc(100vh - 132px);
+  min-height: 0;
   display: flex;
   flex-direction: column;
   border: 0;
@@ -4011,16 +4011,16 @@ function handlePlaylistSearchSubmit() {
 .music-card-grid {
   flex: 1 1 auto;
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(214px, 1fr));
-  gap: 16px;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 12px;
   align-content: start;
-  padding: 18px 0 4px;
+  padding: 14px 0 3px;
 }
 
 .music-card-pagination,
 .music-list-pagination {
   display: flex;
-  margin-top: auto;
+  margin-top: 0;
   justify-content: center;
   padding: 20px 0 2px;
 }
@@ -4059,10 +4059,11 @@ function handlePlaylistSearchSubmit() {
   overflow: hidden;
   min-width: 0;
   border: 0;
-  border-radius: 18px;
+  border-radius: 14px;
   display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto auto;
   background: rgba(255, 255, 255, 0.78);
-  box-shadow: 0 12px 24px rgba(164, 126, 148, 0.1);
+  box-shadow: 0 9px 18px rgba(164, 126, 148, 0.1);
   transition: transform 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
 }
 
@@ -4075,9 +4076,9 @@ function handlePlaylistSearchSubmit() {
 }
 
 .music-track-card:hover {
-  transform: translateY(-3px);
+  transform: translateY(-2px);
   background: rgba(255, 255, 255, 0.94);
-  box-shadow: 0 18px 32px rgba(164, 126, 148, 0.14);
+  box-shadow: 0 14px 24px rgba(164, 126, 148, 0.14);
 }
 
 .music-track-card.is-dragging {
@@ -4090,7 +4091,7 @@ function handlePlaylistSearchSubmit() {
 
 .music-track-card__cover {
   position: relative;
-  aspect-ratio: 1.42;
+  aspect-ratio: 1.34;
   overflow: hidden;
   background:
     linear-gradient(135deg, rgba(255, 226, 238, 0.9), rgba(235, 241, 255, 0.88));
@@ -4123,7 +4124,7 @@ function handlePlaylistSearchSubmit() {
   display: grid;
   place-items: center;
   color: #d56f95;
-  font-size: 18px;
+  font-size: 14px;
   font-weight: 900;
   letter-spacing: 0.08em;
 }
@@ -4131,34 +4132,34 @@ function handlePlaylistSearchSubmit() {
 .music-track-card__duration,
 .music-track-card__status {
   position: absolute;
-  min-height: 26px;
-  padding: 0 8px;
+  min-height: 20px;
+  padding: 0 6px;
   border-radius: 999px;
   display: inline-flex;
   align-items: center;
   color: #fff;
   background: rgba(82, 58, 71, 0.56);
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 800;
   backdrop-filter: blur(10px);
 }
 
 .music-track-card__duration {
-  left: 10px;
-  bottom: 10px;
+  left: 8px;
+  bottom: 8px;
 }
 
 .music-track-card__status {
-  top: 10px;
-  left: 10px;
+  top: 8px;
+  left: 8px;
   color: #d56f95;
   background: rgba(255, 255, 255, 0.86);
 }
 
 .music-track-card__cover-actions {
   position: absolute;
-  right: 12px;
-  bottom: 10px;
+  right: 9px;
+  bottom: 8px;
   display: inline-flex;
   align-items: center;
   gap: 8px;
@@ -4166,14 +4167,23 @@ function handlePlaylistSearchSubmit() {
 
 .music-track-card__play,
 .music-track-card__enqueue {
+  position: relative;
   box-sizing: border-box;
-  width: 42px;
-  height: 42px;
+  width: 36px;
+  height: 36px;
   border: 1px solid transparent;
   border-radius: 999px;
   display: grid;
   place-items: center;
   cursor: pointer;
+}
+
+.music-track-card__play::after,
+.music-track-card__enqueue::after {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border-radius: inherit;
 }
 
 .music-track-card__play {
@@ -4216,15 +4226,16 @@ function handlePlaylistSearchSubmit() {
 .music-track-card__body {
   min-width: 0;
   display: grid;
-  gap: 11px;
-  padding: 16px 18px 12px;
+  align-content: start;
+  gap: 9px;
+  padding: 14px 14px 11px;
 }
 
 .music-track-card__titleline {
   min-width: 0;
   display: flex;
   align-items: center;
-  gap: 9px;
+  gap: 7px;
 }
 
 .music-track-card__body strong {
@@ -4232,7 +4243,7 @@ function handlePlaylistSearchSubmit() {
   flex: 0 1 auto;
   min-width: 0;
   color: #594650;
-  font-size: 17px;
+  font-size: 15px;
   font-weight: 900;
   letter-spacing: 0.01em;
   line-height: 1.2;
@@ -4249,35 +4260,35 @@ function handlePlaylistSearchSubmit() {
 
 .music-track-card__meter {
   flex: 0 0 auto;
-  height: 18px;
+  height: 14px;
   display: inline-flex;
   align-items: flex-end;
-  gap: 3px;
+  gap: 2px;
 }
 
 .music-track-card__meter i {
-  width: 4px;
+  width: 3px;
   border-radius: 999px 999px 3px 3px;
   background: linear-gradient(180deg, #ffc0dd, #ff92bb);
   box-shadow: 0 4px 9px rgba(251, 114, 153, 0.12);
 }
 
 .music-track-card__meter i:nth-child(1) {
-  height: 8px;
+  height: 6px;
   opacity: 0.72;
 }
 
 .music-track-card__meter i:nth-child(2) {
-  height: 12px;
+  height: 9px;
   opacity: 0.82;
 }
 
 .music-track-card__meter i:nth-child(3) {
-  height: 16px;
+  height: 12px;
 }
 
 .music-track-card__meter i:nth-child(4) {
-  height: 18px;
+  height: 14px;
   opacity: 0.9;
 }
 
@@ -4285,7 +4296,7 @@ function handlePlaylistSearchSubmit() {
   min-width: 0;
   display: inline-flex;
   align-items: center;
-  gap: 7px;
+  gap: 5px;
   overflow: hidden;
   padding-left: 2px;
   color: #9b8a92;
@@ -4300,8 +4311,8 @@ function handlePlaylistSearchSubmit() {
 .music-track-card__artist::before {
   content: '';
   flex: 0 0 auto;
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
   border: 1.5px solid rgba(251, 114, 153, 0.56);
   border-radius: 2px;
   transform: rotate(45deg);
@@ -4310,15 +4321,15 @@ function handlePlaylistSearchSubmit() {
 
 .music-track-card__body p {
   position: relative;
-  min-height: 46px;
+  min-height: 42px;
   margin: 2px 0 0;
-  padding: 0 22px;
+  padding: 0 16px;
   display: -webkit-box;
   overflow: hidden;
   color: #938089;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 700;
-  line-height: 1.6;
+  line-height: 1.5;
   text-align: center;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
@@ -4329,7 +4340,7 @@ function handlePlaylistSearchSubmit() {
   position: absolute;
   color: #ffb1d1;
   font-family: Georgia, 'Times New Roman', serif;
-  font-size: 24px;
+  font-size: 20px;
   font-weight: 900;
   line-height: 1;
 }
@@ -4337,30 +4348,30 @@ function handlePlaylistSearchSubmit() {
 .music-track-card__quote::before {
   content: '“';
   left: 0;
-  top: -4px;
+  top: -3px;
 }
 
 .music-track-card__quote::after {
   content: '”';
   right: 2px;
-  bottom: -8px;
+  bottom: -6px;
 }
 
 .music-track-card__meta {
   min-width: 0;
   display: flex;
-  gap: 9px;
-  padding: 0 18px 14px;
+  gap: 7px;
+  padding: 0 14px 12px;
 }
 
 .music-track-card__meta span {
   overflow: hidden;
   max-width: 50%;
-  padding: 6px 10px;
+  padding: 5px 8px;
   border-radius: 999px;
   color: #ab9aa2;
   background: rgba(246, 242, 245, 0.86);
-  font-size: 12px;
+  font-size: 10px;
   font-weight: 800;
   line-height: 1;
   text-overflow: ellipsis;
@@ -4373,12 +4384,12 @@ function handlePlaylistSearchSubmit() {
 }
 
 .music-track-card__footer {
-  min-height: 52px;
+  min-height: 44px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
-  padding: 10px 16px;
+  gap: 8px;
+  padding: 7px 12px;
   border-top: 0;
   background: rgba(255, 250, 252, 0.58);
 }
@@ -4386,7 +4397,7 @@ function handlePlaylistSearchSubmit() {
 .music-track-card__year {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 5px;
   color: #a8959f;
   font-weight: 700;
   line-height: 1;
@@ -4394,8 +4405,8 @@ function handlePlaylistSearchSubmit() {
 
 .music-track-card__year-icon {
   flex: 0 0 auto;
-  width: 15px;
-  height: 15px;
+  width: 14px;
+  height: 14px;
   color: #d56f95;
   opacity: 0.72;
 }
@@ -4759,6 +4770,24 @@ function handlePlaylistSearchSubmit() {
 
   .lyric-window {
     scroll-behavior: auto;
+  }
+}
+
+@media (min-width: 861px) and (max-width: 1179px) {
+  .music-card-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1180px) {
+  .playlist-categories,
+  .category-track-board {
+    min-height: 790px;
+  }
+
+  .music-card-grid {
+    flex: 0 0 738px;
+    grid-template-rows: repeat(2, minmax(0, 1fr));
   }
 }
 

@@ -3,6 +3,26 @@ import { ref, computed } from 'vue';
 import type { User } from '@/types';
 import { getUserInfo } from '@/api/auth';
 
+interface RequestFailureLike {
+  response?: {
+    status?: unknown;
+  };
+  businessCode?: unknown;
+}
+
+function isAuthenticationRejected(error: unknown) {
+  if (!error || typeof error !== 'object') {
+    return false;
+  }
+
+  const failure = error as RequestFailureLike;
+  const status = failure.response?.status;
+  return status === 401
+    || status === 403
+    || failure.businessCode === 401
+    || failure.businessCode === 403;
+}
+
 export const useUserStore = defineStore('user', () => {
   // 用户信息
   const user = ref<User | null>(null);
@@ -80,10 +100,16 @@ export const useUserStore = defineStore('user', () => {
       setUser(latestUser);
       sessionChecked.value = true;
       return true;
-    } catch {
-      logout();
-      sessionChecked.value = true;
-      return false;
+    } catch (error) {
+      if (isAuthenticationRejected(error)) {
+        logout();
+        sessionChecked.value = true;
+        return false;
+      }
+
+      // 网络波动或服务端暂不可用时保留本地登录态，允许后续重新同步。
+      sessionChecked.value = false;
+      return isLoggedIn.value;
     }
   };
 
