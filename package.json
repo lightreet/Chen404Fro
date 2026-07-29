@@ -9,7 +9,8 @@
     "preview": "vite preview",
     "gen:sdk": "node ./scripts/generate-openapi-sdk.mjs",
     "maps:build": "node ./scripts/build-china-city-map.mjs",
-    "check:element-boundary": "node ./scripts/check-element-boundary.mjs"
+    "check:element-boundary": "node ./scripts/check-element-boundary.mjs",
+    "check:design-boundary": "node ./scripts/check-design-boundary.mjs"
   },
   "dependencies": {
     "@element-plus/icons-vue": "^2.3.2",

@@ -77,9 +77,9 @@ const handleClick = (ev: MouseEvent) => {
   justify-content: center;
   gap: 6px;
   border: 1px solid transparent;
-  border-radius: 10px;
+  border-radius: var(--radius-control);
   font-family: inherit;
-  font-weight: 500;
+  font-weight: var(--font-weight-medium);
   cursor: pointer;
   white-space: nowrap;
   user-select: none;
@@ -92,7 +92,7 @@ const handleClick = (ev: MouseEvent) => {
     color var(--motion-duration-fast) var(--motion-ease-standard);
 
   &:focus-visible {
-    outline: 2px solid var(--color-accent);
+    outline: 2px solid var(--color-focus-ring);
     outline-offset: 2px;
   }
 
@@ -151,11 +151,12 @@ const handleClick = (ev: MouseEvent) => {
 
 // ---- 变体 ----
 .ui-button--primary {
-  background: linear-gradient(135deg, var(--primary), var(--primary-light));
-  color: #fff;
+  background: var(--color-action-solid);
+  color: var(--color-on-action);
   &:not(.is-disabled):hover {
+    background: var(--color-action-hover);
     transform: translateY(-1px);
-    box-shadow: 0 8px 20px color-mix(in srgb, var(--primary) 32%, transparent);
+    box-shadow: var(--shadow-action);
   }
   &:not(.is-disabled):active {
     transform: translateY(0);
@@ -167,8 +168,8 @@ const handleClick = (ev: MouseEvent) => {
   border-color: var(--color-border);
   color: var(--color-text-primary);
   &:not(.is-disabled):hover {
-    border-color: var(--primary-light);
-    color: var(--primary);
+    border-color: var(--color-action-border);
+    color: var(--color-action-primary);
     transform: translateY(-1px);
   }
   &:not(.is-disabled):active {
@@ -177,10 +178,10 @@ const handleClick = (ev: MouseEvent) => {
 }
 
 .ui-button--ghost {
-  background: var(--color-accent-soft);
-  color: var(--primary);
+  background: var(--color-action-soft);
+  color: var(--color-action-primary);
   &:not(.is-disabled):hover {
-    background: color-mix(in srgb, var(--primary) 20%, transparent);
+    background: color-mix(in srgb, var(--color-action-primary) 20%, transparent);
   }
 }
 
@@ -190,26 +191,24 @@ const handleClick = (ev: MouseEvent) => {
   padding-left: 8px;
   padding-right: 8px;
   &:not(.is-disabled):hover {
-    color: var(--primary);
-    background: var(--color-accent-soft);
+    color: var(--color-action-primary);
+    background: var(--color-action-soft);
   }
 }
 
 .ui-button--danger {
-  background: var(--color-danger);
-  color: #fff;
+  background: var(--color-danger-solid);
+  color: var(--color-on-status);
   &:not(.is-disabled):hover {
     transform: translateY(-1px);
-    box-shadow: 0 8px 20px color-mix(in srgb, var(--color-danger) 32%, transparent);
   }
 }
 
 .ui-button--success {
-  background: var(--color-success);
-  color: #fff;
+  background: var(--color-success-solid);
+  color: var(--color-on-status);
   &:not(.is-disabled):hover {
     transform: translateY(-1px);
-    box-shadow: 0 8px 20px color-mix(in srgb, var(--color-success) 32%, transparent);
   }
 }
 </style>

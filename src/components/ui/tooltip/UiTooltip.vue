@@ -44,20 +44,20 @@ withDefaults(
 <style>
 /* 非 scoped：作用于 teleport 出去的 popper */
 .ui-tooltip__popper.el-popper {
-  --el-text-color-primary: #fff;
+  --el-text-color-primary: var(--color-on-dark);
   max-width: min(320px, calc(100vw - 32px)) !important;
-  background: color-mix(in srgb, #2a2030 92%, transparent) !important;
-  color: #fff !important;
+  background: color-mix(in srgb, var(--color-tooltip-surface) 92%, transparent) !important;
+  color: var(--color-on-dark) !important;
   border: none !important;
-  border-radius: 10px !important;
+  border-radius: var(--radius-control) !important;
   padding: 7px 11px !important;
   font-size: var(--font-size-xs) !important;
   line-height: 1.55 !important;
   white-space: normal !important;
-  box-shadow: var(--shadow-md) !important;
+  box-shadow: var(--shadow-editorial) !important;
 }
 .ui-tooltip__popper.el-popper .el-popper__arrow::before {
-  background: color-mix(in srgb, #2a2030 92%, transparent) !important;
+  background: color-mix(in srgb, var(--color-tooltip-surface) 92%, transparent) !important;
   border: none !important;
 }
 </style>

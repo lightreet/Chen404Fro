@@ -168,16 +168,16 @@ defineExpose({
   width: 100%;
   padding: 0 12px;
   background: var(--color-surface);
-  border-radius: 10px;
+  border-radius: var(--radius-control);
   box-shadow: 0 0 0 1px var(--color-border) inset;
   transition: box-shadow var(--motion-duration-base) var(--motion-ease-standard);
   color: var(--color-text-primary);
 
   &:hover:not(.is-disabled) {
-    box-shadow: 0 0 0 1px var(--primary-light) inset;
+    box-shadow: 0 0 0 1px var(--color-action-border) inset;
   }
   &.is-focused {
-    box-shadow: 0 0 0 2px var(--primary) inset;
+    box-shadow: 0 0 0 2px var(--color-focus-ring) inset;
   }
   &.is-disabled {
     opacity: 0.6;

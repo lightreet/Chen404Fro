@@ -123,7 +123,7 @@ const go = (page: number) => {
   height: 34px;
   padding: 0 8px;
   border: 1px solid transparent;
-  border-radius: 9px;
+  border-radius: var(--radius-control);
   background: var(--color-surface-muted);
   color: var(--color-text-secondary);
   font: inherit;
@@ -135,7 +135,7 @@ const go = (page: number) => {
     transform var(--motion-duration-fast) var(--motion-ease-standard);
 
   &:hover:not(:disabled):not(.is-active) {
-    color: var(--primary);
+    color: var(--color-action-primary);
     background: var(--color-accent-soft);
   }
   &:disabled {
@@ -148,8 +148,8 @@ const go = (page: number) => {
     opacity: 1;
   }
   &.is-active {
-    background: linear-gradient(135deg, var(--primary), var(--primary-light));
-    color: #fff;
+    background: var(--color-action-solid);
+    color: var(--color-on-action);
     cursor: default;
   }
 }

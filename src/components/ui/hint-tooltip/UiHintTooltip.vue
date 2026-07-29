@@ -54,7 +54,7 @@ withDefaults(
   color: var(--color-text-tertiary);
   background: transparent;
   font: inherit;
-  font-size: 15px;
+  font-size: var(--font-size-md);
   line-height: 1;
   cursor: help;
   transition:

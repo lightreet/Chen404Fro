@@ -72,10 +72,10 @@ withDefaults(
   justify-content: center;
   width: 38px;
   height: 38px;
-  border-radius: 13px;
+  border-radius: var(--radius-lg);
   background: var(--color-accent-soft);
-  color: var(--primary);
-  font-size: 20px;
+  color: var(--color-action-primary);
+  font-size: var(--font-size-xl);
   flex-shrink: 0;
 }
 

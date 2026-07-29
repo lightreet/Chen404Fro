@@ -108,7 +108,7 @@ watch(
   justify-content: center;
   padding: clamp(24px, 8vh, 96px) 16px 48px;
   overflow-y: auto;
-  background: color-mix(in srgb, #1a1320 48%, transparent);
+  background: var(--color-overlay);
   backdrop-filter: blur(3px);
 }
 
@@ -116,8 +116,8 @@ watch(
   width: 100%;
   background: var(--color-surface);
   border-radius: var(--radius-xl);
-  box-shadow: var(--shadow-lg);
-  border: 1px solid var(--color-border-light);
+  box-shadow: var(--shadow-hero);
+  border: none;
   display: flex;
   flex-direction: column;
   max-height: calc(100vh - 96px);
@@ -161,7 +161,7 @@ watch(
   background: transparent;
   color: var(--color-text-tertiary);
   cursor: pointer;
-  font-size: 18px;
+  font-size: var(--font-size-lg);
   transition:
     background-color var(--motion-duration-fast) var(--motion-ease-standard),
     color var(--motion-duration-fast) var(--motion-ease-standard);

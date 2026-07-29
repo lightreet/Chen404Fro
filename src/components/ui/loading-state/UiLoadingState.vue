@@ -104,17 +104,15 @@ withDefaults(
   justify-items: center;
   gap: 10px;
   padding: 16px 18px;
-  border-radius: 18px;
+  border-radius: var(--radius-xl);
   background: rgba(255, 255, 255, 0.92);
-  border: 1px solid rgba(238, 221, 228, 0.92);
-  box-shadow:
-    0 16px 30px rgba(196, 167, 180, 0.16),
-    inset 0 1px 0 rgba(255, 255, 255, 0.88);
+  border: none;
+  box-shadow: var(--shadow-rose), var(--shadow-inset-paper);
 }
 
 .ui-loading-state__spinner {
-  font-size: 24px;
-  color: var(--primary);
+  font-size: var(--font-size-2xl);
+  color: var(--color-action-primary);
 }
 
 .ui-loading-state__message {

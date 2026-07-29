@@ -209,7 +209,7 @@ function normalizeMinHeight(value: string) {
   text-align: center;
 
   .page-hero__content {
-    max-width: 760px;
+    max-width: var(--layout-reading-prose);
   }
 }
 

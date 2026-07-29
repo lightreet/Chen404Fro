@@ -303,8 +303,8 @@ watch(
 }
 
 .article-content-wrapper {
-  --article-content-width: 840px;
-  --article-prose-width: 760px;
+  --article-content-width: var(--layout-reading-content);
+  --article-prose-width: var(--layout-reading-prose);
 
   background: var(--bg-secondary);
   border-radius: var(--radius-lg);

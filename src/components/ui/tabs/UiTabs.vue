@@ -106,7 +106,7 @@ const select = (item: UiTabItem) => {
   padding: 0 5px;
   border-radius: var(--radius-pill);
   background: var(--color-accent-soft);
-  color: var(--primary-dark);
+  color: var(--color-action-primary);
   font-size: var(--font-size-xs);
 }
 
@@ -132,12 +132,12 @@ const select = (item: UiTabItem) => {
       bottom: -1px;
       height: 2px;
       border-radius: var(--radius-pill);
-      background: linear-gradient(90deg, var(--primary), var(--primary-light));
+      background: var(--color-action-primary);
       transform: scaleX(0);
       transition: transform var(--motion-duration-base) var(--motion-ease-entrance);
     }
     &.is-active {
-      color: var(--primary);
+      color: var(--color-action-primary);
       &::after {
         transform: scaleX(1);
       }
@@ -160,8 +160,8 @@ const select = (item: UiTabItem) => {
 
     &.is-active {
       background: var(--color-surface);
-      color: var(--primary);
-      box-shadow: var(--shadow-sm);
+      color: var(--color-action-primary);
+      box-shadow: var(--shadow-quiet);
     }
   }
 }

@@ -39,7 +39,7 @@ withDefaults(
   position: relative;
   overflow: hidden;
   width: 100%;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: linear-gradient(90deg, rgba(233, 226, 232, 0.92), rgba(247, 242, 246, 0.98), rgba(233, 226, 232, 0.92));
 }
 
@@ -58,7 +58,7 @@ withDefaults(
 .ui-skeleton__line.is-title {
   width: 62%;
   height: 20px;
-  border-radius: 12px;
+  border-radius: var(--radius-lg);
 }
 
 .ui-skeleton--sm .ui-skeleton__line.is-title {
