@@ -512,9 +512,7 @@ const navItems = computed<NavItem[]>(() => [
   },
   { key: 'memory-map', name: '旅行地图', path: '/memory-map', to: '/memory-map', icon: 'Place' },
   { key: 'music', name: '音乐馆', path: '/music', to: '/music', icon: 'Headset' },
-  ...(isLoggedIn.value
-    ? [{ key: 'bookshelf', name: '书架', path: '/bookshelf', to: '/bookshelf', icon: 'book' }]
-    : []),
+  { key: 'bookshelf', name: '书架', path: '/bookshelf', to: '/bookshelf', icon: 'book' },
   {
     key: 'more',
     name: '更多',

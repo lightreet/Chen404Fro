@@ -231,8 +231,7 @@ const routes: RouteRecordRaw[] = [
     name: 'Bookshelf',
     component: () => import('@/views/Reader/Bookshelf.vue'),
     meta: {
-      title: '我的书架',
-      requiresAuth: true,
+      title: '书架',
     },
   },
   {
@@ -241,7 +240,6 @@ const routes: RouteRecordRaw[] = [
     component: () => import('@/views/Reader/Reader.vue'),
     meta: {
       title: '小说阅读',
-      requiresAuth: true,
     },
   },
   {

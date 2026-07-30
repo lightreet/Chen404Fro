@@ -203,7 +203,9 @@
 
         <p class="preference-status">
           <UiIcon :name="preferenceSaving ? 'loading' : 'success'" :spin="preferenceSaving" />
-          {{ preferenceSaving ? '正在同步设置…' : '设置会同步到你的其他设备' }}
+          {{ preferenceSaving
+            ? '正在同步设置…'
+            : isLoggedIn ? '设置会同步到你的其他设备' : '当前设置保存在此设备，登录后可同步' }}
         </p>
       </div>
     </UiDrawer>
@@ -232,6 +234,7 @@ import {
   ref,
   watch,
 } from 'vue'
+import { storeToRefs } from 'pinia'
 import { useRoute, useRouter } from 'vue-router'
 import {
   UiButton,
@@ -254,6 +257,7 @@ import {
   searchReaderBook,
 } from '@/api/reader'
 import { useReaderAssetResolver } from '@/composables/reader/useReaderAssetResolver'
+import { useUserStore } from '@/stores/user'
 import type {
   ReaderBook,
   ReaderChapter,
@@ -274,6 +278,9 @@ interface LocalReaderProgress extends ReaderProgressCommand {
 
 const route = useRoute()
 const router = useRouter()
+const userStore = useUserStore()
+userStore.initUser()
+const { isLoggedIn } = storeToRefs(userStore)
 const bookId = computed(() => String(route.params.bookId))
 const book = ref<ReaderBook>()
 const chapter = ref<ReaderChapter>()
@@ -439,7 +446,7 @@ const saveCurrentPosition = async (server = true) => {
   if (!progress) return
   persistLocal(progress)
   currentProgress.value = Number(progress.progressPercent)
-  if (server) {
+  if (server && isLoggedIn.value) {
     await saveReaderProgress(bookId.value, progress)
   }
 }
@@ -454,9 +461,11 @@ const scheduleProgressSave = () => {
   persistLocal(progress)
   currentProgress.value = Number(progress.progressPercent)
   window.clearTimeout(progressTimer)
-  progressTimer = window.setTimeout(() => {
-    runSilently(saveReaderProgress(bookId.value, progress))
-  }, 1200)
+  if (isLoggedIn.value) {
+    progressTimer = window.setTimeout(() => {
+      runSilently(saveReaderProgress(bookId.value, progress))
+    }, 1200)
+  }
 }
 
 const updateCurrentPosition = () => {
@@ -499,7 +508,7 @@ const clearSearch = () => {
 
 const schedulePreferenceSave = () => {
   localStorage.setItem('chen404:reader-preference', JSON.stringify(preference))
-  if (!initializedPreference) return
+  if (!initializedPreference || !isLoggedIn.value) return
   window.clearTimeout(preferenceTimer)
   preferenceTimer = window.setTimeout(async () => {
     preferenceSaving.value = true
@@ -514,7 +523,7 @@ const schedulePreferenceSave = () => {
   }, 600)
 }
 
-const normalizePreference = (value: ReaderPreference): ReaderPreference => ({
+const normalizePreference = (value: Partial<ReaderPreference>): ReaderPreference => ({
   fontSize: Number(value.fontSize || 18),
   lineHeight: Number(value.lineHeight || 1.85),
   contentWidth: Number(value.contentWidth || 720),
@@ -526,12 +535,14 @@ const normalizePreference = (value: ReaderPreference): ReaderPreference => ({
 const loadInitial = async () => {
   loading.value = true
   try {
-    const [loadedBook, loadedToc, serverProgress, serverPreference] = await Promise.all([
+    const signedIn = await userStore.syncAuthState()
+    const [loadedBook, loadedToc] = await Promise.all([
       getReaderBook(bookId.value),
       getReaderToc(bookId.value),
-      getReaderProgress(bookId.value),
-      getReaderPreference(),
     ])
+    const [serverProgress, serverPreference] = signedIn
+      ? await Promise.all([getReaderProgress(bookId.value), getReaderPreference()])
+      : [null, null]
     book.value = loadedBook
     toc.value = loadedToc
     let localPreference: Partial<ReaderPreference> = {}
@@ -540,8 +551,8 @@ const loadInitial = async () => {
     } catch {
       localPreference = {}
     }
-    Object.assign(preference, normalizePreference({ ...serverPreference, ...localPreference }))
-    initializedPreference = true
+    Object.assign(preference, normalizePreference({ ...(serverPreference || {}), ...localPreference }))
+    initializedPreference = signedIn
 
     const localProgress = readLocalProgress()
     const restore = chooseRestoreProgress(serverProgress, localProgress)

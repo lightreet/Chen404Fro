@@ -10,10 +10,11 @@
         :bg-position="heroBgPosition"
         min-height="64vh"
         compact
+        scroll-target="#about-content"
       />
     </template>
 
-    <div class="about-page">
+    <div id="about-content" class="about-page">
       <section class="community-section" aria-labelledby="about-community-title">
         <header class="section-heading">
           <div>

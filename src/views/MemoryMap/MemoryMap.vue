@@ -9,10 +9,11 @@
         :bg-position="heroBgPosition"
         min-height="64vh"
         compact
+        scroll-target="#memory-map-content"
       />
     </template>
 
-    <div class="memory-map-page">
+    <div id="memory-map-content" class="memory-map-page">
       <section v-if="!authReady" class="memory-map-access-state" aria-live="polite">
         <div class="gallery-state memory-map-access-state__body">正在确认旅行地图访问权限...</div>
       </section>

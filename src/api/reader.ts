@@ -17,7 +17,10 @@ export function importReaderBook(file: File, options: ReaderImportOptions = {}):
   formData.append('file', file)
   if (options.title?.trim()) formData.append('title', options.title.trim())
   if (options.author?.trim()) formData.append('author', options.author.trim())
+  if (options.description?.trim()) formData.append('description', options.description.trim())
   if (options.encoding?.trim()) formData.append('encoding', options.encoding.trim())
+  if (options.visibility) formData.append('visibility', options.visibility)
+  if (options.coverFileId != null) formData.append('coverFileId', String(options.coverFileId))
   return post('/reader/books/import', formData, {
     timeout: 120_000,
     timeoutErrorMessage: '小说解析时间较长，本次请求已超时，请检查文件大小后重试',
@@ -26,6 +29,12 @@ export function importReaderBook(file: File, options: ReaderImportOptions = {}):
       options.onProgress(Math.min(99, Math.round((event.loaded / event.total) * 100)))
     },
   })
+}
+
+export function uploadReaderBookCover(file: File): Promise<{ id?: ReaderId; url: string; name: string }> {
+  const formData = new FormData()
+  formData.append('file', file)
+  return post('/upload/novel-cover', formData)
 }
 
 export function listReaderBooks(): Promise<ReaderBook[]> {

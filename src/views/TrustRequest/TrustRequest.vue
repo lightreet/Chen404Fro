@@ -9,10 +9,11 @@
         :bg-position="heroBgPosition"
         min-height="64vh"
         compact
+        scroll-target="#trust-request-content"
       />
     </template>
 
-    <div class="trust-request-page">
+    <div id="trust-request-content" class="trust-request-page">
       <FeatureAccessCover
         v-if="!authReady || !isLoggedIn"
         v-bind="trustRequestLoginCover"

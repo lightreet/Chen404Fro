@@ -1,4 +1,5 @@
 export type ReaderId = number | string
+export type ReaderBookVisibility = 'public' | 'private'
 export type ReaderTheme = 'light' | 'rose' | 'dark'
 export type ReaderFontFamily = 'serif' | 'sans'
 
@@ -8,6 +9,8 @@ export interface ReaderBook {
   author?: string
   description?: string
   language?: string
+  visibility: ReaderBookVisibility
+  ownedByCurrentUser: boolean
   sourceFormat: 'txt' | 'epub' | 'html' | 'markdown' | 'fb2' | string
   sourceEncoding?: string
   status: 'ready' | 'failed'
@@ -82,6 +85,8 @@ export interface ReaderBookUpdateCommand {
   title: string
   author?: string
   description?: string
+  coverFileId?: ReaderId
+  visibility: ReaderBookVisibility
 }
 
 export interface ReaderSearchResult {
@@ -94,6 +99,9 @@ export interface ReaderSearchResult {
 export interface ReaderImportOptions {
   title?: string
   author?: string
+  description?: string
   encoding?: string
+  visibility?: ReaderBookVisibility
+  coverFileId?: ReaderId
   onProgress?: (percent: number) => void
 }
