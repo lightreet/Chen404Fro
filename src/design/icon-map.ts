@@ -14,6 +14,7 @@ import mdiArchiveOutline from '@iconify/icons-mdi/archive-outline'
 import mdiArrowLeft from '@iconify/icons-mdi/arrow-left'
 import mdiArrowRight from '@iconify/icons-mdi/arrow-right'
 import mdiBellOutline from '@iconify/icons-mdi/bell-outline'
+import mdiBookOpenPageVariantOutline from '@iconify/icons-mdi/book-open-page-variant-outline'
 import mdiCalendarBlankOutline from '@iconify/icons-mdi/calendar-blank-outline'
 import mdiCalendarClock from '@iconify/icons-mdi/calendar-clock'
 import mdiChatOutline from '@iconify/icons-mdi/chat-outline'
@@ -138,6 +139,7 @@ export const iconMap = {
   // 内容与导航
   home: mdiHomeOutline,
   article: mdiFileDocumentOutline,
+  book: mdiBookOpenPageVariantOutline,
   category: mdiTagMultipleOutline,
   tag: mdiTagOutline,
   archive: mdiArchiveOutline,

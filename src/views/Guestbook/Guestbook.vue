@@ -9,10 +9,11 @@
         :bg-position="heroBgPosition"
         min-height="64vh"
         compact
+        scroll-target="#guestbook-content"
       />
     </template>
 
-    <div class="guestbook-page">
+    <div id="guestbook-content" class="guestbook-page">
       <div class="guestbook-content">
         <CommentSection :can-comment="true" :comment-policy="3" />
       </div>

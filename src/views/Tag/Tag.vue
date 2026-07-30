@@ -9,6 +9,7 @@
         :bg-position="heroBgPosition"
         min-height="64vh"
         compact
+        scroll-target="#tag-content"
       >
         <template #meta>
           <div class="hero-meta">
@@ -18,7 +19,7 @@
       </PageHero>
     </template>
 
-    <div class="tag-page">
+    <div id="tag-content" class="tag-page">
       <div v-if="loading" class="loading-state">
         <UiIcon class="loading-icon" name="Loading" />
         <p>加载中…</p>

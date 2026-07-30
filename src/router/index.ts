@@ -216,15 +216,20 @@ const routes: RouteRecordRaw[] = [
     },
   },
   {
-    path: '/trust-request',
-    name: 'TrustRequest',
-    redirect: to => ({
-      path: '/profile',
-      query: {
-        ...to.query,
-        tab: 'trust',
-      },
-    }),
+    path: '/bookshelf',
+    name: 'Bookshelf',
+    component: () => import('@/views/Reader/Bookshelf.vue'),
+    meta: {
+      title: '书架',
+    },
+  },
+  {
+    path: '/reader/:bookId',
+    name: 'NovelReader',
+    component: () => import('@/views/Reader/Reader.vue'),
+    meta: {
+      title: '小说阅读',
+    },
   },
   {
     path: '/profile',

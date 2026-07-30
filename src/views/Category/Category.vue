@@ -9,6 +9,7 @@
         :bg-position="heroBgPosition"
         min-height="64vh"
         compact
+        scroll-target="#category-content"
       >
         <template #meta>
           <div class="hero-meta">
@@ -18,7 +19,7 @@
       </PageHero>
     </template>
 
-    <div class="category-page">
+    <div id="category-content" class="category-page">
       <!-- 加载中 -->
       <div v-if="loading" class="loading-state">
         <UiIcon class="loading-icon" name="Loading" />

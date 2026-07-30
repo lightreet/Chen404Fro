@@ -25,6 +25,8 @@ const showAssistant = computed(() => {
   const path = route.path;
   return !(
     path.startsWith('/admin')
+    || path.startsWith('/reader/')
+    || path === '/bookshelf'
     || path === '/login'
     || path === '/register'
     || path === '/forgot-password'

@@ -125,7 +125,8 @@ Route / Page -> Feature -> components/app (App*) -> components/ui (Ui*) -> desig
 /register                 注册
 /profile                  个人中心（资料与“我的创作”）
 /studio                   旧创作中心兼容入口，重定向到 /profile?tab=creations
-/trust-request            好友申请（公开入口，提交时要求登录）
+/bookshelf                书架与阅读清单
+/reader/:bookId           小说阅读器
 /admin                    后台管理（管理员）
 /memory-map               旅行纪念地图（公开入口，内容按权限展示）
 /memory-map/detail/:id    旧详情链接兼容入口，重定向到 /memory-map?focus=:id
@@ -228,7 +229,7 @@ Route / Page -> Feature -> components/app (App*) -> components/ui (Ui*) -> desig
 当前已接入的页面封面 key：
 
 ```text
-trust-request / home / archive / memory-map / music / category / about / guestbook
+home / category / archive / development-history / memory-map / music / bookshelf / guestbook / about
 ```
 
 ## 7. 关键业务模块

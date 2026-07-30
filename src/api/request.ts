@@ -302,6 +302,21 @@ export function installGeneratedSdkInterceptors(client: AxiosInstance) {
   installRequestInterceptors(client, { unwrapBusinessData: false });
 }
 
+const rawRequest: AxiosInstance = axios.create({
+  baseURL: import.meta.env.VITE_API_BASE_URL || '/api',
+  timeout: DEFAULT_REQUEST_TIMEOUT_MS,
+});
+installRequestInterceptors(rawRequest, { unwrapBusinessData: false });
+
+/** 下载需要登录态的二进制资源，不经过业务 JSON 解包。 */
+export async function getBlob(url: string, config?: RequestConfig): Promise<Blob> {
+  const response = await rawRequest.get(url, {
+    ...config,
+    responseType: 'blob',
+  });
+  return response.data as Blob;
+}
+
 // 封装 GET 请求
 export function get<T>(url: string, params?: object, config?: RequestConfig): Promise<T> {
   return request.get(url, { ...config, params }) as Promise<T>;

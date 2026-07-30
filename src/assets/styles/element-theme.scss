@@ -193,6 +193,11 @@
   border-radius: var(--radius-lg);
 }
 
+// UiDialog 位于 2100 层，选择器菜单必须高于弹窗才能在导入等弹窗表单中正常显示。
+.el-select__popper.el-popper {
+  z-index: var(--z-popover) !important;
+}
+
 // 消息提示：圆润 + 柔和阴影
 .el-message {
   border-radius: var(--radius-pill);

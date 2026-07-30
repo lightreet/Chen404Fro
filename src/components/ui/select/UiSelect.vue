@@ -67,6 +67,18 @@ const onChange = (v: SelectValue) => emit('change', v)
   width: 100%;
 }
 
+.ui-select--sm :deep(.el-select__wrapper) {
+  min-height: var(--control-height-sm);
+}
+
+.ui-select--md :deep(.el-select__wrapper) {
+  min-height: var(--control-height-md);
+}
+
+.ui-select--lg :deep(.el-select__wrapper) {
+  min-height: var(--control-height-lg);
+}
+
 .ui-select--borderless {
   :deep(.el-select__wrapper) {
     border: none;

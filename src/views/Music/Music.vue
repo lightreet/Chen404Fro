@@ -10,10 +10,11 @@
         min-height="64vh"
         :wave-height="132"
         compact
+        scroll-target="#music-content"
       />
     </template>
 
-    <div class="music-page">
+    <div id="music-content" class="music-page">
       <section class="radio-panel">
         <div class="radio-panel__primary">
           <div class="radio-panel__visual">

@@ -9,10 +9,11 @@
         :bg-position="heroBgPosition"
         min-height="64vh"
         compact
+        scroll-target="#user-profile-content"
       />
     </template>
 
-    <main class="user-profile-page">
+    <main id="user-profile-content" class="user-profile-page">
       <section v-if="loading" class="profile-state">正在加载用户资料...</section>
       <section v-else-if="!profile" class="profile-state">没有找到这个用户。</section>
 
