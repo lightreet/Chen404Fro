@@ -216,17 +216,6 @@ const routes: RouteRecordRaw[] = [
     },
   },
   {
-    path: '/trust-request',
-    name: 'TrustRequest',
-    redirect: to => ({
-      path: '/profile',
-      query: {
-        ...to.query,
-        tab: 'trust',
-      },
-    }),
-  },
-  {
     path: '/bookshelf',
     name: 'Bookshelf',
     component: () => import('@/views/Reader/Bookshelf.vue'),

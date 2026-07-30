@@ -75,8 +75,12 @@ async function loadDevelopmentHistory(force = false) {
 onMounted(() => {
   void loadDevelopmentHistory()
   void loadSiteConfig(true).then((config) => {
-    heroBgImage.value = config.heroImages?.archive || DEFAULT_HERO
-    heroBgPosition.value = resolveHeroImagePosition(config, 'archive', DEFAULT_HERO_POSITION)
+    heroBgImage.value = config.heroImages?.['development-history'] || DEFAULT_HERO
+    heroBgPosition.value = resolveHeroImagePosition(
+      config,
+      'development-history',
+      DEFAULT_HERO_POSITION,
+    )
   })
 })
 </script>

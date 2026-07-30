@@ -168,47 +168,154 @@
           </section>
 
         <section v-show="activeTab === 'hero'" class="settings-section settings-section--wide">
-            <div class="section-head">
+          <div class="section-head section-head--hero">
+            <div>
               <h3>页面封面</h3>
+              <p>按前台导航选择页面，每次集中编辑一张封面。</p>
             </div>
+            <span class="hero-summary">{{ configuredHeroCount }}/{{ heroPages.length }} 已配置</span>
+          </div>
 
-            <div class="hero-grid">
-              <section v-for="item in heroPages" :key="item.key" class="hero-panel">
-                <div class="hero-preview">
-                  <HeroImageFocusEditor
-                    :image-url="heroImages[item.key]"
-                    :position="heroImagePositions[item.key]"
-                    @update:position="heroImagePositions[item.key] = $event"
-                  />
-                </div>
-                <div class="hero-panel__body">
-                  <h4>{{ item.label }}</h4>
-                  <div class="hero-actions">
-                    <UiUpload
-                      :show-file-list="false"
-                      :before-upload="beforeImageUpload"
-                      :http-request="(options) => handleHeroUpload(item.key, options)"
-                      accept="image/*"
+          <div class="hero-workspace">
+            <nav class="hero-page-menu" aria-label="页面封面分类">
+              <p class="hero-page-menu__label">前台导航</p>
+              <div class="hero-page-menu__items">
+                <template v-for="item in heroNavigationItems" :key="item.key">
+                  <button
+                    v-if="item.type === 'page'"
+                    type="button"
+                    class="hero-page-menu__item"
+                    :class="{ 'is-active': activeHeroKey === item.key }"
+                    :aria-pressed="activeHeroKey === item.key"
+                    @click="selectHeroPage(item.key)"
+                  >
+                    <UiIcon :name="item.icon" class="hero-page-menu__icon" />
+                    <span class="hero-page-menu__name">{{ item.label }}</span>
+                    <span class="hero-page-menu__suffix">
+                      <span
+                        class="hero-page-menu__status"
+                        :class="{ 'is-configured': Boolean(heroImages[item.key]) }"
+                        :title="heroImages[item.key] ? '已配置封面' : '使用默认封面'"
+                      />
+                    </span>
+                  </button>
+
+                  <div
+                    v-else
+                    class="hero-page-menu__submenu"
+                    :class="{
+                      'is-open': expandedHeroMenus[item.key],
+                    }"
+                  >
+                    <button
+                      type="button"
+                      class="hero-page-menu__item hero-page-menu__trigger"
+                      :class="{ 'is-active': isHeroMenuActive(item) }"
+                      :aria-expanded="expandedHeroMenus[item.key]"
+                      :aria-controls="`hero-submenu-${item.key}`"
+                      @click="toggleHeroMenu(item.key)"
                     >
-                      <UiButton icon="upload" :loading="uploadingKey === item.key">上传</UiButton>
-                    </UiUpload>
-                    <UiButton
-                      v-if="heroImages[item.key]"
-                      variant="danger"
-                      icon="delete"
-                      @click="clearHeroImage(item.key)"
+                      <UiIcon :name="item.icon" class="hero-page-menu__icon" />
+                      <span class="hero-page-menu__name">{{ item.label }}</span>
+                      <span class="hero-page-menu__suffix">
+                        <span class="hero-page-menu__count">
+                          {{ configuredHeroCountFor(item) }}/{{ item.pages.length }}
+                        </span>
+                        <UiIcon
+                          name="arrow-down"
+                          class="hero-page-menu__chevron"
+                          aria-hidden="true"
+                        />
+                      </span>
+                    </button>
+
+                    <div
+                      v-show="expandedHeroMenus[item.key]"
+                      :id="`hero-submenu-${item.key}`"
+                      class="hero-page-menu__children"
                     >
-                      清除
-                    </UiButton>
+                      <button
+                        v-for="child in item.pages"
+                        :key="child.key"
+                        type="button"
+                        class="hero-page-menu__item hero-page-menu__child"
+                        :class="{ 'is-active': activeHeroKey === child.key }"
+                        :aria-pressed="activeHeroKey === child.key"
+                        @click="selectHeroPage(child.key, item.key)"
+                      >
+                        <UiIcon :name="child.icon" class="hero-page-menu__icon" />
+                        <span class="hero-page-menu__name">{{ child.label }}</span>
+                        <span class="hero-page-menu__suffix">
+                          <span
+                            class="hero-page-menu__status"
+                            :class="{ 'is-configured': Boolean(heroImages[child.key]) }"
+                            :title="heroImages[child.key] ? '已配置封面' : '使用默认封面'"
+                          />
+                        </span>
+                      </button>
+                    </div>
                   </div>
-                  <UiInput
-                    v-model="heroImages[item.key]"
-                    clearable
-                    placeholder="粘贴图片 URL，支持 GIF"
-                  />
+                </template>
+              </div>
+            </nav>
+
+            <section class="hero-editor" :aria-labelledby="`hero-editor-${activeHeroKey}`">
+              <header class="hero-editor__head">
+                <div class="hero-editor__identity">
+                  <span class="hero-editor__icon" aria-hidden="true">
+                    <UiIcon :name="activeHeroPage.icon" />
+                  </span>
+                  <div>
+                    <div class="hero-editor__title-row">
+                      <h4 :id="`hero-editor-${activeHeroKey}`">{{ activeHeroPage.label }}</h4>
+                      <span class="hero-editor__group">{{ activeHeroNavigationLabel }}</span>
+                    </div>
+                    <p>{{ activeHeroPage.description }}</p>
+                  </div>
                 </div>
-              </section>
-            </div>
+                <span class="hero-editor__state" :class="{ 'is-configured': activeHeroImage }">
+                  {{ activeHeroImage ? '已配置自定义封面' : '当前使用默认封面' }}
+                </span>
+              </header>
+
+              <div class="hero-preview">
+                <HeroImageFocusEditor
+                  :key="activeHeroKey"
+                  :image-url="activeHeroImage"
+                  :position="heroImagePositions[activeHeroKey]"
+                  @update:position="heroImagePositions[activeHeroKey] = $event"
+                />
+              </div>
+
+              <div class="hero-editor__controls">
+                <div class="hero-actions">
+                  <UiUpload
+                    :show-file-list="false"
+                    :before-upload="beforeImageUpload"
+                    :http-request="(options) => handleHeroUpload(activeHeroKey, options)"
+                    accept="image/*"
+                  >
+                    <UiButton icon="upload" :loading="uploadingKey === activeHeroKey">
+                      上传封面
+                    </UiButton>
+                  </UiUpload>
+                  <UiButton
+                    v-if="activeHeroImage"
+                    variant="danger"
+                    icon="delete"
+                    @click="clearHeroImage(activeHeroKey)"
+                  >
+                    清除封面
+                  </UiButton>
+                </div>
+                <UiInput
+                  v-model="heroImages[activeHeroKey]"
+                  clearable
+                  placeholder="粘贴图片 URL，支持 GIF"
+                />
+              </div>
+            </section>
+          </div>
           </section>
 
         <div v-show="activeTab === 'ai'" class="settings-pane settings-pane--wide">
@@ -232,7 +339,7 @@
 import { computed, onMounted, reactive, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { notify } from '@/lib/feedback';
-import { UiPanel, UiButton, UiTabs, UiForm, UiFormField, UiInput, UiLoadingState, UiSwitch, UiTextarea, UiUpload } from '@/components/ui';
+import { UiPanel, UiButton, UiIcon, UiTabs, UiForm, UiFormField, UiInput, UiLoadingState, UiSwitch, UiTextarea, UiUpload } from '@/components/ui';
 import type { UiTabItem } from '@/components/ui';
 import type { UploadRequestOptions } from '@/components/ui';
 import { getSiteConfig, updateSiteConfig } from '@/api/home';
@@ -255,26 +362,128 @@ const tabItems: UiTabItem[] = [
   { label: 'AI 助手', value: 'ai' },
 ];
 
-type HeroKey = 'home' | 'archive' | 'memory-map' | 'trust-request' | 'music' | 'category' | 'about' | 'guestbook';
+type HeroKey =
+  | 'home'
+  | 'archive'
+  | 'development-history'
+  | 'memory-map'
+  | 'music'
+  | 'bookshelf'
+  | 'category'
+  | 'about'
+  | 'guestbook';
+type HeroMenuKey = 'timeline' | 'more';
 type AssetKey = 'siteLogo' | 'siteFavicon';
 type UploadingKey = HeroKey | AssetKey | '';
 
-const heroPages: Array<{ key: HeroKey; label: string }> = [
-  { key: 'trust-request', label: '好友申请' },
-  { key: 'home', label: '首页' },
-  { key: 'archive', label: '时光轴' },
-  { key: 'memory-map', label: '旅行地图' },
-  { key: 'music', label: '音乐馆' },
-  { key: 'category', label: '分类页' },
-  { key: 'about', label: '关于页' },
-  { key: 'guestbook', label: '留言板' },
+interface HeroPage {
+  key: HeroKey;
+  label: string;
+  icon: string;
+  description: string;
+}
+
+interface HeroPageNavigationItem extends HeroPage {
+  type: 'page';
+}
+
+interface HeroPageMenu {
+  type: 'menu';
+  key: HeroMenuKey;
+  label: string;
+  icon: string;
+  pages: HeroPage[];
+}
+
+type HeroNavigationItem = HeroPageNavigationItem | HeroPageMenu;
+
+const heroNavigationItems: HeroNavigationItem[] = [
+  {
+    type: 'page',
+    key: 'home',
+    label: '首页',
+    icon: 'HomeFilled',
+    description: '站点首页顶部展示的主封面。',
+  },
+  {
+    type: 'page',
+    key: 'category',
+    label: '分类',
+    icon: 'List',
+    description: '文章分类浏览页顶部展示的封面。',
+  },
+  {
+    type: 'menu',
+    key: 'timeline',
+    label: '时光轴',
+    icon: 'clock',
+    pages: [
+      {
+        key: 'archive',
+        label: '文章记录',
+        icon: 'article',
+        description: '顶部导航「时光轴」菜单中的文章记录页面封面。',
+      },
+      {
+        key: 'development-history',
+        label: '开发历程',
+        icon: 'branch',
+        description: '顶部导航「时光轴」菜单中的开发历程页面封面。',
+      },
+    ],
+  },
+  {
+    type: 'page',
+    key: 'memory-map',
+    label: '旅行地图',
+    icon: 'Place',
+    description: '旅行地图与旅行记忆入口顶部展示的封面。',
+  },
+  {
+    type: 'page',
+    key: 'music',
+    label: '音乐馆',
+    icon: 'Headset',
+    description: '音乐馆入口顶部展示的封面。',
+  },
+  {
+    type: 'page',
+    key: 'bookshelf',
+    label: '书架',
+    icon: 'book',
+    description: '书架入口顶部展示的封面。',
+  },
+  {
+    type: 'menu',
+    key: 'more',
+    label: '更多',
+    icon: 'more',
+    pages: [
+      {
+        key: 'guestbook',
+        label: '留言板',
+        icon: 'ChatDotRound',
+        description: '顶部导航「更多」菜单中的留言板页面封面。',
+      },
+      {
+        key: 'about',
+        label: '关于本站',
+        icon: 'InfoFilled',
+        description: '顶部导航「更多」菜单中的关于本站页面封面。',
+      },
+    ],
+  },
 ];
+const heroPages = heroNavigationItems.flatMap((item) =>
+  item.type === 'page' ? [item] : item.pages,
+);
 const HERO_DEFAULT_POSITIONS: Record<HeroKey, string> = {
   home: '50% 58%',
   archive: '50% 44%',
+  'development-history': '50% 44%',
   'memory-map': '50% 48%',
-  'trust-request': '50% 48%',
   music: '50% 52%',
+  bookshelf: '50% 47%',
   category: '50% 40%',
   about: '50% 42%',
   guestbook: '50% 40%',
@@ -284,6 +493,46 @@ const { setSiteConfig } = useSiteConfig();
 const router = useRouter();
 
 const activeTab = ref('basic');
+const activeHeroKey = ref<HeroKey>('home');
+const expandedHeroMenus = reactive<Record<HeroMenuKey, boolean>>({
+  timeline: false,
+  more: false,
+});
+const activeHeroPage = computed(
+  () => heroPages.find((item) => item.key === activeHeroKey.value) ?? heroPages[0],
+);
+const activeHeroNavigationLabel = computed(() => {
+  const navigationItem = heroNavigationItems.find((item) =>
+    item.type === 'page'
+      ? item.key === activeHeroKey.value
+      : item.pages.some((page) => page.key === activeHeroKey.value),
+  );
+  return navigationItem?.type === 'menu' ? `${navigationItem.label}菜单` : '前台导航';
+});
+const activeHeroImage = computed(() => heroImages[activeHeroKey.value]);
+const configuredHeroCount = computed(
+  () => heroPages.filter((item) => Boolean(heroImages[item.key].trim())).length,
+);
+
+function isHeroMenuActive(menu: HeroPageMenu) {
+  return menu.pages.some((page) => page.key === activeHeroKey.value);
+}
+
+function configuredHeroCountFor(menu: HeroPageMenu) {
+  return menu.pages.filter((page) => Boolean(heroImages[page.key].trim())).length;
+}
+
+function toggleHeroMenu(menuKey: HeroMenuKey) {
+  expandedHeroMenus[menuKey] = !expandedHeroMenus[menuKey];
+}
+
+function selectHeroPage(heroKey: HeroKey, menuKey?: HeroMenuKey) {
+  activeHeroKey.value = heroKey;
+  if (menuKey) {
+    expandedHeroMenus[menuKey] = true;
+  }
+}
+
 const activeTabManagesOwnActions = computed(() =>
   activeTab.value === 'ai' || activeTab.value === 'github-development',
 );
@@ -309,9 +558,10 @@ const form = reactive<Required<Omit<SiteConfig, 'heroImages' | 'heroImagePositio
 const heroImages = reactive<Record<HeroKey, string>>({
   home: '',
   archive: '',
+  'development-history': '',
   'memory-map': '',
-  'trust-request': '',
   music: '',
+  bookshelf: '',
   category: '',
   about: '',
   guestbook: '',
@@ -319,9 +569,10 @@ const heroImages = reactive<Record<HeroKey, string>>({
 const heroImagePositions = reactive<Record<HeroKey, string>>({
   home: HERO_DEFAULT_POSITIONS.home,
   archive: HERO_DEFAULT_POSITIONS.archive,
+  'development-history': HERO_DEFAULT_POSITIONS['development-history'],
   'memory-map': HERO_DEFAULT_POSITIONS['memory-map'],
-  'trust-request': HERO_DEFAULT_POSITIONS['trust-request'],
   music: HERO_DEFAULT_POSITIONS.music,
+  bookshelf: HERO_DEFAULT_POSITIONS.bookshelf,
   category: HERO_DEFAULT_POSITIONS.category,
   about: HERO_DEFAULT_POSITIONS.about,
   guestbook: HERO_DEFAULT_POSITIONS.guestbook,
@@ -344,20 +595,24 @@ function applyConfig(config: SiteConfig) {
 
   heroImages.home = config.heroImages?.home ?? '';
   heroImages.archive = config.heroImages?.archive ?? '';
+  heroImages['development-history'] = config.heroImages?.['development-history'] ?? '';
   heroImages['memory-map'] = config.heroImages?.['memory-map'] ?? '';
-  heroImages['trust-request'] = config.heroImages?.['trust-request'] ?? '';
   heroImages.music = config.heroImages?.music ?? '';
+  heroImages.bookshelf = config.heroImages?.bookshelf ?? '';
   heroImages.category = config.heroImages?.category ?? '';
   heroImages.about = config.heroImages?.about ?? '';
   heroImages.guestbook = config.heroImages?.guestbook ?? '';
 
   heroImagePositions.home = config.heroImagePositions?.home ?? HERO_DEFAULT_POSITIONS.home;
   heroImagePositions.archive = config.heroImagePositions?.archive ?? HERO_DEFAULT_POSITIONS.archive;
+  heroImagePositions['development-history'] =
+    config.heroImagePositions?.['development-history']
+    ?? HERO_DEFAULT_POSITIONS['development-history'];
   heroImagePositions['memory-map'] =
     config.heroImagePositions?.['memory-map'] ?? HERO_DEFAULT_POSITIONS['memory-map'];
-  heroImagePositions['trust-request'] =
-    config.heroImagePositions?.['trust-request'] ?? HERO_DEFAULT_POSITIONS['trust-request'];
   heroImagePositions.music = config.heroImagePositions?.music ?? HERO_DEFAULT_POSITIONS.music;
+  heroImagePositions.bookshelf =
+    config.heroImagePositions?.bookshelf ?? HERO_DEFAULT_POSITIONS.bookshelf;
   heroImagePositions.category = config.heroImagePositions?.category ?? HERO_DEFAULT_POSITIONS.category;
   heroImagePositions.about = config.heroImagePositions?.about ?? HERO_DEFAULT_POSITIONS.about;
   heroImagePositions.guestbook = config.heroImagePositions?.guestbook ?? HERO_DEFAULT_POSITIONS.guestbook;
@@ -381,9 +636,10 @@ function toPayload(): SiteConfig {
     heroImages: {
       home: heroImages.home.trim(),
       archive: heroImages.archive.trim(),
+      'development-history': heroImages['development-history'].trim(),
       'memory-map': heroImages['memory-map'].trim(),
-      'trust-request': heroImages['trust-request'].trim(),
       music: heroImages.music.trim(),
+      bookshelf: heroImages.bookshelf.trim(),
       category: heroImages.category.trim(),
       about: heroImages.about.trim(),
       guestbook: heroImages.guestbook.trim(),
@@ -391,9 +647,10 @@ function toPayload(): SiteConfig {
     heroImagePositions: {
       home: heroImagePositions.home.trim(),
       archive: heroImagePositions.archive.trim(),
+      'development-history': heroImagePositions['development-history'].trim(),
       'memory-map': heroImagePositions['memory-map'].trim(),
-      'trust-request': heroImagePositions['trust-request'].trim(),
       music: heroImagePositions.music.trim(),
+      bookshelf: heroImagePositions.bookshelf.trim(),
       category: heroImagePositions.category.trim(),
       about: heroImagePositions.about.trim(),
       guestbook: heroImagePositions.guestbook.trim(),
@@ -716,47 +973,315 @@ onMounted(() => {
   }
 }
 
-.hero-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--space-lg);
-  align-items: start;
+.section-head--hero {
+  align-items: flex-end;
+
+  p {
+    max-width: 62ch;
+    margin: 6px 0 0;
+    color: var(--color-text-secondary);
+    font-size: 13px;
+    line-height: 1.6;
+  }
 }
 
-.hero-panel {
-  --hero-tint: oklch(72% 0.08 310);
+.hero-summary {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  min-height: 30px;
+  padding: 0 12px;
+  border-radius: var(--radius-pill);
+  background: var(--color-surface-muted);
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  font-weight: 600;
+}
 
-  border: 1px solid color-mix(in oklch, var(--color-border-light) 82%, var(--hero-tint));
+.hero-workspace {
+  --hero-tint: oklch(72% 0.08 310);
+  --hero-menu-surface: var(--color-surface);
+  --hero-menu-divider: color-mix(in oklch, var(--color-accent) 18%, var(--color-surface));
+  --hero-menu-ink: color-mix(in oklch, var(--color-text-primary) 88%, var(--color-accent));
+  --hero-menu-meta: color-mix(in oklch, var(--color-text-primary) 62%, var(--color-accent));
+  --hero-menu-hover: color-mix(in oklch, var(--color-accent) 6%, var(--color-surface));
+  --hero-menu-active: color-mix(in oklch, var(--color-accent) 13%, var(--color-surface));
+  --hero-menu-active-border: color-mix(in oklch, var(--color-accent) 30%, var(--color-surface));
+  --hero-menu-accent-ink: color-mix(
+    in oklch,
+    var(--color-accent-strong) 74%,
+    var(--color-text-primary)
+  );
+
+  display: grid;
+  grid-template-columns: minmax(196px, 224px) minmax(0, 1fr);
+  min-height: 520px;
+  border: 1px solid var(--color-border-light);
   border-radius: var(--radius-lg);
   overflow: hidden;
-  background: color-mix(in oklch, var(--color-surface) 97%, var(--hero-tint));
-  align-self: start;
+  background: var(--color-surface);
 }
 
-.hero-preview {
-  padding: 14px;
-  background: color-mix(in oklch, var(--color-surface) 93%, var(--hero-tint));
+.hero-page-menu {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: var(--space-md);
+  border-right: 1px solid var(--hero-menu-divider);
+  background: var(--hero-menu-surface);
 }
 
-.hero-panel__body {
+.hero-page-menu__label {
+  margin: 0 0 2px;
+  padding: 0 10px;
+  color: var(--hero-menu-meta);
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.hero-page-menu__items {
   display: grid;
+  gap: 3px;
+}
+
+.hero-page-menu__item {
+  width: 100%;
+  min-height: 42px;
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--hero-menu-ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    color var(--motion-duration-fast) var(--motion-ease-standard),
+    background-color var(--motion-duration-fast) var(--motion-ease-standard);
+
+  &:hover:not(.is-active) {
+    background: var(--hero-menu-hover);
+    color: var(--hero-menu-accent-ink);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--color-accent-strong);
+    outline-offset: 2px;
+  }
+
+  &.is-active {
+    background: var(--hero-menu-active);
+    color: var(--hero-menu-accent-ink);
+    font-weight: 650;
+    box-shadow: 0 0 0 1px var(--hero-menu-active-border) inset;
+  }
+}
+
+.hero-page-menu__submenu {
+  display: grid;
+  gap: 3px;
+}
+
+.hero-page-menu__trigger {
+  position: relative;
+}
+
+.hero-page-menu__children {
+  display: grid;
+  gap: 3px;
+  margin: 0 0 3px 17px;
+  padding-left: 8px;
+  border-left: 1px solid var(--hero-menu-divider);
+}
+
+.hero-page-menu__child {
+  min-height: 39px;
+}
+
+.hero-page-menu__icon {
+  font-size: 16px;
+}
+
+.hero-page-menu__name {
+  min-width: 0;
+  overflow: hidden;
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hero-page-menu__suffix {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 5px;
+}
+
+.hero-page-menu__count {
+  color: var(--hero-menu-meta);
+  font-size: 10px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.hero-page-menu__chevron {
+  color: var(--hero-menu-meta);
+  font-size: 13px;
+  transition: transform var(--motion-duration-fast) var(--motion-ease-standard);
+}
+
+.hero-page-menu__submenu.is-open .hero-page-menu__chevron {
+  transform: rotate(180deg);
+}
+
+.hero-page-menu__status {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: color-mix(in oklch, var(--color-accent) 18%, var(--color-surface));
+  box-shadow: 0 0 0 1px var(--hero-menu-active-border) inset;
+
+  &.is-configured {
+    background: var(--color-accent);
+    box-shadow: none;
+  }
+}
+
+.hero-page-menu__item.is-active {
+  .hero-page-menu__count,
+  .hero-page-menu__chevron {
+    color: var(--hero-menu-accent-ink);
+  }
+}
+
+.hero-page-menu__submenu:has(.hero-page-menu__child.is-active)
+  > .hero-page-menu__trigger.is-active {
+  background: var(--hero-menu-hover);
+  box-shadow: none;
+}
+
+.hero-editor {
+  min-width: 0;
+  padding: clamp(var(--space-lg), 2.6vw, var(--space-xl));
+}
+
+.hero-editor__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-lg);
+  margin-bottom: var(--space-lg);
+}
+
+.hero-editor__identity {
+  min-width: 0;
+  display: flex;
+  align-items: flex-start;
   gap: 12px;
-  padding: 15px;
-  background: color-mix(in oklch, var(--color-surface) 97%, var(--hero-tint));
+
+  > div {
+    min-width: 0;
+  }
+
+  p {
+    max-width: 64ch;
+    margin: 6px 0 0;
+    color: var(--color-text-secondary);
+    font-size: 12px;
+    line-height: 1.6;
+    text-wrap: pretty;
+  }
+}
+
+.hero-editor__icon {
+  flex: 0 0 auto;
+  width: 36px;
+  height: 36px;
+  display: inline-grid;
+  place-items: center;
+  border-radius: var(--radius-md);
+  background: var(--color-accent-soft);
+  color: var(--color-accent-strong);
+  font-size: 18px;
+}
+
+.hero-editor__title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
 
   h4 {
     margin: 0;
-    color: color-mix(in oklch, var(--color-text-primary) 90%, var(--hero-tint));
-    font-size: 15px;
+    color: var(--color-text-primary);
+    font-size: 16px;
     font-weight: 650;
   }
 }
 
+.hero-editor__group,
+.hero-editor__state {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 0 9px;
+  border-radius: var(--radius-pill);
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.hero-editor__group {
+  background: var(--color-surface-muted);
+  color: var(--color-text-secondary);
+}
+
+.hero-editor__state {
+  flex: 0 0 auto;
+  background: var(--color-surface-muted);
+  color: var(--color-text-secondary);
+
+  &.is-configured {
+    background: var(--color-accent-soft);
+    color: var(--color-accent-strong);
+  }
+}
+
+.hero-preview {
+  padding: 12px;
+  border-radius: var(--radius-lg);
+  background: color-mix(in oklch, var(--color-surface-muted) 90%, var(--hero-tint));
+}
+
+.hero-editor__controls {
+  display: grid;
+  gap: 12px;
+  margin-top: var(--space-lg);
+}
+
 @media (max-width: 1080px) {
   .brand-grid,
-  .hero-grid,
   .form-grid {
     grid-template-columns: 1fr;
+  }
+
+  .hero-workspace {
+    grid-template-columns: 190px minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 900px) {
+  .hero-workspace {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .hero-page-menu {
+    border-right: 0;
+    border-bottom: 1px solid var(--hero-menu-divider);
   }
 }
 
@@ -777,13 +1302,34 @@ onMounted(() => {
     margin-bottom: var(--space-lg);
   }
 
+  .section-head--hero {
+    align-items: flex-start;
+  }
+
   .asset-panel {
     width: 100%;
     grid-template-columns: 1fr;
   }
 
+  .hero-editor {
+    padding: var(--space-md);
+  }
+
+  .hero-editor__head {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 12px;
+  }
+
   .runtime-row {
     align-items: flex-start;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-page-menu__item,
+  .hero-page-menu__chevron {
+    transition: none;
   }
 }
 </style>

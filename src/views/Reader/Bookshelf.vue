@@ -5,8 +5,8 @@
         title="书架"
         eyebrow="Reading Shelf"
         subtitle="浏览公开故事，也为自己保留一处安静的阅读空间。"
-        :bg-image="BOOKSHELF_HERO_IMAGE"
-        bg-position="50% 47%"
+        :bg-image="heroBgImage"
+        :bg-position="heroBgPosition"
         min-height="64vh"
         align="left"
         compact
@@ -74,38 +74,45 @@
           </div>
 
           <div v-if="filteredBooks.length" class="book-grid">
-            <article v-for="book in filteredBooks" :key="String(book.id)" class="book-card">
-              <button type="button" class="book-card__main" @click="openBook(book)">
+            <article
+              v-for="book in filteredBooks"
+              :key="String(book.id)"
+              class="book-card"
+              :class="`is-${book.status}`"
+            >
+              <button type="button" class="book-card__main" @click="openBookDetail(book)">
                 <ReaderBookCover
                   :title="book.title"
                   :format="book.sourceFormat"
                   :url="book.coverUrl"
                 />
-                <span class="book-card__status">
-                  {{ book.ownedByCurrentUser
-                    ? (book.finished ? '已读完' : book.progressPercent > 0 ? formatProgress(book.progressPercent) : '未开始')
-                    : '公开阅读' }}
-                </span>
-              </button>
-              <div class="book-card__info">
-                <div>
+                <div class="book-card__info">
                   <h3 :title="book.title">{{ book.title }}</h3>
-                  <p>{{ book.author || '未知作者' }}</p>
+                  <p class="book-card__author">{{ book.author || '未知作者' }}</p>
+                  <p v-if="book.status === 'ready'" class="book-card__meta">
+                    <span>{{ book.chapterCount }} 章</span>
+                  </p>
+                  <p v-if="book.status === 'ready'" class="book-card__progress">
+                    <span>进度</span>
+                    <span class="book-card__progress-value">
+                      {{ book.ownedByCurrentUser
+                        ? (book.finished ? '已读完' : book.progressPercent > 0 ? formatProgress(book.progressPercent) : '未开始')
+                        : '公开阅读' }}
+                    </span>
+                  </p>
+                  <p v-else class="book-card__task-status" :class="`is-${book.status}`">
+                    <span aria-hidden="true" />
+                    {{ book.status === 'importing' ? '后台导入中' : '导入失败' }}
+                  </p>
+                  <p class="book-card__description">
+                    {{ book.status === 'ready'
+                      ? (book.description || '暂时没有留下简介。')
+                      : (book.parseMessage || (book.status === 'importing'
+                        ? '正在解析目录和正文，可继续浏览其他内容。'
+                        : '请删除后重新导入。')) }}
+                  </p>
                 </div>
-                <div class="book-card__meta">
-                  <span>{{ book.chapterCount }} 章</span>
-                  <span>{{ formatCharCount(book.totalCharCount) }}</span>
-                  <span>{{ book.sourceFormat.toUpperCase() }}</span>
-                  <span>{{ visibilityLabel(book.visibility) }}</span>
-                </div>
-                <div v-if="book.ownedByCurrentUser" class="book-card__progress">
-                  <span :style="{ width: `${book.progressPercent || 0}%` }" />
-                </div>
-                <div v-if="book.ownedByCurrentUser" class="book-card__actions">
-                  <UiButton variant="text" size="sm" icon="edit" @click="editBook(book)">编辑</UiButton>
-                  <UiButton variant="text" size="sm" icon="delete" @click="removeBook(book)">删除</UiButton>
-                </div>
-              </div>
+              </button>
             </article>
           </div>
 
@@ -145,102 +152,65 @@
       @imported="handleImported"
     />
 
-    <UiDialog v-model="editOpen" title="编辑书籍信息" size="sm">
-      <div class="edit-form">
-        <label>
-          <span>书名</span>
-          <UiInput v-model="editForm.title" maxlength="255" />
-        </label>
-        <label>
-          <span>作者</span>
-          <UiInput v-model="editForm.author" maxlength="255" />
-        </label>
-        <label>
-          <span>简介</span>
-          <UiInput v-model="editForm.description" type="textarea" :rows="4" maxlength="4000" />
-        </label>
-        <label>
-          <span>封面</span>
-          <div class="edit-cover">
-            <UiUpload
-              :show-file-list="false"
-              :http-request="handleEditCoverUpload"
-              :before-upload="beforeEditCoverUpload"
-              accept="image/jpeg,image/png,image/webp,image/gif"
-              :disabled="uploadingEditCover"
-            >
-              <div class="edit-cover__picker" :class="{ 'has-cover': editForm.coverUrl }">
-                <img v-if="editForm.coverUrl" :src="editForm.coverUrl" alt="书籍封面预览" />
-                <template v-else>
-                  <UiIcon name="upload" />
-                  <span>{{ uploadingEditCover ? '正在上传' : '更换封面' }}</span>
-                </template>
-              </div>
-            </UiUpload>
-            <small>上传新图片后，保存书籍信息即可生效。</small>
-          </div>
-        </label>
-        <label>
-          <span>可见范围</span>
-          <UiSelect v-model="editForm.visibility" :options="visibilityOptions" />
-        </label>
-      </div>
-      <template #footer>
-        <UiButton variant="text" @click="editOpen = false">取消</UiButton>
-        <UiButton variant="primary" :loading="savingEdit" @click="saveEdit">保存</UiButton>
-      </template>
-    </UiDialog>
+    <ReaderImportDialog
+      v-model="editOpen"
+      mode="edit"
+      :book="editingBook"
+      @updated="handleUpdated"
+    />
+
+    <ReaderBookDetailDialog
+      v-model="detailOpen"
+      :book="detailBook"
+      @read="openBook"
+      @edit="openEditFromDetail"
+      @delete="removeBookFromDetail"
+    />
   </DefaultLayout>
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useRouter } from 'vue-router'
 import DefaultLayout from '@/layouts/DefaultLayout.vue'
 import PageHero from '@/components/PageHero/PageHero.vue'
 import ReaderBookCover from '@/components/Reader/ReaderBookCover.vue'
+import ReaderBookDetailDialog from '@/components/Reader/ReaderBookDetailDialog.vue'
 import ReaderImportDialog from '@/components/Reader/ReaderImportDialog.vue'
 import {
   UiButton,
-  UiDialog,
   UiEmpty,
-  UiInput,
   UiLoadingState,
-  UiSelect,
-  UiUpload,
 } from '@/components/ui'
-import type { UploadRequestOptions } from '@/components/ui'
-import { deleteReaderBook, listReaderBooks, updateReaderBook, uploadReaderBookCover } from '@/api/reader'
+import { deleteReaderBook, getReaderBookImportStatus, listReaderBooks } from '@/api/reader'
 import { confirmDelete, notify } from '@/lib/feedback'
 import { useUserStore } from '@/stores/user'
-import type { ReaderBook, ReaderBookVisibility } from '@/types/reader'
-import { DEFAULT_IMAGE_MAX_MB, validateImageFile } from '@/utils/validation'
+import { useSiteConfig } from '@/composables/useSiteConfig'
+import type { ReaderBook } from '@/types/reader'
+import { resolveHeroImage, resolveHeroImagePosition } from '@/utils/siteConfig'
 
 const BOOKSHELF_HERO_IMAGE =
   'https://images.unsplash.com/photo-1495446815901-a7297e633e8d?auto=format&fit=crop&w=2200&q=88'
+const BOOKSHELF_HERO_POSITION = '50% 47%'
 
 const router = useRouter()
 const userStore = useUserStore()
+const { loadSiteConfig } = useSiteConfig()
 userStore.initUser()
 const { isLoggedIn } = storeToRefs(userStore)
+const heroBgImage = ref(BOOKSHELF_HERO_IMAGE)
+const heroBgPosition = ref(BOOKSHELF_HERO_POSITION)
 const books = ref<ReaderBook[]>([])
 const loading = ref(true)
 const importOpen = ref(false)
 const editOpen = ref(false)
-const savingEdit = ref(false)
-const editingId = ref<ReaderBook['id']>()
+const editingBook = ref<ReaderBook>()
+const detailOpen = ref(false)
+const detailBook = ref<ReaderBook>()
 const keyword = ref('')
 const sortBy = ref('recent')
-const editForm = reactive<{
-  title: string
-  author: string
-  description: string
-  coverUrl: string
-  coverFileId?: ReaderBook['id']
-  visibility: ReaderBookVisibility
-}>({ title: '', author: '', description: '', coverUrl: '', coverFileId: undefined, visibility: 'public' })
-const uploadingEditCover = ref(false)
+let importPollTimer: number | undefined
 
 const sortOptions = [
   { label: '最近阅读', value: 'recent' },
@@ -248,19 +218,15 @@ const sortOptions = [
   { label: '书名排序', value: 'title' },
   { label: '阅读进度', value: 'progress' },
 ]
-const visibilityOptions = [
-  { label: '公开（默认）', value: 'public' },
-  { label: '知友可见', value: 'friend' },
-  { label: '仅自己可见', value: 'private' },
-]
-
-const visibilityLabel = (visibility: ReaderBookVisibility) => ({
-  public: '公开',
-  friend: '知友可见',
-  private: '仅自己',
-}[visibility])
-
-const continueBook = computed(() => books.value.find((book) => book.ownedByCurrentUser && book.lastReadAt && !book.finished))
+const continueBook = computed(() => books.value.find((book) => (
+  book.status === 'ready'
+  && book.ownedByCurrentUser
+  && book.lastReadAt
+  && !book.finished
+)))
+const pendingImportBooks = computed(() => books.value.filter((book) => (
+  book.ownedByCurrentUser && book.status === 'importing'
+)))
 const totalChapterCount = computed(() => books.value.reduce((sum, book) => sum + book.chapterCount, 0))
 const filteredBooks = computed(() => {
   const query = keyword.value.trim().toLowerCase()
@@ -279,13 +245,25 @@ const loadBooks = async () => {
   loading.value = true
   try {
     books.value = await listReaderBooks()
+    scheduleImportPolling(900)
   } finally {
     loading.value = false
   }
 }
 
 const openBook = (book: ReaderBook) => {
+  if (book.status !== 'ready') {
+    notify.info(book.status === 'importing'
+      ? '小说仍在后台导入，完成后即可阅读'
+      : (book.parseMessage || '小说导入失败，请删除后重试'))
+    return
+  }
   void router.push({ name: 'NovelReader', params: { bookId: String(book.id) } })
+}
+
+const openBookDetail = (book: ReaderBook) => {
+  detailBook.value = book
+  detailOpen.value = true
 }
 
 const openImport = () => {
@@ -297,60 +275,75 @@ const openImport = () => {
 }
 
 const handleImported = (book: ReaderBook) => {
-  books.value = [book, ...books.value.filter((item) => String(item.id) !== String(book.id))]
+  upsertBook(book, true)
+  scheduleImportPolling(900)
+}
+
+const handleUpdated = (book: ReaderBook) => {
+  upsertBook(book)
+}
+
+const upsertBook = (book: ReaderBook, prepend = false) => {
+  const remaining = books.value.filter((item) => String(item.id) !== String(book.id))
+  books.value = prepend ? [book, ...remaining] : books.value.map((item) => (
+    String(item.id) === String(book.id) ? book : item
+  ))
+  if (!prepend && !books.value.some((item) => String(item.id) === String(book.id))) {
+    books.value = [book, ...books.value]
+  }
+  if (detailBook.value && String(detailBook.value.id) === String(book.id)) {
+    detailBook.value = book
+  }
+  if (editingBook.value && String(editingBook.value.id) === String(book.id)) {
+    editingBook.value = book
+  }
+}
+
+const scheduleImportPolling = (delay = 2_000) => {
+  if (importPollTimer != null || !isLoggedIn.value || !pendingImportBooks.value.length) return
+  importPollTimer = window.setTimeout(() => {
+    importPollTimer = undefined
+    void pollImportTasks()
+  }, delay)
+}
+
+const pollImportTasks = async () => {
+  const pending = [...pendingImportBooks.value]
+  if (!pending.length || !isLoggedIn.value) return
+  const results = await Promise.allSettled(
+    pending.map((book) => getReaderBookImportStatus(book.id)),
+  )
+  let requestFailed = false
+  results.forEach((result, index) => {
+    if (result.status === 'rejected') {
+      requestFailed = true
+      return
+    }
+    const previous = pending[index]
+    const current = result.value
+    upsertBook(current)
+    if (previous.status === 'importing' && current.status === 'ready') {
+      notify.success(`《${current.title}》后台导入完成，共 ${current.chapterCount} 章`)
+    } else if (previous.status === 'importing' && current.status === 'failed') {
+      notify.error(current.parseMessage || `《${current.title}》导入失败，请删除后重试`)
+    }
+  })
+  scheduleImportPolling(requestFailed ? 5_000 : 2_000)
 }
 
 const editBook = (book: ReaderBook) => {
-  editingId.value = book.id
-  editForm.title = book.title
-  editForm.author = book.author || ''
-  editForm.description = book.description || ''
-  editForm.coverUrl = book.coverUrl || ''
-  editForm.coverFileId = undefined
-  editForm.visibility = book.visibility
+  editingBook.value = book
   editOpen.value = true
 }
 
-const saveEdit = async () => {
-  if (!editingId.value || !editForm.title.trim() || savingEdit.value) return
-  savingEdit.value = true
-  try {
-    const updated = await updateReaderBook(editingId.value, {
-      title: editForm.title.trim(),
-      author: editForm.author.trim() || undefined,
-      description: editForm.description.trim() || undefined,
-      coverFileId: editForm.coverFileId,
-      visibility: editForm.visibility,
-    })
-    books.value = books.value.map((book) => String(book.id) === String(updated.id) ? updated : book)
-    editOpen.value = false
-    notify.success('书籍信息已更新')
-  } finally {
-    savingEdit.value = false
-  }
+const openEditFromDetail = (book: ReaderBook) => {
+  detailOpen.value = false
+  editBook(book)
 }
 
-const beforeEditCoverUpload = (file: File) => {
-  const result = validateImageFile(file, DEFAULT_IMAGE_MAX_MB)
-  if (!result.valid) notify.warning(result.message)
-  return result.valid
-}
-
-const handleEditCoverUpload = async (options: UploadRequestOptions) => {
-  uploadingEditCover.value = true
-  try {
-    const uploaded = await uploadReaderBookCover(options.file as File)
-    if (uploaded.id == null || !uploaded.url) throw new Error('封面上传结果不完整')
-    editForm.coverFileId = uploaded.id
-    editForm.coverUrl = uploaded.url
-    options.onSuccess?.(uploaded)
-    notify.success('封面已上传，保存后生效')
-  } catch (error) {
-    options.onError?.(error as any)
-    notify.error('封面上传失败，请重新选择图片')
-  } finally {
-    uploadingEditCover.value = false
-  }
+const removeBookFromDetail = (book: ReaderBook) => {
+  detailOpen.value = false
+  void removeBook(book)
 }
 
 const removeBook = async (book: ReaderBook) => {
@@ -365,9 +358,6 @@ const removeBook = async (book: ReaderBook) => {
 }
 
 const formatProgress = (value: number) => `${Math.max(0, Math.min(100, Number(value || 0))).toFixed(1)}%`
-const formatCharCount = (value: number) => value >= 10_000
-  ? `${(value / 10_000).toFixed(value >= 100_000 ? 0 : 1)} 万字`
-  : `${value} 字`
 const relativeTime = (value: string) => {
   const diff = Date.now() - Date.parse(value)
   const minutes = Math.max(1, Math.round(diff / 60_000))
@@ -378,7 +368,21 @@ const relativeTime = (value: string) => {
   return days < 30 ? `${days} 天前` : new Date(value).toLocaleDateString('zh-CN')
 }
 
-onMounted(loadBooks)
+onMounted(() => {
+  void loadBooks()
+  void loadSiteConfig(true).then((config) => {
+    heroBgImage.value = resolveHeroImage(config, 'bookshelf', BOOKSHELF_HERO_IMAGE)
+    heroBgPosition.value = resolveHeroImagePosition(
+      config,
+      'bookshelf',
+      BOOKSHELF_HERO_POSITION,
+    )
+  })
+})
+
+onBeforeUnmount(() => {
+  if (importPollTimer != null) window.clearTimeout(importPollTimer)
+})
 </script>
 
 <style scoped lang="scss">
@@ -482,8 +486,7 @@ onMounted(loadBooks)
   background: var(--color-border-light);
 }
 
-.continue-reading__progress span,
-.book-card__progress span {
+.continue-reading__progress span {
   display: block;
   height: 100%;
   background: var(--primary);
@@ -496,7 +499,7 @@ onMounted(loadBooks)
 
 .library-toolbar {
   display: flex;
-  align-items: flex-end;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 24px;
   margin-bottom: 26px;
@@ -514,25 +517,43 @@ onMounted(loadBooks)
 }
 
 .library-toolbar__controls {
+  --bookshelf-toolbar-control-height: var(--control-height-md);
   display: grid;
   grid-template-columns: minmax(220px, 320px) 150px auto;
   gap: 10px;
-  align-items: center;
+  align-items: stretch;
+}
+
+.library-toolbar__controls > :deep(.ui-input),
+.library-toolbar__controls > :deep(.ui-select),
+.library-toolbar__controls > :deep(.ui-button) {
+  height: var(--bookshelf-toolbar-control-height) !important;
+}
+
+.library-toolbar__controls > :deep(.ui-select .el-select__wrapper) {
+  box-sizing: border-box;
+  height: var(--bookshelf-toolbar-control-height) !important;
+  min-height: var(--bookshelf-toolbar-control-height) !important;
 }
 
 .book-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
-  gap: clamp(24px, 3vw, 38px) clamp(20px, 3vw, 34px);
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 20px 16px;
+  justify-content: start;
 }
 
 .book-card {
+  position: relative;
   min-width: 0;
 }
 
 .book-card__main {
   position: relative;
-  display: block;
+  display: grid;
+  grid-template-columns: 112px minmax(0, 1fr);
+  gap: 16px;
+  min-height: 160px;
   width: 100%;
   padding: 0;
   border: 0;
@@ -542,42 +563,36 @@ onMounted(loadBooks)
 }
 
 .book-card__main:hover {
-  transform: translateY(-5px);
-}
-
-.book-card__status {
-  position: absolute;
-  right: 10px;
-  bottom: 10px;
-  padding: 5px 8px;
-  border: 1px solid rgba(255, 255, 255, 0.34);
-  background: rgba(27, 20, 24, 0.7);
-  color: #fff;
-  font-size: 11px;
-  backdrop-filter: blur(7px);
+  transform: translateY(-2px);
 }
 
 .book-card__info {
-  display: grid;
-  gap: 10px;
-  padding-top: 15px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  padding: 3px 0 0;
+  text-align: left;
 }
 
 .book-card h3 {
   margin: 0;
   overflow: hidden;
   color: var(--color-text-primary);
-  font-size: 17px;
+  display: -webkit-box;
+  font-size: 16px;
   line-height: 1.45;
   text-overflow: ellipsis;
-  white-space: nowrap;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 
-.book-card p {
-  margin: 4px 0 0;
+.book-card__author {
+  margin: 0;
   overflow: hidden;
   color: var(--color-text-tertiary);
-  font-size: 13px;
+  font-size: 12px;
+  line-height: 1.55;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -585,72 +600,111 @@ onMounted(loadBooks)
 .book-card__meta {
   display: flex;
   flex-wrap: wrap;
-  gap: 5px 10px;
+  gap: 4px 8px;
+  margin: 0;
   color: var(--color-text-tertiary);
-  font-size: 11px;
-}
-
-.book-card__meta span + span::before {
-  content: '·';
-  margin-right: 10px;
+  font-size: 10px;
 }
 
 .book-card__progress {
-  height: 3px;
-  overflow: hidden;
-  background: var(--color-border-light);
-}
-
-.book-card__actions {
   display: flex;
-  justify-content: space-between;
-  opacity: 0;
-  transition: opacity var(--motion-duration-fast);
+  align-items: baseline;
+  gap: 8px;
+  margin: 0;
+  color: var(--color-text-tertiary);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.65;
 }
 
-.book-card:hover .book-card__actions,
-.book-card:focus-within .book-card__actions {
-  opacity: 1;
-}
-
-.edit-form {
-  display: grid;
-  gap: 18px;
-}
-
-.edit-form label {
-  display: grid;
-  gap: 7px;
+.book-card__progress-value,
+.book-card__description {
   color: var(--color-text-secondary);
-  font-size: 13px;
+  font-family: inherit;
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 400;
+  letter-spacing: normal;
+  line-height: 1.65;
+}
+
+.book-card__progress-value {
+  font-variant-numeric: tabular-nums;
+}
+
+.book-card__task-status {
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-start;
+  gap: 7px;
+  margin: 2px 0 0;
+  color: var(--primary);
+  font-size: 12px;
   font-weight: 600;
 }
 
-.edit-cover {
-  display: flex;
-  align-items: center;
-  gap: 12px;
+.book-card__task-status > span {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
 }
 
-.edit-cover__picker {
-  display: grid;
-  place-content: center;
-  justify-items: center;
-  width: 76px;
-  aspect-ratio: 2 / 3;
+.book-card__task-status.is-importing > span {
+  animation: bookshelf-task-pulse 1.5s ease-in-out infinite;
+}
+
+.book-card__task-status.is-failed {
+  color: var(--color-danger);
+}
+
+.book-card.is-importing .book-card__main {
+  cursor: progress;
+}
+
+.book-card.is-importing :deep(.book-cover) {
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--primary) 22%, transparent);
+}
+
+.book-card__description {
+  display: -webkit-box;
+  margin: auto 0 0;
   overflow: hidden;
-  border: 1px dashed var(--color-border);
-  border-radius: var(--radius-md);
-  background: var(--color-surface-muted);
-  color: var(--color-text-secondary);
-  font-size: 11px;
-  text-align: center;
+  text-align: left;
+  text-overflow: ellipsis;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
 }
 
-.edit-cover__picker:hover { border-color: var(--color-action-border); }
-.edit-cover__picker img { width: 100%; height: 100%; object-fit: cover; }
-.edit-cover__picker :deep(.ui-icon) { color: var(--primary); font-size: 18px; }
-.edit-cover small { color: var(--color-text-tertiary); font-size: 12px; font-weight: 400; line-height: 1.5; }
+@keyframes bookshelf-task-pulse {
+  0%,
+  100% {
+    opacity: 0.35;
+    transform: scale(0.85);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.15);
+  }
+}
+
+.book-card :deep(.book-cover) {
+  align-self: start;
+  padding: 12px;
+}
+
+.book-card :deep(.book-cover::after) {
+  inset: 7px;
+}
+
+.book-card :deep(.book-cover strong) {
+  font-size: 17px;
+}
+
+.book-card :deep(.book-cover__ornament) {
+  font-size: 16px !important;
+}
 
 @media (max-width: 720px) {
   .bookshelf-page {
@@ -685,11 +739,8 @@ onMounted(loadBooks)
     grid-template-columns: 1fr;
   }
   .book-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 28px 16px;
-  }
-  .book-card__actions {
-    opacity: 1;
+    grid-template-columns: 1fr;
+    gap: 24px;
   }
 }
 

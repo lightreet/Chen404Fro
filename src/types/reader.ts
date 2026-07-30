@@ -13,7 +13,7 @@ export interface ReaderBook {
   ownedByCurrentUser: boolean
   sourceFormat: 'txt' | 'epub' | 'html' | 'markdown' | 'fb2' | string
   sourceEncoding?: string
-  status: 'ready' | 'failed'
+  status: 'importing' | 'ready' | 'failed'
   parseMessage?: string
   chapterCount: number
   totalCharCount: number
@@ -104,4 +104,15 @@ export interface ReaderImportOptions {
   visibility?: ReaderBookVisibility
   coverFileId?: ReaderId
   onProgress?: (percent: number) => void
+}
+
+export interface ReaderBookImportPreview {
+  title?: string
+  author?: string
+  description?: string
+  language?: string
+  sourceFormat?: string
+  sourceEncoding?: string
+  coverDataUrl?: string
+  coverFileName?: string
 }

@@ -4,7 +4,7 @@
       <div>
         <span class="notification-page__eyebrow">Site activity</span>
         <h2>消息中心</h2>
-        <p>查看知友最近发布的文章、旅行地点、音乐与新的好友申请。</p>
+        <p>查看知友最近新增的文章、旅行地点、音乐和小说，以及新的好友申请。</p>
       </div>
       <UiButton
         variant="secondary"
@@ -149,6 +149,7 @@ const eventFilterOptions = [
   { label: '旅行地点', value: 'TRAVEL_MEMORY_CREATED' },
   { label: '音乐草稿', value: 'MUSIC_TRACK_CREATED' },
   { label: '音乐发布', value: 'MUSIC_TRACK_PUBLISHED' },
+  { label: '小说导入', value: 'READER_BOOK_IMPORTED' },
   { label: '知友申请', value: 'TRUST_REQUEST_CREATED' },
 ]
 
@@ -231,6 +232,10 @@ const openNotification = async (notification: AdminNotification) => {
     await router.push(`/music/tracks/${notification.resourceId}/edit`)
     return
   }
+  if (notification.resourceType === 'READER_BOOK') {
+    await router.push('/bookshelf')
+    return
+  }
   await router.push({ path: '/admin', query: { tab: 'trust-requests' } })
 }
 
@@ -238,6 +243,7 @@ const eventIcon = (eventType: AdminNotificationEventType) => {
   if (eventType.startsWith('ARTICLE')) return 'article'
   if (eventType === 'TRAVEL_MEMORY_CREATED') return 'location'
   if (eventType.startsWith('MUSIC')) return 'music'
+  if (eventType === 'READER_BOOK_IMPORTED') return 'book'
   return 'postcard'
 }
 

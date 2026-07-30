@@ -445,12 +445,14 @@ export type AdminNotificationEventType =
   | 'TRAVEL_MEMORY_CREATED'
   | 'MUSIC_TRACK_CREATED'
   | 'MUSIC_TRACK_PUBLISHED'
+  | 'READER_BOOK_IMPORTED'
   | 'TRUST_REQUEST_CREATED';
 
 export type AdminNotificationResourceType =
   | 'ARTICLE'
   | 'TRAVEL_MEMORY'
   | 'MUSIC_TRACK'
+  | 'READER_BOOK'
   | 'TRUST_REQUEST';
 
 export interface AdminNotificationActor {

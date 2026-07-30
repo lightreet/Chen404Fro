@@ -1,6 +1,7 @@
 import { del, get, getBlob, patch, post, put } from './request'
 import type {
   ReaderBook,
+  ReaderBookImportPreview,
   ReaderBookUpdateCommand,
   ReaderChapter,
   ReaderImportOptions,
@@ -23,11 +24,22 @@ export function importReaderBook(file: File, options: ReaderImportOptions = {}):
   if (options.coverFileId != null) formData.append('coverFileId', String(options.coverFileId))
   return post('/reader/books/import', formData, {
     timeout: 120_000,
-    timeoutErrorMessage: '小说解析时间较长，本次请求已超时，请检查文件大小后重试',
+    timeoutErrorMessage: '小说上传或后台任务创建超时，请检查网络后重试',
     onUploadProgress: (event) => {
       if (!event.total || !options.onProgress) return
       options.onProgress(Math.min(99, Math.round((event.loaded / event.total) * 100)))
     },
+  })
+}
+
+export function previewReaderBook(file: File, encoding?: string): Promise<ReaderBookImportPreview> {
+  const formData = new FormData()
+  formData.append('file', file)
+  if (encoding?.trim()) formData.append('encoding', encoding.trim())
+  return post('/reader/books/preview', formData, {
+    timeout: 120_000,
+    timeoutErrorMessage: '书籍资料解析超时，请直接补充资料后继续导入',
+    suppressErrorMessage: true,
   })
 }
 
@@ -43,6 +55,12 @@ export function listReaderBooks(): Promise<ReaderBook[]> {
 
 export function getReaderBook(bookId: ReaderId): Promise<ReaderBook> {
   return get(`/reader/books/${String(bookId)}`)
+}
+
+export function getReaderBookImportStatus(bookId: ReaderId): Promise<ReaderBook> {
+  return get(`/reader/books/${String(bookId)}`, undefined, {
+    suppressErrorMessage: true,
+  })
 }
 
 export function updateReaderBook(

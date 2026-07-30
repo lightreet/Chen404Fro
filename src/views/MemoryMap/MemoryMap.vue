@@ -661,7 +661,7 @@ function goToLogin() {
 }
 
 function goToTrustRequest() {
-  router.push('/trust-request')
+  router.push({ path: '/profile', query: { tab: 'trust' } })
 }
 
 function retryActiveDetail() {
