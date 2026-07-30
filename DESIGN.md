@@ -2,12 +2,9 @@
 name: Chen404 Frontend
 description: "A personal editorial atlas with sakura warmth, readable product surfaces, and private travel memory tools."
 colors:
-  brand-sakura: "#fb7299"
-  brand-sakura-light: "#ff85a7"
-  brand-sakura-dark: "#e44d78"
-  action-primary: "#b83264"
-  action-solid: "#c83f6d"
-  action-hover: "#a92d57"
+  primary: "#fb7299"
+  primary-light: "#ff85a7"
+  primary-dark: "#e44d78"
   page-bg: "#f4f5f7"
   page-bg-warm: "#fff5f8"
   surface: "#ffffff"
@@ -18,7 +15,7 @@ colors:
   border-rose: "#f3c7d7"
   text-strong: "#212121"
   text: "#565057"
-  text-muted: "#766a72"
+  text-muted: "#8a7a84"
   profile-sakura: "#f59bbc"
   profile-mist: "#c7bdd9"
   atlas-ink: "#4e353e"
@@ -45,32 +42,24 @@ typography:
   title:
     fontFamily: "\"Microsoft YaHei UI\", \"PingFang SC\", \"Hiragino Sans GB\", \"Noto Sans CJK SC\", sans-serif"
     fontSize: "1.25rem"
-    fontWeight: 600
+    fontWeight: 650
     lineHeight: 1.35
     letterSpacing: "0"
   body:
     fontFamily: "-apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, \"Helvetica Neue\", Arial, \"Noto Sans\", sans-serif"
-    fontSize: "1rem"
+    fontSize: "0.9375rem"
     fontWeight: 400
-    lineHeight: 1.68
-    letterSpacing: "0"
-  reading:
-    fontFamily: "\"Noto Serif SC\", \"Source Han Serif SC\", \"Songti SC\", SimSun, serif"
-    fontSize: "1.0625rem"
-    fontWeight: 400
-    lineHeight: 1.82
+    lineHeight: 1.72
     letterSpacing: "0"
   label:
     fontFamily: "\"Microsoft YaHei UI\", \"PingFang SC\", \"Hiragino Sans GB\", \"Noto Sans CJK SC\", sans-serif"
     fontSize: "0.75rem"
-    fontWeight: 600
+    fontWeight: 650
     lineHeight: 1.2
     letterSpacing: "0.06em"
 rounded:
   sm: "4px"
-  control-sm: "6px"
   md: "8px"
-  control: "10px"
   lg: "12px"
   xl: "16px"
   xxl: "20px"
@@ -83,24 +72,17 @@ spacing:
   lg: "24px"
   xl: "32px"
   xxl: "48px"
-layout:
-  page-max: "1200px"
-  reading-shell: "980px"
-  reading-content: "840px"
-  reading-prose: "760px"
-  form-focus: "920px"
-  sidebar: "280px"
 components:
   button-primary:
-    backgroundColor: "{colors.action-solid}"
+    backgroundColor: "{colors.primary}"
     textColor: "{colors.surface}"
-    rounded: "{rounded.control}"
+    rounded: "{rounded.pill}"
     padding: "0 18px"
     height: "38px"
   button-secondary:
     backgroundColor: "{colors.surface}"
-    textColor: "{colors.action-primary}"
-    rounded: "{rounded.control}"
+    textColor: "{colors.primary-dark}"
+    rounded: "{rounded.pill}"
     padding: "0 16px"
     height: "36px"
   nav-pill:
@@ -134,12 +116,11 @@ components:
 
 Chen404 should feel like a personal editorial atlas: articles are arranged for reading, music is arranged for listening, guest messages are arranged like notes on a desk, and trusted travel memories are arranged like places in a private atlas. The product can be warm and slightly dreamy, but every page still needs a clear job.
 
-The design language has five surface modes:
+The design language has four intensities:
 
 - **Editorial public**: home, category, archive, article, tag, guestbook. Warm, readable, lightly expressive.
 - **Companion product**: music. Tactile, musical, familiar, and state-driven.
 - **Travel atlas**: memory map and travel detail. Public entries are explorable by everyone; friend-visible entries are more private, expressive, photo-led, map-aware, and structured.
-- **Focused reader**: bookshelf and book reader. Quiet, typographic, progress-aware, and free from unrelated decoration.
 - **Workbench**: editors, profile, admin. Quiet, dense, and task-shaped.
 
 The current strongest surfaces are home and music. Home has a working editorial rhythm. Music has a product metaphor that supports the task. Category and archive are clear but ordinary, which is acceptable if they remain fast to scan. Guestbook needs a warmer message-desk pattern. Memory map and travel detail need the clearest correction: they must become a coherent private travel atlas rather than a mix of underwater hero, scrapbook spread, generic photo article, and oversized cards.
@@ -160,19 +141,11 @@ The current strongest surfaces are home and music. Home has a working editorial 
 
 The palette is sakura warmth plus clean product neutrals, with a special atlas range for travel memory surfaces. It should feel personal and bright, not beige, neon, corporate, or underwater by default.
 
-### Brand
+### Primary
 
-- **Sakura Signal** (`{colors.brand-sakura}`): identity, illustrations, route markers, decorative emphasis, and color moments that do not carry small white text.
-- **Blossom Lift** (`{colors.brand-sakura-light}`): soft highlights and restrained atmospheric gradients.
-- **Petal Depth** (`{colors.brand-sakura-dark}`): deeper brand material. It is not a substitute for verified interaction contrast.
-
-### Interaction
-
-- **Action Ink** (`{colors.action-primary}`): links, selected text, focus treatment, active tabs, and outlined controls on light surfaces.
-- **Action Solid** (`{colors.action-solid}`): primary button and selected-control backgrounds when the foreground is white.
-- **Action Hover** (`{colors.action-hover}`): hover and pressed treatment for solid actions.
-
-Brand color and action color are related but not interchangeable. `#fb7299` remains the recognizable sakura color; it must not be used automatically for small link text or behind white button text.
+- **Sakura Signal** (`{colors.primary}`): primary action, selected navigation, active state, small emphasis.
+- **Blossom Lift** (`{colors.primary-light}`): hover brightness, soft gradients, warm highlights.
+- **Petal Depth** (`{colors.primary-dark}`): stronger active states, focused links, destructive-adjacent warmth when pure red is too harsh.
 
 ### Secondary
 
@@ -199,17 +172,16 @@ Brand color and action color are related but not interchangeable. `#fb7299` rema
 - **Atlas Ink** (`{colors.atlas-ink}`): travel memory headings and itinerary labels.
 - **Atlas Paper** (`{colors.atlas-paper}`): private travel paper surfaces.
 
-**The Accent Scarcity Rule.** Strong sakura fill belongs to identity, small emotional emphasis, and route-specific marks. Use the darker action scale for controls. If more than one major block on a viewport is saturated pink, reduce one.
+**The Accent Scarcity Rule.** Strong sakura fill belongs to primary actions, selected navigation, active filters, and travel route markers. If more than one major block on a viewport is saturated pink, reduce one.
 
 **The Route Color Rule.** Route-specific moods may introduce supporting colors, but the body surface must still return to Chen404 paper, ink, and sakura. The travel map should not use a large underwater blue hero unless the selected journey is literally sea-related.
 
-**The Contrast Rule.** Normal text, links, placeholders, and button labels target at least `4.5:1`; large text and visible control boundaries target at least `3:1`. Muted text remains readable on tinted surfaces and may not fall below the normal-text target merely to look quiet. Photo text requires a tested safe zone, scrim, or solid backing.
+**The Contrast Rule.** Body text and form text must stay readable on tinted surfaces. Muted text on pink, glass, or photo overlays must be darkened until it is comfortably legible.
 
 ## 3. Typography
 
 **Display Font:** `Patrick Hand`, with `ZCOOL KuaiLe`, `Segoe Print`, and `Bradley Hand` fallbacks.
 **Body Font:** system sans stack with Chinese-friendly fallbacks.
-**Reading Font:** `Noto Serif SC`, `Source Han Serif SC`, or a Chinese Song fallback for the dedicated book reader only.
 **Label Font:** Chinese UI sans stack, not display handwriting.
 
 **Character:** Typography has two voices: emotional route entrance and dependable product UI. The display voice is a signpost, not a general-purpose font.
@@ -218,14 +190,9 @@ Brand color and action color are related but not interchangeable. `#fb7299` rema
 
 - **Display** (`400`, `clamp(3rem, 6vw, 5rem)`, `1.04`): public hero titles and rare emotional marks only.
 - **Headline** (`700`, `clamp(1.5rem, 2.5vw, 2.25rem)`, `1.2`): section heads, page panels, travel story headings.
-- **Title** (`600`, `1.25rem`, `1.35`): article cards, category cards, music track titles, message author rows.
-- **Body** (`400`, `1rem`, `1.68`): summaries, comments, travel notes, descriptions, and standard product copy.
-- **Reading** (`400`, `1.0625rem`, `1.82`): dedicated long-form reader prose. Article pages may keep the UI sans face while using the same measure and line-height discipline.
-- **Label** (`600`, `0.75rem`, `1.2`): short metadata, section labels, status chips, compact controls. Letter spacing is optional for short Latin labels and should not be applied mechanically to Chinese.
-
-Use real supported weights (`400 / 500 / 600 / 700`). Do not depend on interpolated `650` when the active Chinese fallback font does not provide it.
-
-**The Prose Measure Rule.** Long Latin prose stays around `65ch` to `75ch`. Chinese reading should be visually checked around `34` to `45` full-width characters per line. CSS `ch` is not a reliable substitute for a Chinese screenshot.
+- **Title** (`650`, `1.25rem`, `1.35`): article cards, category cards, music track titles, message author rows.
+- **Body** (`400`, `0.9375rem`, `1.72`): article summaries, comments, travel notes, descriptions. Reading prose should stay around `65ch` to `75ch`.
+- **Label** (`650`, `0.75rem`, `0.06em`): short metadata, section labels, status chips, compact controls.
 
 **The Two-Voice Rule.** Handwritten display type is forbidden inside buttons, forms, tabs, data rows, map controls, music controls, admin pages, and editor workbenches.
 
@@ -233,29 +200,7 @@ Use real supported weights (`400 / 500 / 600 / 700`). Do not depend on interpola
 
 **The Chinese Length Rule.** Every title, button, chip, and card must survive realistic Chinese strings. If the longest real word or title does not fit, reduce type size, change layout, or rewrite the component, not the content.
 
-## 4. Layout
-
-Layout uses nested width roles. A background canvas, page shell, content composition, and prose measure solve different problems and must not share one arbitrary `max-width`.
-
-| Role | Runtime token | Desktop reference | Purpose |
-| --- | --- | ---: | --- |
-| Page canvas | full width | viewport | Background, atmosphere, full-bleed hero |
-| Page shell | `--layout-page-max` | `1200px` | Home, category, archive, workbench composition |
-| Reading shell | `--layout-reading-shell` | `980px` | Article or document surface inside the page |
-| Reading content | `--layout-reading-content` | `840px` | Title, summary, media, code, table, navigation, comments |
-| Reading prose | `--layout-reading-prose` | `760px` | Paragraphs, lists, headings, quotes |
-| Focused form | `--layout-form-focus` | `920px` | Ordinary forms and settings |
-| Sidebar | `--layout-sidebar` | `280px` | Workbench and supporting rail |
-
-**The Canvas-Content-Prose Rule.** Never narrow the whole article to improve paragraph line length. Keep the title, summary, media, tags, adjacent navigation, and comments on the wider content measure; constrain continuous prose separately. Whole-page screenshots decide whether the content composition still fills its canvas naturally.
-
-**The Media Width Rule.** Images, code blocks, tables, maps, and other evidence may use the reading-content width even when nearby paragraphs use the prose width. A feature may deliberately break wider only when the surrounding shell still owns overflow and alignment.
-
-**The Route Width Rule.** Public browsing pages default to the page shell. Reading pages use reading shell plus content/prose nesting. Focused forms use the form width. Media editors and multi-column workbenches may use the full workbench width.
-
-**Responsive contract.** Shared viewport breakpoints are `640px`, `768px`, `1024px`, and `1280px`. A component-specific breakpoint must represent a real content failure and stay local; prefer container queries for reusable components instead of inventing another viewport breakpoint.
-
-## 5. Elevation
+## 4. Elevation
 
 Chen404 uses tonal layering, soft borders, photo depth, and restrained shadow. Depth should feel like paper and light, not heavy cards floating in a SaaS dashboard.
 
@@ -273,7 +218,7 @@ Chen404 uses tonal layering, soft borders, photo depth, and restrained shadow. D
 
 **The Map Attribution Rule.** Custom floating controls must never cover provider logos, copyright text, native map controls, player controls, or interaction hotspots.
 
-## 6. Components
+## 5. Components
 
 Components must be recognizable first and personal second. A user should understand the control before noticing the decoration.
 
@@ -281,7 +226,7 @@ Components must be recognizable first and personal second. A user should underst
 
 Chen404 now has its own design system in code. This doc describes *intent*; the layers below are *where that intent lives*. Build new surfaces by composing these, not by styling raw library widgets.
 
-- **Tokens — `src/design/` + `src/assets/styles/tokens.scss`.** Semantic CSS variables are the single source of visual truth: `--color-brand-*`, `--color-action-*`, surface / border / text / state colors, `--layout-*`, `--font-family-*`, `--font-size-*`, `--line-height-*`, radius, spacing, shadow, motion, z-index, and control-height tokens. `variables.scss` contains compatibility aliases only. Always reach for a semantic token before a hardcoded value.
+- **Tokens — `src/design/` + `src/assets/styles/tokens.scss`.** Semantic CSS variables are the single source of visual truth: `--color-*` (accent / surface / border / text / state), `--radius-*` + `--radius-pill`, `--space-*`, `--font-size-*`, `--line-height-*`, `--motion-duration-*` / `--motion-ease-*`, `--z-*`, `--control-height-*`. The named colors, radii, and shadows in this doc are the *design rationale*; the CSS variables are their *runtime form*. Always reach for a token before a hardcoded value.
 - **Motion — `src/design/motion.ts` + `src/assets/styles/motion.scss`.** Shared enter/leave transitions (`m-fade / m-raise / m-panel / m-list / m-drawer / m-press`) with reduced-motion handling. Use these named presets instead of per-component ad-hoc transitions.
 - **UI primitives — `src/components/ui/` (`Ui*`).** Library-agnostic controls with a project-owned API: `UiButton`, `UiInput`, `UiTextarea`, `UiSelect`, `UiPanel`, `UiTabs`, `UiDialog`, `UiDrawer`, `UiBadge`, `UiTooltip`, `UiPagination`, `UiEmpty`, `UiTable`, `UiForm` / `UiFormField`, `UiAvatar`, `UiRadioGroup`, `UiSegmented`, `UiSwitch`, `UiCheckbox`, `UiSlider`, `UiUpload`, `UiDateField`, `UiNumberField`, `UiSkeleton`, `UiLoadingState`, `UiSearchBar`, `UiDropdown*`, `UiDivider`, and `UiIcon` (the single icon entry, fed by `design/icon-map.ts`).
 - **App shells — `src/components/app/` (`App*`).** Brand-level compositions that carry Chen404's voice but stay cross-feature: `AppSection`, `AppActionBar`, `AppFilterBar`, `AppStatusPill`, `AppEmptyState`.
@@ -289,7 +234,7 @@ Chen404 now has its own design system in code. This doc describes *intent*; the 
 - **Authentication feedback:** login, registration, verification-code, and password-reset failures must always produce one visible message while preserving the user's input. The request layer owns Axios transport and HTTP feedback; auth pages own generated-SDK business-envelope failures and must not silently catch them or duplicate the request-layer notification.
 - **Legal documents:** user agreements and privacy policies should read like calm documents, not promotional cards. Use one short summary, a linear section flow, natural dividers, and a `65–75ch` prose measure. Keep section titles on the document column and indent their body copy one step to make the hierarchy explicit; avoid nested cards, decorative gradients, oversized headings, and custom scrollbars.
 
-**The Build-From-System Rule.** A new search box, card, filter, or panel should first be assembled from existing `Ui*` / `App*` + tokens. Create a new shared component only when a composition repeats or needs real semantic abstraction, never to re-skin an existing one. Element Plus still powers a few primitives internally, but it is a hidden dependency: business pages and components must not render `<el-*>`, use `v-loading`, or import `element-plus` directly. `npm run check:element-boundary` enforces the library boundary; `npm run check:design-boundary` enforces the foundational visual contract.
+**The Build-From-System Rule.** A new search box, card, filter, or panel should first be assembled from existing `Ui*` / `App*` + tokens. Create a new shared component only when a composition repeats or needs real semantic abstraction — never to re-skin an existing one. Element Plus still powers a few primitives internally, but it is a hidden dependency: business pages and components must not render `<el-*>`, use `v-loading`, or import `element-plus` directly. `npm run check:element-boundary` enforces this.
 
 ### PageHero
 
@@ -310,7 +255,7 @@ Chen404 now has its own design system in code. This doc describes *intent*; the 
 
 ### Buttons
 
-- **Primary:** solid action color, verified white text, `36px` to `40px` height, standard control radius. Use a pill only when the composition explicitly needs a compact signature CTA.
+- **Primary:** sakura fill or gradient, white text, `36px` to `40px` height, pill radius.
 - **Secondary:** clean paper background, rose text or warm graphite, light border.
 - **Icon buttons:** square or circular with stable dimensions. Use recognizable icons and tooltips when meaning is not obvious.
 - **Danger:** use clear destructive color and label, not decorative pink.
@@ -382,14 +327,6 @@ Chen404 now has its own design system in code. This doc describes *intent*; the 
 - **Photo treatment:** photos are content, not backgrounds only. Preserve aspect ratios and captions. Thumbnails should support navigation, not create visual noise.
 - **Ban:** generic photo-blog layout, oversized blank cards, side information pushed below all story content on desktop, decorative stamps that compete with the actual place.
 
-### Reader / Bookshelf
-
-- **Bookshelf:** cover-first scanning with calm metadata, clear reading progress, and no cinematic hero competing with the library.
-- **Reader:** the text is the primary surface. A Chinese serif reading face is allowed here even though product controls remain in the UI sans face.
-- **Measure:** use the reading shell and prose measure; toolbars, progress, chapter navigation, and resume notices may use the wider content measure.
-- **Focus:** hide unrelated floating companions and decorative motion while reading. Keep chapter navigation, theme, type size, progress, and exit controls familiar.
-- **Ban:** handwritten body text, card-per-paragraph layouts, saturated page backgrounds, and toolbar chrome that competes with the book.
-
 ### Workbench / Admin
 
 - **Role:** task completion.
@@ -415,7 +352,7 @@ Chen404 now has its own design system in code. This doc describes *intent*; the 
 - **Motion:** state feedback only.
 - **Ban:** cute stationery treatment, decorative display fonts, and large hero sections.
 
-## 7. Do's and Don'ts
+## 6. Do's and Don'ts
 
 ### Do:
 
@@ -424,8 +361,7 @@ Chen404 now has its own design system in code. This doc describes *intent*; the 
 - **Do** keep archive compact and category simple unless the user problem requires a richer browsing model.
 - **Do** make travel map an atlas: map, selected place, route, photos, and gallery should feel connected.
 - **Do** make travel detail an itinerary article: photo hero, story fragments, support rail, album, map, and adjacent navigation.
-- **Do** keep sakura pink for brand identity and use the verified action scale for links, focus states, and white-text controls.
-- **Do** separate page canvas, reading content, and prose measure on long-form pages.
+- **Do** use sakura pink for primary actions, selected states, and small emotional emphasis.
 - **Do** verify desktop and mobile with real Chinese content, actual photos, empty states, loading states, and long metadata.
 - **Do** keep product controls familiar: standard buttons, segmented controls, sliders, text fields, tabs, and icon buttons.
 - **Do** treat map attribution, media controls, focus rings, keyboard use, and readable contrast as design requirements.
@@ -441,7 +377,5 @@ Chen404 now has its own design system in code. This doc describes *intent*; the 
 - **Don't** use gradient text for headings or panel titles.
 - **Don't** let every surface become a glass card.
 - **Don't** rely on huge rounded corners, giant shadows, or pink badges to create hierarchy.
-- **Don't** use the decorative brand pink automatically for small text or behind white button labels.
-- **Don't** narrow titles, summaries, media, navigation, and comments merely to shorten paragraph lines.
 - **Don't** ship travel detail pages where supporting information arrives only after all story cards on desktop.
 - **Don't** place floating controls over map provider attribution, player controls, text, or primary content.

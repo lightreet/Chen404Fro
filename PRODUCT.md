@@ -25,7 +25,6 @@ Chen404 has one emotional universe, but every surface needs a different intensit
 | Surface | Routes | Product job | Design intensity | Quality target |
 | --- | --- | --- | --- | --- |
 | Editorial reading | `/`, `/category`, `/category/:id`, `/archive`, `/article/:id`, `/tag`, `/tag/:id` | Help readers find and read content | Balanced to expressive | Clear hierarchy, calm article rhythm, enough personality to feel owned |
-| Focused reading | `/bookshelf`, `/reader/:bookId` | Let signed-in readers manage books and continue long-form reading | Quiet and typographic | Stable progress, comfortable Chinese measure, controls subordinate to text |
 | Social note | `/guestbook` | Let visitors leave a short message and read others | Balanced | Warm, legible, conversational, not a plain form dump |
 | Companion listening | `/music` | Let readers browse and play Sakura Radio | Expressive product UI | Tactile, musical, familiar controls, no nightclub or dashboard mood |
 | Travel atlas | `/memory-map` | Let public readers browse public places, while trusted friends can see more private routes, photos, and memories | Expressive but structured | Travel atlas first, scrapbook second, clear map/detail relationship |
@@ -36,7 +35,6 @@ Chen404 has one emotional universe, but every surface needs a different intensit
 ## Current Product Surface
 
 - Public reading: home, article detail, archive, category, tag, guestbook, about, public user page.
-- Focused reading: personal bookshelf, book progress, and a distraction-reduced long-form reader.
 - Trust layer: friend access requests and status live inside `/profile?tab=trust`; public travel map browsing, friend-only travel memories, and capability-based creation remain connected to that account relationship.
 - Personal creation workspace: `/profile?tab=creations` unifies the user's article, travel, and music records; each content tab exposes its own create action only when permitted.
 - Creation editors: article editor, travel memory editor, and music track editor are available to users with the matching capability.
@@ -61,12 +59,6 @@ The category page is clear but ordinary. Its product job is browsing by topic, s
 ### Archive
 
 The archive is a utility reading surface. It should feel like a timeline ledger: compact, chronological, and easy to scan. It should not become cinematic or heavily decorated.
-
-### Bookshelf and Reader
-
-The bookshelf is a personal library rather than another article feed. Covers, titles, authors, reading progress, and the continue-reading action should be easy to scan without adding a promotional hero.
-
-The reader is a focused text surface. Chinese serif typography is appropriate for book content, while navigation, progress, settings, and feedback remain in the product UI font. The page should preserve progress and orientation, support comfortable line length and line height, and suppress unrelated floating companions or decorative motion.
 
 ### Music Hall
 

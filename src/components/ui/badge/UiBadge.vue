@@ -60,7 +60,7 @@ withDefaults(
 
 .ui-badge--accent {
   background: var(--color-accent-soft);
-  color: var(--color-action-primary);
+  color: var(--primary-dark);
 }
 .ui-badge--success {
   background: var(--color-success-soft);

@@ -104,9 +104,9 @@ const toggle = () => {
   left: 2px;
   width: 20px;
   height: 20px;
-  background: var(--color-control-thumb);
+  background: #fff;
   border-radius: 50%;
-  box-shadow: var(--shadow-control-thumb);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
   transition: transform var(--motion-duration-base) var(--motion-ease-spring);
 }
 .ui-switch--sm .ui-switch__thumb {
@@ -115,7 +115,7 @@ const toggle = () => {
 }
 
 .ui-switch.is-checked .ui-switch__track {
-  background: var(--color-action-solid);
+  background: linear-gradient(135deg, var(--primary), var(--primary-light));
 }
 .ui-switch.is-checked .ui-switch__thumb {
   transform: translateX(20px);

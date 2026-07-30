@@ -99,10 +99,10 @@ const onChange = (ev: Event) => {
   width: 18px;
   height: 18px;
   border: 1.5px solid var(--color-border);
-  border-radius: var(--radius-control-sm);
+  border-radius: 6px;
   background: var(--color-surface);
-  color: var(--color-on-action);
-  font-size: var(--font-size-sm);
+  color: #fff;
+  font-size: 13px;
   transition:
     border-color var(--motion-duration-fast) var(--motion-ease-standard),
     background-color var(--motion-duration-fast) var(--motion-ease-standard);
@@ -123,11 +123,11 @@ const onChange = (ev: Event) => {
 }
 
 .ui-checkbox:hover:not(.is-disabled) .ui-checkbox__box {
-  border-color: var(--color-action-border);
+  border-color: var(--primary-light);
 }
 
 .ui-checkbox.is-checked .ui-checkbox__box {
-  background: var(--color-action-solid);
+  background: linear-gradient(135deg, var(--primary), var(--primary-light));
   border-color: transparent;
 
   &::after {

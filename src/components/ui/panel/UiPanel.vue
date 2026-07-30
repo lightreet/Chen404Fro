@@ -66,8 +66,8 @@ const hasHeader = computed(
   flex-direction: column;
   border-radius: var(--radius-xl);
   background: var(--color-surface);
-  border: none;
-  box-shadow: var(--shadow-quiet);
+  border: 1px solid var(--color-border-light);
+  box-shadow: var(--shadow-sm);
   overflow: hidden;
   transition:
     box-shadow var(--motion-duration-base) var(--motion-ease-standard),
@@ -81,11 +81,11 @@ const hasHeader = computed(
 .ui-panel--outline {
   background: transparent;
   box-shadow: none;
-  border: 1px solid var(--color-border);
+  border-color: var(--color-border);
 }
 
 .ui-panel.is-hoverable:hover {
-  box-shadow: var(--shadow-editorial);
+  box-shadow: var(--shadow-md);
   transform: translateY(-2px);
 }
 
@@ -112,10 +112,10 @@ const hasHeader = computed(
   justify-content: center;
   width: 34px;
   height: 34px;
-  border-radius: var(--radius-lg);
+  border-radius: 12px;
   background: var(--color-accent-soft);
-  color: var(--color-action-primary);
-  font-size: var(--font-size-lg);
+  color: var(--primary);
+  font-size: 18px;
   flex-shrink: 0;
 }
 

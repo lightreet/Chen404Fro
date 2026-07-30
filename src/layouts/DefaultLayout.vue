@@ -93,8 +93,8 @@ const { isMobile } = useLayoutMobile();
 /* 有 hero 插槽时由 hero 占位，无 hero 时保持原有顶部留白 */
 .main-content {
   flex: 1;
-  padding-top: calc(var(--layout-header-height) + var(--space-lg));
-  padding-bottom: var(--space-lg);
+  padding-top: calc(64px + 24px);
+  padding-bottom: 24px;
   overflow: clip;
 }
 
@@ -108,7 +108,7 @@ const { isMobile } = useLayoutMobile();
 
 .content-wrapper {
   display: flex;
-  gap: var(--space-lg);
+  gap: 24px;
   align-items: flex-start;
 }
 
@@ -124,7 +124,7 @@ const { isMobile } = useLayoutMobile();
 }
 
 .content-wrapper.no-right-sidebar .main-area {
-  max-width: var(--layout-reading-shell);
+  max-width: 980px;
   margin: 0 auto;
 }
 
@@ -133,7 +133,7 @@ const { isMobile } = useLayoutMobile();
 }
 
 .sidebar-right {
-  width: var(--layout-sidebar);
+  width: 300px;
   flex-shrink: 0;
 }
 

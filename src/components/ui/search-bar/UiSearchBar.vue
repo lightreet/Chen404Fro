@@ -76,10 +76,10 @@ defineExpose({ focus: () => inputRef.value?.focus() })
   width: 100%;
 
   &.is-focused {
-    box-shadow: 0 0 0 2px var(--color-focus-ring) inset;
+    box-shadow: 0 0 0 2px var(--primary) inset;
   }
   &:not(.is-focused):hover {
-    box-shadow: 0 0 0 1px var(--color-action-border) inset;
+    box-shadow: 0 0 0 1px var(--primary-light) inset;
   }
 }
 
@@ -120,8 +120,8 @@ defineExpose({ focus: () => inputRef.value?.focus() })
   padding: 0 20px;
   border: none;
   border-radius: 0 var(--radius-pill) var(--radius-pill) 0;
-  background: var(--color-action-solid);
-  color: var(--color-on-action);
+  background: var(--primary);
+  color: #fff;
   font-size: var(--font-size-base);
   font-weight: 600;
   cursor: pointer;
@@ -133,7 +133,7 @@ defineExpose({ focus: () => inputRef.value?.focus() })
     transform var(--motion-duration-fast) var(--motion-ease-standard);
 
   &:hover:not(:disabled) {
-    background: var(--color-action-hover);
+    background: var(--primary-dark);
   }
   &:active:not(:disabled) {
     transform: scale(0.97);
@@ -145,6 +145,6 @@ defineExpose({ focus: () => inputRef.value?.focus() })
 }
 
 [data-theme='dark'] .ui-search-bar {
-  background: var(--color-surface-elevated);
+  background: var(--bg-elevated);
 }
 </style>

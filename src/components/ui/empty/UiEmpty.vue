@@ -64,14 +64,14 @@ withDefaults(
   border-radius: var(--radius-pill);
   background: var(--color-surface-muted);
   color: var(--color-text-tertiary);
-  font-size: var(--font-size-3xl);
+  font-size: 30px;
   margin-bottom: 4px;
 }
 
 .ui-empty--sm .ui-empty__icon {
   width: 48px;
   height: 48px;
-  font-size: var(--font-size-2xl);
+  font-size: 24px;
 }
 
 .ui-empty__title {

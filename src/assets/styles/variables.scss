@@ -1,61 +1,97 @@
-// 历史变量兼容层
-//
-// 视觉值以 tokens.scss 为准。旧页面仍可使用这些别名，但新代码必须直接消费
-// --color-* / --layout-* / --font-* / --radius-* 等语义 Token。
+// 全局 SCSS 变量
 
+// 主题色 - 樱花粉
 :root {
-  // 品牌色
-  --primary: var(--color-brand-sakura);
-  --primary-light: var(--color-brand-sakura-light);
-  --primary-dark: var(--color-brand-sakura-dark);
-  --primary-hover: var(--color-brand-sakura-light);
+  --primary: #fb7299;
+  --primary-light: #ff85a7;
+  --primary-dark: #e44d78;
+  --primary-hover: #ff9eb3;
 
   // 背景色
-  --bg-primary: var(--color-page);
-  --bg-secondary: var(--color-surface);
-  --bg-hover: var(--color-surface-muted);
-  --bg-elevated: var(--color-surface-elevated);
-  --bg-glass: var(--color-surface-glass);
-  --bg-glass-strong: var(--color-surface-glass-strong);
-  --hero-fade-base: var(--color-page);
-  --page-background-image: var(--background-page-image);
+  --bg-primary: #f4f5f7;
+  --bg-secondary: #ffffff;
+  --bg-hover: #f5f5f5;
+  --bg-elevated: #ffffff;
+  --bg-glass: rgba(255, 255, 255, 0.72);
+  --bg-glass-strong: rgba(255, 255, 255, 0.84);
+  --border-strong: rgba(227, 229, 231, 0.9);
+  --hero-fade-base: #f4f5f7;
+  --page-background-image:
+    radial-gradient(circle at 18% 12%, rgba(255, 223, 234, 0.34), transparent 24%),
+    radial-gradient(circle at 86% 18%, rgba(255, 244, 248, 0.9), transparent 26%),
+    linear-gradient(180deg, #fff9fb 0%, #f7f5f8 32%, #f4f5f7 100%);
 
   // 文字色
-  --text-primary: var(--color-text-primary);
-  --text-secondary: var(--color-text-secondary);
-  --text-tertiary: var(--color-text-tertiary);
-  --text-link: var(--color-text-link);
+  --text-primary: #212121;
+  --text-secondary: #666666;
+  --text-tertiary: #999999;
+  --text-link: #fb7299;
 
   // 边框
-  --border-color: var(--color-border);
-  --border-light: var(--color-border-light);
-  --border-strong: var(--color-border-strong);
+  --border-color: #e3e5e7;
+  --border-light: #f1f2f3;
 
   // 功能色
-  --success: var(--color-success);
-  --warning: var(--color-warning);
-  --danger: var(--color-danger);
-  --info: var(--color-info);
+  --success: #67c23a;
+  --warning: #e6a23c;
+  --danger: #e06088;
+  --info: #909399;
 
   // 阴影
-  --shadow-sm: var(--shadow-quiet);
-  --shadow-md: var(--shadow-editorial);
-  --shadow-lg: var(--shadow-hero);
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.08);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.12);
+
+  // 圆角
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
 
   // 间距
-  --spacing-xs: var(--space-xs);
-  --spacing-sm: var(--space-sm);
-  --spacing-md: var(--space-md);
-  --spacing-lg: var(--space-lg);
-  --spacing-xl: var(--space-xl);
-  --spacing-2xl: var(--space-2xl);
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 16px;
+  --spacing-lg: 24px;
+  --spacing-xl: 32px;
+  --spacing-2xl: 48px;
 
   // 字体
-  --font-sans: var(--font-family-ui);
-  --font-mono: var(--font-family-mono);
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+  --font-mono: "Fira Code", Consolas, Monaco, "Andale Mono", monospace;
 }
 
-// SCSS 编译期镜像。媒体查询不能读取 CSS 自定义属性，因此只在这里保留断点值。
+// 暗色主题
+[data-theme="dark"] {
+  --primary: #f29ab6;
+  --primary-light: #f6b7cb;
+  --primary-dark: #d77497;
+  --primary-hover: #f3aec4;
+  --bg-primary: #211d26;
+  --bg-secondary: #2b2431;
+  --bg-hover: #342c3a;
+  --bg-elevated: #352d3d;
+  --bg-glass: rgba(255, 255, 255, 0.06);
+  --bg-glass-strong: rgba(58, 48, 67, 0.76);
+  --text-primary: #f2ebf0;
+  --text-secondary: #c9bcc6;
+  --text-tertiary: #9b8d99;
+  --border-color: rgba(255, 230, 239, 0.12);
+  --border-light: rgba(255, 230, 239, 0.08);
+  --border-strong: rgba(255, 230, 239, 0.18);
+  --hero-fade-base: #241f2b;
+  --page-background-image:
+    radial-gradient(circle at 18% 0%, rgba(106, 77, 109, 0.34), transparent 26%),
+    radial-gradient(circle at 82% 18%, rgba(119, 87, 113, 0.18), transparent 24%),
+    radial-gradient(circle at 50% 100%, rgba(60, 46, 70, 0.2), transparent 34%),
+    linear-gradient(180deg, #261f2e 0%, #211d26 30%, #1f1b24 100%);
+  --shadow-sm: 0 6px 16px rgba(16, 12, 22, 0.2);
+  --shadow-md: 0 16px 34px rgba(16, 12, 22, 0.28);
+  --shadow-lg: 0 24px 56px rgba(16, 12, 22, 0.34);
+}
+
+// SCSS 变量 (用于计算)
 $primary: #fb7299;
 $primary-light: #ff85a7;
 $primary-dark: #e44d78;
@@ -64,6 +100,7 @@ $container-max-width: 1200px;
 $sidebar-width: 280px;
 $header-height: 64px;
 
+// 响应式断点
 $breakpoint-sm: 640px;
 $breakpoint-md: 768px;
 $breakpoint-lg: 1024px;

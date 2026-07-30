@@ -17,13 +17,12 @@ html {
 }
 
 body {
-  font-family: var(--font-family-ui);
-  font-size: var(--font-size-body);
-  background-color: var(--color-page);
-  background-image: var(--background-page-image);
+  font-family: var(--font-sans);
+  background-color: var(--bg-primary);
+  background-image: var(--page-background-image);
   background-attachment: fixed;
-  color: var(--color-text-primary);
-  line-height: var(--line-height-body);
+  color: var(--text-primary);
+  line-height: 1.6;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   transition:
@@ -33,12 +32,12 @@ body {
 
 // 链接样式
 a {
-  color: var(--color-text-link);
+  color: var(--text-link);
   text-decoration: none;
   transition: color 0.3s;
 
   &:hover {
-    color: var(--color-action-text-hover);
+    color: var(--primary-dark);
   }
 }
 
@@ -49,46 +48,29 @@ a {
 }
 
 ::-webkit-scrollbar-track {
-  background: var(--color-page);
+  background: var(--bg-primary);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--color-border);
-  border-radius: var(--radius-sm);
+  background: var(--border-color);
+  border-radius: 4px;
 
   &:hover {
-    background: var(--color-text-tertiary);
+    background: var(--text-tertiary);
   }
 }
 
 // 选中文字样式
 ::selection {
-  background: var(--color-selection);
-  color: var(--color-selection-text);
+  background: var(--primary-light);
+  color: white;
 }
 
 // 容器
 .container {
-  width: min(100%, var(--layout-page-max));
+  max-width: $container-max-width;
   margin: 0 auto;
-  padding-inline: var(--layout-gutter);
-}
-
-.reading-shell {
-  width: min(100%, var(--layout-reading-shell));
-  margin-inline: auto;
-}
-
-.reading-content {
-  width: min(100%, var(--layout-reading-content));
-  margin-inline: auto;
-}
-
-.reading-prose {
-  width: min(100%, var(--layout-reading-prose));
-  margin-inline: auto;
-  font-size: var(--font-size-lg);
-  line-height: var(--line-height-reading);
+  padding: 0 var(--spacing-lg);
 }
 
 // 通用过渡动画
@@ -105,9 +87,7 @@ a {
 // 列表动画
 .list-enter-active,
 .list-leave-active {
-  transition:
-    opacity var(--motion-duration-slow) var(--motion-ease-standard),
-    transform var(--motion-duration-slow) var(--motion-ease-standard);
+  transition: all 0.4s ease;
 }
 
 .list-enter-from,
@@ -129,9 +109,9 @@ a {
 .skeleton {
   background: linear-gradient(
     90deg,
-    var(--color-surface-muted) 25%,
-    var(--color-border-light) 50%,
-    var(--color-surface-muted) 75%
+    var(--bg-hover) 25%,
+    var(--border-light) 50%,
+    var(--bg-hover) 75%
   );
   background-size: 200% 100%;
   animation: skeleton-loading 1.5s infinite;
@@ -161,22 +141,13 @@ a {
 
 // 毛玻璃效果
 .glass {
-  background: var(--color-surface-glass);
-  border: 1px solid var(--color-border);
+  background: var(--bg-glass);
+  border: 1px solid var(--border-color);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
+  box-shadow: var(--shadow-sm);
 }
 
 [data-theme="dark"] .glass {
-  background: var(--color-surface-glass-strong);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  html {
-    scroll-behavior: auto;
-  }
-
-  .skeleton {
-    animation: none;
-  }
+  background: var(--bg-glass-strong);
 }

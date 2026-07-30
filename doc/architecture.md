@@ -75,7 +75,7 @@ src/
 └─ views/
 ```
 
-### UI 设计系统分层
+### UI 设计系统分层（迁移进行中）
 
 前端正按 `doc/前端 UI 架构迁移方案.md` 渐进迁移到自有设计系统，分层模型：
 
@@ -83,16 +83,13 @@ src/
 Route / Page -> Feature -> components/app (App*) -> components/ui (Ui*) -> design/ tokens + motion + icon
 ```
 
-- `assets/styles/tokens.scss`：颜色、布局、排版、圆角、阴影、间距、动效与层级的运行时单一事实来源。品牌樱花色与可访问交互色分开建模，长文使用画布、内容区、正文区三级宽度。
-- `design/tokens.ts`：TS / JS 使用 CSS Token 时的安全引用入口，不重复存储视觉值。
-- `assets/styles/variables.scss`：只提供历史变量到语义 Token 的兼容别名，以及媒体查询所需的 SCSS 编译期断点镜像。
+- `design/tokens.ts`、`assets/styles/tokens.scss`：语义化 token（`--color-*` / `--radius-*` / `--space-*` / `--motion-*` 等），在不破坏历史 `variables.scss` 的前提下建立稳定命名。
 - `assets/styles/element-theme.scss`：把 Element Plus 的 CSS 变量整体映射到项目 token，使所有 `el-*` 组件在不改页面代码的情况下立即去掉「标准后台味」，与品牌语言统一（全站生效）。
 - `components/ui`：与库无关的 primitive，对外只暴露项目自己的 API（短期内部可复用 Element Plus）。
 - `components/app`：承接 Chen404 产品语义与品牌表达，消费 `ui` 层。
 - `lib/feedback`：`notify.*` 与 `confirmAction()` 收敛全站对 `ElMessage` / `ElMessageBox` 的直调。
 - 依赖边界：业务页面、业务组件、views、modules、composables 不应再直接引用 `element-plus` 或 `@element-plus/icons-vue`；如仍需使用，只允许保留在 `components/ui` 薄封装、`lib/feedback`、或专门的兼容层内部。
 - 检查命令：`npm run check:element-boundary`。它会阻止业务层新增 `element-plus` / `@element-plus/icons-vue` 直接依赖，同时检查业务层模板中的 `<el-*>` 与 `v-loading` 等 Element 运行时依赖。允许名单仅包含 `components/ui`、`lib/feedback`、`compat` 以及极少数基础运行时文件。
-- 设计边界：`npm run check:design-boundary` 检查 `Ui*` / `App*` 与基础主题是否绕过语义 Token、重新引入旧变量、固定字号/圆角、非标准断点或 `transition: all`，并验证文章双宽度布局仍由全局 Token 驱动。
 
 迁移以页面为单位推进，已完成基础设施、阶段 3 全部后台页、阶段 4 表单与编辑页、阶段 5 展示型长页面，以及阶段 6 第一批高频入口与高频业务组件的页面层收口。当前 `src/views` 下业务页面直接书写的 `<el-*>` 为 `0`，业务页 `v-loading` 也已统一收口到 `UiLoadingState`；`src/components` 下剩余的 `el-*` 已全部收口到 `src/components/ui/*` 薄封装内部。后续重点已从“页面层去 Element”转向两类工作：一是继续按收益做低频组件与专题页的视觉统一，二是处理包体、分包与测试等工程收尾。
 
@@ -137,8 +134,6 @@ Route / Page -> Feature -> components/app (App*) -> components/ui (Ui*) -> desig
 /music                    Sakura Radio 音乐馆
 /music/tracks/new         歌曲创建工作台（music:create）
 /music/tracks/:id/edit    歌曲编辑工作台（music:create）
-/bookshelf                私人小说书架（登录）
-/reader/:bookId           沉浸式小说阅读器（登录）
 ```
 
 ### 路由守卫行为
@@ -166,7 +161,6 @@ Route / Page -> Feature -> components/app (App*) -> components/ui (Ui*) -> desig
 | `trust-request.ts` | 好友申请及后台审批 |
 | `travel-memory.ts` | 旅行纪念地图查询与管理 |
 | `music.ts` | Sakura Radio 公开播放、歌曲与歌单管理 |
-| `reader.ts` | 私人书架、小说导入、目录/章节检索、阅读进度与偏好 |
 | `ai.ts` | 文章 AI、Lyra 同步/流式聊天、会话恢复 |
 | `ai-admin.ts` | AI 后台配置与连接测试 |
 | `emoji.ts` | 表情包公开接口与后台维护 |
@@ -206,7 +200,6 @@ Route / Page -> Feature -> components/app (App*) -> components/ui (Ui*) -> desig
 - `modules/category-icons/service.ts`：后台分类图标搜索，走 Iconify 远程检索
 - `modules/feature-access/constants.ts`：知友/权限封面文案与 Hero 资源映射
 - `modules/music-metadata/metadata.ts`：音乐上传时读取本地音频 metadata、封面与歌词
-- `composables/reader/useReaderAssetResolver.ts`：携带登录凭据加载书内插图，并维护 Blob URL 生命周期
 
 整体上，前端没有把所有业务数据推入 Pinia，而是保持“页面请求 + 局部状态”为主，仅把真正跨页面共享的状态收敛到 store。
 
@@ -220,8 +213,6 @@ Route / Page -> Feature -> components/app (App*) -> components/ui (Ui*) -> desig
 - `HeroWave.vue`：Hero 到正文的波浪过渡
 - `SakuraOverlay.vue`：樱花动效
 - `Live2D.vue`：看板娘入口
-
-桌面布局使用统一宽度契约：通用页面 `1200px`、阅读外壳 `980px`、阅读内容 `840px`、连续正文 `760px`、侧栏 `280px`。文章标题、摘要、媒体、导航和评论使用较宽内容区，只有段落、列表、引用和正文标题使用正文宽度；不能为了控制行长把整张阅读画布一起收窄。共享视口断点为 `640 / 768 / 1024 / 1280px`，专题组件的额外断点必须局部存在并有真实内容失败依据。
 
 ### 站点配置
 
@@ -298,28 +289,7 @@ trust-request / home / archive / memory-map / music / category / about / guestbo
 - 支持纯文本歌词与 LRC 时间轴歌词
 - 管理员可调用 AI 匹配接口补全歌手、专辑、年份、语言、风格、标签、推荐语和心情短句
 
-### 7.4 私人小说书架与阅读器
-
-相关文件：
-
-- `views/Reader/Bookshelf.vue`
-- `views/Reader/Reader.vue`
-- `components/Reader/*`
-- `composables/reader/useReaderAssetResolver.ts`
-- `api/reader.ts`
-
-当前实现要点：
-
-- `/bookshelf` 是登录用户的私人书架，支持导入、继续阅读、搜索、排序、编辑元数据与删除
-- 直接导入 TXT、EPUB、HTML、Markdown 和 FB2；MOBI、AZW3、PDF 会提供明确的转换提示
-- EPUB 支持 OPF/spine、EPUB 2 NCX、EPUB 3 nav、多级目录、封面和书内插图
-- TXT 自动识别 UTF-8、GB18030、Big5 与 UTF-16，也允许手动指定编码；章节识别包含卷/章层级并提供无标题长文回退切分
-- 阅读器支持目录、全文搜索、上一章/下一章、键盘快捷键、主题、字体、字号、行高、栏宽与段距
-- 阅读位置同时保存章节、段落、字符偏移和章节内进度；服务端用于跨设备恢复，localStorage 用作断网与页面离开时的兜底
-- 原始小说文件和书内资源均按用户归属保护，阅读器通过带鉴权的二进制请求加载插图，不暴露公开对象地址
-- 阅读器使用独立沉浸式画布，并在该路由关闭 Live2D，避免浮层干扰长时间阅读
-
-### 7.5 Lyra 聊天
+### 7.4 Lyra 聊天
 
 相关文件：
 
@@ -335,7 +305,7 @@ trust-request / home / archive / memory-map / music / category / about / guestbo
 - 面板长回答与人物小气泡短句分层展示
 - 后台可配置模型、Lyra 人设、检索策略、小气泡长度与长回复提示语
 
-### 7.6 后台管理
+### 7.5 后台管理
 
 后台入口为 [`../src/views/Admin/AdminLayout.vue`](../src/views/Admin/AdminLayout.vue)。
 
