@@ -96,7 +96,7 @@
                   <span>{{ book.chapterCount }} 章</span>
                   <span>{{ formatCharCount(book.totalCharCount) }}</span>
                   <span>{{ book.sourceFormat.toUpperCase() }}</span>
-                  <span>{{ book.visibility === 'public' ? '公开' : '仅自己' }}</span>
+                  <span>{{ visibilityLabel(book.visibility) }}</span>
                 </div>
                 <div v-if="book.ownedByCurrentUser" class="book-card__progress">
                   <span :style="{ width: `${book.progressPercent || 0}%` }" />
@@ -239,7 +239,7 @@ const editForm = reactive<{
   coverUrl: string
   coverFileId?: ReaderBook['id']
   visibility: ReaderBookVisibility
-}>({ title: '', author: '', description: '', coverUrl: '', coverFileId: undefined, visibility: 'private' })
+}>({ title: '', author: '', description: '', coverUrl: '', coverFileId: undefined, visibility: 'public' })
 const uploadingEditCover = ref(false)
 
 const sortOptions = [
@@ -249,9 +249,16 @@ const sortOptions = [
   { label: '阅读进度', value: 'progress' },
 ]
 const visibilityOptions = [
+  { label: '公开（默认）', value: 'public' },
+  { label: '知友可见', value: 'friend' },
   { label: '仅自己可见', value: 'private' },
-  { label: '公开，所有访客可阅读', value: 'public' },
 ]
+
+const visibilityLabel = (visibility: ReaderBookVisibility) => ({
+  public: '公开',
+  friend: '知友可见',
+  private: '仅自己',
+}[visibility])
 
 const continueBook = computed(() => books.value.find((book) => book.ownedByCurrentUser && book.lastReadAt && !book.finished))
 const totalChapterCount = computed(() => books.value.reduce((sum, book) => sum + book.chapterCount, 0))

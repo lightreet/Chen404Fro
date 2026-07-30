@@ -7,22 +7,34 @@
     @update:model-value="emit('update:modelValue', $event)"
   >
     <form class="import-form" @submit.prevent="submit">
-      <button
-        type="button"
-        class="drop-zone"
-        :class="{ 'is-dragging': dragging, 'has-file': selectedFile }"
-        :disabled="importing"
-        @click="fileInput?.click()"
-        @dragenter.prevent="dragging = true"
-        @dragover.prevent
-        @dragleave.prevent="dragging = false"
-        @drop.prevent="handleDrop"
-      >
-        <UiIcon :name="selectedFile ? 'success' : 'upload'" />
-        <strong>{{ selectedFile?.name || '拖入小说文件，或点击选择' }}</strong>
-        <span v-if="selectedFile">{{ formatBytes(selectedFile.size) }} · 已准备导入</span>
-        <span v-else>TXT · EPUB 2/3 · HTML · Markdown · FB2，最大 60MB</span>
-      </button>
+      <section class="source-section" aria-labelledby="source-file-title">
+        <div class="section-heading">
+          <div>
+            <h3 id="source-file-title">选择小说文件</h3>
+            <p>支持 TXT、EPUB、HTML、Markdown 和 FB2，最大 60MB。</p>
+          </div>
+          <span v-if="selectedFile" class="source-section__ready">文件已就绪</span>
+        </div>
+        <button
+          type="button"
+          class="drop-zone"
+          :class="{ 'is-dragging': dragging, 'has-file': selectedFile }"
+          :disabled="importing"
+          @click="fileInput?.click()"
+          @dragenter.prevent="dragging = true"
+          @dragover.prevent
+          @dragleave.prevent="dragging = false"
+          @drop.prevent="handleDrop"
+        >
+          <UiIcon :name="selectedFile ? 'success' : 'upload'" />
+          <span class="drop-zone__copy">
+            <strong>{{ selectedFile?.name || '拖入小说文件，或点击选择' }}</strong>
+            <small v-if="selectedFile">{{ formatBytes(selectedFile.size) }} · {{ selectedFile.name.split('.').pop()?.toUpperCase() }} 文件</small>
+            <small v-else>选好后可以继续填写封面、简介和阅读权限。</small>
+          </span>
+          <span v-if="selectedFile" class="drop-zone__action">更换文件</span>
+        </button>
+      </section>
       <input
         ref="fileInput"
         class="visually-hidden"
@@ -37,9 +49,6 @@
             <h3 id="book-profile-title">书籍资料</h3>
             <p>书名、简介和封面会展示在书架中，导入后仍可修改。</p>
           </div>
-          <span v-if="selectedFile" class="book-profile__format">
-            {{ selectedFile.name.split('.').pop()?.toUpperCase() }}
-          </span>
         </div>
 
         <div class="book-profile__layout">
@@ -93,6 +102,12 @@
       </section>
 
       <section class="import-options" aria-label="导入设置">
+        <div class="section-heading">
+          <div>
+            <h3>导入设置</h3>
+            <p>系统会自动识别文本编码；阅读权限可在导入后调整。</p>
+          </div>
+        </div>
         <div class="import-form__grid">
           <label class="import-form__encoding">
             <span>文本编码</span>
@@ -102,18 +117,24 @@
           <label>
             <span>可见范围</span>
             <UiSelect v-model="visibility" :options="visibilityOptions" />
-            <small>私密书籍只对你可见，公开书籍可被访客阅读。</small>
+            <small>公开书籍任何访客可读，知友可见仅开放给站点知友。</small>
           </label>
         </div>
       </section>
 
-      <div class="format-note">
+      <div class="format-note" role="note">
         <UiIcon name="info" />
         <p>EPUB 会保留书脊顺序、多级目录和内嵌插图；纯文本会识别卷、部、章、序章、番外等标题。MOBI、AZW3 与 PDF 请先用 Calibre 转换为 EPUB。</p>
       </div>
 
       <div v-if="importing" class="import-progress" aria-live="polite">
-        <div><span :style="{ width: `${uploadProgress}%` }" /></div>
+        <div
+          role="progressbar"
+          aria-label="小说导入进度"
+          aria-valuemin="0"
+          aria-valuemax="100"
+          :aria-valuenow="uploadProgress"
+        ><span :style="{ transform: `scaleX(${uploadProgress / 100})` }" /></div>
         <p>{{ uploadProgress < 100 ? `正在上传 ${uploadProgress}%` : '正在解析目录和正文…' }}</p>
       </div>
     </form>
@@ -154,7 +175,7 @@ const title = ref('')
 const author = ref('')
 const description = ref('')
 const encoding = ref('')
-const visibility = ref<ReaderBookVisibility>('private')
+const visibility = ref<ReaderBookVisibility>('public')
 const coverFileId = ref<string | number>()
 const coverUrl = ref('')
 const dragging = ref(false)
@@ -171,8 +192,9 @@ const encodingOptions = [
   { label: 'UTF-16 BE', value: 'UTF-16BE' },
 ]
 const visibilityOptions = [
-  { label: '仅自己可见（默认）', value: 'private' },
-  { label: '公开，所有访客可阅读', value: 'public' },
+  { label: '公开（默认）', value: 'public' },
+  { label: '知友可见', value: 'friend' },
+  { label: '仅自己可见', value: 'private' },
 ]
 const allowedExtensions = new Set(['txt', 'epub', 'html', 'htm', 'xhtml', 'md', 'markdown', 'fb2'])
 
@@ -232,7 +254,7 @@ const reset = () => {
   author.value = ''
   description.value = ''
   encoding.value = ''
-  visibility.value = 'private'
+  visibility.value = 'public'
   clearCover()
   uploadProgress.value = 0
   if (fileInput.value) fileInput.value.value = ''
@@ -273,41 +295,44 @@ watch(() => selectedFile.value?.name, () => {
 </script>
 
 <style scoped lang="scss">
-.import-form { display: grid; gap: 22px; }
+.import-form { display: grid; gap: 26px; }
+
+.source-section, .book-profile, .import-options { display: grid; gap: 16px; }
+.section-heading, .book-profile__head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+.section-heading h3, .book-profile__head h3 { margin: 0; color: var(--color-text-primary); font-size: 16px; }
+.section-heading p, .book-profile__head p { margin: 5px 0 0; color: var(--color-text-secondary); font-size: 13px; line-height: 1.6; }
+.source-section__ready { padding: 4px 8px; border-radius: var(--radius-pill); background: var(--color-accent-soft); color: var(--color-action-text); font-size: 12px; font-weight: 700; }
 
 .drop-zone {
-  display: grid;
-  justify-items: center;
-  gap: 9px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
   width: 100%;
-  min-height: 178px;
-  padding: 28px;
+  min-height: 108px;
+  padding: 20px 22px;
   border: 1.5px dashed var(--color-border);
-  border-radius: var(--radius-lg);
-  background: color-mix(in srgb, var(--color-surface-muted) 82%, var(--color-surface));
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
   color: var(--color-text-secondary);
+  text-align: left;
   cursor: pointer;
-  transition: border-color var(--motion-duration-fast), background-color var(--motion-duration-fast), transform var(--motion-duration-fast);
+  transition: border-color var(--motion-duration-fast), background-color var(--motion-duration-fast);
 }
 
 .drop-zone:hover, .drop-zone.is-dragging { border-color: var(--color-action-border); background: var(--color-accent-soft); }
-.drop-zone.is-dragging { transform: scale(1.01); }
 .drop-zone.has-file { border-style: solid; border-color: var(--color-action-border); }
-.drop-zone :deep(.ui-icon) { font-size: 34px; color: var(--primary); }
-.drop-zone strong { color: var(--color-text-primary); font-size: 17px; }
-.drop-zone span { font-size: 13px; }
+.drop-zone :deep(.ui-icon) { flex: 0 0 auto; font-size: 28px; color: var(--primary); }
+.drop-zone__copy { display: grid; min-width: 0; gap: 4px; }
+.drop-zone strong { overflow: hidden; color: var(--color-text-primary); font-size: 15px; text-overflow: ellipsis; white-space: nowrap; }
+.drop-zone small { color: var(--color-text-secondary); font-size: 13px; line-height: 1.5; }
+.drop-zone__action { margin-left: auto; color: var(--color-action-text); font-size: 13px; font-weight: 700; white-space: nowrap; }
 
-.book-profile, .import-options { display: grid; gap: 18px; }
-.book-profile { padding: 20px; border-radius: var(--radius-lg); background: var(--color-surface-muted); }
-.book-profile__head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
-.book-profile__head h3 { margin: 0; color: var(--color-text-primary); font-size: 16px; }
-.book-profile__head p { margin: 5px 0 0; color: var(--color-text-secondary); font-size: 13px; line-height: 1.6; }
-.book-profile__format { padding: 4px 8px; border-radius: var(--radius-sm); background: var(--color-surface); color: var(--color-text-secondary); font-size: 11px; font-weight: 700; }
-.book-profile__layout { display: grid; grid-template-columns: 122px minmax(0, 1fr); gap: 20px; }
+.book-profile, .import-options { padding-top: 24px; border-top: 1px solid var(--color-border-light); }
+.book-profile__layout { display: grid; grid-template-columns: 118px minmax(0, 1fr); gap: 24px; }
 .book-profile__fields { display: grid; align-content: start; gap: 16px; }
 
 .cover-field { display: grid; align-content: start; gap: 8px; color: var(--color-text-secondary); font-size: 13px; font-weight: 600; }
-.cover-picker { display: grid; place-content: center; justify-items: center; gap: 6px; width: 116px; aspect-ratio: 2 / 3; overflow: hidden; border: 1px dashed var(--color-border); border-radius: var(--radius-md); background: var(--color-surface); color: var(--color-text-secondary); text-align: center; transition: border-color var(--motion-duration-fast), background-color var(--motion-duration-fast); }
+.cover-picker { display: grid; place-content: center; justify-items: center; gap: 6px; width: 112px; aspect-ratio: 2 / 3; overflow: hidden; border: 1px dashed var(--color-border); border-radius: var(--radius-md); background: var(--color-surface-muted); color: var(--color-text-secondary); text-align: center; transition: border-color var(--motion-duration-fast), background-color var(--motion-duration-fast); }
 .cover-picker:hover, .cover-picker.is-uploading { border-color: var(--color-action-border); background: var(--color-accent-soft); }
 .cover-picker :deep(.ui-icon) { color: var(--primary); font-size: 20px; }
 .cover-picker strong { color: var(--color-text-primary); font-size: 12px; }
@@ -321,19 +346,20 @@ watch(() => selectedFile.value?.name, () => {
 .import-form__encoding { max-width: 360px; }
 .import-form small { color: var(--color-text-tertiary); font-weight: 400; line-height: 1.6; }
 
-.format-note { display: flex; align-items: flex-start; gap: 10px; padding: 13px 14px; border: 1px solid var(--color-border-light); border-radius: var(--radius-md); background: var(--color-accent-soft); color: var(--color-text-secondary); }
+.format-note { display: flex; align-items: flex-start; gap: 10px; padding: 12px 0 0; border-top: 1px solid var(--color-border-light); color: var(--color-text-secondary); }
 .format-note :deep(.ui-icon) { flex: 0 0 auto; margin-top: 2px; color: var(--color-action-text); }
 .format-note p { margin: 0; font-size: 13px; line-height: 1.7; }
 .import-progress { display: grid; gap: 8px; }
 .import-progress > div { height: 5px; overflow: hidden; border-radius: var(--radius-pill); background: var(--color-border-light); }
-.import-progress span { display: block; height: 100%; background: var(--primary); transition: width 180ms ease; }
+.import-progress span { display: block; width: 100%; height: 100%; transform-origin: left center; background: var(--primary); transition: transform 180ms ease; }
 .import-progress p { margin: 0; color: var(--color-text-secondary); font-size: 12px; }
 .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0); }
 
 @media (max-width: 640px) {
   .import-form__grid { grid-template-columns: 1fr; }
-  .drop-zone { min-height: 150px; padding: 22px 14px; }
-  .book-profile { padding: 16px; }
+  .drop-zone { min-height: 96px; padding: 16px; }
+  .drop-zone__action { display: none; }
+  .book-profile, .import-options { padding-top: 20px; }
   .book-profile__layout { grid-template-columns: 92px minmax(0, 1fr); gap: 14px; }
   .cover-picker { width: 88px; }
 }

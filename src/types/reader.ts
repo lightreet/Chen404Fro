@@ -1,5 +1,5 @@
 export type ReaderId = number | string
-export type ReaderBookVisibility = 'public' | 'private'
+export type ReaderBookVisibility = 'public' | 'friend' | 'private'
 export type ReaderTheme = 'light' | 'rose' | 'dark'
 export type ReaderFontFamily = 'serif' | 'sans'
 
