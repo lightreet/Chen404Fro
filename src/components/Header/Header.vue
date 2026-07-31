@@ -165,13 +165,9 @@
                     <UiIcon name="User" />
                     个人中心
                   </UiDropdownItem>
-                  <UiDropdownItem command="bookshelf">
-                    <UiIcon name="book" />
-                    我的书架
-                  </UiDropdownItem>
                   <UiDropdownItem v-if="!isAdmin" command="trust">
                     <UiIcon name="Postcard" />
-                    好友与权限
+                    好友权限
                   </UiDropdownItem>
                   <UiDropdownItem v-if="isAdmin" command="notifications">
                     <UiIcon name="bell" />
@@ -345,7 +341,7 @@
             @click="closeMobileMenu"
           >
             <UiIcon name="Postcard" />
-            <span>好友与权限</span>
+            <span>好友权限</span>
           </router-link>
           <router-link
             v-if="isAdmin"
@@ -642,9 +638,6 @@ const handleUserCommand = (command: string | number | object) => {
       break;
     case 'trust':
       router.push({ path: '/profile', query: { tab: 'trust' } });
-      break;
-    case 'bookshelf':
-      router.push('/bookshelf');
       break;
     case 'notifications':
       router.push({ path: '/admin', query: { tab: 'notifications' } });

@@ -1,6 +1,6 @@
 /**
  * 文件上传相关 API。
- * 保留薄适配层，统一前端调用签名，同时底层走 generated SDK 对齐后端契约。
+ * 保留薄适配层，统一前端调用签名；通用接口优先复用 generated SDK，业务端点走 request 封装。
  */
 
 import { Service } from '@/sdk/generated'
@@ -76,6 +76,10 @@ export function uploadCover(file: File): Promise<UploadResult> {
 
 export function uploadSiteAsset(file: File): Promise<UploadResult> {
   return uploadSingleFile(file, Service.uploadSiteAsset)
+}
+
+export function uploadSiteHero(file: File): Promise<UploadResult> {
+  return uploadFileByEndpoint(file, '/upload/site-hero')
 }
 
 export function uploadAvatar(file: File): Promise<UploadResult> {

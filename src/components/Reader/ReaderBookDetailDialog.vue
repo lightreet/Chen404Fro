@@ -21,7 +21,7 @@
             <span v-if="book.status === 'ready'">{{ book.chapterCount }} 章</span>
             <span v-if="book.status === 'ready'">{{ formatCharCount(book.totalCharCount) }}</span>
           </div>
-          <div v-if="book.ownedByCurrentUser && book.status === 'ready'" class="book-detail__progress">
+          <div v-if="book.status === 'ready'" class="book-detail__progress">
             <div><span :style="{ width: `${book.progressPercent || 0}%` }" /></div>
             <span>{{ formatProgress(book.progressPercent) }}</span>
           </div>
@@ -110,7 +110,7 @@ const emit = defineEmits<{
 
 const readActionLabel = computed(() => {
   const book = props.book
-  return book?.ownedByCurrentUser && book.progressPercent > 0 && !book.finished ? '继续阅读' : '开始阅读'
+  return book && book.progressPercent > 0 && !book.finished ? '继续阅读' : '开始阅读'
 })
 
 const visibilityLabel = computed(() => ({

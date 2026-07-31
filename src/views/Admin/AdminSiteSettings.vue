@@ -343,7 +343,7 @@ import { UiPanel, UiButton, UiIcon, UiTabs, UiForm, UiFormField, UiInput, UiLoad
 import type { UiTabItem } from '@/components/ui';
 import type { UploadRequestOptions } from '@/components/ui';
 import { getSiteConfig, updateSiteConfig } from '@/api/home';
-import { uploadSiteAsset } from '@/api/upload';
+import { uploadSiteAsset, uploadSiteHero } from '@/api/upload';
 import AiAssistantSettings from '@/views/Admin/components/AiAssistantSettings.vue';
 import AdminSettingsFooter from '@/views/Admin/components/AdminSettingsFooter.vue';
 import GitHubDevelopmentSettings from '@/views/Admin/components/GitHubDevelopmentSettings.vue';
@@ -723,7 +723,7 @@ async function handleAssetUpload(key: AssetKey, options: UploadRequestOptions) {
 async function handleHeroUpload(key: HeroKey, options: UploadRequestOptions) {
   uploadingKey.value = key;
   try {
-    const res = await uploadSiteAsset(options.file);
+    const res = await uploadSiteHero(options.file);
     heroImages[key] = res.url;
     heroImagePositions[key] = HERO_DEFAULT_POSITIONS[key];
     options.onSuccess?.(res as any);
@@ -762,7 +762,7 @@ async function saveConfig() {
     setSiteConfig(nextConfig);
     notify.success('站点配置保存成功');
   } catch {
-    notify.error('保存失败');
+    // 请求层已经展示具体失败原因，避免再弹出一条笼统的“保存失败”。
   } finally {
     saving.value = false;
   }

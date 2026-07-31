@@ -15,45 +15,8 @@
     </template>
 
     <main id="bookshelf-content" class="bookshelf-page">
-      <header class="bookshelf-content__heading">
-        <div>
-          <h2>阅读清单</h2>
-          <p>已公开的书籍可直接阅读，你导入的书籍可随时调整可见范围。</p>
-        </div>
-        <span v-if="books.length" class="bookshelf-content__count">
-          {{ books.length }} 本 · {{ totalChapterCount }} 章
-        </span>
-      </header>
-
       <UiLoadingState :loading="loading" message="正在整理你的书架…">
         <template v-if="books.length">
-          <article v-if="continueBook" class="continue-reading">
-            <div class="continue-reading__cover">
-              <ReaderBookCover
-                :title="continueBook.title"
-                :format="continueBook.sourceFormat"
-                :url="continueBook.coverUrl"
-              />
-            </div>
-            <div class="continue-reading__body">
-              <span>继续阅读</span>
-              <h2>{{ continueBook.title }}</h2>
-              <p>
-                {{ continueBook.currentChapterTitle || '从正文开始' }}
-                <template v-if="continueBook.lastReadAt">
-                  · {{ relativeTime(continueBook.lastReadAt) }}
-                </template>
-              </p>
-              <div class="continue-reading__progress">
-                <div><span :style="{ width: `${continueBook.progressPercent || 0}%` }" /></div>
-                <small>{{ formatProgress(continueBook.progressPercent) }}</small>
-              </div>
-              <UiButton variant="primary" icon="book" @click="openBook(continueBook)">
-                接着读
-              </UiButton>
-            </div>
-          </article>
-
           <div class="library-toolbar">
             <div>
               <h2>全部藏书</h2>
@@ -95,9 +58,7 @@
                   <p v-if="book.status === 'ready'" class="book-card__progress">
                     <span>进度</span>
                     <span class="book-card__progress-value">
-                      {{ book.ownedByCurrentUser
-                        ? (book.finished ? '已读完' : book.progressPercent > 0 ? formatProgress(book.progressPercent) : '未开始')
-                        : '公开阅读' }}
+                      {{ isLoggedIn ? formatProgress(book.progressPercent) : '0%' }}
                     </span>
                   </p>
                   <p v-else class="book-card__task-status" :class="`is-${book.status}`">
@@ -218,16 +179,9 @@ const sortOptions = [
   { label: '书名排序', value: 'title' },
   { label: '阅读进度', value: 'progress' },
 ]
-const continueBook = computed(() => books.value.find((book) => (
-  book.status === 'ready'
-  && book.ownedByCurrentUser
-  && book.lastReadAt
-  && !book.finished
-)))
 const pendingImportBooks = computed(() => books.value.filter((book) => (
   book.ownedByCurrentUser && book.status === 'importing'
 )))
-const totalChapterCount = computed(() => books.value.reduce((sum, book) => sum + book.chapterCount, 0))
 const filteredBooks = computed(() => {
   const query = keyword.value.trim().toLowerCase()
   const result = books.value.filter((book) => !query
@@ -358,15 +312,6 @@ const removeBook = async (book: ReaderBook) => {
 }
 
 const formatProgress = (value: number) => `${Math.max(0, Math.min(100, Number(value || 0))).toFixed(1)}%`
-const relativeTime = (value: string) => {
-  const diff = Date.now() - Date.parse(value)
-  const minutes = Math.max(1, Math.round(diff / 60_000))
-  if (minutes < 60) return `${minutes} 分钟前`
-  const hours = Math.round(minutes / 60)
-  if (hours < 24) return `${hours} 小时前`
-  const days = Math.round(hours / 24)
-  return days < 30 ? `${days} 天前` : new Date(value).toLocaleDateString('zh-CN')
-}
 
 onMounted(() => {
   void loadBooks()
@@ -392,109 +337,12 @@ onBeforeUnmount(() => {
   padding: 28px 0 72px;
 }
 
-.bookshelf-content__heading {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 24px;
-  margin: 0 0 28px;
-  padding: 0 4px 22px;
-  border-bottom: 1px solid var(--color-border-light);
-}
-
-.bookshelf-content__heading h2 {
-  margin: 0;
-  color: var(--color-text-primary);
-  font-size: 24px;
-  font-weight: 700;
-}
-
-.bookshelf-content__heading p {
-  max-width: 620px;
-  margin: 8px 0 0;
-  color: var(--color-text-secondary);
-  font-size: 14px;
-  line-height: 1.7;
-}
-
-.bookshelf-content__count {
-  flex: 0 0 auto;
-  padding-top: 5px;
-  color: var(--color-text-tertiary);
-  font-size: 13px;
-  font-variant-numeric: tabular-nums;
-}
-
 :deep(.page-hero--left .page-hero__content) {
   max-width: 1120px;
 }
 
 :deep(.page-hero__meta) {
   margin-top: 1.55rem;
-}
-
-.continue-reading {
-  display: grid;
-  grid-template-columns: 170px 1fr;
-  gap: clamp(24px, 4vw, 54px);
-  align-items: center;
-  margin-bottom: 58px;
-  padding: clamp(24px, 4vw, 44px);
-  overflow: hidden;
-  border-radius: var(--radius-lg);
-  background:
-    radial-gradient(circle at 90% 8%, color-mix(in srgb, var(--primary) 13%, transparent), transparent 34%),
-    var(--color-surface);
-}
-
-.continue-reading__cover {
-  width: 170px;
-}
-
-.continue-reading__body > span {
-  color: var(--primary);
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.16em;
-}
-
-.continue-reading h2 {
-  margin: 8px 0 8px;
-  color: var(--color-text-primary);
-  font-family: 'Noto Serif SC', 'Songti SC', serif;
-  font-size: clamp(28px, 4vw, 44px);
-  line-height: 1.2;
-}
-
-.continue-reading p {
-  margin: 0;
-  color: var(--color-text-secondary);
-}
-
-.continue-reading__progress {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  max-width: 460px;
-  margin: 24px 0 20px;
-}
-
-.continue-reading__progress > div {
-  flex: 1;
-  height: 4px;
-  overflow: hidden;
-  background: var(--color-border-light);
-}
-
-.continue-reading__progress span {
-  display: block;
-  height: 100%;
-  background: var(--primary);
-}
-
-.continue-reading__progress small {
-  color: var(--color-text-tertiary);
-  font-variant-numeric: tabular-nums;
 }
 
 .library-toolbar {
@@ -615,10 +463,15 @@ onBeforeUnmount(() => {
   font-family: inherit;
   font-size: 12px;
   font-weight: 400;
-  line-height: 1.65;
+  line-height: 1.55;
 }
 
-.book-card__progress-value,
+.book-card__progress-value {
+  color: inherit;
+  font: inherit;
+  letter-spacing: normal;
+}
+
 .book-card__description {
   color: var(--color-text-secondary);
   font-family: inherit;
@@ -627,10 +480,6 @@ onBeforeUnmount(() => {
   font-weight: 400;
   letter-spacing: normal;
   line-height: 1.65;
-}
-
-.book-card__progress-value {
-  font-variant-numeric: tabular-nums;
 }
 
 .book-card__task-status {
@@ -711,29 +560,9 @@ onBeforeUnmount(() => {
     width: min(100% - 24px, 1120px);
     padding-top: 18px;
   }
-  .bookshelf-content__heading {
-    align-items: stretch;
-    flex-direction: column;
-    gap: 8px;
-    margin-bottom: 22px;
-  }
-  .bookshelf-content__count {
-    padding-top: 0;
-  }
   .library-toolbar {
     align-items: stretch;
     flex-direction: column;
-  }
-  .continue-reading {
-    grid-template-columns: 100px 1fr;
-    gap: 20px;
-    padding: 20px;
-  }
-  .continue-reading__cover {
-    width: 100px;
-  }
-  .continue-reading h2 {
-    font-size: 24px;
   }
   .library-toolbar__controls {
     grid-template-columns: 1fr;
@@ -744,15 +573,4 @@ onBeforeUnmount(() => {
   }
 }
 
-@media (max-width: 430px) {
-  .continue-reading {
-    grid-template-columns: 76px 1fr;
-  }
-  .continue-reading__cover {
-    width: 76px;
-  }
-  .continue-reading__progress {
-    display: none;
-  }
-}
 </style>
