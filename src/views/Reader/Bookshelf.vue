@@ -30,8 +30,8 @@
                 placeholder="搜索书名或作者"
               />
               <UiSelect v-model="sortBy" :options="sortOptions" />
-              <UiButton variant="primary" :icon="isLoggedIn ? 'upload' : 'user'" @click="openImport">
-                {{ isLoggedIn ? '导入小说' : '登录后导入' }}
+              <UiButton v-if="canImportBooks" variant="primary" icon="upload" @click="openImport">
+                导入小说
               </UiButton>
             </div>
           </div>
@@ -89,19 +89,13 @@
         <UiEmpty
           v-else-if="!loading"
           title="书架还是空的"
-          :description="isLoggedIn
-            ? '导入 TXT、EPUB、HTML、Markdown 或 FB2，目录和阅读位置会自动保存。'
-            : '这里会展示公开书籍。登录后可以导入小说，并选择公开或仅自己可见。'"
+          description="这里会展示公开书籍。"
           icon="book"
           size="lg"
         >
           <template #action>
-            <UiButton
-              variant="primary"
-              :icon="isLoggedIn ? 'upload' : 'user'"
-              @click="openImport"
-            >
-              {{ isLoggedIn ? '导入第一本小说' : '登录后导入小说' }}
+            <UiButton v-if="canImportBooks" variant="primary" icon="upload" @click="openImport">
+              导入第一本小说
             </UiButton>
           </template>
         </UiEmpty>
@@ -148,6 +142,7 @@ import { deleteReaderBook, getReaderBookImportStatus, listReaderBooks } from '@/
 import { confirmDelete, notify } from '@/lib/feedback'
 import { useUserStore } from '@/stores/user'
 import { useSiteConfig } from '@/composables/useSiteConfig'
+import { hasCapability } from '@/utils/permission'
 import type { ReaderBook } from '@/types/reader'
 import { resolveHeroImage, resolveHeroImagePosition } from '@/utils/siteConfig'
 
@@ -159,7 +154,7 @@ const router = useRouter()
 const userStore = useUserStore()
 const { loadSiteConfig } = useSiteConfig()
 userStore.initUser()
-const { isLoggedIn } = storeToRefs(userStore)
+const { isLoggedIn, user } = storeToRefs(userStore)
 const heroBgImage = ref(BOOKSHELF_HERO_IMAGE)
 const heroBgPosition = ref(BOOKSHELF_HERO_POSITION)
 const books = ref<ReaderBook[]>([])
@@ -182,6 +177,7 @@ const sortOptions = [
 const pendingImportBooks = computed(() => books.value.filter((book) => (
   book.ownedByCurrentUser && book.status === 'importing'
 )))
+const canImportBooks = computed(() => hasCapability(user.value, 'friend-content:view'))
 const filteredBooks = computed(() => {
   const query = keyword.value.trim().toLowerCase()
   const result = books.value.filter((book) => !query
@@ -221,11 +217,8 @@ const openBookDetail = (book: ReaderBook) => {
 }
 
 const openImport = () => {
-  if (isLoggedIn.value) {
-    importOpen.value = true
-    return
-  }
-  void router.push({ path: '/login', query: { redirect: '/bookshelf' } })
+  if (!canImportBooks.value) return
+  importOpen.value = true
 }
 
 const handleImported = (book: ReaderBook) => {
@@ -545,10 +538,6 @@ onBeforeUnmount(() => {
 
 .book-card :deep(.book-cover::after) {
   inset: 7px;
-}
-
-.book-card :deep(.book-cover strong) {
-  font-size: 17px;
 }
 
 .book-card :deep(.book-cover__ornament) {

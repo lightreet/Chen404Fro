@@ -114,7 +114,7 @@ function clearStoredAuth() {
 }
 
 function resolveLoginRedirectUrl() {
-  const redirect = encodeURIComponent(window.location.pathname + window.location.search);
+  const redirect = encodeURIComponent(window.location.pathname + window.location.search + window.location.hash);
   return redirect ? `/login?redirect=${redirect}` : '/login';
 }
 

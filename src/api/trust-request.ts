@@ -1,6 +1,7 @@
 import type { PageResult, TrustRequest } from '@/types'
 import { Service } from '@/sdk/generated'
 import { unwrapResult } from '@/sdk/runtime'
+import { post } from '@/api/request'
 
 export interface CreateTrustRequestParams {
   reason: string
@@ -45,6 +46,10 @@ export async function approveTrustRequest(id: number | string, data?: ReviewTrus
     id: Number(id),
     requestBody: data ? { reviewNote: data.reviewNote } : undefined,
   })) as TrustRequest
+}
+
+export async function approveTrustRequestByEmailToken(token: string): Promise<TrustRequest> {
+  return post<TrustRequest>('/admin/trust-requests/email-approve', { token })
 }
 
 export async function rejectTrustRequest(id: number | string, data: ReviewTrustRequestParams): Promise<TrustRequest> {
