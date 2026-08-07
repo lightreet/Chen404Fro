@@ -173,15 +173,21 @@
 
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
-import { useRouter } from 'vue-router'
-import { notify } from '@/lib/feedback'
+import { useRoute, useRouter } from 'vue-router'
+import { confirmAction, notify } from '@/lib/feedback'
 import { UiPanel, UiButton, UiDialog, UiForm, UiFormField, UiInput, UiPagination, UiSelect, UiTable, UiTableColumn, UiTextarea } from '@/components/ui'
 import { AppStatusPill } from '@/components/app'
 import type { AccentTone } from '@/design/tokens'
-import { approveTrustRequest, getAdminTrustRequests, rejectTrustRequest } from '@/api/trust-request'
+import {
+  approveTrustRequest,
+  approveTrustRequestByEmailToken,
+  getAdminTrustRequests,
+  rejectTrustRequest,
+} from '@/api/trust-request'
 import type { TrustRequest } from '@/types'
 import { TrustRequestStatus } from '@/types'
 
+const route = useRoute()
 const router = useRouter()
 const loading = ref(false)
 const reviewLoading = ref(false)
@@ -278,8 +284,45 @@ const handleReject = async () => {
   }
 }
 
-onMounted(() => {
-  loadRequests()
+const clearEmailApprovalToken = async () => {
+  await router.replace({ path: route.path, query: route.query, hash: '' })
+}
+
+const handleEmailApproval = async () => {
+  const hashPrefix = '#emailApproveToken='
+  const token = route.hash.startsWith(hashPrefix)
+    ? decodeURIComponent(route.hash.slice(hashPrefix.length))
+    : ''
+  if (!token) return
+
+  const confirmed = await confirmAction({
+    title: '确认通过好友申请',
+    message: '这是邮件中的一次性审批操作。确认后，该用户将立即获得知友权限。',
+    confirmText: '确认通过',
+    cancelText: '暂不处理',
+    tone: 'warning',
+  })
+  if (!confirmed) {
+    await clearEmailApprovalToken()
+    return
+  }
+
+  reviewLoading.value = true
+  try {
+    await approveTrustRequestByEmailToken(token)
+    notify.success('邮件申请已确认通过')
+    await clearEmailApprovalToken()
+    await loadRequests(1)
+  } catch {
+    await clearEmailApprovalToken()
+  } finally {
+    reviewLoading.value = false
+  }
+}
+
+onMounted(async () => {
+  await loadRequests()
+  await handleEmailApproval()
 })
 </script>
 

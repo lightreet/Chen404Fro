@@ -145,6 +145,10 @@ const requestDelete = () => {
 
 .book-detail__summary { display: grid; grid-template-columns: 132px minmax(0, 1fr); gap: 22px; align-items: start; }
 .book-detail__cover { width: 132px; box-shadow: 0 8px 16px rgba(61, 38, 50, 0.14); }
+.book-detail__cover :deep(.book-cover) { padding: 18px; }
+.book-detail__cover :deep(.book-cover strong) {
+  line-height: 1.42;
+}
 .book-detail__intro { display: grid; align-content: start; gap: 8px; min-width: 0; padding-top: 2px; }
 .book-detail h2 { margin: 0; color: var(--color-text-primary); font-size: 24px; line-height: 1.35; text-wrap: balance; }
 .book-detail__author { margin: 0; color: var(--color-text-secondary); font-size: 15px; }
@@ -181,6 +185,7 @@ const requestDelete = () => {
 @media (max-width: 560px) {
   .book-detail__summary { grid-template-columns: 102px minmax(0, 1fr); gap: 16px; }
   .book-detail__cover { width: 102px; }
+  .book-detail__cover :deep(.book-cover) { padding: 14px; }
   .book-detail h2 { font-size: 20px; }
   .book-detail__metadata { grid-template-columns: 1fr; gap: 10px; }
 }
