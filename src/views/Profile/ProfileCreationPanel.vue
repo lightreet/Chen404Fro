@@ -392,12 +392,15 @@ const loadArticles = async (page = 1) => {
   articlePage.value = page
   articleLoading.value = true
   try {
-    const result = await getMyArticles({
-      page,
-      size: articlePageSize,
-      status: articleStatus.value === -1 ? undefined : articleStatus.value,
-      keyword: articleKeyword.value.trim() || undefined,
-    })
+    const result = await getMyArticles(
+      {
+        page,
+        size: articlePageSize,
+        status: articleStatus.value === -1 ? undefined : articleStatus.value,
+        keyword: articleKeyword.value.trim() || undefined,
+      },
+      { suppressErrorMessage: true },
+    )
     articles.value = result.list ?? []
     articleTotal.value = result.total ?? 0
   } finally {
@@ -408,7 +411,7 @@ const loadArticles = async (page = 1) => {
 const loadTravelMemories = async () => {
   travelLoading.value = true
   try {
-    travelMemories.value = await getMyTravelMemories()
+    travelMemories.value = await getMyTravelMemories({ suppressErrorMessage: true })
   } finally {
     travelLoading.value = false
   }
@@ -417,7 +420,7 @@ const loadTravelMemories = async () => {
 const loadMusicTracks = async () => {
   musicLoading.value = true
   try {
-    musicTracks.value = await getMyMusicTracks()
+    musicTracks.value = await getMyMusicTracks({ suppressErrorMessage: true })
   } finally {
     musicLoading.value = false
   }
@@ -510,13 +513,17 @@ watch(
 )
 
 onMounted(async () => {
+  const resourceLabels = ['文章', '旅行', '音乐']
   const results = await Promise.allSettled([
     loadArticles(1),
     loadTravelMemories(),
     loadMusicTracks(),
   ])
-  if (results.some((result) => result.status === 'rejected')) {
-    notify.error('部分创作记录加载失败，请稍后重试')
+  const failedResources = results.flatMap((result, index) =>
+    result.status === 'rejected' ? [resourceLabels[index]] : [],
+  )
+  if (failedResources.length > 0) {
+    notify.error(`${failedResources.join('、')}记录加载失败，请稍后重试`)
   }
 })
 </script>

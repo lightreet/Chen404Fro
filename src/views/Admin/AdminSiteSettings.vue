@@ -325,6 +325,10 @@
         <div v-if="activeTab === 'github-development'" class="settings-pane settings-pane--wide">
           <GitHubDevelopmentSettings />
         </div>
+
+        <div v-if="activeTab === 'feature-toggles'" class="settings-pane settings-pane--wide">
+          <FeatureToggleSettings />
+        </div>
       </UiTabs>
 
       <AdminSettingsFooter v-if="!activeTabManagesOwnActions">
@@ -347,6 +351,7 @@ import { uploadSiteAsset, uploadSiteHero } from '@/api/upload';
 import AiAssistantSettings from '@/views/Admin/components/AiAssistantSettings.vue';
 import AdminSettingsFooter from '@/views/Admin/components/AdminSettingsFooter.vue';
 import GitHubDevelopmentSettings from '@/views/Admin/components/GitHubDevelopmentSettings.vue';
+import FeatureToggleSettings from '@/views/Admin/components/FeatureToggleSettings.vue';
 import HeroImageFocusEditor from '@/components/HeroImageFocusEditor/HeroImageFocusEditor.vue';
 import { useSiteConfig } from '@/composables/useSiteConfig';
 import type { SiteConfig } from '@/types';
@@ -357,6 +362,7 @@ const tabItems: UiTabItem[] = [
   { label: '品牌资源', value: 'brand' },
   { label: 'SEO', value: 'seo' },
   { label: '运行配置', value: 'runtime' },
+  { label: '功能开关', value: 'feature-toggles' },
   { label: '页面封面', value: 'hero' },
   { label: '开发同步', value: 'github-development' },
   { label: 'AI 助手', value: 'ai' },
@@ -534,7 +540,9 @@ function selectHeroPage(heroKey: HeroKey, menuKey?: HeroMenuKey) {
 }
 
 const activeTabManagesOwnActions = computed(() =>
-  activeTab.value === 'ai' || activeTab.value === 'github-development',
+  activeTab.value === 'ai'
+  || activeTab.value === 'github-development'
+  || activeTab.value === 'feature-toggles',
 );
 const loading = ref(false);
 const saving = ref(false);

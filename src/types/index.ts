@@ -157,6 +157,16 @@ export interface SiteConfig {
   heroImagePositions?: Record<string, string>;
 }
 
+export interface FeatureToggleConfig {
+  articleCreationEnabled: boolean;
+  travelCreationEnabled: boolean;
+  musicCreationEnabled: boolean;
+  adminNotificationEnabled: boolean;
+  aiArticleAssistEnabled: boolean;
+  aiMusicAssistEnabled: boolean;
+  aiArticleRecommendEnabled: boolean;
+}
+
 export interface SiteOwner {
   id: number | string;
   username: string;

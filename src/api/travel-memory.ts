@@ -31,8 +31,8 @@ export function getAdminTravelMemoryDetail(id: number | string): Promise<TravelM
   return get(`/admin/travel-memories/${String(id)}`)
 }
 
-export function getMyTravelMemories(): Promise<TravelMemoryLocationDetail[]> {
-  return get('/travel-memories/mine')
+export function getMyTravelMemories(config?: RequestConfig): Promise<TravelMemoryLocationDetail[]> {
+  return get('/travel-memories/mine', undefined, config)
 }
 
 export function getManageableTravelMemoryDetail(id: number | string): Promise<TravelMemoryLocationDetail> {

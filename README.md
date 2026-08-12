@@ -158,7 +158,7 @@ src/
 - 入口：`src/views/Admin/AdminLayout.vue`
 - 站点配置页：`src/views/Admin/AdminSiteSettings.vue`
 - AI 配置页：`src/views/Admin/components/AiAssistantSettings.vue`
-- 当前 tab：基础信息、品牌资源、SEO、运行配置、页面封面、AI 助手
+- 当前 tab：基础信息、品牌资源、SEO、运行配置、功能开关、页面封面、开发同步、AI 助手
 
 ## OpenAPI SDK
 

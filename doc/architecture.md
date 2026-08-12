@@ -223,7 +223,9 @@ Route / Page -> Feature -> components/app (App*) -> components/ui (Ui*) -> desig
 - 品牌资源
 - SEO
 - 运行配置
+- 功能开关（知友共创、管理员消息与 AI 业务入口）
 - 页面封面
+- 开发同步
 - AI 助手
 
 当前已接入的页面封面 key：
@@ -313,7 +315,7 @@ home / category / archive / development-history / memory-map / music / bookshelf
 当前一级菜单：
 
 - 分类管理
-- 站点配置（内含基础信息、品牌资源、SEO、运行配置、页面封面、AI 助手 tab）
+- 站点配置（内含基础信息、品牌资源、SEO、运行配置、功能开关、页面封面、开发同步、AI 助手 tab）
 - 表情包管理
 - 文件管理
 - 好友申请

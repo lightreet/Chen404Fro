@@ -1,4 +1,4 @@
-import { AI_REQUEST_TIMEOUT_MESSAGE, AI_REQUEST_TIMEOUT_MS, del, get, patch, post, put } from './request'
+import { AI_REQUEST_TIMEOUT_MESSAGE, AI_REQUEST_TIMEOUT_MS, del, get, patch, post, put, type RequestConfig } from './request'
 import type {
   MusicPlaylist,
   MusicPlayerState,
@@ -53,8 +53,8 @@ export function getAdminMusicTrack(id: number | string): Promise<MusicTrack> {
   return get(`/admin/music/tracks/${String(id)}`)
 }
 
-export function getMyMusicTracks(): Promise<MusicTrack[]> {
-  return get('/music/tracks/mine')
+export function getMyMusicTracks(config?: RequestConfig): Promise<MusicTrack[]> {
+  return get('/music/tracks/mine', undefined, config)
 }
 
 export function getManageableMusicTrack(id: number | string): Promise<MusicTrack> {

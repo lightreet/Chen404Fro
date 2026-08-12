@@ -93,8 +93,8 @@ export function getMyArticles(params?: {
   size?: number;
   status?: number;
   keyword?: string;
-}): Promise<PageResult<ArticleListItem>> {
-  return get('/articles/mine', params);
+}, config?: RequestConfig): Promise<PageResult<ArticleListItem>> {
+  return get('/articles/mine', params, config);
 }
 
 export interface ArticleLikeResponse {
