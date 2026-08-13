@@ -125,3 +125,16 @@ export function getReaderAssetBlob(assetUrl: string): Promise<Blob> {
     suppressErrorMessage: true,
   })
 }
+
+/**
+ * 将后端返回的 /api 资源地址映射到当前环境的 API 基址，供 img 等原生元素直接加载。
+ */
+export function resolveReaderAssetBrowserUrl(assetUrl?: string): string {
+  const normalizedUrl = assetUrl?.trim() || ''
+  if (!normalizedUrl || (normalizedUrl !== '/api' && !normalizedUrl.startsWith('/api/'))) {
+    return normalizedUrl
+  }
+
+  const apiBase = String(import.meta.env.VITE_API_BASE_URL || '/api').replace(/\/+$/, '')
+  return `${apiBase.replace(/\/api$/, '')}${normalizedUrl}`
+}
