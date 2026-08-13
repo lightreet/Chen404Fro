@@ -126,7 +126,7 @@
           </section>
 
         <section v-show="activeTab === 'runtime'" class="settings-section settings-section--focused">
-            <div class="section-head">
+            <div class="section-head runtime-section-head">
               <h3>评论互动策略</h3>
             </div>
 
@@ -163,6 +163,84 @@
                   active-text="允许"
                   inactive-text="关闭"
                 />
+              </section>
+            </div>
+
+            <div class="section-head runtime-section-head">
+              <div>
+                <h3>消息与协作功能</h3>
+                <p>这些开关即时生效，用于控制管理消息和知友创作入口。</p>
+              </div>
+            </div>
+
+            <div class="runtime-list">
+              <section class="runtime-row">
+                <div>
+                  <h4>管理员消息记录</h4>
+                  <p>开启后，文章、旅行、音乐和书籍等内容变更会写入管理后台消息中心。</p>
+                </div>
+                <UiSwitch
+                  v-model="featureToggles.adminNotificationEnabled"
+                  active-text="开启"
+                  inactive-text="关闭"
+                />
+              </section>
+
+              <section class="runtime-row">
+                <div>
+                  <h4>知友文章创作</h4>
+                  <p>允许具备对应权限的知友创建和管理文章。</p>
+                </div>
+                <UiSwitch v-model="featureToggles.articleCreationEnabled" active-text="开启" inactive-text="关闭" />
+              </section>
+
+              <section class="runtime-row">
+                <div>
+                  <h4>知友旅行创作</h4>
+                  <p>允许具备对应权限的知友创建和管理旅行记忆。</p>
+                </div>
+                <UiSwitch v-model="featureToggles.travelCreationEnabled" active-text="开启" inactive-text="关闭" />
+              </section>
+
+              <section class="runtime-row">
+                <div>
+                  <h4>知友音乐创作</h4>
+                  <p>允许具备对应权限的知友创建和管理音乐内容。</p>
+                </div>
+                <UiSwitch v-model="featureToggles.musicCreationEnabled" active-text="开启" inactive-text="关闭" />
+              </section>
+            </div>
+
+            <div class="section-head runtime-section-head">
+              <div>
+                <h3>AI 功能</h3>
+                <p>控制前台 AI 辅助能力；模型参数仍在“AI 助手”页配置。</p>
+              </div>
+            </div>
+
+            <div class="runtime-list">
+              <section class="runtime-row">
+                <div>
+                  <h4>AI 文章助手</h4>
+                  <p>为文章编辑提供内容辅助能力。</p>
+                </div>
+                <UiSwitch v-model="featureToggles.aiArticleAssistEnabled" active-text="开启" inactive-text="关闭" />
+              </section>
+
+              <section class="runtime-row">
+                <div>
+                  <h4>AI 音乐信息补全</h4>
+                  <p>允许使用 AI 补全音乐元数据。</p>
+                </div>
+                <UiSwitch v-model="featureToggles.aiMusicAssistEnabled" active-text="开启" inactive-text="关闭" />
+              </section>
+
+              <section class="runtime-row">
+                <div>
+                  <h4>相关文章推荐</h4>
+                  <p>允许使用 AI 生成相关文章推荐。</p>
+                </div>
+                <UiSwitch v-model="featureToggles.aiArticleRecommendEnabled" active-text="开启" inactive-text="关闭" />
               </section>
             </div>
           </section>
@@ -343,6 +421,11 @@ import { UiPanel, UiButton, UiIcon, UiTabs, UiForm, UiFormField, UiInput, UiLoad
 import type { UiTabItem } from '@/components/ui';
 import type { UploadRequestOptions } from '@/components/ui';
 import { getSiteConfig, updateSiteConfig } from '@/api/home';
+import {
+  getFeatureToggleConfig,
+  updateFeatureToggleConfig,
+  type FeatureToggleConfig,
+} from '@/api/feature-toggle';
 import { uploadSiteAsset, uploadSiteHero } from '@/api/upload';
 import AiAssistantSettings from '@/views/Admin/components/AiAssistantSettings.vue';
 import AdminSettingsFooter from '@/views/Admin/components/AdminSettingsFooter.vue';
@@ -554,6 +637,15 @@ const form = reactive<Required<Omit<SiteConfig, 'heroImages' | 'heroImagePositio
   commentAudit: true,
   commentGuest: true,
 });
+const featureToggles = reactive<FeatureToggleConfig>({
+  articleCreationEnabled: false,
+  travelCreationEnabled: false,
+  musicCreationEnabled: false,
+  adminNotificationEnabled: true,
+  aiArticleAssistEnabled: true,
+  aiMusicAssistEnabled: true,
+  aiArticleRecommendEnabled: true,
+});
 
 const heroImages = reactive<Record<HeroKey, string>>({
   home: '',
@@ -687,8 +779,12 @@ function validatePayload(payload: SiteConfig) {
 async function loadConfig() {
   loading.value = true;
   try {
-    const config = await getSiteConfig();
+    const [config, nextFeatureToggles] = await Promise.all([
+      getSiteConfig(),
+      getFeatureToggleConfig(),
+    ]);
     applyConfig(config);
+    Object.assign(featureToggles, nextFeatureToggles);
   } catch {
     notify.error('加载站点配置失败');
   } finally {
@@ -757,10 +853,14 @@ async function saveConfig() {
 
   saving.value = true;
   try {
-    const nextConfig = await updateSiteConfig(payload);
+    const [nextConfig, nextFeatureToggles] = await Promise.all([
+      updateSiteConfig(payload),
+      updateFeatureToggleConfig({ ...featureToggles }),
+    ]);
     applyConfig(nextConfig);
+    Object.assign(featureToggles, nextFeatureToggles);
     setSiteConfig(nextConfig);
-    notify.success('站点配置保存成功');
+    notify.success('配置保存成功');
   } catch {
     // 请求层已经展示具体失败原因，避免再弹出一条笼统的“保存失败”。
   } finally {
@@ -864,6 +964,10 @@ onMounted(() => {
 .runtime-list {
   display: grid;
   gap: var(--space-md);
+}
+
+.runtime-section-head:not(:first-child) {
+  margin-top: var(--space-xl);
 }
 
 .runtime-row {

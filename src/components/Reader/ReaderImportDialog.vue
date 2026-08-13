@@ -153,7 +153,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { UiButton, UiDialog, UiIcon, UiInput, UiSelect, UiTextarea, UiUpload } from '@/components/ui'
 import type { UploadRequestOptions } from '@/components/ui'
 import { importReaderBook, previewReaderBook, updateReaderBook, uploadReaderBookCover } from '@/api/reader'
@@ -184,6 +184,7 @@ const encoding = ref('')
 const visibility = ref<ReaderBookVisibility>('public')
 const coverFileId = ref<string | number>()
 const coverUrl = ref('')
+const coverPreviewUrl = ref('')
 const parsedCoverUrl = ref('')
 const dragging = ref(false)
 const importing = ref(false)
@@ -193,7 +194,8 @@ const metadataPreviewing = ref(false)
 const previewRequestId = ref(0)
 const autoFilled = ref({ title: '', author: '', description: '' })
 const isImportMode = computed(() => props.mode === 'import')
-const displayedCoverUrl = computed(() => coverUrl.value || parsedCoverUrl.value)
+const displayedCoverUrl = computed(() => coverPreviewUrl.value || coverUrl.value || parsedCoverUrl.value)
+let coverObjectUrl = ''
 
 const encodingOptions = [
   { label: '自动识别（推荐）', value: '' },
@@ -269,16 +271,27 @@ const beforeCoverUpload = (file: File) => {
   return result.valid
 }
 
+const releaseCoverPreview = () => {
+  if (coverObjectUrl) URL.revokeObjectURL(coverObjectUrl)
+  coverObjectUrl = ''
+  coverPreviewUrl.value = ''
+}
+
 const handleCoverUpload = async (options: UploadRequestOptions) => {
+  const file = options.file as File
+  releaseCoverPreview()
+  coverObjectUrl = URL.createObjectURL(file)
+  coverPreviewUrl.value = coverObjectUrl
   uploadingCover.value = true
   try {
-    const uploaded = await uploadReaderBookCover(options.file as File)
+    const uploaded = await uploadReaderBookCover(file)
     if (uploaded.id == null || !uploaded.url) throw new Error('封面上传结果不完整')
     coverFileId.value = uploaded.id
     coverUrl.value = uploaded.url
     options.onSuccess?.(uploaded)
     notify.success('封面已上传，将在导入时绑定')
   } catch (error) {
+    releaseCoverPreview()
     options.onError?.(error as any)
     notify.error('封面上传失败，请重新选择图片')
   } finally {
@@ -287,6 +300,7 @@ const handleCoverUpload = async (options: UploadRequestOptions) => {
 }
 
 const clearCover = () => {
+  releaseCoverPreview()
   coverFileId.value = undefined
   coverUrl.value = ''
 }
@@ -309,6 +323,7 @@ const reset = () => {
 
 const hydrateEditBook = () => {
   const book = props.book
+  releaseCoverPreview()
   title.value = book?.title || ''
   author.value = book?.author || ''
   description.value = book?.description || ''
@@ -387,10 +402,13 @@ watch(encoding, () => {
 watch(
   () => [props.modelValue, props.mode, props.book?.id],
   () => {
+    if (!props.modelValue) releaseCoverPreview()
     if (props.modelValue && !isImportMode.value) hydrateEditBook()
     if (props.modelValue && isImportMode.value) reset()
   },
 )
+
+onBeforeUnmount(releaseCoverPreview)
 </script>
 
 <style scoped lang="scss">
