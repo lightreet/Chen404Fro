@@ -5,7 +5,12 @@
     :style="{ '--cover-hue': String(coverHue) }"
     :aria-label="`${title}封面`"
   >
-    <img v-if="resolvedUrl" :src="resolvedUrl" :alt="`${title}封面`" />
+    <img
+      v-if="resolvedUrl"
+      :src="resolvedUrl"
+      :alt="`${title}封面`"
+      @error="handleImageError"
+    />
     <template v-else>
       <span class="book-cover__ornament" aria-hidden="true">✦</span>
       <strong :title="title">{{ compactTitle }}</strong>
@@ -16,7 +21,7 @@
 
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
-import { getReaderAssetBlob } from '@/api/reader'
+import { getReaderAssetBlob, resolveReaderAssetBrowserUrl } from '@/api/reader'
 
 const props = withDefaults(defineProps<{
   title: string
@@ -29,6 +34,8 @@ const props = withDefaults(defineProps<{
 
 const resolvedUrl = ref('')
 let currentObjectUrl = ''
+let loadVersion = 0
+let blobFallbackAttempted = false
 
 const coverHue = computed(() => {
   let hash = 0
@@ -47,29 +54,46 @@ const compactTitle = computed(() => titleCharacters.value.length > 24
   ? `${titleCharacters.value.slice(0, 24).join('')}…`
   : titleCharacters.value.join(''))
 
-const release = () => {
+const releaseObjectUrl = () => {
   if (currentObjectUrl) URL.revokeObjectURL(currentObjectUrl)
   currentObjectUrl = ''
-  resolvedUrl.value = ''
 }
 
-watch(
-  () => props.url,
-  async (url) => {
-    release()
-    if (!url) return
-    try {
-      const blob = await getReaderAssetBlob(url)
-      currentObjectUrl = URL.createObjectURL(blob)
-      resolvedUrl.value = currentObjectUrl
-    } catch {
-      resolvedUrl.value = ''
-    }
-  },
-  { immediate: true },
-)
+const handleImageError = async () => {
+  if (!props.url || blobFallbackAttempted) {
+    releaseObjectUrl()
+    resolvedUrl.value = ''
+    return
+  }
 
-onBeforeUnmount(release)
+  blobFallbackAttempted = true
+  const currentVersion = loadVersion
+  try {
+    const blob = await getReaderAssetBlob(props.url)
+    const objectUrl = URL.createObjectURL(blob)
+    if (currentVersion !== loadVersion) {
+      URL.revokeObjectURL(objectUrl)
+      return
+    }
+    releaseObjectUrl()
+    currentObjectUrl = objectUrl
+    resolvedUrl.value = objectUrl
+  } catch {
+    if (currentVersion === loadVersion) resolvedUrl.value = ''
+  }
+}
+
+watch(() => props.url, (url) => {
+  loadVersion += 1
+  blobFallbackAttempted = false
+  releaseObjectUrl()
+  resolvedUrl.value = resolveReaderAssetBrowserUrl(url)
+}, { immediate: true })
+
+onBeforeUnmount(() => {
+  loadVersion += 1
+  releaseObjectUrl()
+})
 </script>
 
 <style scoped lang="scss">
