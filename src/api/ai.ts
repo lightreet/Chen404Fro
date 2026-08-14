@@ -1,4 +1,11 @@
-import { AI_REQUEST_TIMEOUT_MESSAGE, AI_REQUEST_TIMEOUT_MS, get, post } from './request';
+import {
+  AI_REQUEST_TIMEOUT_MESSAGE,
+  AI_REQUEST_TIMEOUT_MS,
+  get,
+  getAccessTokenForRequest,
+  post,
+  refreshAccessTokenAfterUnauthorized,
+} from './request';
 import type {
   AiArticleAssistRequest,
   AiArticleAssistResponse,
@@ -44,8 +51,7 @@ export async function streamMaidChat(
     signal?: AbortSignal;
   },
 ): Promise<void> {
-  const token = localStorage.getItem('token');
-  const response = await fetch(`${API_BASE_URL}/ai/chat/stream`, {
+  const sendRequest = (token: string) => fetch(`${API_BASE_URL}/ai/chat/stream`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -54,6 +60,17 @@ export async function streamMaidChat(
     body: JSON.stringify(data),
     signal: handlers.signal,
   });
+
+  let token = await getAccessTokenForRequest({ url: '/ai/chat/stream' });
+  let response = await sendRequest(token);
+  if (response.status === 401) {
+    try {
+      token = await refreshAccessTokenAfterUnauthorized();
+      response = await sendRequest(token);
+    } catch {
+      // 由下方统一抛出流式请求失败，认证状态已在刷新失败时清理。
+    }
+  }
 
   if (!response.ok || !response.body) {
     throw new Error('流式聊天请求失败');

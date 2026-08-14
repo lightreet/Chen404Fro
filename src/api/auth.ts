@@ -16,6 +16,7 @@ import type {
 } from '@/types';
 import { Service } from '@/sdk/generated';
 import { unwrapResult } from '@/sdk/runtime';
+import { readRefreshToken } from '@/utils/authSession';
 
 /**
  * 用户登录
@@ -50,7 +51,7 @@ export async function register(params: RegisterParams): Promise<User> {
  * 退出登录
  */
 export function logout(): Promise<void> {
-  const refreshToken = localStorage.getItem('refreshToken') || undefined;
+  const refreshToken = readRefreshToken() || undefined;
   return post('/auth/logout', refreshToken ? { refreshToken } : undefined);
 }
 

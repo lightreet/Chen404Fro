@@ -4,6 +4,7 @@ import {
   DEFAULT_REQUEST_TIMEOUT_MS,
   installGeneratedSdkInterceptors,
 } from '@/api/request';
+import { readAccessToken } from '@/utils/authSession';
 
 export interface ResultEnvelope<T> {
   code?: number;
@@ -16,7 +17,7 @@ export interface ResultEnvelope<T> {
  */
 export function configureGeneratedSdk() {
   OpenAPI.BASE = import.meta.env.VITE_API_BASE_URL || '/api';
-  OpenAPI.TOKEN = async () => localStorage.getItem('token') || '';
+  OpenAPI.TOKEN = async () => readAccessToken();
   axios.defaults.timeout = DEFAULT_REQUEST_TIMEOUT_MS;
   installGeneratedSdkInterceptors(axios);
 }
