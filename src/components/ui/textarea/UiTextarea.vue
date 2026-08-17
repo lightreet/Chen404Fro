@@ -3,6 +3,7 @@
     <textarea
       ref="areaRef"
       class="ui-textarea__inner"
+      :id="id"
       :value="modelValue"
       :placeholder="placeholder"
       :disabled="disabled"
@@ -25,6 +26,7 @@ import { ref } from 'vue'
 
 withDefaults(
   defineProps<{
+    id?: string
     modelValue?: string
     placeholder?: string
     disabled?: boolean
@@ -35,6 +37,7 @@ withDefaults(
     resize?: 'none' | 'both' | 'horizontal' | 'vertical'
   }>(),
   {
+    id: undefined,
     modelValue: '',
     placeholder: '',
     disabled: false,

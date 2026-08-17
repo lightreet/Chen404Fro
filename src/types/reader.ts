@@ -2,6 +2,7 @@ export type ReaderId = number | string
 export type ReaderBookVisibility = 'public' | 'friend' | 'private'
 export type ReaderTheme = 'light' | 'rose' | 'dark'
 export type ReaderFontFamily = 'serif' | 'sans'
+export type ReaderNoteColor = 'rose' | 'sage' | 'blue' | 'amber'
 
 export interface ReaderBook {
   id: ReaderId
@@ -115,4 +116,45 @@ export interface ReaderBookImportPreview {
   sourceEncoding?: string
   coverDataUrl?: string
   coverFileName?: string
+}
+
+export interface ReaderNote {
+  id: ReaderId
+  bookId: ReaderId
+  chapterId: ReaderId
+  targetChapterId?: ReaderId | null
+  chapterOrder: number
+  chapterTitle: string
+  startBlockIndex: number
+  startCharacterOffset: number
+  endBlockIndex: number
+  endCharacterOffset: number
+  excerpt: string
+  reflection?: string
+  highlightColor: ReaderNoteColor
+  prefixContext?: string
+  suffixContext?: string
+  contentVersion: number
+  contentChanged: boolean
+  createTime: string
+  updateTime: string
+}
+
+export interface ReaderNoteCreateCommand {
+  chapterId: ReaderId
+  startBlockIndex: number
+  startCharacterOffset: number
+  endBlockIndex: number
+  endCharacterOffset: number
+  excerpt: string
+  reflection?: string
+  highlightColor: ReaderNoteColor
+  prefixContext?: string
+  suffixContext?: string
+  contentVersion: number
+}
+
+export interface ReaderNoteUpdateCommand {
+  reflection?: string
+  highlightColor: ReaderNoteColor
 }

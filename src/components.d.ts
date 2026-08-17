@@ -38,6 +38,8 @@ declare module 'vue' {
     ReaderBookCover: typeof import('./components/Reader/ReaderBookCover.vue')['default']
     ReaderBookDetailDialog: typeof import('./components/Reader/ReaderBookDetailDialog.vue')['default']
     ReaderImportDialog: typeof import('./components/Reader/ReaderImportDialog.vue')['default']
+    ReaderNoteEditor: typeof import('./components/Reader/ReaderNoteEditor.vue')['default']
+    ReaderNotesList: typeof import('./components/Reader/ReaderNotesList.vue')['default']
     ReaderTocTree: typeof import('./components/Reader/ReaderTocTree.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']

@@ -5,6 +5,9 @@ import type {
   ReaderBookUpdateCommand,
   ReaderChapter,
   ReaderImportOptions,
+  ReaderNote,
+  ReaderNoteCreateCommand,
+  ReaderNoteUpdateCommand,
   ReaderPreference,
   ReaderProgress,
   ReaderProgressCommand,
@@ -104,6 +107,30 @@ export function saveReaderProgress(
 
 export function clearReaderProgress(bookId: ReaderId): Promise<void> {
   return del(`/reader/books/${String(bookId)}/progress`)
+}
+
+export function listReaderNotes(bookId: ReaderId): Promise<ReaderNote[]> {
+  return get(`/reader/books/${String(bookId)}/notes`, undefined, {
+    suppressErrorMessage: true,
+  })
+}
+
+export function createReaderNote(
+  bookId: ReaderId,
+  command: ReaderNoteCreateCommand,
+): Promise<ReaderNote> {
+  return post(`/reader/books/${String(bookId)}/notes`, command)
+}
+
+export function updateReaderNote(
+  noteId: ReaderId,
+  command: ReaderNoteUpdateCommand,
+): Promise<ReaderNote> {
+  return patch(`/reader/notes/${String(noteId)}`, command)
+}
+
+export function deleteReaderNote(noteId: ReaderId): Promise<void> {
+  return del(`/reader/notes/${String(noteId)}`)
 }
 
 export function getReaderPreference(): Promise<ReaderPreference> {

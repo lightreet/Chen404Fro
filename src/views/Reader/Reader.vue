@@ -19,6 +19,7 @@
       <div class="reader-toolbar__side reader-toolbar__actions">
         <UiButton variant="text" icon-only icon="search" aria-label="书内搜索" @click="openSearch" />
         <UiButton variant="text" icon-only icon="menu" aria-label="打开目录" @click="tocOpen = true" />
+        <UiButton variant="text" icon-only icon="edit" aria-label="打开阅读笔记" @click="openNotes" />
         <UiButton variant="text" icon-only icon="settings" aria-label="阅读设置" @click="settingsOpen = true" />
       </div>
     </header>
@@ -42,6 +43,8 @@
             ref="contentRef"
             class="reader-content"
             v-html="hydratedHtml"
+            @pointerup="scheduleSelectionCapture"
+            @keyup="scheduleSelectionCapture"
           />
 
           <nav class="chapter-navigation" aria-label="章节导航">
@@ -138,6 +141,24 @@
     </UiDrawer>
 
     <UiDrawer
+      v-model="notesOpen"
+      direction="rtl"
+      size="min(420px, 94vw)"
+      title="阅读笔记"
+      class="reader-drawer reader-notes-drawer"
+    >
+      <ReaderNotesList
+        :notes="notes"
+        :loading="notesLoading"
+        :error="notesError"
+        @retry="loadNotes(true)"
+        @jump="jumpToNote"
+        @edit="editNote"
+        @delete="removeNote"
+      />
+    </UiDrawer>
+
+    <UiDrawer
       v-model="settingsOpen"
       direction="rtl"
       size="min(380px, 92vw)"
@@ -211,6 +232,33 @@
     </UiDrawer>
 
     <Transition name="m-fade">
+      <UiButton
+        v-if="selectionTriggerVisible"
+        class="selection-note-trigger"
+        variant="secondary"
+        size="sm"
+        icon="edit"
+        :style="selectionTriggerStyle"
+        @pointerdown.prevent
+        @click="startNoteFromSelection"
+      >记笔记</UiButton>
+    </Transition>
+
+    <ReaderNoteEditor
+      v-if="editorDraft"
+      :note-id="editorDraft.noteId"
+      :excerpt="editorDraft.excerpt"
+      :reflection="editorDraft.reflection"
+      :highlight-color="editorDraft.highlightColor"
+      :theme="preference.theme"
+      :saving="noteSaving"
+      :left="editorDraft.left"
+      :top="editorDraft.top"
+      @cancel="closeNoteEditor"
+      @save="saveNote"
+    />
+
+    <Transition name="m-fade">
       <button
         v-if="showResumeNotice"
         type="button"
@@ -246,23 +294,33 @@ import {
   UiSlider,
 } from '@/components/ui'
 import ReaderTocTree from '@/components/Reader/ReaderTocTree.vue'
+import ReaderNoteEditor from '@/components/Reader/ReaderNoteEditor.vue'
+import ReaderNotesList from '@/components/Reader/ReaderNotesList.vue'
 import {
+  createReaderNote,
+  deleteReaderNote,
   getReaderBook,
   getReaderChapter,
   getReaderPreference,
   getReaderProgress,
   getReaderToc,
+  listReaderNotes,
   saveReaderPreference,
   saveReaderProgress,
   searchReaderBook,
+  updateReaderNote,
 } from '@/api/reader'
 import { useReaderAssetResolver } from '@/composables/reader/useReaderAssetResolver'
+import { confirmDelete, notify } from '@/lib/feedback'
 import { useUserStore } from '@/stores/user'
 import type {
   ReaderBook,
   ReaderChapter,
   ReaderFontFamily,
   ReaderId,
+  ReaderNote,
+  ReaderNoteColor,
+  ReaderNoteCreateCommand,
   ReaderPreference,
   ReaderProgress,
   ReaderProgressCommand,
@@ -274,6 +332,19 @@ import type {
 interface LocalReaderProgress extends ReaderProgressCommand {
   savedAt: string
   contentVersion: number
+}
+
+type ReaderSelectionAnchor = Omit<ReaderNoteCreateCommand, 'reflection' | 'highlightColor'>
+
+interface ReaderNoteEditorDraft {
+  mode: 'create' | 'edit'
+  noteId?: ReaderId
+  anchor?: ReaderSelectionAnchor
+  excerpt: string
+  reflection?: string
+  highlightColor: ReaderNoteColor
+  left: number
+  top: number
 }
 
 const route = useRoute()
@@ -290,6 +361,7 @@ const contentRef = ref<HTMLElement>()
 const searchInput = ref<{ focus: () => void }>()
 const loading = ref(true)
 const tocOpen = ref(false)
+const notesOpen = ref(false)
 const settingsOpen = ref(false)
 const searchKeyword = ref('')
 const searchResults = ref<ReaderSearchResult[] | null>(null)
@@ -297,6 +369,15 @@ const searching = ref(false)
 const showResumeNotice = ref(false)
 const preferenceSaving = ref(false)
 const currentProgress = ref(0)
+const notes = ref<ReaderNote[]>([])
+const notesLoading = ref(false)
+const notesLoaded = ref(false)
+const notesError = ref('')
+const noteSaving = ref(false)
+const selectionAnchor = ref<ReaderSelectionAnchor>()
+const selectionTriggerVisible = ref(false)
+const selectionTriggerPosition = reactive({ left: 16, top: 72 })
+const editorDraft = ref<ReaderNoteEditorDraft>()
 const preference = reactive<ReaderPreference>({
   fontSize: 18,
   lineHeight: 1.85,
@@ -306,6 +387,16 @@ const preference = reactive<ReaderPreference>({
   fontFamily: 'serif',
 })
 const { resolveHtml, revokeAll } = useReaderAssetResolver()
+
+const NOTE_HIGHLIGHT_NAMES = [
+  'reader-note-rose',
+  'reader-note-sage',
+  'reader-note-blue',
+  'reader-note-amber',
+  'reader-note-focus',
+] as const
+
+const noteRangeById = new Map<string, Range>()
 
 const themeOptions: Array<{ value: ReaderTheme; label: string }> = [
   { value: 'light', label: '明亮' },
@@ -319,12 +410,18 @@ const readerStyle = computed(() => ({
   '--reader-width': `${preference.contentWidth}px`,
   '--reader-paragraph-space': `${preference.paragraphSpacing}px`,
 }))
+const selectionTriggerStyle = computed(() => ({
+  left: `${selectionTriggerPosition.left}px`,
+  top: `${selectionTriggerPosition.top}px`,
+}))
 const previousLabel = computed(() => chapter.value?.previousChapterId ? '回到前一章' : '已经是第一章')
 const nextLabel = computed(() => chapter.value?.nextChapterId ? '继续下一章' : '本书已读完')
 
 let scrollFrame = 0
 let progressTimer = 0
 let preferenceTimer = 0
+let selectionTimer = 0
+let noteFocusTimer = 0
 let ignoreScrollUntil = 0
 let initializedPreference = false
 
@@ -359,14 +456,437 @@ const chooseRestoreProgress = (
   return server
 }
 
+interface DomTextPoint {
+  node: Text
+  offset: number
+}
+
+interface BlockBoundary {
+  blockIndex: number
+  characterOffset: number
+}
+
+interface HighlightRegistryLike {
+  set: (name: string, highlight: unknown) => void
+  delete: (name: string) => void
+}
+
+type HighlightConstructorLike = new (...ranges: Range[]) => unknown
+
+const getHighlightApi = () => {
+  const registry = typeof CSS === 'undefined'
+    ? undefined
+    : (CSS as unknown as { highlights?: HighlightRegistryLike }).highlights
+  const HighlightConstructor = typeof window === 'undefined'
+    ? undefined
+    : (window as unknown as { Highlight?: HighlightConstructorLike }).Highlight
+  return { registry, HighlightConstructor }
+}
+
+const NOTE_HIGHLIGHT_STYLE_ID = 'reader-note-highlight-styles'
+const ensureNoteHighlightStyles = () => {
+  if (document.getElementById(NOTE_HIGHLIGHT_STYLE_ID)) return
+  const style = document.createElement('style')
+  style.id = NOTE_HIGHLIGHT_STYLE_ID
+  style.textContent = `
+    .reader-content::highlight(reader-note-rose) { background-color: rgba(216, 143, 157, 0.30); }
+    .reader-content::highlight(reader-note-sage) { background-color: rgba(158, 172, 134, 0.29); }
+    .reader-content::highlight(reader-note-blue) { background-color: rgba(143, 169, 196, 0.29); }
+    .reader-content::highlight(reader-note-amber) { background-color: rgba(217, 174, 105, 0.28); }
+    .reader-content::highlight(reader-note-focus) {
+      background-color: rgba(251, 114, 153, 0.34);
+      text-decoration: underline 2px rgba(251, 114, 153, 0.78);
+    }
+    .reader-theme--dark .reader-content::highlight(reader-note-rose) { background-color: rgba(171, 107, 121, 0.40); }
+    .reader-theme--dark .reader-content::highlight(reader-note-sage) { background-color: rgba(121, 137, 105, 0.40); }
+    .reader-theme--dark .reader-content::highlight(reader-note-blue) { background-color: rgba(107, 132, 157, 0.42); }
+    .reader-theme--dark .reader-content::highlight(reader-note-amber) { background-color: rgba(165, 128, 75, 0.40); }
+  `
+  document.head.appendChild(style)
+}
+
+const contentBlocks = () => contentRef.value
+  ? [...contentRef.value.querySelectorAll<HTMLElement>('[data-reader-block]')]
+  : []
+
+const textPointInElement = (element: HTMLElement, characterOffset: number): DomTextPoint | null => {
+  if (characterOffset < 0) return null
+  const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT)
+  let current = walker.nextNode() as Text | null
+  let remaining = characterOffset
+  let last: Text | null = null
+  while (current) {
+    last = current
+    const length = current.data.length
+    if (remaining <= length) return { node: current, offset: remaining }
+    remaining -= length
+    current = walker.nextNode() as Text | null
+  }
+  return remaining === 0 && last ? { node: last, offset: last.data.length } : null
+}
+
+const boundaryInBlock = (node: Node, offset: number): BlockBoundary | null => {
+  const element = node.nodeType === Node.ELEMENT_NODE
+    ? node as Element
+    : node.parentElement
+  const block = element?.closest<HTMLElement>('[data-reader-block]')
+  const root = contentRef.value
+  if (!block || !root?.contains(block)) return null
+  const blocks = contentBlocks()
+  const blockIndex = blocks.indexOf(block)
+  if (blockIndex < 0) return null
+  try {
+    const probe = document.createRange()
+    probe.selectNodeContents(block)
+    probe.setEnd(node, offset)
+    return { blockIndex, characterOffset: probe.toString().length }
+  } catch {
+    return null
+  }
+}
+
+const rangeFromAnchors = (note: ReaderNote): Range | null => {
+  const blocks = contentBlocks()
+  const startBlock = blocks[note.startBlockIndex]
+  const endBlock = blocks[note.endBlockIndex]
+  if (!startBlock || !endBlock) return null
+  const start = textPointInElement(startBlock, note.startCharacterOffset)
+  const end = textPointInElement(endBlock, note.endCharacterOffset)
+  if (!start || !end) return null
+  const range = document.createRange()
+  try {
+    range.setStart(start.node, start.offset)
+    range.setEnd(end.node, end.offset)
+    return range.toString() === note.excerpt ? range : null
+  } catch {
+    return null
+  }
+}
+
+const contentTextSnapshot = () => {
+  const nodes: Array<{ node: Text; start: number; end: number }> = []
+  const root = contentRef.value
+  if (!root) return { text: '', nodes }
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT)
+  let current = walker.nextNode() as Text | null
+  let offset = 0
+  let text = ''
+  while (current) {
+    const start = offset
+    text += current.data
+    offset += current.data.length
+    nodes.push({ node: current, start, end: offset })
+    current = walker.nextNode() as Text | null
+  }
+  return { text, nodes }
+}
+
+const textPointAtGlobalOffset = (
+  nodes: Array<{ node: Text; start: number; end: number }>,
+  offset: number,
+): DomTextPoint | null => {
+  for (const item of nodes) {
+    if (offset >= item.start && offset <= item.end) {
+      return { node: item.node, offset: offset - item.start }
+    }
+  }
+  const last = nodes.at(-1)
+  return last && offset === last.end ? { node: last.node, offset: last.node.data.length } : null
+}
+
+const relocatedRange = (note: ReaderNote): Range | null => {
+  const { text, nodes } = contentTextSnapshot()
+  if (!note.excerpt || !text) return null
+  let searchFrom = 0
+  let bestStart = -1
+  let bestScore = -1
+  while (searchFrom <= text.length) {
+    const start = text.indexOf(note.excerpt, searchFrom)
+    if (start < 0) break
+    const before = text.slice(Math.max(0, start - (note.prefixContext?.length || 0)), start)
+    const end = start + note.excerpt.length
+    const after = text.slice(end, end + (note.suffixContext?.length || 0))
+    const score = Number(Boolean(note.prefixContext) && before.endsWith(note.prefixContext || ''))
+      + Number(Boolean(note.suffixContext) && after.startsWith(note.suffixContext || ''))
+    if (score > bestScore) {
+      bestScore = score
+      bestStart = start
+    }
+    searchFrom = start + Math.max(1, note.excerpt.length)
+  }
+  if (bestStart < 0) return null
+  const start = textPointAtGlobalOffset(nodes, bestStart)
+  const end = textPointAtGlobalOffset(nodes, bestStart + note.excerpt.length)
+  if (!start || !end) return null
+  const range = document.createRange()
+  range.setStart(start.node, start.offset)
+  range.setEnd(end.node, end.offset)
+  return range
+}
+
+const locateNoteRange = (note: ReaderNote) => rangeFromAnchors(note) || relocatedRange(note)
+
+const resolveNoteTargetChapterId = (note: ReaderNote): ReaderId | undefined =>
+  note.targetChapterId ?? (note.contentChanged ? undefined : note.chapterId)
+
+const clearNoteHighlights = () => {
+  noteRangeById.clear()
+  const { registry } = getHighlightApi()
+  for (const name of NOTE_HIGHLIGHT_NAMES) registry?.delete(name)
+}
+
+const renderNoteHighlights = () => {
+  clearNoteHighlights()
+  if (!chapter.value || !contentRef.value) return
+  const rangesByColor: Record<ReaderNoteColor, Range[]> = {
+    rose: [],
+    sage: [],
+    blue: [],
+    amber: [],
+  }
+  for (const note of notes.value) {
+    const targetChapterId = resolveNoteTargetChapterId(note)
+    if (String(targetChapterId) !== String(chapter.value.id)) continue
+    const range = locateNoteRange(note)
+    if (!range) continue
+    noteRangeById.set(String(note.id), range)
+    rangesByColor[note.highlightColor].push(range)
+  }
+  const { registry, HighlightConstructor } = getHighlightApi()
+  if (!registry || !HighlightConstructor) return
+  for (const color of Object.keys(rangesByColor) as ReaderNoteColor[]) {
+    if (rangesByColor[color].length) {
+      registry.set(`reader-note-${color}`, new HighlightConstructor(...rangesByColor[color]))
+    }
+  }
+}
+
+const rangeContext = (range: Range) => {
+  const root = contentRef.value
+  if (!root) return { prefixContext: '', suffixContext: '' }
+  const prefixRange = document.createRange()
+  prefixRange.selectNodeContents(root)
+  prefixRange.setEnd(range.startContainer, range.startOffset)
+  const suffixRange = document.createRange()
+  suffixRange.selectNodeContents(root)
+  suffixRange.setStart(range.endContainer, range.endOffset)
+  return {
+    prefixContext: prefixRange.toString().slice(-120),
+    suffixContext: suffixRange.toString().slice(0, 120),
+  }
+}
+
+const captureSelection = () => {
+  if (editorDraft.value || !chapter.value || !book.value || !contentRef.value) return
+  const selection = document.getSelection()
+  if (!selection || selection.rangeCount === 0 || selection.isCollapsed) {
+    selectionTriggerVisible.value = false
+    selectionAnchor.value = undefined
+    return
+  }
+  const range = selection.getRangeAt(0).cloneRange()
+  if (!contentRef.value.contains(range.startContainer) || !contentRef.value.contains(range.endContainer)) {
+    selectionTriggerVisible.value = false
+    selectionAnchor.value = undefined
+    return
+  }
+  const excerpt = range.toString()
+  if (!excerpt.trim()) return
+  if (excerpt.length > 5000) {
+    selectionTriggerVisible.value = false
+    notify.warning('单条笔记最多记录 5000 个字符，请缩短选区')
+    return
+  }
+  const start = boundaryInBlock(range.startContainer, range.startOffset)
+  const end = boundaryInBlock(range.endContainer, range.endOffset)
+  if (!start || !end) {
+    selectionTriggerVisible.value = false
+    return
+  }
+  const context = rangeContext(range)
+  selectionAnchor.value = {
+    chapterId: chapter.value.id,
+    startBlockIndex: start.blockIndex,
+    startCharacterOffset: start.characterOffset,
+    endBlockIndex: end.blockIndex,
+    endCharacterOffset: end.characterOffset,
+    excerpt,
+    prefixContext: context.prefixContext,
+    suffixContext: context.suffixContext,
+    contentVersion: book.value.contentVersion,
+  }
+  const rects = [...range.getClientRects()].filter(rect => rect.width || rect.height)
+  const rect = rects.at(-1) || range.getBoundingClientRect()
+  const triggerWidth = 88
+  const triggerHeight = 36
+  let left = Math.min(window.innerWidth - triggerWidth - 12, rect.right + 8)
+  if (left < 12) left = Math.max(12, rect.left)
+  let top = rect.bottom + 8
+  if (top + triggerHeight > window.innerHeight - 12) top = rect.top - triggerHeight - 8
+  selectionTriggerPosition.left = left
+  selectionTriggerPosition.top = Math.max(68, top)
+  selectionTriggerVisible.value = true
+}
+
+const scheduleSelectionCapture = () => {
+  window.clearTimeout(selectionTimer)
+  selectionTimer = window.setTimeout(captureSelection, 80)
+}
+
+const requestNoteLogin = () => {
+  selectionTriggerVisible.value = false
+  notify.warning('登录后才能保存自己的阅读笔记')
+  runSilently(router.push({ path: '/login', query: { redirect: route.fullPath } }))
+}
+
+const editorPositionNear = (rect: Pick<DOMRect, 'left' | 'right' | 'top' | 'bottom'>) => {
+  const width = 390
+  const height = 470
+  const left = Math.max(12, Math.min(window.innerWidth - width - 12, rect.right - width))
+  const preferredTop = rect.bottom + 10
+  const top = preferredTop + height <= window.innerHeight - 12
+    ? preferredTop
+    : Math.max(76, rect.top - height - 10)
+  return { left, top }
+}
+
+const startNoteFromSelection = () => {
+  if (!isLoggedIn.value) {
+    requestNoteLogin()
+    return
+  }
+  const anchor = selectionAnchor.value
+  if (!anchor) return
+  const position = editorPositionNear({
+    left: selectionTriggerPosition.left,
+    right: selectionTriggerPosition.left + 88,
+    top: selectionTriggerPosition.top,
+    bottom: selectionTriggerPosition.top + 36,
+  })
+  editorDraft.value = {
+    mode: 'create',
+    anchor,
+    excerpt: anchor.excerpt,
+    reflection: '',
+    highlightColor: 'rose',
+    ...position,
+  }
+  selectionTriggerVisible.value = false
+  document.getSelection()?.removeAllRanges()
+}
+
+const closeNoteEditor = () => {
+  editorDraft.value = undefined
+  selectionAnchor.value = undefined
+  selectionTriggerVisible.value = false
+  document.getSelection()?.removeAllRanges()
+}
+
+const sortNotes = () => {
+  notes.value.sort((left, right) => left.chapterOrder - right.chapterOrder
+    || left.startBlockIndex - right.startBlockIndex
+    || left.startCharacterOffset - right.startCharacterOffset
+    || String(left.id).localeCompare(String(right.id)))
+}
+
+const loadNotes = async (force = false) => {
+  if (!isLoggedIn.value || (notesLoaded.value && !force) || notesLoading.value) return
+  notesLoading.value = true
+  notesError.value = ''
+  try {
+    notes.value = await listReaderNotes(bookId.value)
+    sortNotes()
+    notesLoaded.value = true
+    await nextTick()
+    renderNoteHighlights()
+  } catch {
+    notesError.value = '暂时无法加载阅读笔记，请检查网络后重试。'
+  } finally {
+    notesLoading.value = false
+  }
+}
+
+const openNotes = () => {
+  if (!isLoggedIn.value) {
+    requestNoteLogin()
+    return
+  }
+  tocOpen.value = false
+  settingsOpen.value = false
+  notesOpen.value = true
+  runSilently(loadNotes())
+}
+
+const editNote = (note: ReaderNote, event: MouseEvent) => {
+  const rect = (event.currentTarget as HTMLElement | null)?.getBoundingClientRect()
+  const fallback = { left: window.innerWidth - 440, right: window.innerWidth - 24, top: 88, bottom: 124 }
+  notesOpen.value = false
+  editorDraft.value = {
+    mode: 'edit',
+    noteId: note.id,
+    excerpt: note.excerpt,
+    reflection: note.reflection || '',
+    highlightColor: note.highlightColor,
+    ...editorPositionNear(rect || fallback),
+  }
+}
+
+const saveNote = async (value: { reflection: string; highlightColor: ReaderNoteColor }) => {
+  const draft = editorDraft.value
+  if (!draft || noteSaving.value) return
+  noteSaving.value = true
+  try {
+    const saved = draft.mode === 'create' && draft.anchor
+      ? await createReaderNote(bookId.value, {
+          ...draft.anchor,
+          reflection: value.reflection,
+          highlightColor: value.highlightColor,
+        })
+      : await updateReaderNote(draft.noteId as ReaderId, {
+          reflection: value.reflection,
+          highlightColor: value.highlightColor,
+        })
+    const index = notes.value.findIndex(note => String(note.id) === String(saved.id))
+    if (index >= 0) notes.value.splice(index, 1, saved)
+    else notes.value.push(saved)
+    notesLoaded.value = true
+    notesError.value = ''
+    sortNotes()
+    await nextTick()
+    renderNoteHighlights()
+    notify.success(draft.mode === 'create' ? '阅读笔记已保存' : '阅读笔记已更新')
+    closeNoteEditor()
+  } finally {
+    noteSaving.value = false
+  }
+}
+
+const removeNote = async (note: ReaderNote) => {
+  const confirmed = await confirmDelete('删除这条阅读笔记？原文高亮和感悟将一并删除，且无法恢复。', {
+    title: '删除阅读笔记',
+    confirmText: '删除笔记',
+    cancelText: '保留笔记',
+  })
+  if (!confirmed) return
+  await deleteReaderNote(note.id)
+  notes.value = notes.value.filter(item => String(item.id) !== String(note.id))
+  await nextTick()
+  renderNoteHighlights()
+  notify.success('阅读笔记已删除')
+}
+
 const loadChapter = async (chapterId: ReaderId, restore?: ReaderProgressCommand | null) => {
   loading.value = true
+  selectionTriggerVisible.value = false
+  selectionAnchor.value = undefined
+  clearNoteHighlights()
   revokeAll()
   try {
     const loaded = await getReaderChapter(bookId.value, chapterId)
     chapter.value = loaded
     hydratedHtml.value = await resolveHtml(loaded.contentHtml)
     await nextTick()
+    renderNoteHighlights()
     ignoreScrollUntil = Date.now() + 500
     if (restore && String(restore.chapterId) === String(loaded.id)) {
       restorePosition(restore)
@@ -470,6 +990,7 @@ const scheduleProgressSave = () => {
 
 const updateCurrentPosition = () => {
   if (Date.now() < ignoreScrollUntil) return
+  if (!editorDraft.value) selectionTriggerVisible.value = false
   window.cancelAnimationFrame(scrollFrame)
   scrollFrame = window.requestAnimationFrame(scheduleProgressSave)
 }
@@ -478,6 +999,51 @@ const navigateChapter = async (chapterId: ReaderId) => {
   window.clearTimeout(progressTimer)
   await saveCurrentPosition(true).catch(() => undefined)
   await loadChapter(chapterId)
+}
+
+const focusNoteRange = (note: ReaderNote) => {
+  const range = noteRangeById.get(String(note.id)) || locateNoteRange(note)
+  if (!range) return false
+  noteRangeById.set(String(note.id), range)
+  const { registry, HighlightConstructor } = getHighlightApi()
+  if (registry && HighlightConstructor) {
+    registry.set('reader-note-focus', new HighlightConstructor(range))
+    window.clearTimeout(noteFocusTimer)
+    noteFocusTimer = window.setTimeout(() => registry.delete('reader-note-focus'), 1800)
+  } else {
+    const selection = document.getSelection()
+    selection?.removeAllRanges()
+    selection?.addRange(range)
+  }
+  const rect = range.getBoundingClientRect()
+  window.scrollTo({
+    top: Math.max(0, rect.top + window.scrollY - 118),
+    behavior: 'smooth',
+  })
+  return true
+}
+
+const jumpToNote = async (note: ReaderNote) => {
+  const targetChapterId = resolveNoteTargetChapterId(note)
+  notesOpen.value = false
+  if (!targetChapterId) {
+    notify.warning('原章节已经变化，暂时无法定位这条笔记')
+    return
+  }
+  try {
+    if (String(chapter.value?.id) !== String(targetChapterId)) {
+      await navigateChapter(targetChapterId)
+    } else {
+      renderNoteHighlights()
+    }
+    await nextTick()
+    if (!focusNoteRange(note)) {
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+      notify.warning('原文位置已经变化，已跳转到对应章节')
+    }
+  } catch {
+    notify.error('暂时无法打开笔记对应的章节，请稍后重试')
+  }
 }
 
 const selectFromDrawer = (chapterId: ReaderId) => {
@@ -559,6 +1125,7 @@ const loadInitial = async () => {
     const queryChapter = typeof route.query.chapter === 'string' ? route.query.chapter : undefined
     const target = queryChapter || restore?.chapterId || flattenFirstChapterId(loadedToc)
     if (target) await loadChapter(target, queryChapter ? null : restore)
+    if (signedIn) runSilently(loadNotes())
   } finally {
     loading.value = false
   }
@@ -567,6 +1134,7 @@ const loadInitial = async () => {
 const handleKeydown = (event: KeyboardEvent) => {
   const target = event.target as HTMLElement | null
   if (target?.matches('input, textarea, select, [contenteditable="true"]')) return
+  if (target?.closest('.reader-drawer, .reader-note-editor')) return
   if (event.key === 'ArrowLeft' && chapter.value?.previousChapterId) {
     event.preventDefault()
     runSilently(navigateChapter(chapter.value.previousChapterId))
@@ -577,6 +1145,8 @@ const handleKeydown = (event: KeyboardEvent) => {
     tocOpen.value = !tocOpen.value
   } else if (event.key.toLowerCase() === 'a') {
     settingsOpen.value = !settingsOpen.value
+  } else if (event.key.toLowerCase() === 'n') {
+    openNotes()
   }
 }
 
@@ -594,19 +1164,35 @@ const formatCharCount = (value: number) => value >= 10_000
   : `${value} 字`
 
 watch(preference, schedulePreferenceSave, { deep: true })
+watch(isLoggedIn, (signedIn) => {
+  if (signedIn) {
+    runSilently(loadNotes(true))
+  } else {
+    notes.value = []
+    notesLoaded.value = false
+    notesOpen.value = false
+    clearNoteHighlights()
+  }
+})
 
 onMounted(() => {
+  ensureNoteHighlightStyles()
   runSilently(loadInitial())
   window.addEventListener('scroll', updateCurrentPosition, { passive: true })
   window.addEventListener('keydown', handleKeydown)
   window.addEventListener('pagehide', handlePageHide)
   document.addEventListener('visibilitychange', handleVisibility)
+  document.addEventListener('selectionchange', scheduleSelectionCapture)
 })
 
 onBeforeUnmount(() => {
   window.clearTimeout(progressTimer)
   window.clearTimeout(preferenceTimer)
+  window.clearTimeout(selectionTimer)
+  window.clearTimeout(noteFocusTimer)
   window.cancelAnimationFrame(scrollFrame)
+  clearNoteHighlights()
+  document.getElementById(NOTE_HIGHLIGHT_STYLE_ID)?.remove()
   const progress = captureProgress()
   if (progress) persistLocal(progress)
   runSilently(saveCurrentPosition(true))
@@ -614,6 +1200,7 @@ onBeforeUnmount(() => {
   window.removeEventListener('keydown', handleKeydown)
   window.removeEventListener('pagehide', handlePageHide)
   document.removeEventListener('visibilitychange', handleVisibility)
+  document.removeEventListener('selectionchange', scheduleSelectionCapture)
 })
 </script>
 
@@ -1054,6 +1641,20 @@ onBeforeUnmount(() => {
   margin: 0;
   color: var(--color-text-tertiary);
   font-size: 12px;
+}
+
+.selection-note-trigger {
+  position: fixed;
+  z-index: var(--z-popover);
+  border-color: color-mix(in srgb, var(--primary) 62%, var(--reader-border));
+  background: var(--reader-paper);
+  color: var(--primary);
+  box-shadow: 0 4px 8px rgba(48, 35, 41, 0.12);
+}
+
+.selection-note-trigger:hover {
+  border-color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 7%, var(--reader-paper));
 }
 
 .resume-notice {
