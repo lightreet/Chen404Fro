@@ -16,8 +16,7 @@ export interface RemoteEmojiItem {
 }
 
 /**
- * 预留：后续可由后端下发表情元数据。
- * 当前返回本地内置 registry，保证不依赖后端即可运行。
+ * 优先加载后端表情元数据；请求失败时保留本地内置 registry，保证离线降级可用。
  */
 export async function loadEmojiRegistry(): Promise<EmojiItem[]> {
   try {

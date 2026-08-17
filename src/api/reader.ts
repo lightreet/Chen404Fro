@@ -98,6 +98,7 @@ export function saveReaderProgress(
 ): Promise<ReaderProgress> {
   return put(`/reader/books/${String(bookId)}/progress`, command, {
     suppressErrorMessage: true,
+    skipAuthRedirect: true,
   })
 }
 
@@ -112,6 +113,7 @@ export function getReaderPreference(): Promise<ReaderPreference> {
 export function saveReaderPreference(command: ReaderPreference): Promise<ReaderPreference> {
   return put('/reader/preferences', command, {
     suppressErrorMessage: true,
+    skipAuthRedirect: true,
   })
 }
 

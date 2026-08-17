@@ -1,6 +1,6 @@
 # Chen404 前端架构设计
 
-本文档描述 `Chen404Fro` 当前代码实现的前端结构，而不是历史规划稿。最近一次按代码校准时间：2026-06-12。
+本文档描述 `Chen404Fro` 当前代码实现的前端结构，而不是历史规划稿。最近一次按代码校准时间：2026-08-14。
 
 ## 1. 架构概览
 
@@ -25,7 +25,7 @@ Views
 - `modules`：业务模块级封装，例如 `article-edit`、`feature-access`
 - `api`：手写接口封装，处理真实业务调用
 - `sdk/generated`：OpenAPI 生成代码，作为契约补充与渐进迁移基础
-- `stores`：Pinia 状态，承载登录态、播放器等跨页面状态
+- `stores`：Pinia 状态，承载登录态、播放器、管理员消息等跨页面状态
 
 ## 2. 目录结构
 
@@ -75,9 +75,9 @@ src/
 └─ views/
 ```
 
-### UI 设计系统分层（迁移进行中）
+### UI 设计系统分层（业务边界收口完成）
 
-前端正按 `doc/前端 UI 架构迁移方案.md` 渐进迁移到自有设计系统，分层模型：
+前端已按 `doc/前端 UI 架构迁移方案.md` 将业务层 Element Plus 入口收口到自有设计系统边界，分层模型：
 
 ```text
 Route / Page -> Feature -> components/app (App*) -> components/ui (Ui*) -> design/ tokens + motion + icon
@@ -123,6 +123,7 @@ Route / Page -> Feature -> components/app (App*) -> components/ui (Ui*) -> desig
 /user/:id                 公开用户主页
 /login                    登录
 /register                 注册
+/forgot-password          忘记密码
 /profile                  个人中心（资料与“我的创作”）
 /studio                   旧创作中心兼容入口，重定向到 /profile?tab=creations
 /bookshelf                书架与阅读清单
@@ -135,13 +136,14 @@ Route / Page -> Feature -> components/app (App*) -> components/ui (Ui*) -> desig
 /music                    Sakura Radio 音乐馆
 /music/tracks/new         歌曲创建工作台（music:create）
 /music/tracks/:id/edit    歌曲编辑工作台（music:create）
+/:pathMatch(.*)*          404
 ```
 
 ### 路由守卫行为
 
 - 进入页面前会先加载站点配置，并同步文档标题/SEO
 - 需要登录的页面会触发 `userStore.syncAuthState()`
-- 401 之后由请求层尝试刷新 token；刷新失败后跳转登录页
+- access token 临近过期时由请求层主动续期；401 时再兜底刷新，最终失效才清空会话并提示登录
 - 动态 import 失败时会触发“仅一次自动刷新”兜底，避免弱网白屏后直接卡死
 - 不是所有受限能力都依赖路由守卫，例如 `/memory-map` 主页允许公开进入，但页面内容会按登录态和知友权限决定是否展示
 
@@ -153,25 +155,31 @@ Route / Page -> Feature -> components/app (App*) -> components/ui (Ui*) -> desig
 
 | 文件 | 职责 |
 | --- | --- |
-| `request.ts` | Axios 实例、统一响应解包、token 注入、401 刷新、超时提示 |
-| `auth.ts` | 登录、注册、验证码、资料、密码、登出 |
+| `request.ts` | Axios 实例、统一响应解包、token 注入、到期前主动续期、401 兜底刷新、超时提示 |
+| `auth.ts` | 登录、注册、验证码、忘记密码、资料、密码、登出 |
 | `article.ts` | 文章、分类、标签、归档 |
 | `comment.ts` | 评论、留言板、审核、点赞 |
+| `admin-comment.ts` | 后台评论分页、统计与审核 |
 | `home.ts` | 首页数据、站点配置、Banner、站点统计 |
 | `upload.ts` | 图片、音频、封面、附件上传与文件删除 |
 | `trust-request.ts` | 好友申请及后台审批 |
-| `travel-memory.ts` | 旅行纪念地图查询与管理 |
-| `music.ts` | Sakura Radio 公开播放、歌曲与歌单管理 |
+| `travel-memory.ts` | 旅行公开/知友查询、我的地点与管理员兼容管理 |
+| `music.ts` | Sakura Radio 公开播放、创作者/管理员管理与播放现场 |
+| `reader.ts` | 小说书架、导入、目录、章节、搜索、资源、进度与偏好 |
 | `ai.ts` | 文章 AI、Lyra 同步/流式聊天、会话恢复 |
 | `ai-admin.ts` | AI 后台配置与连接测试 |
 | `emoji.ts` | 表情包公开接口与后台维护 |
 | `admin-file.ts` | 后台文件列表、详情、统计 |
+| `admin-notification.ts` | 管理员消息、未读数、已读与删除 |
+| `feature-toggle.ts` | 管理后台运行时功能开关 |
+| `development-history.ts` / `development-history-admin.ts` | 公开开发历程与后台 GitHub 同步配置 |
 
 ### SDK 边界
 
 - 生成目录：`src/sdk/generated`
 - 来源：后端 OpenAPI 文档
 - 当前策略：生成 SDK 主要用于契约核对和部分读接口；高频业务接口仍优先经由手写 API 层，以便统一处理鉴权、超时和错误提示
+- 2026-08-14 扫描确认生成目录尚未覆盖 reader、feature toggles、notifications、development history、forgot password 等当前后端接口，因此重新生成前不能把它当作完整契约快照
 
 ### 请求层职责
 
@@ -180,15 +188,18 @@ Route / Page -> Feature -> components/app (App*) -> components/ui (Ui*) -> desig
 - 读取 `VITE_API_BASE_URL`，未配置时回退到 `/api`
 - 自动写入 `Authorization: Bearer <token>`
 - 统一解析后端 `{ code, message, data }`
-- 401 时串行刷新 `refreshToken`
+- access token 距离过期不足 5 分钟时单例刷新，并让并发请求复用同一续期结果
+- 401 时再次使用 `refreshToken` 兜底刷新并重放原请求
 - AI 请求的更长超时与专用超时文案
 
 ## 5. 状态与组合逻辑
 
 ### 主要 store
 
-- [`../src/stores/user.ts`](../src/stores/user.ts)：用户、token、登录态同步、本地持久化
+- [`../src/stores/user.ts`](../src/stores/user.ts)：用户、token、登录态同步与 Pinia 状态
+- [`../src/utils/authSession.ts`](../src/utils/authSession.ts)：统一管理会话级/持久级凭证、用户快照和登录态变更通知
 - [`../src/stores/music-player.ts`](../src/stores/music-player.ts)：共享播放器队列、音量、播放模式、时间进度
+- [`../src/stores/admin-notification.ts`](../src/stores/admin-notification.ts)：管理员未读数、可见页轮询与消息状态
 - [`../src/stores/app.ts`](../src/stores/app.ts)：轻量应用状态
 - [`../src/stores/article.ts`](../src/stores/article.ts)：文章相关保留状态
 
@@ -199,7 +210,7 @@ Route / Page -> Feature -> components/app (App*) -> components/ui (Ui*) -> desig
 - `composables/article-edit/useArticleEdit.ts`：文章编辑页的页面编排
 - `modules/article-edit/*`：文章编辑提交模型、标签逻辑、常量
 - `modules/category-icons/service.ts`：后台分类图标搜索，走 Iconify 远程检索
-- `modules/feature-access/constants.ts`：知友/权限封面文案与 Hero 资源映射
+- `modules/feature-access/constants.ts`：受限能力提示文案与 Hero 资源映射，供确实需要整页访问控制的场景复用
 - `modules/music-metadata/metadata.ts`：音乐上传时读取本地音频 metadata、封面与歌词
 
 整体上，前端没有把所有业务数据推入 Pinia，而是保持“页面请求 + 局部状态”为主，仅把真正跨页面共享的状态收敛到 store。
@@ -224,7 +235,10 @@ Route / Page -> Feature -> components/app (App*) -> components/ui (Ui*) -> desig
 - SEO
 - 运行配置
 - 页面封面
+- 开发同步
 - AI 助手
+
+“运行配置”中包含文章/旅行/音乐创作、管理员消息和 AI 场景的运行时功能开关；“开发同步”维护 GitHub 仓库、令牌和缓存刷新；AI 配置维护 provider、模型、人设、检索与工具参数。
 
 当前已接入的页面封面 key：
 
@@ -265,11 +279,12 @@ home / category / archive / development-history / memory-map / music / bookshelf
 
 当前实现要点：
 
-- `/memory-map` 是公开入口，但真实地点内容只对管理员或知友展示；无权限用户会先看到 `FeatureAccessCover`
+- `/memory-map` 对所有访客读取公开地点；知友和管理员扩展读取 `friend` 内容，没有公开内容时才展示空状态或访问提示
 - 主页面已经收敛为“三栏 atlas 工作区”：左侧旅行索引、中间地图主画布、右侧当前地点详情
 - 展示态地图优先使用高德真实底图；缺少 Key、脚本失败或网络异常时，会回退到城市/省级 GeoJSON + 基础 SVG
 - 地点详情直接在右侧面板展示；片段以可横向滚动的标签切换，地点选择通过 `focus` 查询参数保留，旧详情链接会重定向到对应地点
 - 创建/编辑页采用 `location + stops + entries` 结构，支持地图点选、自动定位、地点搜索、图片上传、EXIF 辅助坐标回填
+- 具备 `travel:create` capability 的用户可创建；所有者或管理员可编辑删除，前端入口不替代后端对象级鉴权
 - 当前前端主要维护地点级展示坐标；片段日期按 `stop.visitedAt` 保存，照片拍摄时间默认跟随片段日期，片段未填日期时回退到地点日期
 
 ### 7.3 Sakura Radio 音乐馆
@@ -284,13 +299,36 @@ home / category / archive / development-history / memory-map / music / bookshelf
 
 当前实现要点：
 
-- `/music` 负责公开播放、歌单浏览、歌词、高亮进度和管理员入口
+- `/music` 负责公开播放、歌单浏览、歌词、高亮进度、创作者入口和管理员歌单入口
 - 歌曲新建/编辑为独立工作台，不再嵌入传统后台 tab
 - 共享播放器通过 `music-player` store 统一驱动音乐馆页与 Live2D 随身播放器
 - 支持纯文本歌词与 LRC 时间轴歌词
 - 管理员可调用 AI 匹配接口补全歌手、专辑、年份、语言、风格、标签、推荐语和心情短句
+- 登录用户的队列、当前歌曲、进度和模式通过 `/music/player/state` 在 Redis 临时保存；游客使用本地状态，音量和模式保留浏览器偏好
 
-### 7.4 Lyra 聊天
+### 7.4 小说书架与阅读器
+
+相关文件：
+
+- `views/Reader/Bookshelf.vue`
+- `views/Reader/Reader.vue`
+- `api/reader.ts`
+- `types/reader.ts`
+
+当前实现要点：
+
+- `/bookshelf` 对游客展示公开书籍，知友/管理员可导入；账号启用且仍具备知友能力的所有者或管理员可管理
+- `/reader/:bookId` 按书籍 `public`、`friend`、`private` 可见性加载详情、目录、章节、搜索和书内资源
+- 导入前先预览，确认后异步解析，前端轮询 `importing`、`ready`、`failed` 状态
+- 登录用户把精确阅读进度和阅读偏好持久化到后端，匿名阅读使用本地回退
+
+### 7.5 GitHub 开发历程
+
+- 公开页面 `views/DevelopmentHistory/DevelopmentHistory.vue` 调用 `development-history.ts` 展示后端聚合结果
+- 后台 `GitHubDevelopmentSettings.vue` 通过 `development-history-admin.ts` 维护私有配置并触发刷新
+- 外部 GitHub 调用、API 全量分页、Atom 回退与缓存由后端负责，前端只展示结果和同步状态
+
+### 7.6 Lyra 聊天
 
 相关文件：
 
@@ -306,14 +344,16 @@ home / category / archive / development-history / memory-map / music / bookshelf
 - 面板长回答与人物小气泡短句分层展示
 - 后台可配置模型、Lyra 人设、检索策略、小气泡长度与长回复提示语
 
-### 7.5 后台管理
+### 7.7 后台管理
 
 后台入口为 [`../src/views/Admin/AdminLayout.vue`](../src/views/Admin/AdminLayout.vue)。
 
 当前一级菜单：
 
+- 消息中心
 - 分类管理
-- 站点配置（内含基础信息、品牌资源、SEO、运行配置、页面封面、AI 助手 tab）
+- 评论管理
+- 站点配置（内含基础信息、品牌资源、SEO、运行配置、页面封面、开发同步、AI 助手 tab）
 - 表情包管理
 - 文件管理
 - 好友申请
@@ -325,9 +365,10 @@ home / category / archive / development-history / memory-map / music / bookshelf
 ### 登录与续期
 
 1. 登录页调用 `auth.ts`
-2. token / refreshToken 持久化到 `localStorage`
-3. 页面请求统一经 `request.ts`
-4. 401 时刷新 token，刷新失败则清空本地状态并跳转登录页
+2. 未勾选“记住我”时，token、refreshToken 与用户快照写入 `sessionStorage`；勾选后才写入 `localStorage`
+3. 页面请求统一经 `request.ts`，临近过期时先续期再发送；多个并发请求只发起一次刷新
+4. 401 时继续刷新并重放原请求；刷新凭证失效后同时清理浏览器存储与 Pinia 登录态
+5. “记住我”只决定关闭浏览器后能否恢复登录，不影响当前活跃会话的正常续期
 
 ### 旅行地点创建
 
@@ -335,14 +376,21 @@ home / category / archive / development-history / memory-map / music / bookshelf
 2. 上传图片后拿到后端返回的 URL、拍摄时间和可能的 EXIF 坐标
 3. 页面按 `CreateTravelMemoryCommand` 的 `stops` 结构整理旅途片段、封面、备注和时间
 4. 照片 `shotAt` 当前默认跟随片段日期，片段没填日期时回退到地点日期；片段级坐标字段在契约中保留，但当前前端主流程仍以地点级展示坐标为准
-5. 调用 `/admin/travel-memories`
+5. 调用 `/travel-memories`；管理员兼容接口仅用于全站管理，不是普通创作者主路径
 
 ### 歌曲维护
 
 1. 具备 `music:create` 能力的用户上传音频/封面
 2. 工作台保存歌曲元数据与歌词
-3. 可选调用 `/admin/music/tracks/ai/suggest` 获取候选元数据
+3. 管理员可选调用 `/admin/music/tracks/ai/suggest` 获取候选元数据；普通知友创作者不显示该入口
 4. 保存后返回音乐馆继续维护歌单
+
+### 小说导入与阅读恢复
+
+1. 具备资格的用户在书架上传文件并调用 `/reader/books/preview`
+2. 确认元信息后调用 `/reader/books/import`，页面轮询导入状态
+3. 书籍就绪后进入 `/reader/:bookId`，按目录请求章节和书内资源
+4. 登录用户节流保存章节、块、字符偏移和 locator，重新进入时恢复；偏好在用户维度跨书籍同步
 
 ### AI 配置保存
 
@@ -365,15 +413,19 @@ home / category / archive / development-history / memory-map / music / bookshelf
 
 这样做的目的，是降低首页在弱网下动态 chunk 拉取过多导致白屏的概率。
 
+2026-08-14 生产构建通过，但 Vite 仍报告超过 500 kB 的 chunk；其中 `AdminFiles` 约 1,134 kB（gzip 约 377 kB），文章卡片共享块约 652 kB（gzip 约 214 kB）。这属于性能风险而非构建失败，应结合真实加载瀑布继续拆分。
+
 ## 10. 当前已知边界
 
 - `webSearchEnabled` 目前仅是配置项，还没有真实联网工具接入
-- SDK 与手写 API 并存，后续仍需继续收敛
-- 音乐馆缺播放统计、用户互动、Media Session、断点恢复
+- SDK 与手写 API 并存，且当前生成 SDK 明显落后于后端，后续需重新生成并继续收敛
+- 音乐馆缺播放统计、用户互动和 Media Session；游客/登录用户跨会话播放现场已实现
+- 前端没有统一 `test` 脚本；手动执行现有测试时有 2 个音乐布局契约失败项
 - 文件管理缺批量治理操作闭环
 - 旅行纪念地图仍需持续关注移动端性能和地图数据体积
 - 旅行纪念地图核心文件体量仍然偏大，后续宜继续拆分 `MemoryMap.vue`、`TravelMemoryCreate.vue`、`TravelMemoryMap.vue`
 - 旅行纪念地图相关自动化测试仍偏薄，权限态、加载失败、地图 fallback 和返回 focus 等链路主要依赖人工验证
+- `Music.vue`、`TravelMemoryCreate.vue`、`TravelMemoryMap.vue` 等路由页体积较大，拆分应在行为测试保护下渐进进行
 
 ## 11. 文档维护规则
 

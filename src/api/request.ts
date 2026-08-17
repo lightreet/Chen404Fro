@@ -2,6 +2,12 @@
 
 import axios, { type AxiosInstance, type AxiosRequestConfig, type AxiosResponse } from 'axios';
 import { confirmAction, notify } from '@/lib/feedback';
+import {
+  clearAuthSession,
+  readAccessToken,
+  readRefreshToken,
+  updateAuthTokens,
+} from '@/utils/authSession';
 
 export interface RequestConfig extends AxiosRequestConfig {
   suppressErrorMessage?: boolean;
@@ -10,6 +16,7 @@ export interface RequestConfig extends AxiosRequestConfig {
 }
 
 export const DEFAULT_REQUEST_TIMEOUT_MS = 10000;
+const ACCESS_TOKEN_REFRESH_LEEWAY_MS = 5 * 60 * 1000;
 
 // 创建 axios 实例
 const request: AxiosInstance = axios.create({
@@ -23,11 +30,7 @@ const request: AxiosInstance = axios.create({
 export const AI_REQUEST_TIMEOUT_MS = 60000;
 export const AI_REQUEST_TIMEOUT_MESSAGE = 'AI 生成耗时较久已超时，请稍后重试，或补充更多条件后再试。';
 
-let isRefreshing = false;
-let refreshWaiters: Array<{
-  resolve: (token: string) => void;
-  reject: (error: unknown) => void;
-}> = [];
+let refreshPromise: Promise<string> | null = null;
 let loginRedirectPrompt: Promise<boolean> | null = null;
 let isLoginRedirecting = false;
 
@@ -41,14 +44,10 @@ interface InterceptorInstallOptions {
   unwrapBusinessData: boolean;
 }
 
-function resolveRefreshWaiters(token: string) {
-  refreshWaiters.forEach(({ resolve }) => resolve(token));
-  refreshWaiters = [];
-}
-
-function rejectRefreshWaiters(error: unknown) {
-  refreshWaiters.forEach(({ reject }) => reject(error));
-  refreshWaiters = [];
+interface ResultEnvelope<T> {
+  code?: number;
+  message?: string;
+  data?: T;
 }
 
 function createBusinessRequestError(message?: string, code?: number) {
@@ -73,6 +72,8 @@ const PUBLIC_AUTH_PATHS = [
   '/auth/check-username',
   '/auth/check-email',
   '/auth/check-phone',
+  '/auth/refresh',
+  '/auth/logout',
 ];
 const GENERIC_AUTH_HTTP_MESSAGES = new Set([
   '拒绝访问',
@@ -106,11 +107,6 @@ function resolvePublicAuthErrorMessage(config?: AxiosRequestConfig, backendMessa
     return '密码重置失败，请检查邮箱和验证码';
   }
   return '认证信息不正确，请检查后重试';
-}
-
-function clearStoredAuth() {
-  localStorage.removeItem('token');
-  localStorage.removeItem('refreshToken');
 }
 
 function resolveLoginRedirectUrl() {
@@ -149,23 +145,95 @@ function resolveTimeoutErrorMessage(config?: AxiosRequestConfig) {
 }
 
 export function performTokenRefreshRequest(refreshToken: string): Promise<TokenRefreshResult> {
-  return request.post('/auth/refresh', { refreshToken }, {
-    suppressErrorMessage: true,
-    skipAuthRedirect: true,
-  } as RequestConfig) as Promise<TokenRefreshResult>;
+  return refreshRequest
+    .post<ResultEnvelope<TokenRefreshResult>>('/auth/refresh', { refreshToken })
+    .then((response) => {
+      const { code, message, data } = response.data;
+      if (code !== 200 || !data) {
+        throw createBusinessRequestError(message || '登录续期失败', code);
+      }
+      return data;
+    });
+}
+
+function decodeAccessTokenExpiration(token: string): number | null {
+  try {
+    const payloadPart = token.split('.')[1];
+    if (!payloadPart) return null;
+    const normalized = payloadPart.replace(/-/g, '+').replace(/_/g, '/');
+    const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, '=');
+    const bytes = Uint8Array.from(atob(padded), (char) => char.charCodeAt(0));
+    const payload = JSON.parse(new TextDecoder().decode(bytes)) as { exp?: unknown };
+    return typeof payload.exp === 'number' ? payload.exp * 1000 : null;
+  } catch {
+    return null;
+  }
+}
+
+function shouldRefreshBeforeRequest(token: string, config: AxiosRequestConfig) {
+  const requestUrl = String(config.url || '');
+  if (requestUrl.includes('/auth/refresh') || isPublicAuthRequest(config)) return false;
+  const expiresAt = decodeAccessTokenExpiration(token);
+  return expiresAt != null && expiresAt - Date.now() <= ACCESS_TOKEN_REFRESH_LEEWAY_MS;
+}
+
+function refreshAccessToken(): Promise<string> {
+  if (refreshPromise) return refreshPromise;
+
+  const currentRefreshToken = readRefreshToken();
+  if (!currentRefreshToken) {
+    return Promise.reject(new Error('refresh token unavailable'));
+  }
+
+  refreshPromise = performTokenRefreshRequest(currentRefreshToken)
+    .then((result) => {
+      if (!result?.token || !result.refreshToken) {
+        throw new Error('refresh response incomplete');
+      }
+      updateAuthTokens(result.token, result.refreshToken);
+      return result.token;
+    })
+    .finally(() => {
+      refreshPromise = null;
+    });
+  return refreshPromise;
+}
+
+export async function getAccessTokenForRequest(config: AxiosRequestConfig = {}): Promise<string> {
+  let token = readAccessToken();
+  if (token && readRefreshToken() && shouldRefreshBeforeRequest(token, config)) {
+    try {
+      token = await refreshAccessToken();
+    } catch {
+      // 主动续期失败时保留原 token，让具体请求的 401 流程完成最终判定。
+      token = readAccessToken() || token;
+    }
+  }
+  return token;
+}
+
+export async function refreshAccessTokenAfterUnauthorized(): Promise<string> {
+  try {
+    return await refreshAccessToken();
+  } catch (error) {
+    clearAuthSession();
+    throw error;
+  }
 }
 
 function installRequestInterceptors(client: AxiosInstance, options: InterceptorInstallOptions) {
   client.interceptors.request.use(
-    (config) => {
+    async (config) => {
       if (config.data instanceof FormData) {
         config.headers = config.headers || {};
         delete (config.headers as Record<string, unknown>)['Content-Type'];
       }
 
-      const token = localStorage.getItem('token');
+      const token = await getAccessTokenForRequest(config);
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
+      } else if (config.headers) {
+        delete (config.headers as Record<string, unknown>).Authorization;
       }
       return config;
     },
@@ -211,52 +279,32 @@ function installRequestInterceptors(client: AxiosInstance, options: InterceptorI
             }
 
             return (async () => {
-              const refreshToken = localStorage.getItem('refreshToken') || '';
+              const refreshToken = readRefreshToken();
               const reqUrl = String(originalConfig.url || '');
 
               if (originalConfig._retry || !refreshToken || reqUrl.includes('/auth/refresh')) {
+                clearAuthSession();
                 if (shouldSkipAuthRedirect(originalConfig)) {
                   return Promise.reject(error);
                 }
-                clearStoredAuth();
                 await promptLoginRedirect('这个内容需要登录后才能继续查看，是否现在前往登录？');
                 return Promise.reject(error);
               }
 
               originalConfig._retry = true;
 
-              if (isRefreshing) {
-                const newToken = await new Promise<string>((resolve, reject) => {
-                  refreshWaiters.push({ resolve, reject });
-                });
+              try {
+                const newToken = await refreshAccessToken();
                 originalConfig.headers = originalConfig.headers || {};
                 (originalConfig.headers as Record<string, unknown>).Authorization = `Bearer ${newToken}`;
                 return client(originalConfig);
-              }
-
-              isRefreshing = true;
-              try {
-                const res = await performTokenRefreshRequest(refreshToken);
-                if (!res?.token) {
-                  throw new Error('refresh failed');
-                }
-                localStorage.setItem('token', res.token);
-                if (res.refreshToken) localStorage.setItem('refreshToken', res.refreshToken);
-                resolveRefreshWaiters(res.token);
-
-                originalConfig.headers = originalConfig.headers || {};
-                (originalConfig.headers as Record<string, unknown>).Authorization = `Bearer ${res.token}`;
-                return client(originalConfig);
               } catch (refreshError) {
-                rejectRefreshWaiters(refreshError);
+                clearAuthSession();
                 if (shouldSkipAuthRedirect(originalConfig)) {
                   return Promise.reject(refreshError);
                 }
-                clearStoredAuth();
                 await promptLoginRedirect('登录状态已过期，需要重新登录后继续。');
                 return Promise.reject(refreshError);
-              } finally {
-                isRefreshing = false;
               }
             })();
           }
@@ -295,6 +343,14 @@ function installRequestInterceptors(client: AxiosInstance, options: InterceptorI
     },
   );
 }
+
+const refreshRequest: AxiosInstance = axios.create({
+  baseURL: import.meta.env.VITE_API_BASE_URL || '/api',
+  timeout: DEFAULT_REQUEST_TIMEOUT_MS,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
 
 installRequestInterceptors(request, { unwrapBusinessData: true });
 

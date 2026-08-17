@@ -9,7 +9,7 @@ This folder provides a reusable emoji infrastructure for comment/article/signatu
 - `registry.ts`: local emoji metadata and lookup/query APIs.
 - `parser.ts`: shortcode parser and conversion helpers.
 - `renderers/*`: scene-level renderer adapters.
-- `provider.ts`: extension point for future backend-driven emoji metadata.
+- `provider.ts`: loads backend-driven emoji metadata and falls back to the local registry when the request fails.
 
 ## Shortcode Convention
 
@@ -17,9 +17,15 @@ This folder provides a reusable emoji infrastructure for comment/article/signatu
 - Example: `:basic_smile:`
 - Unknown shortcode falls back to plain text.
 
+## Runtime Flow
+
+- `loadEmojiRegistry()` calls the backend `/emoji/items` wrapper.
+- Backend fields such as `packCode` and `assetUrl` are normalized to the frontend `EmojiItem` shape.
+- A successful response replaces the in-memory registry; a request failure keeps the bundled local registry so comments and articles still render.
+- The admin UI already supports metadata maintenance and ZIP import.
+
 ## Future Extension
 
-- Replace `loadEmojiRegistry()` in `provider.ts` with backend API.
-- Add management UI to configure enable/sort/pack.
 - Add image-based emoji assets while keeping shortcode storage unchanged.
+- Replace the remaining `any`-based remote normalization with a generated or hand-maintained response type after the OpenAPI SDK is refreshed.
 
