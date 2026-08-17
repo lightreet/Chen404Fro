@@ -2,6 +2,15 @@ import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
 import type { User } from '@/types';
 import { getUserInfo } from '@/api/auth';
+import {
+  AUTH_SESSION_CHANGED_EVENT,
+  clearAuthSession,
+  readAccessToken,
+  readAuthSession,
+  saveAuthSession,
+  updateAuthTokens,
+  updateStoredUser,
+} from '@/utils/authSession';
 
 interface RequestFailureLike {
   response?: {
@@ -34,47 +43,42 @@ export const useUserStore = defineStore('user', () => {
   const isLoggedIn = computed(() => !!token.value && !!user.value);
   const sessionChecked = ref(false);
 
+  const hydrateFromStorage = () => {
+    const stored = readAuthSession();
+    token.value = stored.token;
+    if (!stored.userJson) {
+      user.value = null;
+      return;
+    }
+    try {
+      user.value = JSON.parse(stored.userJson) as User;
+    } catch {
+      user.value = null;
+    }
+  };
+
+  window.addEventListener(AUTH_SESSION_CHANGED_EVENT, hydrateFromStorage);
+  window.addEventListener('storage', hydrateFromStorage);
+
   // 设置用户信息
   const setUser = (userData: User | null) => {
     user.value = userData;
-    if (userData) {
-      localStorage.setItem('user', JSON.stringify(userData));
-    } else {
-      localStorage.removeItem('user');
-    }
+    updateStoredUser(userData ? JSON.stringify(userData) : '');
   };
 
   // 设置 Token（同时可更新 refreshToken，由 store 统一持久化）
   const setToken = (newToken: string, refreshToken?: string) => {
     token.value = newToken;
     if (newToken) {
-      localStorage.setItem('token', newToken);
-      if (refreshToken !== undefined) {
-        if (refreshToken) localStorage.setItem('refreshToken', refreshToken);
-        else localStorage.removeItem('refreshToken');
-      }
+      updateAuthTokens(newToken, refreshToken);
     } else {
-      localStorage.removeItem('token');
-      localStorage.removeItem('refreshToken');
-      localStorage.removeItem('remember');
+      clearAuthSession();
     }
   };
 
-  // 初始化用户信息（从 localStorage 恢复）
+  // 初始化用户信息（从当前会话或持久会话恢复）
   const initUser = () => {
-    const savedToken = localStorage.getItem('token');
-    const savedUser = localStorage.getItem('user');
-
-    if (savedToken) {
-      token.value = savedToken;
-    }
-    if (savedUser) {
-      try {
-        user.value = JSON.parse(savedUser);
-      } catch {
-        user.value = null;
-      }
-    }
+    hydrateFromStorage();
     sessionChecked.value = false;
   };
 
@@ -84,7 +88,7 @@ export const useUserStore = defineStore('user', () => {
       return isLoggedIn.value;
     }
 
-    const savedToken = localStorage.getItem('token');
+    const savedToken = readAccessToken();
     if (!savedToken) {
       logout();
       sessionChecked.value = true;
@@ -115,21 +119,23 @@ export const useUserStore = defineStore('user', () => {
 
   // 登录（token/refreshToken/remember 均由 store 持久化，视图层不直接操作 localStorage）
   const login = (userData: User, newToken: string, options?: { remember?: boolean; refreshToken?: string }) => {
-    setUser(userData);
     const remember = options?.remember !== false;
-    if (remember && options?.refreshToken != null) {
-      setToken(newToken, options.refreshToken);
-    } else {
-      setToken(newToken);
-      if (!remember) localStorage.removeItem('refreshToken');
-    }
-    localStorage.setItem('remember', String(remember));
+    saveAuthSession({
+      token: newToken,
+      refreshToken: options?.refreshToken || '',
+      userJson: JSON.stringify(userData),
+      remember,
+    });
+    user.value = userData;
+    token.value = newToken;
+    sessionChecked.value = true;
   };
 
   // 登出
   const logout = () => {
-    setUser(null);
-    setToken('');
+    clearAuthSession();
+    user.value = null;
+    token.value = '';
     sessionChecked.value = true;
   };
 
@@ -137,7 +143,7 @@ export const useUserStore = defineStore('user', () => {
   const updateUserInfo = (updates: Partial<User>) => {
     if (user.value) {
       user.value = { ...user.value, ...updates };
-      localStorage.setItem('user', JSON.stringify(user.value));
+      updateStoredUser(JSON.stringify(user.value));
     }
   };
 

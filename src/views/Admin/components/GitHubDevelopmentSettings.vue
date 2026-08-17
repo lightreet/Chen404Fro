@@ -117,20 +117,6 @@
             <UiFormField>
               <template #label>
                 <span class="field-label">
-                  每仓库拉取条数
-                  <UiTooltip
-                    content="每次从一个仓库最多获取多少条提交。GitHub 单次 API 请求最多返回 100 条。"
-                    placement="top"
-                  >
-                    <UiIcon name="info" class="field-help" />
-                  </UiTooltip>
-                </span>
-              </template>
-              <UiNumberField v-model="form.apiCommitLimit" :min="1" :max="100" />
-            </UiFormField>
-            <UiFormField>
-              <template #label>
-                <span class="field-label">
                   单次请求超时（秒）
                   <UiTooltip
                     content="等待 GitHub 单次响应的最长时间。超时后会尝试公开提交源或继续展示上次缓存。"
@@ -213,7 +199,6 @@ function createDefaultConfig(): GitHubDevelopmentAdminConfig {
     tokenPreview: '',
     clearToken: false,
     cacheMinutes: 30,
-    apiCommitLimit: 100,
     requestTimeoutSeconds: 12,
     apiBaseUrl: 'https://api.github.com',
     webBaseUrl: 'https://github.com',
@@ -451,7 +436,7 @@ onMounted(() => {
 
 .numeric-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
 }
 

@@ -1,6 +1,8 @@
-# Chen404 前端 UI 架构迁移方案
+# Chen404 前端 UI 架构迁移方案与完成状态
 
-本文档用于指导 `Chen404Fro` 从当前“自定义页面 + Element Plus 辅助”的 UI 结构，迁移到“自有设计系统 + primitive 组件层 + 统一图标与动效语言”的前端体系。
+> 当前状态（2026-08-14）：业务层边界收口已经完成。`src/views`、业务组件、modules、composables 中不再允许 Element Plus 直接 import、模板 `<el-*>` 或 `v-loading`；`npm run check:element-boundary` 当前通过。本文第 1—16 节保留迁移决策与实施 rationale，第 17 节记录最终状态和后续工程工作。
+
+本文档用于说明 `Chen404Fro` 如何从“自定义页面 + Element Plus 辅助”的 UI 结构迁移到“自有设计系统 + primitive 组件层 + 统一图标与动效语言”的前端体系。
 
 这不是一次单纯的“换组件库”，而是一次 **UI 基础设施升级**。目标不是把 `Element Plus` 机械替换成另一套库，而是让 Chen404 形成真正可复用、可扩展、可持续演进的前端设计系统。
 
@@ -87,9 +89,9 @@ refactor/ui-memory-map-migration
 - 基础层稳定后，按页面或模块逐步合并
 - 不要在一个 PR 中同时做“换组件体系 + 改业务逻辑 + 调接口协议”
 
-## 4. 当前前端组件与依赖现状
+## 4. 迁移前的组件与依赖基线
 
-## 4.1 当前技术栈
+## 4.1 技术栈基线
 
 当前前端核心栈：
 
@@ -112,7 +114,7 @@ refactor/ui-memory-map-migration
 - `music-metadata`
 - 地图相关：`d3-geo`、`@svg-maps/china`、`china-map-geojson`
 
-## 4.2 当前 UI 架构特点
+## 4.2 迁移前 UI 架构特点
 
 当前前端更接近：
 
@@ -130,7 +132,7 @@ refactor/ui-memory-map-migration
 - 基础组件层不够强
 - 管理与工具类页面退回到标准后台范式
 
-## 4.3 当前应保留并增强的自定义组件
+## 4.3 当时决定保留并增强的自定义组件
 
 以下组件属于 Chen404 的品牌资产，不应简单替换，应在迁移中保留并接入新体系：
 
@@ -143,7 +145,7 @@ refactor/ui-memory-map-migration
 - `components/PageHero/HeroSubtitlePulse.vue`
 - `components/HeroWave/HeroWave.vue`
 - `components/SakuraOverlay/SakuraOverlay.vue`
-- `components/FeatureAccessCover.vue`
+- `modules/feature-access/*`（只保留确需整页访问控制场景的提示能力；原 `FeatureAccessCover.vue` 已移除）
 
 ### 内容与交互组件
 
@@ -173,7 +175,7 @@ refactor/ui-memory-map-migration
 - 去除内部对旧按钮、旧图标、旧交互的散落依赖
 - 接入新的 token、icon、motion 和 primitive
 
-## 4.4 当前页面中的 Element Plus 使用重灾区
+## 4.4 迁移前 Element Plus 使用重灾区
 
 以下页面是迁移重点：
 
@@ -200,7 +202,7 @@ refactor/ui-memory-map-migration
 - `views/MemoryMap/MemoryMap.vue`
 - `views/Article/ArticleDetail.vue`
 
-## 5. 当前 Element Plus 依赖盘点
+## 5. 迁移前 Element Plus 依赖盘点
 
 下表用于判断哪些组件需要优先迁出。
 
@@ -748,9 +750,9 @@ src/composables/useMotionPreset.ts
 
 如果迁移完成，可将本文档从“进行中蓝图”改为“迁移复盘与最终架构说明”，并把长期有效内容收敛回 `architecture.md`。
 
-## 17. 迁移进度（持续更新）
+## 17. 迁移完成状态与后续工作
 
-> 最近更新：2026-06-12（阶段 3、4、5 页面层收口完成，阶段 6 第一批高频入口与高频业务组件收尾完成；`UiLoadingState` 落地、业务页 `v-loading` 完成收口；边界脚本已扩展为同时检查模板 `<el-*>` 与 `v-loading`）
+> 最近更新：2026-08-14。阶段 3—6 的业务层收口均已完成；当前 `components/ui` 有 35 个 Vue primitive，Element Plus 仅允许留在基础适配边界。后续重点是包体、自动化测试、视觉一致性和按收益降低 primitive 内部依赖。
 
 ### 已完成
 
@@ -764,7 +766,7 @@ src/composables/useMotionPreset.ts
 
 **阶段 2（第一批 primitive）**
 
-- `components/ui/`：`UiIcon`、`UiButton`、`UiInput`、`UiTextarea`、`UiPanel`、`UiTabs`、`UiDialog`、`UiBadge`、`UiTooltip`、`UiPagination`、`UiEmpty`（共 11 个，超过验收要求的 10 个），统一 barrel 出口 `@/components/ui`
+- 第一批 `components/ui/` 为 `UiIcon`、`UiButton`、`UiInput`、`UiTextarea`、`UiPanel`、`UiTabs`、`UiDialog`、`UiBadge`、`UiTooltip`、`UiPagination`、`UiEmpty`；后续已扩展到当前 35 个 Vue primitive，统一 barrel 出口为 `@/components/ui`
 - `components/app/`：`AppSection`、`AppActionBar`、`AppStatusPill`、`AppEmptyState`、`AppFilterBar`，出口 `@/components/app`
 - `UiIcon` 通过 `design/icon-map.ts` 支持「语义名 / 旧 Element 图标名 / 直接 Iconify 名」三种来源，迁移期平滑过渡
 
@@ -800,9 +802,9 @@ src/composables/useMotionPreset.ts
 - `MusicTrackEdit.vue`：`UiForm` / `UiFormField` / `UiSegmented` / `UiSwitch` / `UiTooltip` / `UiUpload` / `UiDateField` 已收口，页面层无 `el-*`
 - `TravelMemoryCreate.vue`：`UiForm` / `UiFormField` / `UiIcon` / `UiUpload` / `UiDateField` / `UiSwitch` 已收口，页面层无 `el-*`
 
-构建验证：`vue-tsc -b` 通过（2026-06-12）。
+构建验证：`npm run check:element-boundary` 与 `npm run build` 均通过（2026-08-14）。Vite 仍报告大于 500 kB 的 chunk，属于后续性能治理项。
 
-### 待办（按方案阶段推进）
+### 已完成的后续阶段与剩余工程项
 
 **阶段 5（展示型长页面）**
 - `Music.vue`：页面层已完成 `UiIcon` / `UiButton` / `UiInput` / `UiPagination` / `UiSlider` 收口
@@ -811,7 +813,7 @@ src/composables/useMotionPreset.ts
 - `Archive.vue`、`Category.vue`、`CategoryDetail.vue`、`TagDetail.vue`、`Home.vue`、`NotFound.vue`：展示层和列表尾部动作已迁移到 `Ui*`
 
 **阶段 6（其余页面收尾）**
-- 第一批高频入口与高频业务组件已完成：`Register.vue`、`Login.vue`、`Profile.vue`、`ProfileTrustRequestPanel.vue`、`FeatureAccessCover.vue`、`ArticleCard.vue`、`Header.vue`、`HomeDiscoverySearch.vue`、`Live2D.vue`、`Live2DMusicPanel.vue`、`UserProfileCard.vue`、`TravelMemoryMap.vue`
+- 高频入口与高频业务组件已完成：`Register.vue`、`Login.vue`、`Profile.vue`、`ProfileTrustRequestPanel.vue`、`ArticleCard.vue`、`Header.vue`、`HomeDiscoverySearch.vue`、`Live2D.vue`、`Live2DMusicPanel.vue`、`UserProfileCard.vue`、`TravelMemoryMap.vue`；原 `FeatureAccessCover.vue` 已随旅行公开内容模型调整而移除
 - `AdminSiteSettings.vue`、`AiAssistantSettings.vue`、`AdminFiles.vue`、`AdminTrustRequests.vue`、`AdminEmojiManager.vue`、`AdminCategories.vue`、`MusicTrackEdit.vue`、`TravelMemoryCreate.vue`、`ArticleEdit.vue` 等后台/工作台页页面层已完成 `Ui*` / `App*` 收口
 - `Tag.vue`、`UserProfile.vue`、`About.vue`、`Guestbook.vue` 等少量页面已完成页面层收口，后续仍可按收益继续做视觉层统一，但不再阻塞架构迁移主线
 
@@ -821,7 +823,12 @@ src/composables/useMotionPreset.ts
 - 可选后续：继续把 `components/ui/*` 薄封装内部的 Element Plus 依赖替换为更纯的项目实现，而不是继续在业务页面里做标签替换
 - 当前 `src/views` 下业务页面残余 `el-*` 与 `v-loading` 均为 `0`；高频业务组件的页面层 `el-*` 也已清空；`src/components` 下剩余的 `el-*` / `v-loading` 已收口到 `components/ui/*` 薄封装内部
 
-> 最近更新：2026-06-12（阶段 3、4、5 页面层全部完成；阶段 6 第一批高频入口与高频业务组件收尾完成；`src/views` 下业务页面残余 `el-*` 为 `0`、业务页 `v-loading` 为 `0`，高频业务组件页面层 `el-*` 为 `0`；中期 primitive 已补齐 `UiSkeleton / UiUpload / UiDateField / UiSlider / UiNumberField / UiForm / UiFormField / UiTable / UiTableColumn / UiDrawer / UiAvatar / UiRadioGroup / UiSegmented / UiDropdown* / UiDivider / UiLoadingState`；剩余主要是设计系统内部薄封装继续依赖 Element Plus，以及包体与测试等工程收尾）
+当前剩余工程项：
+
+- 生产构建中的大 chunk，尤其是 `AdminFiles` 和文章卡片共享块。
+- 前端没有统一 `test` 脚本，现有音乐布局测试有 2 个契约失败，详见仓库扫描报告。
+- `Music.vue`、旅行地图/编辑器等超大单文件需要在行为测试保护下渐进拆分。
+- 可继续按收益降低 `components/ui/*` 内部对 Element Plus 的依赖，但这不是当前业务边界完成度的阻塞项。
 
 ## 后续依赖策略
 
