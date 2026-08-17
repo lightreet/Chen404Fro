@@ -326,7 +326,7 @@ home / category / archive / development-history / memory-map / music / bookshelf
 
 - 公开页面 `views/DevelopmentHistory/DevelopmentHistory.vue` 调用 `development-history.ts` 展示后端聚合结果
 - 后台 `GitHubDevelopmentSettings.vue` 通过 `development-history-admin.ts` 维护私有配置并触发刷新
-- 外部 GitHub 调用、API/Atom 回退与缓存由后端负责，前端只展示结果和同步状态
+- 外部 GitHub 调用、API 全量分页、Atom 回退与缓存由后端负责，前端只展示结果和同步状态
 
 ### 7.6 Lyra 聊天
 

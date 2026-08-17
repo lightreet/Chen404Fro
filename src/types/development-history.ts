@@ -39,7 +39,6 @@ export interface GitHubDevelopmentAdminConfig {
   tokenPreview?: string
   clearToken?: boolean
   cacheMinutes: number
-  apiCommitLimit: number
   requestTimeoutSeconds: number
   apiBaseUrl: string
   webBaseUrl: string
