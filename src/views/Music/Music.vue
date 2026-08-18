@@ -41,31 +41,21 @@
           </div>
 
           <div class="radio-panel__body">
-            <div class="radio-panel__topline">
-              <span class="eyebrow">Now Playing</span>
-            </div>
-
             <div class="radio-panel__title-row">
-              <div>
-                <h2>{{ activeTrack?.title || '音乐馆' }}</h2>
-                <p>{{ activeTrack ? `${activeTrack.artist}${activeTrack.album ? ` · ${activeTrack.album}` : ''}` : '等待第一首歌开始播放。' }}</p>
+              <h2 :title="activeTrackByline">{{ activeTrackByline }}</h2>
+              <div v-if="activeTrackTags.length" class="radio-panel__summary">
+                <div class="radio-panel__tags" role="list" aria-label="歌曲标签">
+                  <span
+                    v-for="tag in activeTrackTags"
+                    :key="tag"
+                    class="radio-panel__tag"
+                    role="listitem"
+                    :title="tag"
+                  >
+                    {{ tag }}
+                  </span>
+                </div>
               </div>
-              <span v-if="player.currentPlaylist?.name" class="playlist-badge">{{ player.currentPlaylist.name }}</span>
-            </div>
-
-            <div class="radio-panel__meta">
-              <span>{{ activeTrack?.genre || '音乐馆' }}</span>
-              <span>{{ activeTrack?.language || 'Lyra Select' }}</span>
-              <button
-                type="button"
-                class="radio-panel__queue-chip"
-                :class="{ 'is-active': activePlayerPanel === 'queue' }"
-                :aria-pressed="activePlayerPanel === 'queue'"
-                @click="activePlayerPanel = 'queue'"
-              >
-                <UiIcon name="sequence-play" />
-                {{ player.queue.length }} 首在队列
-              </button>
             </div>
 
             <p class="radio-panel__recommendation">
@@ -831,6 +821,15 @@ const { loadSiteConfig } = useSiteConfig()
 const canManage = computed(() => isAdminUser(user.value))
 const canCreateTrack = computed(() => hasCapability(user.value, 'music:create'))
 const activeTrack = computed(() => player.currentTrack)
+const activeTrackByline = computed(() => {
+  const track = activeTrack.value
+  if (!track) return '音乐馆'
+  return `${track.artist}${track.album ? ` · ${track.album}` : ''}`
+})
+const activeTrackTags = computed(() => {
+  const tags = activeTrack.value?.tags ?? []
+  return Array.from(new Set(tags.map((tag) => tag.trim()).filter(Boolean))).slice(0, 3)
+})
 const upcomingQueueTracks = computed(() => {
   if (player.currentIndex < 0) {
     return player.queue
@@ -1822,7 +1821,7 @@ function handlePlaylistSearchSubmit() {
 
 <style scoped lang="scss">
 .music-page {
-  width: min(1360px, calc(100vw - 40px));
+  width: min(1200px, calc(100vw - 40px));
   margin: 0 auto;
   padding: 18px 0 44px;
   display: grid;
@@ -1832,10 +1831,10 @@ function handlePlaylistSearchSubmit() {
 .radio-panel {
   position: relative;
   display: grid;
-  grid-template-columns: minmax(0, 0.95fr) minmax(440px, 1.05fr);
+  grid-template-columns: minmax(0, 0.92fr) minmax(420px, 1.08fr);
   align-items: stretch;
-  gap: clamp(24px, 3vw, 40px);
-  padding: clamp(18px, 2.3vw, 28px);
+  gap: clamp(22px, 2.4vw, 32px);
+  padding: clamp(18px, 2vw, 24px);
   border-radius: 30px;
   border: 1px solid rgba(255, 220, 232, 0.66);
   background:
@@ -1880,7 +1879,7 @@ function handlePlaylistSearchSubmit() {
 
 .radio-panel__cover {
   position: relative;
-  width: min(100%, 310px);
+  width: min(100%, 280px);
   aspect-ratio: 1;
   border-radius: 50%;
   display: grid;
@@ -1991,7 +1990,8 @@ function handlePlaylistSearchSubmit() {
   text-align: center;
 }
 
-.radio-panel__meta,
+.radio-panel__summary,
+.radio-panel__tags,
 .shelf-heading__actions,
 .track-card__actions,
 .playlist-switches,
@@ -2008,42 +2008,6 @@ function handlePlaylistSearchSubmit() {
   align-items: center;
 }
 
-.radio-panel__meta {
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 8px;
-}
-
-.radio-panel__meta span,
-.radio-panel__queue-chip {
-  padding: 6px 10px;
-  border-radius: 999px;
-  color: #9a6b7e;
-  background: rgba(255, 250, 252, 0.74);
-  border: 1px solid rgba(239, 216, 226, 0.72);
-  font-size: 12px;
-  line-height: 1;
-}
-
-.radio-panel__queue-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  font-family: inherit;
-  cursor: pointer;
-  transition: color 0.18s ease, border-color 0.18s ease, background 0.18s ease;
-}
-
-.radio-panel__queue-chip:hover,
-.radio-panel__queue-chip:focus-visible,
-.radio-panel__queue-chip.is-active {
-  border-color: rgba(251, 114, 153, 0.48);
-  color: #d95683;
-  background: rgba(255, 241, 247, 0.96);
-  outline: none;
-}
-
-.radio-panel__topline,
 .radio-panel__title-row,
 .shelf-heading,
 .playlist-manager__header {
@@ -2053,7 +2017,6 @@ function handlePlaylistSearchSubmit() {
   gap: 16px;
 }
 
-.radio-panel__topline,
 .radio-panel__title-row {
   width: 100%;
   justify-content: center;
@@ -2062,6 +2025,45 @@ function handlePlaylistSearchSubmit() {
 .radio-panel__title-row {
   flex-direction: column;
   gap: 8px;
+}
+
+.radio-panel__summary {
+  width: min(100%, 460px);
+  min-width: 0;
+  justify-content: center;
+  gap: 8px;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.radio-panel__title-row h2 {
+  overflow: hidden;
+  max-width: 100%;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.radio-panel__tags {
+  flex: 0 1 auto;
+  min-width: 0;
+  gap: 6px;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.radio-panel__tag {
+  overflow: hidden;
+  flex: 0 0 auto;
+  max-width: 92px;
+  padding: 5px 9px;
+  border: 1px solid rgba(239, 216, 226, 0.72);
+  border-radius: 999px;
+  color: #9a6b7e;
+  background: rgba(255, 250, 252, 0.74);
+  font-size: 11px;
+  line-height: 1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .shelf-heading__actions {
@@ -2112,24 +2114,15 @@ function handlePlaylistSearchSubmit() {
   margin-left: auto;
 }
 
-.eyebrow {
-  color: #d984a5;
-  font-size: 12px;
-  font-weight: 800;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-}
-
 .radio-panel h2,
 .shelf-heading h2,
 .playlist-manager__header h2 {
   margin: 4px 0 0;
   color: #4f3c46;
-  font-size: clamp(26px, 3vw, 42px);
+  font-size: clamp(25px, 2.7vw, 38px);
   line-height: 1.12;
 }
 
-.radio-panel__title-row p,
 .radio-panel__recommendation,
 .playlist-manager__header p {
   margin: 8px 0 0;
@@ -2140,17 +2133,6 @@ function handlePlaylistSearchSubmit() {
 .radio-panel__recommendation {
   max-width: 48ch;
   margin-top: 0;
-}
-
-.playlist-badge {
-  flex: 0 0 auto;
-  padding: 8px 12px;
-  border-radius: 999px;
-  color: #d86f98;
-  background: rgba(255, 242, 247, 0.9);
-  border: 1px solid rgba(239, 204, 217, 0.78);
-  font-size: 12px;
-  font-weight: 700;
 }
 
 .player-controls {
@@ -2192,9 +2174,9 @@ function handlePlaylistSearchSubmit() {
 .audio-visualizer {
   position: relative;
   z-index: 2;
-  width: min(100%, 320px);
-  height: 72px;
-  padding: 10px 12px 12px;
+  width: min(100%, 340px);
+  height: 58px;
+  padding: 6px 10px 10px;
   border: 0;
   display: flex;
   align-items: flex-end;
@@ -2210,6 +2192,7 @@ function handlePlaylistSearchSubmit() {
   z-index: 1;
   flex: 0 0 4px;
   height: var(--bar-height);
+  max-height: 40px;
   border-radius: 999px;
   background: rgba(251, 114, 153, 0.56);
   box-shadow: 0 4px 10px rgba(251, 114, 153, 0.12);
@@ -4021,7 +4004,7 @@ function handlePlaylistSearchSubmit() {
   display: flex;
   margin-top: 0;
   justify-content: center;
-  padding: 20px 0 2px;
+  padding: 10px 0 0;
 }
 
 :deep(.music-card-pagination .el-pagination),
@@ -4779,40 +4762,338 @@ function handlePlaylistSearchSubmit() {
 }
 
 @media (min-width: 1180px) {
-  .playlist-categories,
-  .category-track-board {
-    min-height: 790px;
+  .radio-panel {
+    border-radius: 28px;
   }
 
-  .music-card-grid {
-    flex: 0 0 738px;
-    grid-template-rows: repeat(2, minmax(0, 1fr));
+  .radio-panel::before {
+    inset: 16px;
+    border-radius: 22px;
   }
+
+  .radio-panel__cover {
+    width: min(100%, 236px);
+  }
+
+  .tone-arm {
+    top: 12%;
+    right: 5%;
+    width: 74px;
+    height: 114px;
+    transform-origin: 62px 18px;
+  }
+
+  .tone-arm__base {
+    width: 36px;
+    height: 36px;
+  }
+
+  .tone-arm__needle {
+    top: 26px;
+    right: 16px;
+    width: 8px;
+    height: 96px;
+  }
+
+  .radio-panel__body {
+    gap: 8px;
+  }
+
+  .radio-panel__title-row {
+    gap: 8px;
+  }
+
+  .radio-panel__recommendation {
+    font-size: 14px;
+    line-height: 1.55;
+  }
+
+  .radio-panel__summary {
+    gap: 7px;
+  }
+
+  .radio-panel__tags {
+    gap: 5px;
+  }
+
+  .radio-panel__tag {
+    padding: 4px 8px;
+  }
+
+  .radio-panel h2 {
+    font-size: clamp(28px, 2.25vw, 36px);
+  }
+
+  .player-controls {
+    gap: 8px;
+    margin-top: 0;
+  }
+
+  .control-btn {
+    width: 38px;
+    height: 38px;
+  }
+
+  .control-btn--primary {
+    width: 48px;
+    height: 48px;
+  }
+
+  .progress-row,
+  .player-subcontrols {
+    font-size: 11px;
+  }
+
+  .player-subcontrols {
+    grid-template-columns: auto minmax(92px, 164px) auto;
+    gap: 8px;
+  }
+
+  .player-context-panel {
+    padding-block: 14px 18px;
+  }
+
+  .player-context-panel__header {
+    min-height: 44px;
+    padding: 5px 8px 5px 10px;
+  }
+
+  .player-context-tabs button {
+    min-height: 32px;
+    padding-inline: 10px;
+    font-size: 12px;
+  }
+
+  .lyric-window {
+    padding: 14px 18px 20px;
+  }
+
+  .lyric-window p {
+    font-size: 14px;
+    line-height: 1.85;
+  }
+
+  .queue-track__main {
+    min-height: 50px;
+    grid-template-columns: 26px 36px minmax(0, 1fr) auto;
+    gap: 8px;
+    padding: 5px 7px;
+  }
+
+  .queue-track__cover {
+    width: 36px;
+    height: 36px;
+  }
+
+  .queue-track__copy strong,
+  .queue-track__copy small,
+  .queue-track__duration {
+    font-size: 11px;
+  }
+
+  .music-shelf {
+    padding: 24px;
+    border-radius: 26px;
+  }
+
+  .shelf-heading {
+    margin-bottom: 14px;
+    padding: 0 4px 16px;
+  }
+
+  .shelf-heading__actions {
+    gap: 12px;
+  }
+
+  .shelf-search-shell {
+    flex-basis: 420px;
+    width: min(100%, 460px);
+    height: 38px;
+  }
+
+  .playlist-status-filter {
+    gap: clamp(16px, 2vw, 28px);
+  }
+
+  .playlist-status-filter__option {
+    min-width: 44px;
+    height: 32px;
+    font-size: 13px;
+  }
+
+  .shelf-heading__buttons {
+    gap: 8px;
+  }
+
+  .shelf-heading__add,
+  .shelf-heading__refresh {
+    min-width: 84px;
+    min-height: 34px;
+    font-size: 13px;
+  }
+
+  .music-view-toggle {
+    padding: 2px;
+    border-radius: 10px;
+  }
+
+  .music-view-toggle button {
+    min-height: 30px;
+    padding-inline: 9px;
+    border-radius: 8px;
+    gap: 5px;
+    font-size: 11px;
+  }
+
+  .music-category-workbench,
+  .playlist-workbench {
+    grid-template-columns: minmax(164px, 184px) minmax(0, 1fr);
+    gap: 16px;
+  }
+
+  .playlist-categories {
+    gap: 6px;
+    padding: 8px 12px 8px 0;
+  }
+
+  .playlist-category-card {
+    min-height: 54px;
+    grid-template-columns: minmax(0, 1fr) 36px;
+  }
+
+  .playlist-category-card__select {
+    min-height: 54px;
+    grid-template-columns: 32px minmax(0, 1fr);
+    gap: 8px;
+    padding: 8px 2px 8px 10px;
+  }
+
+  .playlist-category-card__marker {
+    width: 32px;
+    height: 32px;
+    border-radius: 10px;
+    font-size: 15px;
+  }
+
+  .playlist-category-card__play {
+    width: 36px;
+    height: 36px;
+  }
+
+  .playlist-category-card__copy strong {
+    font-size: 14px;
+  }
+
+  .playlist-category-card__copy small {
+    font-size: 11px;
+  }
+
+  .playlist-categories__new {
+    min-height: 50px;
+    gap: 8px;
+    padding-inline: 10px;
+    font-size: 13px;
+  }
+
+  .category-track-table__header,
+  .category-track-row__main {
+    grid-template-columns: 34px minmax(128px, 0.58fr) minmax(84px, 0.32fr) minmax(72px, 0.26fr) 58px 92px 58px;
+    gap: 10px;
+  }
+
+  .category-track-table__header {
+    padding: 9px 14px;
+    font-size: 11px;
+  }
+
+  .category-track-row__main {
+    padding: 9px 14px;
+  }
+
+  .category-track-row__index,
+  .category-track-row__album,
+  .category-track-row__categories,
+  .category-track-row__duration,
+  .category-track-row__controls,
+  .category-track-row__expand {
+    font-size: 12px;
+  }
+
+  .category-track-row__title {
+    grid-template-columns: 40px minmax(0, 1fr);
+    gap: 10px;
+  }
+
+  .category-track-row__cover {
+    width: 40px;
+    height: 40px;
+    border-radius: 9px;
+  }
+
+  .category-track-row__title strong {
+    font-size: 14px;
+  }
+
+  .category-track-row__title small {
+    font-size: 11px;
+  }
+
+  .category-track-row__controls {
+    gap: 6px;
+  }
+
+  .category-track-row__play {
+    width: 30px;
+    height: 30px;
+  }
+
+  .music-track-card__play,
+  .music-track-card__enqueue {
+    width: 32px;
+    height: 32px;
+  }
+
+  .music-track-card__body {
+    gap: 7px;
+    padding: 12px 12px 10px;
+  }
+
+  .music-track-card__body strong {
+    font-size: 14px;
+  }
+
+  .music-track-card__body p,
+  .music-track-card__meta,
+  .music-track-card__footer,
+  .music-track-card__artist {
+    font-size: 11px;
+  }
+
 }
 
 @media (min-width: 1180px) and (min-height: 760px) {
   .radio-panel {
-    height: clamp(720px, 78vh, 860px);
+    height: clamp(620px, calc(100dvh - 160px), 700px);
     align-items: stretch;
   }
 
   .radio-panel__primary {
     height: 100%;
     grid-template-rows: minmax(0, 1fr) auto;
-    gap: 16px;
+    gap: 12px;
     overflow: hidden;
   }
 
   .radio-panel__visual {
     height: 100%;
-    padding-block: 12px 0;
-    grid-template-rows: minmax(0, 1fr) auto;
+    padding-block: 4px 0;
+    grid-template-rows: minmax(0, 1fr) 58px;
     align-content: stretch;
   }
 
   .radio-panel__cover {
-    width: min(100%, 310px);
-    align-self: center;
+    align-self: end;
+    margin-bottom: 4px;
   }
 
   .audio-visualizer {
@@ -4820,7 +5101,7 @@ function handlePlaylistSearchSubmit() {
   }
 
   .radio-panel__body {
-    padding: 0 8px 8px;
+    padding: 0 6px 6px;
     gap: 10px;
   }
 
@@ -5072,6 +5353,27 @@ function handlePlaylistSearchSubmit() {
 }
 
 @media (max-width: 520px) {
+  .audio-visualizer {
+    width: min(100%, 300px);
+    gap: 3px;
+  }
+
+  .audio-visualizer__bar {
+    flex-basis: 3px;
+  }
+
+  .radio-panel__summary {
+    gap: 6px;
+  }
+
+  .radio-panel__tags {
+    max-width: 46%;
+  }
+
+  .radio-panel__tag:nth-child(n + 3) {
+    display: none;
+  }
+
   .player-context-panel {
     min-height: 320px;
     max-height: 380px;
