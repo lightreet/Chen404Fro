@@ -322,6 +322,7 @@ home / category / archive / development-history / memory-map / music / bookshelf
 - `/reader/:bookId` 按书籍 `public`、`friend`、`private` 可见性加载详情、目录、章节、搜索和书内资源
 - 导入前先预览，确认后异步解析，前端轮询 `importing`、`ready`、`failed` 状态
 - 登录用户把精确阅读进度和阅读偏好持久化到后端，匿名阅读使用本地回退
+- 阅读器支持单章与连续两种阅读方式；连续模式动态加载相邻章节，目录可自动或手动定位当前章节
 
 ### 7.5 GitHub 开发历程
 

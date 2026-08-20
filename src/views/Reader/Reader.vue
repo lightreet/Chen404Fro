@@ -7,7 +7,7 @@
     <header class="reader-toolbar">
       <div class="reader-toolbar__side">
         <UiButton variant="text" icon-only icon="back" aria-label="返回书架" @click="router.push('/bookshelf')" />
-        <button type="button" class="reader-book-title" @click="tocOpen = true">
+        <button type="button" class="reader-book-title" @click="openToc">
           <span>{{ book?.title || '小说阅读' }}</span>
           <small v-if="chapter">{{ chapter.title }}</small>
         </button>
@@ -18,7 +18,7 @@
       </div>
       <div class="reader-toolbar__side reader-toolbar__actions">
         <UiButton variant="text" icon-only icon="search" aria-label="书内搜索" @click="openSearch" />
-        <UiButton variant="text" icon-only icon="menu" aria-label="打开目录" @click="tocOpen = true" />
+        <UiButton variant="text" icon-only icon="menu" aria-label="打开目录" @click="openToc" />
         <UiButton variant="text" icon-only icon="edit" aria-label="打开阅读笔记" @click="openNotes" />
         <UiButton variant="text" icon-only icon="settings" aria-label="阅读设置" @click="settingsOpen = true" />
       </div>
@@ -31,8 +31,12 @@
       variant="plain"
       message="正在展开这一章…"
     >
-      <main v-if="chapter" class="reader-shell">
-        <article class="reader-paper">
+      <main
+        v-if="chapter"
+        class="reader-shell"
+        :class="{ 'reader-shell--continuous': preference.readingMode === 'continuous' }"
+      >
+        <article v-if="preference.readingMode === 'paged'" class="reader-paper">
           <header class="chapter-header">
             <p v-if="chapter.volumeTitle">{{ chapter.volumeTitle }}</p>
             <h1>{{ chapter.title }}</h1>
@@ -66,6 +70,60 @@
             </button>
           </nav>
         </article>
+
+        <template v-else>
+          <div v-if="loadingPrevious" class="chapter-load-state" aria-live="polite">
+            <UiIcon name="loading" spin />正在接上上一章…
+          </div>
+          <button
+            v-else-if="previousLoadError"
+            type="button"
+            class="chapter-load-retry"
+            @click="loadAdjacentChapter('previous')"
+          >
+            上一章加载失败，点击重试
+          </button>
+
+          <article
+            v-for="entry in loadedChapters"
+            :key="String(entry.chapter.id)"
+            class="reader-paper continuous-chapter"
+            :data-reader-chapter-id="String(entry.chapter.id)"
+          >
+            <header class="chapter-header">
+              <p v-if="entry.chapter.volumeTitle">{{ entry.chapter.volumeTitle }}</p>
+              <h1>{{ entry.chapter.title }}</h1>
+              <span>
+                第 {{ entry.chapter.chapterOrder + 1 }} / {{ entry.chapter.chapterCount }} 章
+                · {{ formatCharCount(entry.chapter.charCount) }}
+              </span>
+            </header>
+            <div
+              class="reader-content"
+              :data-reader-content-id="String(entry.chapter.id)"
+              v-html="entry.html"
+              @pointerup="scheduleSelectionCapture"
+              @keyup="scheduleSelectionCapture"
+            />
+          </article>
+
+          <div v-if="loadingNext" class="chapter-load-state" aria-live="polite">
+            <UiIcon name="loading" spin />正在展开下一章…
+          </div>
+          <button
+            v-else-if="nextLoadError"
+            type="button"
+            class="chapter-load-retry"
+            @click="loadAdjacentChapter('next')"
+          >
+            下一章加载失败，点击重试
+          </button>
+          <div v-else-if="!lastLoadedChapter?.nextChapterId" class="book-finished-state">
+            <UiIcon name="success" />
+            <strong>本书已读完</strong>
+            <span>故事在这里暂时落下句点。</span>
+          </div>
+        </template>
       </main>
 
       <div v-else-if="!loading" class="reader-error">
@@ -126,11 +184,14 @@
         </div>
 
         <template v-else>
-          <div class="drawer-section-title">
-            <span>完整目录</span>
-            <small>{{ book?.chapterCount || 0 }} 章</small>
+          <div class="drawer-section-title toc-locator-bar">
+            <span>完整目录 <small>{{ book?.chapterCount || 0 }} 章</small></span>
+            <button type="button" @click="locateCurrentChapter">
+              <UiIcon name="location" />定位当前章节
+            </button>
           </div>
           <ReaderTocTree
+            ref="tocTreeRef"
             :items="toc"
             :active-chapter-id="chapter?.id"
             root
@@ -166,6 +227,24 @@
       class="reader-drawer"
     >
       <div class="reader-settings">
+        <section>
+          <h3>阅读方式</h3>
+          <div class="reading-mode-options" role="radiogroup" aria-label="阅读方式">
+            <button
+              v-for="mode in readingModeOptions"
+              :key="mode.value"
+              type="button"
+              role="radio"
+              :aria-checked="preference.readingMode === mode.value"
+              :class="{ 'is-active': preference.readingMode === mode.value }"
+              @click="changeReadingMode(mode.value)"
+            >
+              <span><UiIcon :name="mode.icon" />{{ mode.label }}</span>
+              <small>{{ mode.description }}</small>
+            </button>
+          </div>
+        </section>
+
         <section>
           <h3>页面主题</h3>
           <div class="theme-options">
@@ -324,6 +403,7 @@ import type {
   ReaderPreference,
   ReaderProgress,
   ReaderProgressCommand,
+  ReaderReadingMode,
   ReaderSearchResult,
   ReaderTheme,
   ReaderTocItem,
@@ -347,6 +427,15 @@ interface ReaderNoteEditorDraft {
   top: number
 }
 
+interface LoadedReaderChapter {
+  chapter: ReaderChapter
+  html: string
+}
+
+interface ReaderTocTreeHandle {
+  locateChapter: (chapterId?: ReaderId) => Promise<boolean>
+}
+
 const route = useRoute()
 const router = useRouter()
 const userStore = useUserStore()
@@ -357,12 +446,15 @@ const book = ref<ReaderBook>()
 const chapter = ref<ReaderChapter>()
 const toc = ref<ReaderTocItem[]>([])
 const hydratedHtml = ref('')
+const loadedChapters = ref<LoadedReaderChapter[]>([])
 const contentRef = ref<HTMLElement>()
+const tocTreeRef = ref<ReaderTocTreeHandle>()
 const searchInput = ref<{ focus: () => void }>()
 const loading = ref(true)
 const tocOpen = ref(false)
 const notesOpen = ref(false)
 const settingsOpen = ref(false)
+const locateOnTocOpen = ref(true)
 const searchKeyword = ref('')
 const searchResults = ref<ReaderSearchResult[] | null>(null)
 const searching = ref(false)
@@ -374,6 +466,10 @@ const notesLoading = ref(false)
 const notesLoaded = ref(false)
 const notesError = ref('')
 const noteSaving = ref(false)
+const loadingPrevious = ref(false)
+const loadingNext = ref(false)
+const previousLoadError = ref(false)
+const nextLoadError = ref(false)
 const selectionAnchor = ref<ReaderSelectionAnchor>()
 const selectionTriggerVisible = ref(false)
 const selectionTriggerPosition = reactive({ left: 16, top: 72 })
@@ -385,6 +481,7 @@ const preference = reactive<ReaderPreference>({
   paragraphSpacing: 16,
   theme: 'light',
   fontFamily: 'serif',
+  readingMode: 'paged',
 })
 const { resolveHtml, revokeAll } = useReaderAssetResolver()
 
@@ -404,6 +501,16 @@ const themeOptions: Array<{ value: ReaderTheme; label: string }> = [
   { value: 'dark', label: '夜间' },
 ]
 
+const readingModeOptions: Array<{
+  value: ReaderReadingMode
+  label: string
+  description: string
+  icon: string
+}> = [
+  { value: 'paged', label: '单章阅读', description: '读完后手动切换章节', icon: 'book' },
+  { value: 'continuous', label: '连续阅读', description: '滚动时自动衔接章节', icon: 'arrow-down' },
+]
+
 const readerStyle = computed(() => ({
   '--reader-font-size': `${preference.fontSize}px`,
   '--reader-line-height': String(preference.lineHeight),
@@ -416,6 +523,8 @@ const selectionTriggerStyle = computed(() => ({
 }))
 const previousLabel = computed(() => chapter.value?.previousChapterId ? '回到前一章' : '已经是第一章')
 const nextLabel = computed(() => chapter.value?.nextChapterId ? '继续下一章' : '本书已读完')
+const firstLoadedChapter = computed(() => loadedChapters.value[0]?.chapter)
+const lastLoadedChapter = computed(() => loadedChapters.value.at(-1)?.chapter)
 
 let scrollFrame = 0
 let progressTimer = 0
@@ -424,6 +533,10 @@ let selectionTimer = 0
 let noteFocusTimer = 0
 let ignoreScrollUntil = 0
 let initializedPreference = false
+let lastScrollY = 0
+let adjacentLoadFrame = 0
+
+const MAX_CONTINUOUS_CHAPTERS = 5
 
 const flattenFirstChapterId = (items: ReaderTocItem[]): ReaderId | undefined => {
   for (const item of items) {
@@ -685,6 +798,28 @@ const captureSelection = () => {
     return
   }
   const range = selection.getRangeAt(0).cloneRange()
+  if (preference.readingMode === 'continuous') {
+    const startElement = range.startContainer.nodeType === Node.ELEMENT_NODE
+      ? range.startContainer as Element
+      : range.startContainer.parentElement
+    const endElement = range.endContainer.nodeType === Node.ELEMENT_NODE
+      ? range.endContainer as Element
+      : range.endContainer.parentElement
+    const startRoot = startElement?.closest<HTMLElement>('[data-reader-content-id]')
+    const endRoot = endElement?.closest<HTMLElement>('[data-reader-content-id]')
+    if (!startRoot || startRoot !== endRoot) {
+      selectionTriggerVisible.value = false
+      selectionAnchor.value = undefined
+      return
+    }
+    const selectedEntry = findLoadedChapter(startRoot.dataset.readerContentId || '')
+    if (selectedEntry && String(selectedEntry.chapter.id) !== String(chapter.value.id)) {
+      chapter.value = selectedEntry.chapter
+      contentRef.value = startRoot
+      renderNoteHighlights()
+      void router.replace({ query: { ...route.query, chapter: String(selectedEntry.chapter.id) } })
+    }
+  }
   if (!contentRef.value.contains(range.startContainer) || !contentRef.value.contains(range.endContainer)) {
     selectionTriggerVisible.value = false
     selectionAnchor.value = undefined
@@ -875,6 +1010,102 @@ const removeNote = async (note: ReaderNote) => {
   notify.success('阅读笔记已删除')
 }
 
+const findLoadedChapter = (chapterId: ReaderId) => loadedChapters.value
+  .find(entry => String(entry.chapter.id) === String(chapterId))
+
+const syncContentRef = () => {
+  if (!chapter.value) {
+    contentRef.value = undefined
+    return
+  }
+  if (preference.readingMode === 'paged') return
+  contentRef.value = document.querySelector<HTMLElement>(
+    `[data-reader-content-id="${String(chapter.value.id)}"]`,
+  ) || undefined
+}
+
+const activateLoadedChapter = async (entry: LoadedReaderChapter) => {
+  if (String(chapter.value?.id) === String(entry.chapter.id) && contentRef.value) return
+  chapter.value = entry.chapter
+  await nextTick()
+  syncContentRef()
+  renderNoteHighlights()
+  void router.replace({ query: { ...route.query, chapter: String(entry.chapter.id) } })
+}
+
+const syncActiveChapterFromScroll = () => {
+  if (preference.readingMode !== 'continuous' || !loadedChapters.value.length) return
+  const readingLine = Math.max(112, window.innerHeight * 0.3)
+  const sections = [...document.querySelectorAll<HTMLElement>('[data-reader-chapter-id]')]
+  let active = sections[0]
+  for (const section of sections) {
+    if (section.getBoundingClientRect().top <= readingLine) active = section
+    else break
+  }
+  const entry = active && findLoadedChapter(active.dataset.readerChapterId || '')
+  if (entry) runSilently(activateLoadedChapter(entry))
+}
+
+const trimContinuousWindow = async (direction: 'previous' | 'next') => {
+  if (loadedChapters.value.length <= MAX_CONTINUOUS_CHAPTERS) return
+  if (direction === 'previous') {
+    loadedChapters.value.pop()
+    await nextTick()
+    return
+  }
+  const heightBefore = document.documentElement.scrollHeight
+  loadedChapters.value.shift()
+  await nextTick()
+  const removedHeight = heightBefore - document.documentElement.scrollHeight
+  if (removedHeight > 0) window.scrollBy({ top: -removedHeight, behavior: 'auto' })
+}
+
+const loadAdjacentChapter = async (direction: 'previous' | 'next') => {
+  if (preference.readingMode !== 'continuous') return
+  const edge = direction === 'previous' ? firstLoadedChapter.value : lastLoadedChapter.value
+  const targetId = direction === 'previous' ? edge?.previousChapterId : edge?.nextChapterId
+  if (!targetId) return
+  const loadingState = direction === 'previous' ? loadingPrevious : loadingNext
+  const errorState = direction === 'previous' ? previousLoadError : nextLoadError
+  if (loadingState.value || findLoadedChapter(targetId)) return
+  loadingState.value = true
+  errorState.value = false
+  const heightBefore = document.documentElement.scrollHeight
+  try {
+    const loaded = await getReaderChapter(bookId.value, targetId)
+    const entry = { chapter: loaded, html: await resolveHtml(loaded.contentHtml) }
+    if (direction === 'previous') loadedChapters.value.unshift(entry)
+    else loadedChapters.value.push(entry)
+    await nextTick()
+    if (direction === 'previous') {
+      const addedHeight = document.documentElement.scrollHeight - heightBefore
+      if (addedHeight > 0) window.scrollBy({ top: addedHeight, behavior: 'auto' })
+    }
+    await trimContinuousWindow(direction)
+  } catch {
+    errorState.value = true
+  } finally {
+    loadingState.value = false
+  }
+}
+
+const maybeLoadAdjacentChapter = () => {
+  if (preference.readingMode !== 'continuous') return
+  window.cancelAnimationFrame(adjacentLoadFrame)
+  adjacentLoadFrame = window.requestAnimationFrame(() => {
+    const currentScrollY = window.scrollY
+    const scrollingUp = currentScrollY < lastScrollY
+    lastScrollY = currentScrollY
+    const distanceToBottom = document.documentElement.scrollHeight - currentScrollY - window.innerHeight
+    if (distanceToBottom < window.innerHeight * 1.25) {
+      runSilently(loadAdjacentChapter('next'))
+    }
+    if (scrollingUp && currentScrollY < Math.max(180, window.innerHeight * 0.6)) {
+      runSilently(loadAdjacentChapter('previous'))
+    }
+  })
+}
+
 const loadChapter = async (chapterId: ReaderId, restore?: ReaderProgressCommand | null) => {
   loading.value = true
   selectionTriggerVisible.value = false
@@ -885,7 +1116,11 @@ const loadChapter = async (chapterId: ReaderId, restore?: ReaderProgressCommand 
     const loaded = await getReaderChapter(bookId.value, chapterId)
     chapter.value = loaded
     hydratedHtml.value = await resolveHtml(loaded.contentHtml)
+    loadedChapters.value = [{ chapter: loaded, html: hydratedHtml.value }]
+    previousLoadError.value = false
+    nextLoadError.value = false
     await nextTick()
+    syncContentRef()
     renderNoteHighlights()
     ignoreScrollUntil = Date.now() + 500
     if (restore && String(restore.chapterId) === String(loaded.id)) {
@@ -902,6 +1137,10 @@ const loadChapter = async (chapterId: ReaderId, restore?: ReaderProgressCommand 
     })
   } finally {
     loading.value = false
+  }
+  if (preference.readingMode === 'continuous') {
+    runSilently(loadAdjacentChapter('previous'))
+    maybeLoadAdjacentChapter()
   }
 }
 
@@ -922,7 +1161,9 @@ const captureProgress = (): ReaderProgressCommand | null => {
   if (!chapter.value || !contentRef.value) return null
   const blocks = [...contentRef.value.querySelectorAll<HTMLElement>('[data-reader-block]')]
   if (!blocks.length) return null
-  const readingLine = 112
+  const readingLine = preference.readingMode === 'continuous'
+    ? Math.max(112, window.innerHeight * 0.3)
+    : 112
   let selected = blocks[0]
   for (const block of blocks) {
     if (block.getBoundingClientRect().top <= readingLine) selected = block
@@ -992,7 +1233,11 @@ const updateCurrentPosition = () => {
   if (Date.now() < ignoreScrollUntil) return
   if (!editorDraft.value) selectionTriggerVisible.value = false
   window.cancelAnimationFrame(scrollFrame)
-  scrollFrame = window.requestAnimationFrame(scheduleProgressSave)
+  scrollFrame = window.requestAnimationFrame(() => {
+    syncActiveChapterFromScroll()
+    scheduleProgressSave()
+  })
+  maybeLoadAdjacentChapter()
 }
 
 const navigateChapter = async (chapterId: ReaderId) => {
@@ -1051,7 +1296,21 @@ const selectFromDrawer = (chapterId: ReaderId) => {
   runSilently(navigateChapter(chapterId))
 }
 
+const locateCurrentChapter = async () => {
+  if (searchResults.value !== null) {
+    clearSearch()
+    await nextTick()
+  }
+  await tocTreeRef.value?.locateChapter(chapter.value?.id)
+}
+
+const openToc = () => {
+  locateOnTocOpen.value = true
+  tocOpen.value = true
+}
+
 const openSearch = () => {
+  locateOnTocOpen.value = false
   tocOpen.value = true
   window.setTimeout(() => searchInput.value?.focus(), 220)
 }
@@ -1070,6 +1329,27 @@ const runSearch = async () => {
 const clearSearch = () => {
   searchResults.value = null
   searchKeyword.value = ''
+}
+
+const changeReadingMode = async (mode: ReaderReadingMode) => {
+  if (preference.readingMode === mode || !chapter.value) return
+  const progress = captureProgress()
+  const activeEntry = findLoadedChapter(chapter.value.id)
+    || { chapter: chapter.value, html: hydratedHtml.value }
+  preference.readingMode = mode
+  hydratedHtml.value = activeEntry.html
+  loadedChapters.value = [activeEntry]
+  previousLoadError.value = false
+  nextLoadError.value = false
+  await nextTick()
+  syncContentRef()
+  if (progress) restorePosition(progress)
+  renderNoteHighlights()
+  lastScrollY = window.scrollY
+  if (mode === 'continuous') {
+    runSilently(loadAdjacentChapter('previous'))
+    maybeLoadAdjacentChapter()
+  }
 }
 
 const schedulePreferenceSave = () => {
@@ -1096,6 +1376,7 @@ const normalizePreference = (value: Partial<ReaderPreference>): ReaderPreference
   paragraphSpacing: Number(value.paragraphSpacing || 16),
   theme: (value.theme || 'light') as ReaderTheme,
   fontFamily: (value.fontFamily || 'serif') as ReaderFontFamily,
+  readingMode: value.readingMode === 'continuous' ? 'continuous' : 'paged',
 })
 
 const loadInitial = async () => {
@@ -1135,10 +1416,10 @@ const handleKeydown = (event: KeyboardEvent) => {
   const target = event.target as HTMLElement | null
   if (target?.matches('input, textarea, select, [contenteditable="true"]')) return
   if (target?.closest('.reader-drawer, .reader-note-editor')) return
-  if (event.key === 'ArrowLeft' && chapter.value?.previousChapterId) {
+  if (preference.readingMode === 'paged' && event.key === 'ArrowLeft' && chapter.value?.previousChapterId) {
     event.preventDefault()
     runSilently(navigateChapter(chapter.value.previousChapterId))
-  } else if (event.key === 'ArrowRight' && chapter.value?.nextChapterId) {
+  } else if (preference.readingMode === 'paged' && event.key === 'ArrowRight' && chapter.value?.nextChapterId) {
     event.preventDefault()
     runSilently(navigateChapter(chapter.value.nextChapterId))
   } else if (event.key.toLowerCase() === 'm') {
@@ -1164,6 +1445,10 @@ const formatCharCount = (value: number) => value >= 10_000
   : `${value} 字`
 
 watch(preference, schedulePreferenceSave, { deep: true })
+watch(tocOpen, (open) => {
+  if (!open || !locateOnTocOpen.value) return
+  window.setTimeout(() => runSilently(locateCurrentChapter()), 260)
+})
 watch(isLoggedIn, (signedIn) => {
   if (signedIn) {
     runSilently(loadNotes(true))
@@ -1177,6 +1462,7 @@ watch(isLoggedIn, (signedIn) => {
 
 onMounted(() => {
   ensureNoteHighlightStyles()
+  lastScrollY = window.scrollY
   runSilently(loadInitial())
   window.addEventListener('scroll', updateCurrentPosition, { passive: true })
   window.addEventListener('keydown', handleKeydown)
@@ -1191,6 +1477,7 @@ onBeforeUnmount(() => {
   window.clearTimeout(selectionTimer)
   window.clearTimeout(noteFocusTimer)
   window.cancelAnimationFrame(scrollFrame)
+  window.cancelAnimationFrame(adjacentLoadFrame)
   clearNoteHighlights()
   document.getElementById(NOTE_HIGHLIGHT_STYLE_ID)?.remove()
   const progress = captureProgress()
@@ -1324,6 +1611,11 @@ onBeforeUnmount(() => {
   padding: 108px 20px 84px;
 }
 
+.reader-shell--continuous {
+  display: grid;
+  gap: 28px;
+}
+
 .reader-paper {
   width: min(var(--reader-width), calc(100vw - 40px));
   min-height: calc(100vh - 150px);
@@ -1336,6 +1628,62 @@ onBeforeUnmount(() => {
 
 .reader-theme--dark .reader-paper {
   box-shadow: 0 24px 70px rgba(0, 0, 0, 0.24);
+}
+
+.continuous-chapter {
+  min-height: 0;
+}
+
+.continuous-chapter .chapter-header {
+  margin-bottom: clamp(42px, 6vw, 68px);
+}
+
+.chapter-load-state,
+.chapter-load-retry,
+.book-finished-state {
+  width: min(var(--reader-width), calc(100vw - 40px));
+  margin: 0 auto;
+}
+
+.chapter-load-state,
+.chapter-load-retry {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 54px;
+  border: 1px solid var(--reader-border);
+  background: var(--reader-paper);
+  color: var(--reader-muted);
+  font-size: 13px;
+}
+
+.chapter-load-retry {
+  color: var(--primary);
+  cursor: pointer;
+}
+
+.book-finished-state {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  padding: 38px 20px;
+  color: var(--reader-muted);
+  text-align: center;
+}
+
+.book-finished-state :deep(.ui-icon) {
+  color: var(--primary);
+  font-size: 24px;
+}
+
+.book-finished-state strong {
+  color: var(--reader-text);
+  font-size: 16px;
+}
+
+.book-finished-state span {
+  font-size: 12px;
 }
 
 .chapter-header {
@@ -1495,7 +1843,14 @@ onBeforeUnmount(() => {
 .reader-drawer__body,
 .reader-settings {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 24px;
+  min-width: 0;
+}
+
+.reader-drawer__body {
+  overflow-x: hidden;
+  width: 100%;
 }
 
 .reader-search {
@@ -1531,6 +1886,31 @@ onBeforeUnmount(() => {
 
 .drawer-section-title small {
   color: var(--color-text-tertiary);
+}
+
+.toc-locator-bar {
+  position: sticky;
+  z-index: 2;
+  top: -20px;
+  margin: -8px 0 10px;
+  padding: 14px 0 10px;
+  background: var(--color-surface);
+  min-width: 0;
+  width: 100%;
+}
+
+.toc-locator-bar > span {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+}
+
+.toc-locator-bar button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  flex: none;
 }
 
 .search-results {
@@ -1572,6 +1952,49 @@ onBeforeUnmount(() => {
   margin: 0;
   color: var(--color-text-primary);
   font-size: 14px;
+}
+
+.reading-mode-options {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 9px;
+}
+
+.reading-mode-options button {
+  display: grid;
+  gap: 6px;
+  min-height: 82px;
+  padding: 13px;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background: var(--color-surface);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  text-align: left;
+}
+
+.reading-mode-options button:hover {
+  border-color: color-mix(in srgb, var(--primary) 54%, var(--color-border));
+}
+
+.reading-mode-options button.is-active {
+  border-color: var(--primary);
+  background: var(--color-accent-soft);
+  color: var(--primary);
+}
+
+.reading-mode-options button > span {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.reading-mode-options button small {
+  color: var(--color-text-tertiary);
+  font-size: 11px;
+  line-height: 1.5;
 }
 
 .setting-label span {
@@ -1703,6 +2126,18 @@ onBeforeUnmount(() => {
     padding: 48px clamp(20px, 6vw, 34px) 64px;
     border: 0;
     box-shadow: none;
+  }
+  .reader-shell--continuous {
+    gap: 0;
+    padding-bottom: 0;
+  }
+  .continuous-chapter + .continuous-chapter {
+    border-top: 10px solid var(--reader-bg);
+  }
+  .chapter-load-state,
+  .chapter-load-retry,
+  .book-finished-state {
+    width: 100%;
   }
   .chapter-header {
     margin-bottom: 48px;

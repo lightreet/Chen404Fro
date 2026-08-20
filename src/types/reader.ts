@@ -2,6 +2,7 @@ export type ReaderId = number | string
 export type ReaderBookVisibility = 'public' | 'friend' | 'private'
 export type ReaderTheme = 'light' | 'rose' | 'dark'
 export type ReaderFontFamily = 'serif' | 'sans'
+export type ReaderReadingMode = 'paged' | 'continuous'
 export type ReaderNoteColor = 'rose' | 'sage' | 'blue' | 'amber'
 
 export interface ReaderBook {
@@ -80,6 +81,7 @@ export interface ReaderPreference {
   paragraphSpacing: number
   theme: ReaderTheme
   fontFamily: ReaderFontFamily
+  readingMode: ReaderReadingMode
 }
 
 export interface ReaderBookUpdateCommand {
