@@ -14,6 +14,7 @@ import mdiArchiveOutline from '@iconify/icons-mdi/archive-outline'
 import mdiArrowLeft from '@iconify/icons-mdi/arrow-left'
 import mdiArrowRight from '@iconify/icons-mdi/arrow-right'
 import mdiBellOutline from '@iconify/icons-mdi/bell-outline'
+import mdiBookMultipleOutline from '@iconify/icons-mdi/book-multiple-outline'
 import mdiBookOpenPageVariantOutline from '@iconify/icons-mdi/book-open-page-variant-outline'
 import mdiCalendarBlankOutline from '@iconify/icons-mdi/calendar-blank-outline'
 import mdiCalendarClock from '@iconify/icons-mdi/calendar-clock'
@@ -140,6 +141,7 @@ export const iconMap = {
   home: mdiHomeOutline,
   article: mdiFileDocumentOutline,
   book: mdiBookOpenPageVariantOutline,
+  books: mdiBookMultipleOutline,
   category: mdiTagMultipleOutline,
   tag: mdiTagOutline,
   archive: mdiArchiveOutline,

@@ -240,7 +240,6 @@
               @click="changeReadingMode(mode.value)"
             >
               <span><UiIcon :name="mode.icon" />{{ mode.label }}</span>
-              <small>{{ mode.description }}</small>
             </button>
           </div>
         </section>
@@ -504,11 +503,10 @@ const themeOptions: Array<{ value: ReaderTheme; label: string }> = [
 const readingModeOptions: Array<{
   value: ReaderReadingMode
   label: string
-  description: string
   icon: string
 }> = [
-  { value: 'paged', label: '单章阅读', description: '读完后手动切换章节', icon: 'book' },
-  { value: 'continuous', label: '连续阅读', description: '滚动时自动衔接章节', icon: 'arrow-down' },
+  { value: 'paged', label: '单章阅读', icon: 'book' },
+  { value: 'continuous', label: '连续阅读', icon: 'books' },
 ]
 
 const readerStyle = computed(() => ({
@@ -1046,6 +1044,39 @@ const syncActiveChapterFromScroll = () => {
   if (entry) runSilently(activateLoadedChapter(entry))
 }
 
+interface ContinuousScrollAnchor {
+  chapterId: string
+  viewportTop: number
+}
+
+const captureContinuousScrollAnchor = (): ContinuousScrollAnchor | null => {
+  const readingLine = Math.max(112, window.innerHeight * 0.3)
+  const sections = [...document.querySelectorAll<HTMLElement>('[data-reader-chapter-id]')]
+  if (!sections.length) return null
+  let anchor = sections[0]
+  for (const section of sections) {
+    if (section.getBoundingClientRect().top <= readingLine) anchor = section
+    else break
+  }
+  const chapterId = anchor.dataset.readerChapterId
+  return chapterId
+    ? { chapterId, viewportTop: anchor.getBoundingClientRect().top }
+    : null
+}
+
+const restoreContinuousScrollAnchor = (anchor: ContinuousScrollAnchor | null) => {
+  if (!anchor) return
+  const target = [...document.querySelectorAll<HTMLElement>('[data-reader-chapter-id]')]
+    .find(section => section.dataset.readerChapterId === anchor.chapterId)
+  if (!target) return
+  const offset = target.getBoundingClientRect().top - anchor.viewportTop
+  if (Math.abs(offset) > 0.5) {
+    window.scrollBy({ top: offset, behavior: 'auto' })
+  }
+  lastScrollY = window.scrollY
+  ignoreScrollUntil = Math.max(ignoreScrollUntil, Date.now() + 180)
+}
+
 const trimContinuousWindow = async (direction: 'previous' | 'next') => {
   if (loadedChapters.value.length <= MAX_CONTINUOUS_CHAPTERS) return
   if (direction === 'previous') {
@@ -1053,11 +1084,10 @@ const trimContinuousWindow = async (direction: 'previous' | 'next') => {
     await nextTick()
     return
   }
-  const heightBefore = document.documentElement.scrollHeight
+  const scrollAnchor = captureContinuousScrollAnchor()
   loadedChapters.value.shift()
   await nextTick()
-  const removedHeight = heightBefore - document.documentElement.scrollHeight
-  if (removedHeight > 0) window.scrollBy({ top: -removedHeight, behavior: 'auto' })
+  restoreContinuousScrollAnchor(scrollAnchor)
 }
 
 const loadAdjacentChapter = async (direction: 'previous' | 'next') => {
@@ -1068,24 +1098,24 @@ const loadAdjacentChapter = async (direction: 'previous' | 'next') => {
   const loadingState = direction === 'previous' ? loadingPrevious : loadingNext
   const errorState = direction === 'previous' ? previousLoadError : nextLoadError
   if (loadingState.value || findLoadedChapter(targetId)) return
+  const scrollAnchor = direction === 'previous' ? captureContinuousScrollAnchor() : null
   loadingState.value = true
   errorState.value = false
-  const heightBefore = document.documentElement.scrollHeight
   try {
     const loaded = await getReaderChapter(bookId.value, targetId)
     const entry = { chapter: loaded, html: await resolveHtml(loaded.contentHtml) }
     if (direction === 'previous') loadedChapters.value.unshift(entry)
     else loadedChapters.value.push(entry)
     await nextTick()
-    if (direction === 'previous') {
-      const addedHeight = document.documentElement.scrollHeight - heightBefore
-      if (addedHeight > 0) window.scrollBy({ top: addedHeight, behavior: 'auto' })
-    }
     await trimContinuousWindow(direction)
   } catch {
     errorState.value = true
   } finally {
     loadingState.value = false
+    if (direction === 'previous') {
+      await nextTick()
+      restoreContinuousScrollAnchor(scrollAnchor)
+    }
   }
 }
 
@@ -1961,9 +1991,10 @@ onBeforeUnmount(() => {
 }
 
 .reading-mode-options button {
-  display: grid;
-  gap: 6px;
-  min-height: 82px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 54px;
   padding: 13px;
   border: 1px solid var(--color-border);
   border-radius: 10px;
@@ -1989,12 +2020,6 @@ onBeforeUnmount(() => {
   gap: 7px;
   font-size: 13px;
   font-weight: 700;
-}
-
-.reading-mode-options button small {
-  color: var(--color-text-tertiary);
-  font-size: 11px;
-  line-height: 1.5;
 }
 
 .setting-label span {

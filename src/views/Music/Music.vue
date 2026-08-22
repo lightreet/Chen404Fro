@@ -2369,6 +2369,23 @@ function handlePlaylistSearchSubmit() {
 .player-context-panel__body {
   min-height: 0;
   overflow: auto;
+  overscroll-behavior: contain;
+  scrollbar-color: rgba(216, 138, 168, 0.42) rgba(248, 242, 245, 0.72);
+  scrollbar-width: thin;
+}
+
+.player-context-panel__body::-webkit-scrollbar {
+  width: 7px;
+}
+
+.player-context-panel__body::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: rgba(216, 138, 168, 0.4);
+}
+
+.player-context-panel__body::-webkit-scrollbar-track {
+  border-radius: 999px;
+  background: rgba(248, 242, 245, 0.72);
 }
 
 .lyric-window {
@@ -5071,7 +5088,7 @@ function handlePlaylistSearchSubmit() {
 
 }
 
-@media (min-width: 1180px) and (min-height: 760px) {
+@media (min-width: 1180px) {
   .radio-panel {
     height: clamp(620px, calc(100dvh - 160px), 700px);
     align-items: stretch;
