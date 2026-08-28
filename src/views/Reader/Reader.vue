@@ -145,6 +145,7 @@
       size="min(420px, 92vw)"
       title="目录与搜索"
       class="reader-drawer"
+      @closed="handleTocDrawerClosed"
     >
       <div class="reader-drawer__body">
         <div class="reader-search">
@@ -207,6 +208,7 @@
       size="min(420px, 94vw)"
       title="阅读笔记"
       class="reader-drawer reader-notes-drawer"
+      @closed="handleNotesDrawerClosed"
     >
       <ReaderNotesList
         :notes="notes"
@@ -453,6 +455,8 @@ const searchInput = ref<{ focus: () => void }>()
 const loading = ref(true)
 const tocOpen = ref(false)
 const notesOpen = ref(false)
+const pendingTocChapterId = ref<ReaderId>()
+const pendingNoteJump = ref<ReaderNote>()
 const settingsOpen = ref(false)
 const locateOnTocOpen = ref(true)
 const searchKeyword = ref('')
@@ -1240,10 +1244,28 @@ const updateCurrentPosition = () => {
   maybeLoadAdjacentChapter()
 }
 
-const navigateChapter = async (chapterId: ReaderId) => {
+const scrollChapterToStart = async (chapterId: ReaderId) => {
+  await nextTick()
+
+  const chapterElement = Array.from(
+    document.querySelectorAll<HTMLElement>('[data-reader-chapter-id]'),
+  ).find(element => element.dataset.readerChapterId === String(chapterId))
+  const targetElement = chapterElement ?? document.querySelector<HTMLElement>('.reader-paper')
+  const targetTop = targetElement
+    ? targetElement.getBoundingClientRect().top + window.scrollY - 84
+    : 0
+
+  ignoreScrollUntil = Date.now() + 500
+  window.scrollTo({ top: Math.max(0, targetTop), behavior: 'auto' })
+}
+
+const navigateChapter = async (chapterId: ReaderId, focusChapterStart = false) => {
   window.clearTimeout(progressTimer)
   await saveCurrentPosition(true).catch(() => undefined)
   await loadChapter(chapterId)
+  if (focusChapterStart) {
+    await scrollChapterToStart(chapterId)
+  }
 }
 
 const focusNoteRange = (note: ReaderNote) => {
@@ -1268,9 +1290,8 @@ const focusNoteRange = (note: ReaderNote) => {
   return true
 }
 
-const jumpToNote = async (note: ReaderNote) => {
+const performNoteJump = async (note: ReaderNote) => {
   const targetChapterId = resolveNoteTargetChapterId(note)
-  notesOpen.value = false
   if (!targetChapterId) {
     notify.warning('原章节已经变化，暂时无法定位这条笔记')
     return
@@ -1291,9 +1312,30 @@ const jumpToNote = async (note: ReaderNote) => {
   }
 }
 
+const jumpToNote = (note: ReaderNote) => {
+  pendingNoteJump.value = note
+  notesOpen.value = false
+}
+
+const handleNotesDrawerClosed = () => {
+  const note = pendingNoteJump.value
+  pendingNoteJump.value = undefined
+  if (note) {
+    runSilently(performNoteJump(note))
+  }
+}
+
 const selectFromDrawer = (chapterId: ReaderId) => {
+  pendingTocChapterId.value = chapterId
   tocOpen.value = false
-  runSilently(navigateChapter(chapterId))
+}
+
+const handleTocDrawerClosed = () => {
+  const chapterId = pendingTocChapterId.value
+  pendingTocChapterId.value = undefined
+  if (chapterId !== undefined) {
+    runSilently(navigateChapter(chapterId, true))
+  }
 }
 
 const locateCurrentChapter = async () => {

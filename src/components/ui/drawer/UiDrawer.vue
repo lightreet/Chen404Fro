@@ -4,6 +4,7 @@
     class="ui-drawer"
     v-bind="$attrs"
     @close="emit('close')"
+    @closed="emit('closed')"
   >
     <template v-if="$slots.header" #header>
       <slot name="header" />
@@ -26,6 +27,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   (e: 'update:modelValue', v: boolean): void
   (e: 'close'): void
+  (e: 'closed'): void
 }>()
 
 const proxyValue = computed({
