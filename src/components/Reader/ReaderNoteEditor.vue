@@ -46,7 +46,7 @@
             id="reader-note-reflection"
             ref="textareaRef"
             v-model="draftReflection"
-            :rows="5"
+            :rows="3"
             :maxlength="2000"
             show-count
             resize="none"
@@ -55,9 +55,10 @@
         </label>
 
         <footer class="reader-note-editor__footer">
-          <UiButton variant="secondary" @click="emit('cancel')">取消</UiButton>
+          <UiButton variant="secondary" size="sm" @click="emit('cancel')">取消</UiButton>
           <UiButton
             variant="primary"
+            size="sm"
             icon="save"
             :loading="saving"
             @click="submit"
@@ -147,16 +148,16 @@ onMounted(syncDraft)
   top: var(--reader-note-editor-top);
   left: var(--reader-note-editor-left);
   display: grid;
-  width: min(390px, calc(100vw - 24px));
+  width: min(280px, calc(100vw - 24px));
   max-height: calc(100vh - 24px);
   overflow-y: auto;
-  gap: 16px;
-  padding: 18px;
+  gap: 10px;
+  padding: 12px;
   border: 1px solid var(--note-editor-border);
-  border-radius: 12px;
+  border-radius: 10px;
   background: var(--note-editor-bg);
   color: var(--note-editor-text);
-  box-shadow: 0 8px 18px rgba(48, 35, 41, 0.14);
+  box-shadow: 0 6px 16px rgba(48, 35, 41, 0.14);
 }
 
 .reader-note-editor--rose {
@@ -179,12 +180,12 @@ onMounted(syncDraft)
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: 8px;
 }
 
 .reader-note-editor__header h2 {
   margin: 0;
-  font-size: 1rem;
+  font-size: 0.875rem;
   line-height: 1.4;
 }
 
@@ -194,11 +195,11 @@ onMounted(syncDraft)
 
 .reader-note-editor__excerpt {
   display: grid;
-  gap: 7px;
+  gap: 5px;
   margin: 0;
-  padding: 12px 14px;
+  padding: 8px 10px;
   border: 0;
-  border-radius: 10px;
+  border-radius: 8px;
   background: color-mix(in srgb, var(--primary) 7%, var(--note-editor-bg));
 }
 
@@ -207,24 +208,24 @@ onMounted(syncDraft)
 .reader-note-editor__colors legend {
   color: var(--note-editor-muted);
   font-family: 'Noto Sans SC', 'Microsoft YaHei', sans-serif;
-  font-size: 0.75rem;
+  font-size: 0.6875rem;
   font-weight: 650;
 }
 
 .reader-note-editor__excerpt p {
-  max-height: 6.6em;
+  max-height: 3.2em;
   margin: 0;
   overflow: auto;
   font-family: 'Noto Serif SC', 'Source Han Serif SC', 'Songti SC', serif;
-  font-size: 0.875rem;
-  line-height: 1.75;
+  font-size: 0.75rem;
+  line-height: 1.6;
   white-space: pre-wrap;
 }
 
 .reader-note-editor__colors {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 4px;
   margin: 0;
   padding: 0;
   border: 0;
@@ -237,8 +238,8 @@ onMounted(syncDraft)
 
 .reader-note-editor__colors button {
   display: grid;
-  width: 36px;
-  height: 36px;
+  width: 30px;
+  height: 30px;
   place-items: center;
   padding: 0;
   border: 0;
@@ -253,8 +254,8 @@ onMounted(syncDraft)
 }
 
 .reader-note-editor__colors button span {
-  width: 18px;
-  height: 18px;
+  width: 14px;
+  height: 14px;
   border-radius: 50%;
   box-shadow: 0 0 0 1px var(--note-editor-border) inset;
 }
@@ -270,7 +271,7 @@ onMounted(syncDraft)
 
 .reader-note-editor__field {
   display: grid;
-  gap: 8px;
+  gap: 6px;
 }
 
 .reader-note-editor__field small {
@@ -279,18 +280,27 @@ onMounted(syncDraft)
 }
 
 .reader-note-editor__field :deep(.ui-textarea) {
+  padding: 6px 9px;
   background: var(--note-editor-bg);
 }
 
 .reader-note-editor__field :deep(.ui-textarea__inner) {
-  min-height: 118px;
+  min-height: 72px;
   color: var(--note-editor-text);
   font-family: 'Noto Sans SC', 'Microsoft YaHei', sans-serif;
+  font-size: 0.75rem;
+  line-height: 1.55;
 }
 
 .reader-note-editor__field :deep(.ui-textarea__inner::placeholder),
 .reader-note-editor__field :deep(.ui-textarea__count) {
   color: var(--note-editor-muted);
+}
+
+.reader-note-editor__field :deep(.ui-textarea__count) {
+  right: 8px;
+  bottom: 3px;
+  font-size: 0.625rem;
 }
 
 .reader-note-editor__footer {
@@ -307,8 +317,8 @@ onMounted(syncDraft)
     bottom: 0;
     left: 0;
     width: 100%;
-    max-height: min(82vh, 680px);
-    padding: 18px max(18px, env(safe-area-inset-right)) max(18px, env(safe-area-inset-bottom)) max(18px, env(safe-area-inset-left));
+    max-height: min(72vh, 520px);
+    padding: 14px max(14px, env(safe-area-inset-right)) max(14px, env(safe-area-inset-bottom)) max(14px, env(safe-area-inset-left));
     border-right: 0;
     border-bottom: 0;
     border-left: 0;

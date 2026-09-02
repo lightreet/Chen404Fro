@@ -877,8 +877,8 @@ const requestNoteLogin = () => {
 }
 
 const editorPositionNear = (rect: Pick<DOMRect, 'left' | 'right' | 'top' | 'bottom'>) => {
-  const width = 390
-  const height = 470
+  const width = 280
+  const height = 340
   const left = Math.max(12, Math.min(window.innerWidth - width - 12, rect.right - width))
   const preferredTop = rect.bottom + 10
   const top = preferredTop + height <= window.innerHeight - 12
