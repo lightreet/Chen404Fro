@@ -14,6 +14,7 @@ declare module 'vue' {
     AppActionBar: typeof import('./components/app/AppActionBar/AppActionBar.vue')['default']
     AppEmptyState: typeof import('./components/app/AppEmptyState/AppEmptyState.vue')['default']
     AppFilterBar: typeof import('./components/app/AppFilterBar/AppFilterBar.vue')['default']
+    AppMobileUploadPanel: typeof import('./components/app/AppMobileUploadPanel/AppMobileUploadPanel.vue')['default']
     AppSection: typeof import('./components/app/AppSection/AppSection.vue')['default']
     AppStatusPill: typeof import('./components/app/AppStatusPill/AppStatusPill.vue')['default']
     ArticleCard: typeof import('./components/ArticleCard/ArticleCard.vue')['default']

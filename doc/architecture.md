@@ -87,6 +87,7 @@ Route / Page -> Feature -> components/app (App*) -> components/ui (Ui*) -> desig
 - `assets/styles/element-theme.scss`：把 Element Plus 的 CSS 变量整体映射到项目 token，使所有 `el-*` 组件在不改页面代码的情况下立即去掉「标准后台味」，与品牌语言统一（全站生效）。
 - `components/ui`：与库无关的 primitive，对外只暴露项目自己的 API（短期内部可复用 Element Plus）。
 - `components/app`：承接 Chen404 产品语义与品牌表达，消费 `ui` 层。
+- `AppMobileUploadPanel`：手机图片上传的品牌与布局容器，通过 `moduleLabel`、`targetLabel`、`selectedCount`、`maxCount` 替换模块名、上传目标及张数；`brandName` / `logoSrc` 可替换品牌。默认插槽展示队列和状态，`footer` 插槽提供业务操作，不耦合旅行接口或上传凭证。
 - `lib/feedback`：`notify.*` 与 `confirmAction()` 收敛全站对 `ElMessage` / `ElMessageBox` 的直调。
 - 依赖边界：业务页面、业务组件、views、modules、composables 不应再直接引用 `element-plus` 或 `@element-plus/icons-vue`；如仍需使用，只允许保留在 `components/ui` 薄封装、`lib/feedback`、或专门的兼容层内部。
 - 检查命令：`npm run check:element-boundary`。它会阻止业务层新增 `element-plus` / `@element-plus/icons-vue` 直接依赖，同时检查业务层模板中的 `<el-*>` 与 `v-loading` 等 Element 运行时依赖。允许名单仅包含 `components/ui`、`lib/feedback`、`compat` 以及极少数基础运行时文件。

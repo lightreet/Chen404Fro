@@ -1,87 +1,81 @@
 <template>
-  <main class="travel-mobile-page">
-    <div class="travel-mobile-page__brand">Chen404 · 旅行照片</div>
-    <section class="travel-mobile-page__content">
-      <h1>把照片传到电脑</h1>
-      <p class="mobile-subtitle">无需登录，从相册直接选择</p>
-      <UiLoadingState :loading="loading" message="正在连接电脑…">
-        <div v-if="session" class="mobile-destination">
-          <span>{{ session.travelTitle || '这趟旅行' }} · 上传至</span>
-          <h2>{{ session.targetLabel }}</h2>
-          <p>{{ isCover ? '仅选择一张，已有封面时请在电脑确认替换' : '照片只会添加到这个旅途片段' }}</p>
-        </div>
-        <div v-if="error" class="mobile-error" role="alert">
-          <p>{{ error }}</p>
-          <UiButton v-if="credentials && !terminal" size="sm" @click="refresh">重新连接</UiButton>
-        </div>
-        <div v-if="!active && !loading && session" class="mobile-ended">
-          <UiIcon name="clock" />
-          <h2>本次手机上传已结束</h2>
-          <p>请在电脑重新生成二维码。已经传入的照片仍保留在电脑编辑页。</p>
-        </div>
-        <div v-if="session && !queue.length && active" class="mobile-empty">
-          <UiIcon name="image" />
-          <strong>{{ receivedCount ? `本次已传入 ${receivedCount} 张照片` : '选择手机里的旅行照片' }}</strong>
-          <p>{{ isCover ? '选择一张作为旅行封面' : '可多选，也可以分批继续添加' }}</p>
-        </div>
-        <ul v-if="queue.length" class="mobile-photo-list" aria-label="待上传与已上传照片">
-          <li v-for="item in queue" :key="item.id" class="mobile-photo">
-            <img
-              :src="item.preview"
-              :alt="item.file.name"
-              loading="lazy"
-              decoding="async"
-              @error="item.previewFailed = true"
-              v-show="!item.previewFailed"
+  <AppMobileUploadPanel
+    module-label="旅行照片"
+    :target-label="session?.targetLabel"
+    :selected-count="selectedCount"
+    :max-count="session?.maxCount"
+  >
+    <UiLoadingState :loading="loading" message="正在连接电脑…">
+      <div v-if="error" class="mobile-error" role="alert">
+        <p>{{ error }}</p>
+        <UiButton v-if="credentials && !terminal" size="sm" @click="refresh">重新连接</UiButton>
+      </div>
+      <div v-if="!active && !loading && session" class="mobile-ended">
+        <UiIcon name="clock" />
+        <h2>本次手机上传已结束</h2>
+        <p>请在电脑重新生成二维码。已经传入的照片仍保留在电脑编辑页。</p>
+      </div>
+      <div v-if="session && !queue.length && active" class="mobile-empty">
+        <UiIcon name="image" />
+        <strong>{{ remainingSlots > 0 ? '添加照片' : '照片已上传' }}</strong>
+      </div>
+      <ul v-if="queue.length" class="mobile-photo-list" aria-label="待上传与已上传照片">
+        <li v-for="item in queue" :key="item.id" class="mobile-photo">
+          <img
+            :src="item.preview"
+            :alt="item.file.name"
+            loading="lazy"
+            decoding="async"
+            @error="item.previewFailed = true"
+            v-show="!item.previewFailed"
+          />
+          <div v-if="item.previewFailed" class="mobile-photo__fallback"><UiIcon name="image" /></div>
+          <div class="mobile-photo__info">
+            <strong>{{ item.file.name }}</strong>
+            <span v-if="item.status === 'done'">上传成功</span>
+            <span v-else-if="item.status === 'uploading'">{{
+              item.progress === 99 ? '正在处理照片…' : `上传中 ${item.progress}%`
+            }}</span>
+            <span v-else-if="item.status === 'failed'" class="mobile-photo__error">{{ item.error }}</span>
+            <span v-else>待上传 · {{ (item.file.size / 1024 / 1024).toFixed(1) }} MB</span>
+            <progress
+              v-if="item.status === 'uploading'"
+              :value="item.progress"
+              max="100"
+              :aria-label="`${item.file.name} 上传进度`"
             />
-            <div v-if="item.previewFailed" class="mobile-photo__fallback"><UiIcon name="image" /></div>
-            <div class="mobile-photo__info">
-              <strong>{{ item.file.name }}</strong>
-              <span v-if="item.status === 'done'">上传成功</span>
-              <span v-else-if="item.status === 'uploading'">{{
-                item.progress === 99 ? '正在处理照片…' : `上传中 ${item.progress}%`
-              }}</span>
-              <span v-else-if="item.status === 'failed'" class="mobile-photo__error">{{ item.error }}</span>
-              <span v-else>待上传 · {{ (item.file.size / 1024 / 1024).toFixed(1) }} MB</span>
-              <progress
-                v-if="item.status === 'uploading'"
-                :value="item.progress"
-                max="100"
-                :aria-label="`${item.file.name} 上传进度`"
-              />
-            </div>
-            <UiButton
-              v-if="item.status === 'failed' && active"
-              size="sm"
-              :disabled="running"
-              @click="upload([item])"
-              >重试</UiButton
-            >
-            <UiButton
-              v-else-if="item.status === 'queued' || item.status === 'failed'"
-              size="sm"
-              variant="text"
-              :disabled="running"
-              @click="remove(item)"
-              >移除</UiButton
-            >
-            <UiIcon v-else-if="item.status === 'done'" name="check" aria-label="上传成功" />
-          </li>
-        </ul>
-        <p v-if="session" class="mobile-status" role="status">
-          {{
-            running
-              ? '上传中，请保持此页打开'
-              : receivedCount
-                ? `已上传 ${receivedCount} 张，请回电脑确认并保存`
-                : active
-                  ? '已连接电脑'
-                  : ''
-          }}
-        </p>
-      </UiLoadingState>
-    </section>
-    <footer v-if="session && active" class="travel-mobile-page__footer">
+          </div>
+          <UiButton
+            v-if="item.status === 'failed' && active"
+            size="sm"
+            :disabled="running"
+            @click="upload([item])"
+            >重试</UiButton
+          >
+          <UiButton
+            v-else-if="item.status === 'queued' || item.status === 'failed'"
+            size="sm"
+            variant="text"
+            :disabled="running"
+            @click="remove(item)"
+            >移除</UiButton
+          >
+          <UiIcon v-else-if="item.status === 'done'" name="check" aria-label="上传成功" />
+        </li>
+      </ul>
+      <p v-if="session" class="mobile-status" role="status">
+        {{
+          running
+            ? '上传中，请保持此页打开'
+            : receivedCount
+              ? `已上传 ${receivedCount} 张，请回电脑确认并保存`
+              : active
+                ? '已连接电脑'
+                : ''
+        }}
+      </p>
+    </UiLoadingState>
+    <template v-if="session && active" #footer>
       <input
         ref="fileInput"
         type="file"
@@ -110,21 +104,15 @@
       >
         {{ queue.length ? '继续选择照片' : '从相册选择照片' }}
       </UiButton>
-      <p>
-        {{
-          isCover && receivedCount
-            ? '已收到封面，请回到电脑确认使用'
-            : `单张不超过 ${maxMb} MB · 本次还可选择 ${remainingSlots} 张`
-        }}
-      </p>
-      <p>支持 {{ session.allowedTypes.join('、').toUpperCase() }}；HEIC 照片请先导出为 JPG。</p>
-    </footer>
-  </main>
+      <p class="mobile-upload-limit">单张不超过 {{ maxMb }} MB</p>
+    </template>
+  </AppMobileUploadPanel>
 </template>
 
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { UiButton, UiIcon, UiLoadingState } from '@/components/ui'
+import { AppMobileUploadPanel } from '@/components/app'
 import {
   beginMobileBatch,
   endMobileBatch,
@@ -206,6 +194,7 @@ const remainingSlots = computed(() =>
       queue.value.filter((item) => item.status !== 'done').length,
   ),
 )
+const selectedCount = computed(() => (session.value?.maxCount || 0) - remainingSlots.value)
 const maxMb = computed(() => Math.floor((session.value?.maxFileBytes || 0) / 1024 / 1024))
 const acceptTypes = computed(() => (session.value?.allowedTypes || []).map((type) => `.${type}`).join(','))
 
@@ -384,29 +373,6 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped lang="scss">
-.travel-mobile-page {
-  max-width: 520px;
-  margin: 0 auto;
-  min-height: 100dvh;
-  background: var(--color-surface);
-  color: var(--color-text-primary);
-}
-.travel-mobile-page__brand {
-  padding: 20px 24px 16px;
-  font-weight: 600;
-  color: var(--color-accent-readable);
-  border-bottom: 1px solid var(--color-border);
-}
-.travel-mobile-page__content {
-  padding: 28px 24px 24px;
-}
-h1 {
-  font-size: 26px;
-  line-height: 1.35;
-  font-weight: 650;
-  margin: 0 0 8px;
-  text-wrap: balance;
-}
 h2 {
   font-size: 17px;
   font-weight: 600;
@@ -417,17 +383,6 @@ h2 {
 p {
   margin: 0;
   line-height: 1.7;
-}
-.mobile-subtitle,
-.mobile-destination p,
-.mobile-destination span {
-  font-size: 13px;
-  color: var(--color-text-secondary);
-}
-.mobile-destination {
-  padding: 20px 0;
-  margin-top: 20px;
-  border-block: 1px solid var(--color-border);
 }
 .mobile-empty,
 .mobile-ended {
@@ -458,16 +413,7 @@ p {
   font-weight: 600;
   margin-top: 18px;
 }
-.travel-mobile-page__footer {
-  position: sticky;
-  bottom: 0;
-  padding: 16px 24px max(24px, env(safe-area-inset-bottom));
-  border-top: 1px solid var(--color-border);
-  background: var(--color-surface);
-  display: grid;
-  gap: 10px;
-}
-.travel-mobile-page__footer p {
+.mobile-upload-limit {
   font-size: 12px;
   text-align: center;
   color: var(--color-text-secondary);
@@ -519,20 +465,5 @@ p {
   width: 100%;
   height: 5px;
   accent-color: var(--color-accent);
-}
-@media (min-width: 700px) {
-  .travel-mobile-page {
-    min-height: auto;
-    margin-block: 32px;
-    border: 1px solid var(--color-border);
-    border-radius: 12px;
-    overflow: hidden;
-  }
-}
-@media (max-width: 360px) {
-  .travel-mobile-page__content,
-  .travel-mobile-page__footer {
-    padding-inline: 16px;
-  }
 }
 </style>
