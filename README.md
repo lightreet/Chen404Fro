@@ -41,7 +41,7 @@ npm run check:element-boundary
 - `npm run check:element-boundary` 校验 UI 架构边界：业务层不得直接 `import` `element-plus` / `@element-plus/icons-vue`，模板里也不得出现 `<el-*>` 或 `v-loading`；仅 `components/ui`、`lib/feedback`、`compat` 及少数基础运行时文件在允许名单内。
 - 当前 `package.json` 尚未提供统一测试脚本。仓库内已有两个 Node 测试文件，手动全量运行时存在 2 个音乐布局契约失败；在修复并接入脚本前，不应把 `npm run build` 等同于“前端测试全部通过”。
 - 开发服务固定端口 `20204`，`strictPort = true`。
-- 当前未配置 `server.proxy`，本地开发应显式配置 `VITE_API_BASE_URL` 直连后端；未配置时请求层会回退到 `/api`。
+- Vite 的 `/api` 开发代理默认指向 `127.0.0.1:10404`，可用 `CHEN404_DEV_API_TARGET` 选择测试后端；`VITE_API_BASE_URL` 仍可显式直连。手机扫码地址由后端复用 `app.frontend-base-url` 返回，可在后台站点基础信息中调整，不使用浏览器的 localhost 地址。
 
 ## 环境变量
 

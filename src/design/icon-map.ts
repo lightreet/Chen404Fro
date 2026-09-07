@@ -10,6 +10,7 @@
  */
 
 import mdiAlertOutline from '@iconify/icons-mdi/alert-outline'
+import mdiCellphone from '@iconify/icons-mdi/cellphone'
 import mdiArchiveOutline from '@iconify/icons-mdi/archive-outline'
 import mdiArrowLeft from '@iconify/icons-mdi/arrow-left'
 import mdiArrowRight from '@iconify/icons-mdi/arrow-right'
@@ -98,6 +99,7 @@ export type IconName = keyof typeof iconMap
  * 命名尽量贴近「操作/含义」，而不是某个库的具体图标名。
  */
 export const iconMap = {
+  phone: mdiCellphone,
   // 基础操作
   add: mdiPlus,
   edit: mdiPencilOutline,

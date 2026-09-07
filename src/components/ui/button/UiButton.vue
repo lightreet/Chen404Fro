@@ -150,6 +150,14 @@ const handleClick = (ev: MouseEvent) => {
 }
 
 // ---- 变体 ----
+.ui-button--solid {
+  background: var(--color-accent-readable);
+  color: var(--color-on-accent-readable);
+  &:not(.is-disabled):hover {
+    background: color-mix(in srgb, var(--color-accent-readable) 88%, var(--color-text-primary));
+  }
+}
+
 .ui-button--primary {
   background: linear-gradient(135deg, var(--primary), var(--primary-light));
   color: #fff;

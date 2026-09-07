@@ -140,6 +140,7 @@ export interface SiteStats {
 
 // 站点配置
 export interface SiteConfig {
+  frontendBaseUrl?: string;
   siteName: string;
   siteDescription: string;
   siteLogo: string;

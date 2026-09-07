@@ -2,6 +2,7 @@
 
 export type UiButtonVariant =
   | 'primary'
+  | 'solid'
   | 'secondary'
   | 'ghost'
   | 'text'

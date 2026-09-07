@@ -12,6 +12,7 @@
             class="ui-dialog"
             :class="[`ui-dialog--${size}`, panelClass]"
             role="dialog"
+            :aria-label="title"
             aria-modal="true"
             :style="widthStyle"
           >

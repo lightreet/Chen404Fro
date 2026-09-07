@@ -1,7 +1,7 @@
 <template>
   <router-view v-slot="{ Component }">
     <transition name="fade" mode="out-in">
-      <component :is="Component" />
+      <component :is="Component" :key="mobileUploadRouteKey" />
     </transition>
   </router-view>
 
@@ -19,6 +19,11 @@ const appStore = useAppStore();
 const route = useRoute();
 const { isMobile } = useLayoutMobile();
 
+// 扫描另一张二维码即进入新的上传会话，同一路径的 hash 导航也要重建手机页面。
+const mobileUploadRouteKey = computed(() => route.name === 'TravelMobileUpload'
+  ? new URLSearchParams(route.hash.slice(1)).get('session') || 'invalid-upload'
+  : undefined);
+
 const showAssistant = computed(() => {
   if (isMobile.value) return false;
 
@@ -30,6 +35,7 @@ const showAssistant = computed(() => {
     || path === '/login'
     || path === '/register'
     || path === '/forgot-password'
+    || path === '/memory-map/mobile-upload'
   );
 });
 

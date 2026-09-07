@@ -9,6 +9,12 @@ import { useUserStore } from '@/stores/user';
 
 const routes: RouteRecordRaw[] = [
   {
+    path: '/memory-map/mobile-upload',
+    name: 'TravelMobileUpload',
+    component: () => import('@/views/MemoryMap/TravelMobileUpload.vue'),
+    meta: { title: '手机上传旅行照片' },
+  },
+  {
     path: '/',
     name: 'Home',
     component: () => import('@/views/Home/Home.vue'),
@@ -294,6 +300,12 @@ router.onError((err) => {
 
 // 路由守卫
 router.beforeEach(async (to, _from, next) => {
+  // 扫码页自带短时凭证，不加载账号、站点资料或触发登录跳转。
+  if (to.name === 'TravelMobileUpload') {
+    document.title = '手机上传旅行照片 · Chen404';
+    next();
+    return;
+  }
   if (to.path === '/archive' && to.query.view === 'development') {
     const { view: _legacyView, ...query } = to.query;
     next({ path: '/development-history', query, hash: to.hash, replace: true });

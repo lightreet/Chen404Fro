@@ -9,6 +9,9 @@
   --color-accent: var(--primary);
   --color-accent-soft: color-mix(in srgb, var(--primary) 14%, transparent);
   --color-accent-strong: var(--primary-dark);
+  // 小字号主操作使用高对比的实色配对，保留粉色品牌方向。
+  --color-accent-readable: #a52b59;
+  --color-on-accent-readable: #ffffff;
 
   // ---- 颜色：表面 ----
   --color-surface: var(--bg-secondary);
@@ -88,4 +91,9 @@
   --control-height-sm: 32px;
   --control-height-md: 38px;
   --control-height-lg: 44px;
+}
+
+[data-theme="dark"] {
+  --color-accent-readable: #f2a0bd;
+  --color-on-accent-readable: #291920;
 }

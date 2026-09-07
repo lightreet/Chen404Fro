@@ -15,6 +15,10 @@
                 <UiFormField label="联系邮箱">
                   <UiInput v-model="form.email" placeholder="helychen@outlook.com" />
                 </UiFormField>
+                <UiFormField label="网站访问地址" class="form-item--wide">
+                  <UiInput v-model="form.frontendBaseUrl" placeholder="https://www.chen404.cn" clearable />
+                  <p class="site-address-hint">用于手机扫码访问，留空则沿用服务器的网站地址配置。</p>
+                </UiFormField>
                 <UiFormField label="ICP备案号">
                   <UiInput v-model="form.icp" placeholder="湘ICP备..." />
                 </UiFormField>
@@ -630,8 +634,10 @@ const activeTabManagesOwnActions = computed(() =>
 const loading = ref(false);
 const saving = ref(false);
 const uploadingKey = ref<UploadingKey>('');
+const loadedFrontendBaseUrl = ref('');
 const form = reactive<Required<Omit<SiteConfig, 'heroImages' | 'heroImagePositions'>>>({
   siteName: '',
+  frontendBaseUrl: '',
   siteDescription: '',
   siteLogo: '',
   siteFavicon: '',
@@ -680,6 +686,8 @@ const heroImagePositions = reactive<Record<HeroKey, string>>({
 
 function applyConfig(config: SiteConfig) {
   form.siteName = config.siteName ?? '';
+  form.frontendBaseUrl = config.frontendBaseUrl ?? '';
+  loadedFrontendBaseUrl.value = form.frontendBaseUrl.trim();
   form.siteDescription = config.siteDescription ?? '';
   form.siteLogo = config.siteLogo ?? '';
   form.siteFavicon = config.siteFavicon ?? '';
@@ -721,6 +729,9 @@ function applyConfig(config: SiteConfig) {
 function toPayload(): SiteConfig {
   return {
     siteName: form.siteName.trim(),
+    ...(form.frontendBaseUrl.trim() !== loadedFrontendBaseUrl.value
+      ? { frontendBaseUrl: form.frontendBaseUrl.trim() }
+      : {}),
     siteDescription: form.siteDescription.trim(),
     siteLogo: form.siteLogo.trim(),
     siteFavicon: form.siteFavicon.trim(),
@@ -882,6 +893,7 @@ onMounted(() => {
 </script>
 
 <style scoped lang="scss">
+.site-address-hint { margin: 8px 0 0; font-size: 13px; line-height: 1.6; color: var(--color-text-secondary); }
 .section-head,
 .asset-actions,
 .hero-actions {

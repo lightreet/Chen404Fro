@@ -197,6 +197,17 @@
                 </div>
               </div>
             </UiUpload>
+            <TravelPhoneUpload :transfer="mobileUpload" target-key="cover" kind="cover" label="旅行封面"
+              :travel-title="form.title" :disabled="saving" />
+            <div v-if="pendingMobileCover" class="mobile-cover-review" role="status">
+              <img :src="pendingMobileCover.url" alt="手机传入的待确认封面" />
+              <strong>手机传来一张新封面</strong>
+              <span>确认后将替换当前封面。</span>
+              <div>
+                <UiButton size="sm" @click="acceptMobileCover">使用新封面</UiButton>
+                <UiButton size="sm" variant="text" @click="pendingMobileCover = undefined">保留原封面</UiButton>
+              </div>
+            </div>
           </section>
         </div>
 
@@ -252,7 +263,7 @@
           <div class="stop-board">
             <article
               v-for="(stop, stopIndex) in form.stops"
-              :key="stop.id || `stop-${stopIndex}`"
+              :key="stopKey(stop)"
               class="stop-card"
               :class="{ 'is-active': stopIndex === selectedStopIndex, 'is-expanded': isStopExpanded(stopIndex) }"
             >
@@ -420,6 +431,9 @@
                           </button>
                         </UiUpload>
                       </div>
+                      <TravelPhoneUpload :transfer="mobileUpload" :target-key="stopKey(stop)" kind="stop"
+                        :label="`第 ${stopIndex + 1} 站 · ${stopDisplayTitle(stop, stopIndex)}`"
+                        :travel-title="form.title" :disabled="saving" />
                     </div>
                   </div>
                 </div>
@@ -482,8 +496,12 @@ import type { AxiosError } from 'axios'
 import { notify } from '@/lib/feedback'
 import { UiButton, UiDateField, UiForm, UiFormField, UiIcon, UiInput, UiLoadingState, UiSegmented, UiSwitch, UiTextarea, UiUpload } from '@/components/ui'
 import type { UploadRequestOptions } from '@/components/ui'
-import { useRoute, useRouter } from 'vue-router'
+import { onBeforeRouteLeave, onBeforeRouteUpdate, useRoute, useRouter } from 'vue-router'
 import TravelMemoryMap from '@/components/TravelMemoryMap/TravelMemoryMap.vue'
+import TravelPhoneUpload from '@/components/TravelMemoryMap/TravelPhoneUpload.vue'
+import { useTravelMobileUpload } from '@/composables/useTravelMobileUpload'
+import { mobileUploadError, mobileUploadRequestId } from '@/api/travel-mobile-upload'
+import type { UploadResult } from '@/api/upload'
 import {
   createTravelMemory,
   getManageableTravelMemoryDetail,
@@ -518,7 +536,9 @@ const pickerMapRef = ref<InstanceType<typeof TravelMemoryMap> | null>(null)
 const list = ref<TravelMemoryLocationListItem[]>([])
 const loading = ref(false)
 const saving = ref(false)
-const uploading = ref(false)
+const sealingMobileUpload = ref(false)
+const uploadCount = ref(0)
+const uploading = computed(() => uploadCount.value > 0)
 const resolvingLocationMeta = ref(false)
 const locationMetaNeedsManualConfirm = ref(false)
 const lastResolvedAddress = ref('')
@@ -619,8 +639,49 @@ const createEmptyForm = (): TravelMemoryEditorForm => ({
 })
 
 const form = reactive<TravelMemoryEditorForm>(createEmptyForm())
+const pendingMobileCover = ref<UploadResult>()
+const stopKeys = new WeakMap<TravelMemoryStopUpsertCommand, string>()
+function stopKey(stop: TravelMemoryStopUpsertCommand) {
+  let key = stopKeys.get(stop)
+  if (!key) { key = `stop-${mobileUploadRequestId()}`; stopKeys.set(stop, key) }
+  return key
+}
+const mobileUpload = useTravelMobileUpload((image, target) => {
+  if (target.kind === 'cover' && coverEntry.value) {
+    pendingMobileCover.value = image
+    mobileUpload.expanded = false
+    return
+  }
+  const stopIndex = target.kind === 'cover' ? 0 : form.stops.findIndex(stop => stopKey(stop) === target.key)
+  if (stopIndex < 0 || !form.stops[stopIndex]) return
+  void appendUploadedEntry(image, { stopIndex, cover: target.kind === 'cover' })
+}, image => {
+  // 长时间整理照片时更新短时图片票据，不重新插入用户已经删除的照片。
+  const stableUrl = image.url.split('?')[0]
+  allEntries.value.filter(entry => entry.imageUrl.split('?')[0] === stableUrl).forEach(entry => { entry.imageUrl = image.url })
+  if (pendingMobileCover.value?.url.split('?')[0] === stableUrl) pendingMobileCover.value.url = image.url
+})
+function acceptMobileCover() {
+  if (!pendingMobileCover.value) return
+  void appendUploadedEntry(pendingMobileCover.value, { stopIndex: 0, cover: true })
+  pendingMobileCover.value = undefined
+}
+watch(() => form.stops.map(stopKey), keys => {
+  if (mobileUpload.target?.kind === 'stop' && !keys.includes(mobileUpload.target.key)) {
+    void mobileUpload.finish(false).catch(() => {})
+  }
+})
+onBeforeRouteLeave(async () => {
+  try { await mobileUpload.finish(false) } catch { /* 断网时由服务端租约回收会话。 */ }
+})
+onBeforeRouteUpdate(async () => {
+  try { await mobileUpload.finish(false) } catch { /* 旧目标已绑定稳定标识，不能回填新表单。 */ }
+  mobileUpload.detach()
+  pendingMobileCover.value = undefined
+})
 
 function resetForm() {
+  pendingMobileCover.value = undefined
   Object.assign(form, createEmptyForm())
   selectedStopIndex.value = 0
   expandedStopIndex.value = 0
@@ -969,10 +1030,12 @@ async function appendUploadedEntry(
 }
 
 async function handleUploadStopImage(stopIndex: number, options: UploadRequestOptions) {
-  uploading.value = true
+  const targetStop = form.stops[stopIndex]
+  uploadCount.value += 1
   try {
     const result = await uploadTravelMemoryImage(options.file as File)
-    await appendUploadedEntry(result, { stopIndex })
+    const currentIndex = form.stops.indexOf(targetStop)
+    if (currentIndex >= 0) await appendUploadedEntry(result, { stopIndex: currentIndex })
     if ((form.latitude == null || form.longitude == null) && result.latitude != null && result.longitude != null) {
       await applyLocationCoordinateSelection(result.latitude, result.longitude, { silent: true })
     }
@@ -982,12 +1045,12 @@ async function handleUploadStopImage(stopIndex: number, options: UploadRequestOp
     options.onError?.(error as never)
     notify.error('照片上传失败')
   } finally {
-    uploading.value = false
+    uploadCount.value -= 1
   }
 }
 
 async function handleUploadCoverImage(options: UploadRequestOptions) {
-  uploading.value = true
+  uploadCount.value += 1
   try {
     const result = await uploadTravelMemoryImage(options.file as File)
     const stopIndex = ensureUploadStopIndex()
@@ -1004,7 +1067,7 @@ async function handleUploadCoverImage(options: UploadRequestOptions) {
     options.onError?.(error as never)
     notify.error('封面上传失败')
   } finally {
-    uploading.value = false
+    uploadCount.value -= 1
   }
 }
 
@@ -1272,6 +1335,7 @@ function validateStopsBeforeSave() {
 }
 
 async function handleSave() {
+  if (saving.value || sealingMobileUpload.value || mobileUpload.busy) return
   if (uploading.value) {
     notify.warning('照片还在上传中，请等上传完成后再保存')
     return
@@ -1286,6 +1350,20 @@ async function handleSave() {
   }
   if (hasInvalidTravelDateRange.value) {
     notify.warning('旅行结束日期不能早于开始日期')
+    return
+  }
+  try {
+    // 原子结束接收并补齐最后一次轮询，防止保存与手机完成回执交错丢图。
+    sealingMobileUpload.value = true
+    await mobileUpload.finish(true)
+  } catch (cause) {
+    notify.warning(mobileUploadError(cause))
+    return
+  } finally {
+    sealingMobileUpload.value = false
+  }
+  if (pendingMobileCover.value) {
+    notify.warning('请先确认是否使用手机传来的新封面')
     return
   }
   if (!validateStopsBeforeSave()) {
@@ -1355,6 +1433,10 @@ watch(
 </script>
 
 <style scoped lang="scss">
+.mobile-cover-review { display: grid; gap: 10px; margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--color-border); color: var(--color-text-primary); font-size: 13px; }
+.mobile-cover-review img { width: 100%; max-height: 180px; object-fit: cover; border-radius: 8px; }
+.mobile-cover-review span { color: var(--color-text-secondary); }
+.mobile-cover-review > div { display: flex; gap: 6px; flex-wrap: wrap; }
 .travel-memory-create-page {
   width: min(1540px, calc(100vw - 72px));
   min-height: 100vh;

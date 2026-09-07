@@ -30,6 +30,10 @@ export default defineConfig({
     host: '0.0.0.0',
     port: 20204,
     strictPort: true,
+    // 手机直传使用同源 API，局域网访问也不会请求手机自身的 localhost。
+    proxy: {
+      '/api': { target: process.env.CHEN404_DEV_API_TARGET || 'http://127.0.0.1:10404', changeOrigin: true },
+    },
   },
   build: {
     rollupOptions: {

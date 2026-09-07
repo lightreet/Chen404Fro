@@ -285,6 +285,7 @@ home / category / archive / development-history / memory-map / music / bookshelf
 - 展示态地图优先使用高德真实底图；缺少 Key、脚本失败或网络异常时，会回退到城市/省级 GeoJSON + 基础 SVG
 - 地点详情直接在右侧面板展示；片段以可横向滚动的标签切换，地点选择通过 `focus` 查询参数保留，旧详情链接会重定向到对应地点
 - 创建/编辑页采用 `location + stops + entries` 结构，支持地图点选、自动定位、地点搜索、图片上传、EXIF 辅助坐标回填
+- 封面和片段照片支持手机扫码直传，入口为 `TravelPhoneUpload.vue`，编辑器会话在 `useTravelMobileUpload.ts` 中维护。独立 `/memory-map/mobile-upload` 页面仅消费上传凭证，不加载账号流程；封面一张、片段多张，稳定片段标识保障重排后的回填归属。
 - 具备 `travel:create` capability 的用户可创建；所有者或管理员可编辑删除，前端入口不替代后端对象级鉴权
 - 当前前端主要维护地点级展示坐标；片段日期按 `stop.visitedAt` 保存，照片拍摄时间默认跟随片段日期，片段未填日期时回退到地点日期
 
