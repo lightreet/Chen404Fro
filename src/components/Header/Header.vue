@@ -62,6 +62,34 @@
           <!-- 右侧操作区 -->
           <div class="header-actions">
             <UiDropdown
+              v-if="creationActions.length"
+              trigger="click"
+              placement="bottom"
+              popper-class="site-display-popper"
+              @command="handleCreationCommand"
+            >
+              <button type="button" class="action-btn creation-trigger" aria-label="编写" title="编写">
+                <UiIcon name="edit" />
+              </button>
+              <template #dropdown>
+                <UiDropdownMenu aria-label="创作菜单">
+                  <div class="site-display-menu__title">
+                    <UiIcon name="edit" />
+                    <span>开始创作</span>
+                  </div>
+                  <UiDropdownItem
+                    v-for="action in creationActions"
+                    :key="action.path"
+                    :command="action.path"
+                  >
+                    <UiIcon :name="action.icon" />
+                    <span class="site-display-menu__option">{{ action.label }}</span>
+                  </UiDropdownItem>
+                </UiDropdownMenu>
+              </template>
+            </UiDropdown>
+
+            <UiDropdown
               trigger="click"
               placement="bottom"
               :hide-on-click="false"
@@ -189,6 +217,34 @@
         </div>
 
         <div class="header-actions mobile-actions" v-if="isMobile">
+          <UiDropdown
+            v-if="creationActions.length"
+            trigger="click"
+            placement="bottom"
+            popper-class="site-display-popper"
+            @command="handleCreationCommand"
+          >
+            <button type="button" class="action-btn creation-trigger" aria-label="编写" title="编写">
+              <UiIcon name="edit" />
+            </button>
+            <template #dropdown>
+              <UiDropdownMenu aria-label="创作菜单">
+                <div class="site-display-menu__title">
+                  <UiIcon name="edit" />
+                  <span>开始创作</span>
+                </div>
+                <UiDropdownItem
+                  v-for="action in creationActions"
+                  :key="action.path"
+                  :command="action.path"
+                >
+                  <UiIcon :name="action.icon" />
+                  <span class="site-display-menu__option">{{ action.label }}</span>
+                </UiDropdownItem>
+              </UiDropdownMenu>
+            </template>
+          </UiDropdown>
+
           <UiDropdown
             trigger="click"
             placement="bottom"
@@ -407,7 +463,8 @@ import { useUserStore } from '@/stores/user';
 import { storeToRefs } from 'pinia';
 import { logout as logoutApi } from '@/api/auth';
 import { useSiteConfig } from '@/composables/useSiteConfig';
-import { getTrustLevelLabel, isAdminUser } from '@/utils/permission';
+import { getTrustLevelLabel, hasCapability, isAdminUser } from '@/utils/permission';
+import type { UserCapability } from '@/types';
 import { resolveSiteLogo, resolveSiteName } from '@/utils/siteConfig';
 import { useLayoutMobile } from '@/composables/useLayoutMobile';
 import { useAdminNotificationStore } from '@/stores/admin-notification';
@@ -472,6 +529,26 @@ const roleText = computed(() => getTrustLevelLabel(user.value));
 
 // 是否为管理员
 const isAdmin = computed(() => isAdminUser(user.value));
+
+const creationOptions: ReadonlyArray<{
+  label: string;
+  path: string;
+  icon: string;
+  capability: UserCapability;
+}> = [
+  { label: '编写文章', path: '/article/edit', icon: 'article', capability: 'article:create' },
+  { label: '上传音乐', path: '/music/tracks/new', icon: 'music', capability: 'music:create' },
+  { label: '记录旅途', path: '/memory-map/create', icon: 'location', capability: 'travel:create' },
+];
+
+const creationActions = computed(() => isLoggedIn.value
+  ? creationOptions.filter((action) => hasCapability(user.value, action.capability))
+  : []);
+
+const handleCreationCommand = (command: string | number | object) => {
+  const action = creationActions.value.find((item) => item.path === command);
+  if (action) void router.push(action.path);
+};
 
 const unreadCountLabel = computed(() => (unreadCount.value > 99 ? '99+' : String(unreadCount.value)));
 
@@ -877,6 +954,11 @@ const handleLogout = async () => {
     outline: 2px solid var(--color-accent-strong);
     outline-offset: 2px;
   }
+}
+
+.action-btn.creation-trigger[aria-expanded='true'] {
+  background: var(--color-accent-soft);
+  color: var(--color-accent-strong);
 }
 
 .site-display-trigger {
@@ -1385,7 +1467,8 @@ const handleLogout = async () => {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .mobile-nav-chevron {
+  .mobile-nav-chevron,
+  .creation-trigger {
     transition: none;
   }
 }
