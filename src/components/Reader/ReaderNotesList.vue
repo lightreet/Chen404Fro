@@ -40,29 +40,58 @@
             class="reader-note-item"
             :class="`is-${note.highlightColor}`"
           >
-            <button
-              type="button"
-              class="reader-note-item__jump"
-              :aria-label="`跳转到${note.chapterTitle}中的笔记原文`"
-              @click="emit('jump', note)"
-            >
-              <span class="reader-note-item__marker" aria-hidden="true" />
-              <span class="reader-note-item__content">
-                <strong v-if="note.reflection?.trim()" class="reader-note-item__reflection">
-                  {{ note.reflection }}
-                </strong>
-                <strong v-else class="reader-note-item__reflection is-empty">仅摘录</strong>
-                <span class="reader-note-item__excerpt">“{{ note.excerpt }}”</span>
-                <span class="reader-note-item__meta">
-                  {{ note.chapterTitle }} · 第 {{ note.startBlockIndex + 1 }} 段
-                  <UiIcon
-                    v-if="note.contentChanged"
-                    name="warning"
-                    title="正文已变化，跳转时会重新定位原文"
-                  />
+            <details class="reader-note-item__details">
+              <summary
+                class="reader-note-item__toggle"
+                :aria-label="`${note.chapterTitle}第 ${note.startBlockIndex + 1} 段的笔记`"
+              >
+                <span class="reader-note-item__marker" aria-hidden="true" />
+                <span class="reader-note-item__content">
+                  <strong v-if="note.reflection?.trim()" class="reader-note-item__reflection">
+                    {{ note.reflection }}
+                  </strong>
+                  <strong v-else class="reader-note-item__reflection is-empty">仅摘录</strong>
+                  <span class="reader-note-item__excerpt">“{{ note.excerpt }}”</span>
+                  <strong class="reader-note-item__expanded-title">笔记全文</strong>
+                  <span class="reader-note-item__meta">
+                    {{ note.chapterTitle }} · 第 {{ note.startBlockIndex + 1 }} 段
+                    <UiIcon
+                      v-if="note.contentChanged"
+                      name="warning"
+                      title="正文已变化，跳转时会重新定位原文"
+                    />
+                  </span>
+                  <span class="reader-note-item__disclosure" aria-hidden="true">
+                    <span class="reader-note-item__expand-label">展开全文</span>
+                    <span class="reader-note-item__collapse-label">收起</span>
+                    <UiIcon name="arrow-down" />
+                  </span>
                 </span>
-              </span>
-            </button>
+              </summary>
+              <div class="reader-note-item__full-content">
+                <section v-if="note.reflection?.trim()">
+                  <h4>感悟</h4>
+                  <p class="reader-note-item__full-reflection">{{ note.reflection }}</p>
+                </section>
+                <section>
+                  <h4>摘录</h4>
+                  <blockquote class="reader-note-item__full-excerpt">{{ note.excerpt }}</blockquote>
+                </section>
+                <div class="reader-note-item__full-actions">
+                  <UiButton
+                    variant="text"
+                    size="sm"
+                    icon="location"
+                    class="reader-note-item__jump"
+                    :aria-label="`跳转到${note.chapterTitle}中的笔记原文`"
+                    @click="emit('jump', note)"
+                  >跳转原文</UiButton>
+                  <UiButton variant="text" size="sm" icon="arrow-up" @click="collapseNote">
+                    收起
+                  </UiButton>
+                </div>
+              </div>
+            </details>
             <div class="reader-note-item__actions" aria-label="笔记操作">
               <UiButton
                 variant="text"
@@ -108,6 +137,13 @@ const emit = defineEmits<{
   (event: 'edit', note: ReaderNote, pointerEvent: MouseEvent): void
   (event: 'delete', note: ReaderNote): void
 }>()
+
+const collapseNote = (event: MouseEvent) => {
+  const details = (event.currentTarget as HTMLElement | null)?.closest('details')
+  if (!details) return
+  details.open = false
+  details.querySelector('summary')?.focus()
+}
 
 const noteGroups = computed(() => {
   const groups = new Map<string, { order: number; title: string; notes: ReaderNote[] }>()
@@ -214,7 +250,11 @@ const noteGroups = computed(() => {
   border-color: var(--primary-light);
 }
 
-.reader-note-item__jump {
+.reader-note-item__details {
+  min-width: 0;
+}
+
+.reader-note-item__toggle {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
   gap: 10px;
@@ -225,9 +265,14 @@ const noteGroups = computed(() => {
   color: inherit;
   text-align: left;
   cursor: pointer;
+  list-style: none;
 }
 
-.reader-note-item__jump:focus-visible {
+.reader-note-item__toggle::-webkit-details-marker {
+  display: none;
+}
+
+.reader-note-item__toggle:focus-visible {
   outline: 2px solid var(--primary);
   outline-offset: -2px;
 }
@@ -250,6 +295,79 @@ const noteGroups = computed(() => {
   display: grid;
   min-width: 0;
   gap: 7px;
+  overflow-wrap: anywhere;
+}
+
+.reader-note-item__expanded-title,
+.reader-note-item__collapse-label {
+  display: none;
+}
+
+.reader-note-item__expanded-title {
+  color: var(--color-text-primary);
+  font-size: 0.875rem;
+  font-weight: 650;
+}
+
+.reader-note-item__disclosure {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--color-accent-strong);
+  font-size: 0.75rem;
+}
+
+.reader-note-item__details[open] .reader-note-item__reflection,
+.reader-note-item__details[open] .reader-note-item__excerpt,
+.reader-note-item__details[open] .reader-note-item__expand-label {
+  display: none;
+}
+
+.reader-note-item__details[open] .reader-note-item__expanded-title,
+.reader-note-item__details[open] .reader-note-item__collapse-label {
+  display: block;
+}
+
+.reader-note-item__details[open] .reader-note-item__disclosure :deep(.ui-icon) {
+  transform: rotate(180deg);
+}
+
+.reader-note-item__full-content {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+  padding: 0 8px 14px 14px;
+}
+
+.reader-note-item__full-content h4 {
+  margin: 0 0 6px;
+  color: var(--color-text-secondary);
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.reader-note-item__full-reflection,
+.reader-note-item__full-excerpt {
+  margin: 0;
+  color: var(--color-text-primary);
+  font-size: 0.875rem;
+  line-height: 1.7;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.reader-note-item__full-excerpt {
+  padding-left: 10px;
+  border-left: 2px solid var(--note-marker);
+  font-family: 'Noto Serif SC', 'Source Han Serif SC', 'Songti SC', serif;
+}
+
+.reader-note-item__full-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
 }
 
 .reader-note-item__reflection {
@@ -281,6 +399,7 @@ const noteGroups = computed(() => {
 
 .reader-note-item__meta {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 5px;
   color: var(--color-text-tertiary);
@@ -307,7 +426,8 @@ const noteGroups = computed(() => {
 }
 
 @media (max-width: 520px) {
-  .reader-note-item__jump {
+  .reader-note-item__toggle,
+  .reader-note-item__full-actions :deep(.ui-button) {
     min-height: 44px;
   }
   .reader-note-item__actions :deep(.ui-button) {
