@@ -47,6 +47,7 @@ declare module 'vue' {
     SakuraOverlay: typeof import('./components/SakuraOverlay/SakuraOverlay.vue')['default']
     TravelMemoryMap: typeof import('./components/TravelMemoryMap/TravelMemoryMap.vue')['default']
     TravelPhoneUpload: typeof import('./components/TravelMemoryMap/TravelPhoneUpload.vue')['default']
+    TravelPhotoGallery: typeof import('./components/TravelMemoryMap/TravelPhotoGallery.vue')['default']
     UiAvatar: typeof import('./components/ui/avatar/UiAvatar.vue')['default']
     UiBadge: typeof import('./components/ui/badge/UiBadge.vue')['default']
     UiButton: typeof import('./components/ui/button/UiButton.vue')['default']

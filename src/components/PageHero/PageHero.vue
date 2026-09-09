@@ -50,7 +50,7 @@
     </div>
 
     <a v-if="scrollTarget" :href="scrollTarget" class="page-hero__scroll-hint" aria-label="向下滚动">
-      <span class="page-hero__scroll-copy">向下看看</span>
+      <span v-if="showScrollText" class="page-hero__scroll-copy">向下看看</span>
       <span class="page-hero__scroll-chevron">↓</span>
     </a>
   </section>
@@ -75,6 +75,7 @@ interface Props {
   compact?: boolean;
   showWave?: boolean;
   scrollTarget?: string;
+  showScrollText?: boolean;
   waveHeight?: number;
   waveIntensity?: number;
   highlightText?: string;
@@ -92,6 +93,7 @@ const props = withDefaults(defineProps<Props>(), {
   compact: false,
   showWave: true,
   scrollTarget: '',
+  showScrollText: true,
   waveHeight: 138,
   waveIntensity: 1.02,
   highlightText: '',

@@ -3,6 +3,7 @@
     class="travel-map-shell"
     :class="{
       'is-picker-mode': pickerMode,
+      'is-compact': compact && !pickerMode,
       'is-amap-display-mode': useAmapDisplay,
       'is-svg-fallback-mode': !pickerMode && !useAmapDisplay,
     }"
@@ -24,7 +25,7 @@
           <UiIcon name="Plus" />
         </button>
         <button type="button" class="travel-map-control" title="缩小地图" @click="zoomOut">
-          <UiIcon name="Minus" />
+          <span aria-hidden="true">−</span>
         </button>
         <button type="button" class="travel-map-control travel-map-control--reset" title="恢复初始比例" @click="resetZoom">
           <UiIcon name="Refresh" />
@@ -263,6 +264,8 @@ interface Props {
   locations?: TravelMemoryLocationListItem[]
   activeId?: number | null
   pickerMode?: boolean
+  compact?: boolean
+  displayMaxZoom?: number
   pickerLatitude?: number | null
   pickerLongitude?: number | null
   searchKeyword?: string
@@ -389,6 +392,8 @@ const props = withDefaults(defineProps<Props>(), {
   locations: () => [],
   activeId: null,
   pickerMode: false,
+  compact: false,
+  displayMaxZoom: 4,
   pickerLatitude: null,
   pickerLongitude: null,
   searchKeyword: '',
@@ -1842,7 +1847,8 @@ function fitDisplayView(force = false) {
   if (!force && hasFitDisplayView) return
 
   if (markers.length) {
-    map.setFitView(markers, false, [78, 78, 78, 78], 4)
+    const padding = props.compact ? 48 : 78
+    map.setFitView(markers, false, [padding, padding, padding, padding], props.displayMaxZoom)
   } else {
     map.setZoomAndCenter(4.4, [104.0, 35.0])
   }
@@ -2039,6 +2045,40 @@ defineExpose({
 .travel-map-shell.is-picker-mode {
   min-height: 392px;
   border-radius: 20px;
+}
+
+.travel-map-shell.is-compact {
+  height: var(--travel-compact-map-height, 216px);
+  min-height: var(--travel-compact-map-height, 216px);
+  border-radius: 13px;
+
+  .travel-map-stage,
+  .travel-map-canvas,
+  .travel-map-viewport {
+    height: var(--travel-compact-map-height, 216px);
+    min-height: var(--travel-compact-map-height, 216px);
+    padding: 0;
+    border-radius: 13px;
+    box-shadow: none;
+  }
+
+  .travel-map-legend,
+  .travel-map-haze,
+  .travel-map-petals {
+    display: none;
+  }
+
+  .travel-map-controls {
+    top: 10px;
+    right: 10px;
+    gap: 6px;
+  }
+  .travel-map-control {
+    width: 32px;
+    height: 32px;
+    border-radius: 9px;
+    font-size: 16px;
+  }
 }
 
 .travel-map-canvas {

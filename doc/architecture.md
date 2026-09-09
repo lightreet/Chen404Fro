@@ -277,14 +277,18 @@ home / category / archive / development-history / memory-map / music / bookshelf
 - `views/MemoryMap/MemoryMap.vue`
 - `views/MemoryMap/TravelMemoryCreate.vue`
 - `components/TravelMemoryMap/TravelMemoryMap.vue`
+- `components/TravelMemoryMap/TravelPhotoGallery.vue`
 - `api/travel-memory.ts`
 
 当前实现要点：
 
 - `/memory-map` 对所有访客读取公开地点；知友和管理员扩展读取 `friend` 内容，没有公开内容时才展示空状态或访问提示
-- 主页面已经收敛为“三栏 atlas 工作区”：左侧旅行索引、中间地图主画布、右侧当前地点详情
+- 主页面采用两栏阅读布局：左侧旅行索引与紧凑地图，右侧宽幅游记；共享导航、`PageHero` 和页尾保持原结构，手机端索引横向滚动、地图通过弹窗展开
+- 桌面内容居中限宽，索引卡片固定 440px 高并独立于右侧详情伸缩，所有游记在列表内滚动，切换时地图位置保持稳定；选中项定位只滚动列表自身，手机端沿用横向列表。优先保证预览可读，照片区高度随宽度保持在 320–400px，小地图保留 240px 高度，右侧正文可自然超过一屏；片段标题只出现在标签栏
 - 展示态地图优先使用高德真实底图；缺少 Key、脚本失败或网络异常时，会回退到城市/省级 GeoJSON + 基础 SVG
-- 地点详情直接在右侧面板展示；片段以可横向滚动的标签切换，地点选择通过 `focus` 查询参数保留，旧详情链接会重定向到对应地点
+- 地点详情直接在右侧阅读区展示；片段以可横向滚动的标签切换，照片支持左右循环、预览选择与大图查看，切换游记或片段时从第一张开始。地点选择通过 `focus` 查询参数保留，旧详情链接会重定向到对应地点
+- 登录身份或作者筛选范围变化时清空详情缓存并作废旧请求，管理入口同时要求有效登录态；页面离开后迟到请求不再回写。地图弹窗由页面统一恢复滚动状态与阅读焦点
+- 展开地图可继续选择地点并返回对应游记；展示页通过 `compact`、`displayMaxZoom` 配置地图尺寸与地点适配范围，创建/编辑页的选点地图和表单流程沿用原布局
 - 创建/编辑页采用 `location + stops + entries` 结构，支持地图点选、自动定位、地点搜索、图片上传、EXIF 辅助坐标回填
 - 封面和片段照片支持手机扫码直传，入口为 `TravelPhoneUpload.vue`，编辑器会话在 `useTravelMobileUpload.ts` 中维护。独立 `/memory-map/mobile-upload` 页面仅消费上传凭证，不加载账号流程；封面一张、片段多张，稳定片段标识保障重排后的回填归属。
 - 具备 `travel:create` capability 的用户可创建；所有者或管理员可编辑删除，前端入口不替代后端对象级鉴权
