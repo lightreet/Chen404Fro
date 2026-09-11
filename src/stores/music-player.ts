@@ -82,6 +82,7 @@ export const useMusicPlayerStore = defineStore('music-player', () => {
   })
 
   const hasQueue = computed(() => queue.value.length > 0)
+  const upcomingTracks = computed(() => queue.value.slice(currentIndex.value + 1))
   const playbackTime = computed(() => (isSeeking.value ? seekPreviewTime.value : currentTime.value))
 
   audioRuntime.cleanup?.()
@@ -162,11 +163,21 @@ export const useMusicPlayerStore = defineStore('music-player', () => {
       return 'full'
     }
     queue.value.push(track)
-    if (currentIndex.value < 0) {
-      currentIndex.value = 0
-    }
     schedulePersistence()
     return 'added'
+  }
+
+  /** 只调整待播区域，正在播放的歌曲和进度保持不变。 */
+  function moveUpcoming(trackId: number, direction: -1 | 1) {
+    const index = queue.value.findIndex((item) => item.id === trackId)
+    const target = index + direction
+    if (index <= currentIndex.value || target <= currentIndex.value || target >= queue.value.length) {
+      return false
+    }
+    const [track] = queue.value.splice(index, 1)
+    queue.value.splice(target, 0, track)
+    schedulePersistence()
+    return true
   }
 
   function removeFromQueue(trackId: number) {
@@ -192,8 +203,7 @@ export const useMusicPlayerStore = defineStore('music-player', () => {
       schedulePersistence()
       return
     }
-    queue.value = [track]
-    currentIndex.value = 0
+    queue.value.splice(currentIndex.value + 1)
     currentPlaylist.value = null
     schedulePersistence()
   }
@@ -211,6 +221,15 @@ export const useMusicPlayerStore = defineStore('music-player', () => {
   }
 
   async function playTrack(track: MusicTrack, tracks?: MusicTrack[], playlist?: MusicPlaylist | null) {
+    if (!track.audioUrl) {
+      notify.info('这首歌暂时没有可播放音频')
+      return
+    }
+    const existingIndex = queue.value.findIndex((item) => item.id === track.id)
+    if (!tracks?.length && existingIndex < 0 && queue.value.length >= MAX_QUEUE_SIZE) {
+      notify.info('播放队列最多保留 200 首，请先移除部分歌曲')
+      return
+    }
     if (currentTrack.value?.id !== track.id) {
       pendingRestore = null
     }
@@ -219,11 +238,14 @@ export const useMusicPlayerStore = defineStore('music-player', () => {
       setQueue(tracks, playlist, track.id)
       const nextIndex = queue.value.findIndex((item) => item.id === track.id)
       currentIndex.value = nextIndex >= 0 ? nextIndex : 0
-    } else if (!queue.value.some((item) => item.id === track.id)) {
-      setQueue([track], playlist)
-      currentIndex.value = 0
-    } else {
-      currentIndex.value = queue.value.findIndex((item) => item.id === track.id)
+    } else if (currentTrack.value?.id !== track.id) {
+      // 单曲点播插到当前位置之后，保留其他待播歌曲的相对顺序。
+      if (existingIndex >= 0) {
+        queue.value.splice(existingIndex, 1)
+        if (existingIndex < currentIndex.value) currentIndex.value -= 1
+      }
+      currentIndex.value += 1
+      queue.value.splice(currentIndex.value, 0, track)
     }
     await playCurrent()
     schedulePersistence()
@@ -292,18 +314,25 @@ export const useMusicPlayerStore = defineStore('music-player', () => {
     }
     if (!hasQueue.value) {
       try {
-        await loadPublicQueue()
+        const tracks = await loadPublicQueue()
+        if (!hasQueue.value) setQueue(tracks)
       } catch {
         notify.warning('播放队列加载失败，请稍后重试')
         return
       }
     }
+    if (currentIndex.value < 0 && hasQueue.value) currentIndex.value = 0
     await playCurrent()
     schedulePersistence()
   }
 
   async function next() {
     if (!queue.value.length) return
+    if (currentIndex.value < 0) {
+      currentIndex.value = 0
+      await playCurrent()
+      return
+    }
     if (mode.value === 'single') {
       audio.currentTime = 0
       await playCurrent()
@@ -395,7 +424,8 @@ export const useMusicPlayerStore = defineStore('music-player', () => {
       const restored = storedState ? restorePlaybackState(playableTracks, storedState) : false
 
       if (!restored && (force || !hasQueue.value)) {
-        setQueue(playableTracks, null)
+        // 浏览曲库不等于播放全部；新会话由用户点播或入队建立队列。
+        setQueue([], null)
         if (force) {
           resetPlaybackForScopeChange()
         }
@@ -455,7 +485,7 @@ export const useMusicPlayerStore = defineStore('music-player', () => {
     queue.value = restoredQueue
     currentPlaylist.value = null
     const restoredIndex = restoredQueue.findIndex((track) => track.id === state.currentTrackId)
-    currentIndex.value = restoredIndex >= 0 ? restoredIndex : 0
+    currentIndex.value = restoredIndex >= 0 ? restoredIndex : state.currentTrackId == null ? -1 : 0
     mode.value = parsePlayMode(state.mode)
     window.localStorage.setItem(STORAGE_MODE_KEY, mode.value)
     restoreAudioPosition(currentTrack.value, state.currentTime)
@@ -614,8 +644,10 @@ export const useMusicPlayerStore = defineStore('music-player', () => {
     mode,
     audio,
     hasQueue,
+    upcomingTracks,
     setQueue,
     enqueue,
+    moveUpcoming,
     removeFromQueue,
     clearUpcoming,
     loadPublicQueue,
@@ -676,9 +708,11 @@ function parseStoredPlayerState(value: unknown): MusicPlayerState | null {
       && trackId > 0
     )),
   )).slice(0, MAX_QUEUE_SIZE)
-  const currentTrackId = typeof value.currentTrackId === 'number' && trackIds.includes(value.currentTrackId)
-    ? value.currentTrackId
-    : trackIds[0]
+  const currentTrackId = value.currentTrackId == null
+    ? undefined
+    : typeof value.currentTrackId === 'number' && trackIds.includes(value.currentTrackId)
+      ? value.currentTrackId
+      : trackIds[0]
   const currentTime = typeof value.currentTime === 'number' && Number.isFinite(value.currentTime)
     ? Math.max(0, value.currentTime)
     : 0

@@ -1,5 +1,5 @@
 <template>
-  <DefaultLayout wide-content :mobile-title="mobilePlayer ? '正在播放' : '音乐馆'" mobile-back-to="/music">
+  <DefaultLayout wide-content :class="{ 'music-player-layout': isPhone && mobilePlayer }" :mobile-title="mobilePlayer ? '正在播放' : '音乐馆'" mobile-back-to="/music">
     <template v-if="isPhone && !mobilePlayer && canCreateTrack" #mobile-actions><button class="app-mobile-icon" type="button" aria-label="上传歌曲" @click="openCreateTrack"><UiIcon name="add" :size="24" /></button></template>
     <template #hero>
       <PageHero
@@ -28,12 +28,10 @@
       :can-edit="canEditTrack"
       @retry="loadMusic"
       @play="openMobileTrack"
-      @play-queued="playQueuedTrack"
       @play-all="playMobileCategory"
       @toggle="handleTogglePlayback"
       @previous="handlePreviousTrack"
       @next="handleNextTrack"
-      @enqueue="enqueueTrack"
       @edit="openEditTrack"
       @delete="removeTrack"
     />
@@ -1443,13 +1441,12 @@ function ensureSelectedCategoryExists() {
   selectedCategoryId.value = null
 }
 
-async function playTrack(track: MusicTrack, expandRow = true) {
+async function playTrack(track: MusicTrack, expandRow = false) {
   await primeSpectrumRuntimeForUserGesture(track.audioUrl)
   if (musicDisplayMode.value === 'rows' && expandRow) {
     expandedManagedTrackId.value = track.id
   }
-  const queue = filteredCategoryTracks.value.length ? filteredCategoryTracks.value : tracks.value
-  await player.playTrack(track, queue, selectedCategory.value)
+  await player.playTrack(track)
   if (player.playing) {
     await primeSpectrumRuntimeForUserGesture(track.audioUrl)
   }
@@ -1528,21 +1525,15 @@ async function toggleTrackPlayback(track: MusicTrack) {
   await playTrack(track, false)
 }
 
-function showMobilePlayer() {
-  if (!mobilePlayer.value) void router.push({ path: '/music', query: { ...route.query, player: '1' } })
-}
-
 function openMobileTrack(track: MusicTrack) {
   if (!track.audioUrl) return
-  // 打开正在播放的歌曲时保留播放状态；列表点选与暂停按钮职责分开。
+  // 点歌后留在曲库；从底部播放器独立进入全屏播放页。
   if (activeTrack.value?.id !== track.id || !player.playing) void playTrack(track, false)
-  showMobilePlayer()
 }
 
 function playMobileCategory() {
   if (!filteredCategoryTracks.value.some(track => track.audioUrl)) return
   void playCategory(selectedCategory.value, filteredCategoryTracks.value)
-  showMobilePlayer()
 }
 
 async function handleTogglePlayback() {
@@ -1867,6 +1858,17 @@ function handlePlaylistSearchSubmit() {
 </script>
 
 <style scoped lang="scss">
+.default-layout.music-player-layout {
+  --player-foreground: #f5f7f6;
+  --player-muted: #bfc6c2;
+  isolation: isolate;
+  background: #272e2b;
+
+  :deep(.app-mobile-header) { background: transparent; color: var(--player-foreground); backdrop-filter: blur(16px); }
+  :deep(.app-mobile-header__title) { font-size: 16px; font-weight: 500; letter-spacing: .06em; }
+  :deep(.main-content) { padding-bottom: 0; }
+}
+
 .music-page {
   width: min(1200px, calc(100vw - 40px));
   margin: 0 auto;

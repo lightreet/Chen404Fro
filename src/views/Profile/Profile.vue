@@ -1099,6 +1099,7 @@ onMounted(() => {
   .info-card :deep(.ui-panel__header) { display: none; }
   .info-card :deep(.ui-panel__body) { padding: 0; }
   .article-scroll-area { max-height: none; height: auto; overflow: visible; padding: 0; }
+  .article-list { gap: var(--mobile-article-list-gap); }
   .form-grid { grid-template-columns: minmax(0, 1fr); }
   .avatar-edit-row { flex-direction: row; align-items: center; gap: 16px; }
   .avatar-edit-title { font-size: 15px; }

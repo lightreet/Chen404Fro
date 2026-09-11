@@ -90,4 +90,7 @@ h1 { font-size: 20px; margin: 16px 0 8px; }
 .article-search__intro p { font-size: 14px; color: var(--color-text-secondary); margin-bottom: 32px; }
 .article-search__more { text-align: center; padding-block: 24px; }
 .article-search__more p { color: var(--color-text-secondary); font-size: 13px; margin-bottom: 12px; }
+@media (max-width: 767px) {
+  .article-search__list { gap: var(--mobile-article-list-gap); }
+}
 </style>

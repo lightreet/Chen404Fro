@@ -70,6 +70,7 @@ import mdiPause from '@iconify/icons-mdi/pause'
 import mdiPencilOutline from '@iconify/icons-mdi/pencil-outline'
 import mdiPlay from '@iconify/icons-mdi/play'
 import mdiPlaylistPlay from '@iconify/icons-mdi/playlist-play'
+import mdiPlaylistPlus from '@iconify/icons-mdi/playlist-plus'
 import mdiPlus from '@iconify/icons-mdi/plus'
 import mdiRadio from '@iconify/icons-mdi/radio'
 import mdiRefresh from '@iconify/icons-mdi/refresh'
@@ -175,6 +176,7 @@ export const iconMap = {
   eye: mdiEyeOutline,
   grid: mdiViewGridOutline,
   list: mdiFormatListBulleted,
+  'list-plus': mdiPlaylistPlus,
   branch: mdiSourceBranch,
   commit: mdiSourceCommit,
 

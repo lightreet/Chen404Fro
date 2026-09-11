@@ -174,6 +174,10 @@ watch(categoryId, () => {
   margin-bottom: 24px;
 }
 
+@media (max-width: 767px) {
+  .article-list { display: flex; flex-direction: column; gap: var(--mobile-article-list-gap); }
+}
+
 .empty-state {
   text-align: center;
   padding: 48px 24px;

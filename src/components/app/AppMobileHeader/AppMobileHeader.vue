@@ -61,7 +61,7 @@ function goBack() {
 .app-mobile-header__brand span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .app-mobile-header--brand { padding-inline: var(--mobile-gutter); }
 .app-mobile-header__title { min-width: 0; flex: 1; text-align: center; font-size: 18px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.app-mobile-header__actions { min-width: 44px; margin-left: auto; display: flex; justify-content: flex-end; }
+.app-mobile-header__actions { min-width: 44px; flex-shrink: 0; margin-left: auto; display: flex; justify-content: flex-end; }
 .app-mobile-header__spacer { width: 44px; }
 .app-mobile-header--primary { padding-inline: var(--mobile-gutter); }
 .app-mobile-header--primary .app-mobile-header__spacer { display: none; }

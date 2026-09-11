@@ -969,6 +969,7 @@ function formatLocation(memory: TravelMemoryLocationListItem) {
   .profile-metric { border-radius: 16px; padding: 16px; background: var(--color-surface); box-shadow: none; }
   .profile-metric strong { font-size: 20px; }
   .profile-section { padding: 0; background: none; box-shadow: none; border: 0; }
+  .profile-article-list--cards { gap: var(--mobile-article-list-gap); }
   .profile-section__head { flex-direction: row; flex-wrap: wrap; gap: 12px; margin-bottom: 16px; }
   .profile-eyebrow { display: none; }
   .profile-activity-title-tab { font-size: 17px; min-height: 48px; }

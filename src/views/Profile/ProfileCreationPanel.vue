@@ -680,6 +680,10 @@ onMounted(async () => {
   gap: var(--space-sm);
 }
 
+@media (max-width: 767px) {
+  .article-list { gap: var(--mobile-article-list-gap); }
+}
+
 @media (max-width: 720px) {
   .creation-tabs :deep(.ui-tabs__nav) {
     flex-wrap: nowrap;

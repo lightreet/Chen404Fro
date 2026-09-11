@@ -42,6 +42,7 @@ declare module 'vue' {
     MobileArticleCard: typeof import('./components/ArticleCard/MobileArticleCard.vue')['default']
     MobileMiniPlayer: typeof import('./components/Music/MobileMiniPlayer.vue')['default']
     MobileMusicExperience: typeof import('./components/Music/MobileMusicExperience.vue')['default']
+    MusicQueueSheet: typeof import('./components/Music/MusicQueueSheet.vue')['default']
     PageHero: typeof import('./components/PageHero/PageHero.vue')['default']
     ReaderBookCover: typeof import('./components/Reader/ReaderBookCover.vue')['default']
     ReaderBookDetailDialog: typeof import('./components/Reader/ReaderBookDetailDialog.vue')['default']

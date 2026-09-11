@@ -1,5 +1,13 @@
 <template>
   <DefaultLayout>
+    <template v-if="isPhone" #mobile-actions>
+      <RouterLink to="/search" class="app-mobile-icon" aria-label="搜索文章">
+        <UiIcon name="search" :size="24" />
+      </RouterLink>
+      <RouterLink v-if="canWriteArticle" to="/article/edit" class="app-mobile-icon" aria-label="编写文章">
+        <UiIcon name="add" :size="24" />
+      </RouterLink>
+    </template>
     <template #hero>
       <PageHero
         :title="siteName"
@@ -119,6 +127,8 @@ import type { Article, Category, SiteOwner } from '@/types';
 import { getArticles, getCategories } from '@/api/article';
 import { getSiteOwner } from '@/api/home';
 import { useMobileViewport } from '@/composables/useMobileViewport';
+import { useUserStore } from '@/stores/user';
+import { hasCapability } from '@/utils/permission';
 import { resolveArticlePageSize, resolveHeroImage, resolveHeroImagePosition, resolveSiteName } from '@/utils/siteConfig';
 
 const DEFAULT_HOME_HERO =
@@ -126,6 +136,8 @@ const DEFAULT_HOME_HERO =
 const DEFAULT_HOME_HERO_POSITION = '50% 58%';
 const DEFAULT_HOME_LEAD = '每一行代码，都是热爱的注脚。';
 const { isMobile: isPhone } = useMobileViewport();
+const userStore = useUserStore();
+const canWriteArticle = computed(() => userStore.isLoggedIn && hasCapability(userStore.user, 'article:create'));
 const categories = ref<Category[]>([]);
 const activeCategory = ref<number | null>(null);
 const owner = ref<SiteOwner | null>(null);
@@ -609,7 +621,7 @@ watch(
   .mobile-home-categories__scroll::-webkit-scrollbar { display: none; }
   .mobile-home-categories button { flex-shrink: 0; border: 0; border-radius: var(--radius-pill); padding: 0 18px; min-height: 44px; font: inherit; font-size: 14px; color: var(--color-text-secondary); background: var(--color-surface); cursor: pointer; }
   .mobile-home-categories button.is-active { background: var(--color-text-primary); color: var(--color-surface); font-weight: 600; }
-  .article-list { gap: 12px; padding: 0; perspective: none; }
+  .article-list { gap: var(--mobile-article-list-gap); padding: 0; perspective: none; }
   .load-more { margin-top: 20px; padding: 0; }
 }
 </style>

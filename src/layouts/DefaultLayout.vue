@@ -1,5 +1,5 @@
 <template>
-  <div class="default-layout" :class="{ 'mobile-layout': isPhone, 'mobile-layout--with-nav': isPhone && mobilePrimary, 'mobile-layout--with-player': showMiniPlayer }">
+  <div class="default-layout" :class="{ 'mobile-layout': isPhone, 'mobile-layout--with-nav': isPhone && mobilePrimary, 'mobile-layout--with-player': showMiniPlayer }" :style="{ '--mobile-player-height': `${miniPlayerHeight}px`, '--mobile-player-bottom': mobilePrimary ? 'var(--mobile-nav-height)' : 'env(safe-area-inset-bottom)' }">
     <SakuraOverlay v-if="!isPhone" :mode="sakuraSceneMode" />
     <!-- 顶部导航 -->
     <AppMobileHeader
@@ -39,13 +39,13 @@
 
     <!-- 底部 -->
     <AppMobileNav v-if="isPhone && mobilePrimary" />
-    <MobileMiniPlayer v-if="showMiniPlayer" />
+    <MobileMiniPlayer v-if="showMiniPlayer" @resize="miniPlayerHeight = $event" />
     <Footer v-if="!isPhone" />
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import { useRoute } from 'vue-router';
 import Header from '@/components/Header/Header.vue';
 import Footer from '@/components/Footer/Footer.vue';
@@ -104,10 +104,11 @@ const { isMobile } = useLayoutMobile();
 const { isMobile: isPhone } = useMobileViewport();
 const mobileNavigation = useMobileNavigationStore();
 const musicPlayer = useMusicPlayerStore();
+const miniPlayerHeight = ref(160);
 const mobilePrimary = computed(() => isMobilePrimaryPage(route.path, mobileNavigation.selected,
   Boolean(route.query.focus || route.query.player || route.query.tab)));
 const showMiniPlayer = computed(() => isPhone.value && route.path === '/music'
-  && route.query.player !== '1' && Boolean(musicPlayer.currentTrack));
+  && route.query.player !== '1' && musicPlayer.hasQueue);
 </script>
 
 <style scoped lang="scss">
@@ -192,7 +193,7 @@ const showMiniPlayer = computed(() => isPhone.value && route.path === '/music'
   .mobile-layout { background: var(--color-canvas); min-height: 100dvh; }
   .mobile-layout .main-content { padding: 0 0 24px; overflow: visible; background: none; }
   .mobile-layout--with-nav .main-content { padding-bottom: calc(var(--mobile-nav-height) + 24px); }
-  .mobile-layout--with-player .main-content { padding-bottom: calc(var(--mobile-nav-height) + 104px); }
+  .mobile-layout--with-player .main-content { padding-bottom: calc(var(--mobile-player-bottom) + var(--mobile-player-height) + 24px); }
   .mobile-layout .container { width: 100%; padding-inline: var(--mobile-gutter); }
   .mobile-layout .content-wrapper { gap: 0; }
 }

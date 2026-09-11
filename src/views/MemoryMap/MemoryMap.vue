@@ -1,5 +1,10 @@
 <template>
   <DefaultLayout :wide-content="true" :mobile-title="mobileDetail ? '旅行详情' : '旅行游记'" mobile-back-to="/memory-map">
+    <template v-if="isPhone && authReady && canManage && !mobileDetail" #mobile-actions>
+      <button class="app-mobile-icon" type="button" aria-label="新增旅行游记" @click="openCreateDialog">
+        <UiIcon name="add" :size="24" />
+      </button>
+    </template>
     <template #hero>
       <PageHero
         title="旅行纪念地图"
@@ -15,7 +20,7 @@
     </template>
 
     <div id="memory-map-content" class="memory-map-page" :class="{ 'is-mobile-detail': mobileDetail }">
-      <div v-if="authReady && canManage && !mobileDetail" class="memory-topline">
+      <div v-if="!isPhone && authReady && canManage" class="memory-topline">
         <UiButton
           variant="primary"
           size="sm"
