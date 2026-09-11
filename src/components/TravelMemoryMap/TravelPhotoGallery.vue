@@ -53,13 +53,21 @@
           {{ photos.length }}
         </span>
       </div>
-      <div v-if="previews.length" class="travel-photos__previews">
+      <div
+        v-if="previews.length"
+        ref="previewStrip"
+        class="travel-photos__previews"
+        role="group"
+        :aria-label="isMobile ? '照片缩略图' : '更多照片'"
+      >
         <button
           v-for="preview in previews"
           :key="preview.index"
           type="button"
           class="travel-photos__image travel-photos__preview"
+          :class="{ 'is-active': preview.index === currentIndex }"
           :aria-label="`切换到第 ${preview.index + 1} 张：${photoTitle(preview.photo, preview.index)}`"
+          :aria-pressed="isMobile ? preview.index === currentIndex : undefined"
           @click="currentIndex = preview.index"
         >
           <img
@@ -87,13 +95,16 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, nextTick, ref, watch } from 'vue'
 import { UiIcon } from '@/components/ui'
+import { useMobileViewport } from '@/composables/useMobileViewport'
 import type { TravelMemoryEntry } from '@/types'
 
 const props = defineProps<{ entries: TravelMemoryEntry[]; title: string }>()
 const emit = defineEmits<{ (event: 'open', imageUrl: string): void }>()
 const currentIndex = ref(0)
+const previewStrip = ref<HTMLElement>()
+const { isMobile } = useMobileViewport()
 let swipeStart: { x: number; y: number } | null = null
 let lastSwipeAt = 0
 function startSwipe(event: TouchEvent) {
@@ -119,15 +130,29 @@ const photos = computed(() =>
   props.entries.filter((entry) => Boolean(entry.imageUrl)),
 )
 const currentPhoto = computed(() => photos.value[currentIndex.value])
-const previews = computed(() =>
-  Array.from(
+const previews = computed(() => {
+  if (isMobile.value) return photos.value.map((photo, index) => ({ index, photo }))
+  return Array.from(
     { length: Math.min(2, Math.max(0, photos.value.length - 1)) },
     (_, offset) => {
       const index = (currentIndex.value + offset + 1) % photos.value.length
       return { index, photo: photos.value[index]! }
     },
-  ),
-)
+  )
+})
+
+// 箭头或手势切图时只滚动缩略图条，不改变页面的垂直位置。
+watch([currentIndex, isMobile], async () => {
+  if (!isMobile.value) return
+  await nextTick()
+  const strip = previewStrip.value
+  const selected = strip?.querySelector<HTMLElement>('.is-active')
+  if (!strip || !selected) return
+  const stripRect = strip.getBoundingClientRect()
+  const selectedRect = selected.getBoundingClientRect()
+  if (selectedRect.left < stripRect.left) strip.scrollLeft += selectedRect.left - stripRect.left
+  else if (selectedRect.right > stripRect.right) strip.scrollLeft += selectedRect.right - stripRect.right
+})
 
 function move(offset: number) {
   if (photos.value.length < 2) return
@@ -323,7 +348,26 @@ watch(
     touch-action: pan-y pinch-zoom;
   }
   .travel-photos__previews {
-    display: none;
+    display: flex;
+    gap: 8px;
+    min-width: 0;
+    padding: 4px;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scrollbar-width: thin;
+  }
+  .travel-photos__preview {
+    flex: 0 0 64px;
+    width: 64px;
+    height: 56px;
+    padding: 2px;
+    border: 2px solid transparent;
+    border-radius: var(--mobile-control-radius);
+    background: transparent;
+
+    img { border-radius: 7px; }
+    &.is-active { border-color: var(--color-accent-readable); }
+    &::after, .travel-photos__caption { display: none; }
   }
   .travel-photos__caption {
     inset-inline: 15px;

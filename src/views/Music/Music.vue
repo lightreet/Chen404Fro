@@ -27,9 +27,9 @@
       :lyrics="activeLyricLines"
       :can-edit="canEditTrack"
       @retry="loadMusic"
-      @play="toggleTrackPlayback"
+      @play="openMobileTrack"
       @play-queued="playQueuedTrack"
-      @play-all="playCategory(selectedCategory, filteredCategoryTracks)"
+      @play-all="playMobileCategory"
       @toggle="handleTogglePlayback"
       @previous="handlePreviousTrack"
       @next="handleNextTrack"
@@ -1526,6 +1526,23 @@ async function toggleTrackPlayback(track: MusicTrack) {
     return
   }
   await playTrack(track, false)
+}
+
+function showMobilePlayer() {
+  if (!mobilePlayer.value) void router.push({ path: '/music', query: { ...route.query, player: '1' } })
+}
+
+function openMobileTrack(track: MusicTrack) {
+  if (!track.audioUrl) return
+  // 打开正在播放的歌曲时保留播放状态；列表点选与暂停按钮职责分开。
+  if (activeTrack.value?.id !== track.id || !player.playing) void playTrack(track, false)
+  showMobilePlayer()
+}
+
+function playMobileCategory() {
+  if (!filteredCategoryTracks.value.some(track => track.audioUrl)) return
+  void playCategory(selectedCategory.value, filteredCategoryTracks.value)
+  showMobilePlayer()
 }
 
 async function handleTogglePlayback() {

@@ -25,7 +25,7 @@ const routes: RouteRecordRaw[] = [
   },
   {
     path: '/navigation', name: 'NavigationSettings',
-    component: () => import('@/views/Discover/NavigationSettings.vue'),
+    redirect: { path: '/discover', query: { panel: 'navigation' } },
     meta: { title: '自定义底栏' },
   },
   {

@@ -36,6 +36,7 @@ import mdiContentCopy from '@iconify/icons-mdi/content-copy'
 import mdiContentSaveOutline from '@iconify/icons-mdi/content-save-outline'
 import mdiDotsHorizontal from '@iconify/icons-mdi/dots-horizontal'
 import mdiDownloadOutline from '@iconify/icons-mdi/download-outline'
+import mdiDragVertical from '@iconify/icons-mdi/drag-vertical'
 import mdiEmailOutline from '@iconify/icons-mdi/email-outline'
 import mdiEyeOutline from '@iconify/icons-mdi/eye-outline'
 import mdiFileDocumentOutline from '@iconify/icons-mdi/file-document-outline'
@@ -61,6 +62,7 @@ import mdiMapOutline from '@iconify/icons-mdi/map-outline'
 import mdiMedalOutline from '@iconify/icons-mdi/medal-outline'
 import mdiMenu from '@iconify/icons-mdi/menu'
 import mdiMessageOutline from '@iconify/icons-mdi/message-outline'
+import mdiMinus from '@iconify/icons-mdi/minus'
 import mdiMusicNoteOutline from '@iconify/icons-mdi/music-note-outline'
 import mdiOpenInNew from '@iconify/icons-mdi/open-in-new'
 import mdiPaletteOutline from '@iconify/icons-mdi/palette-outline'
@@ -73,6 +75,9 @@ import mdiRadio from '@iconify/icons-mdi/radio'
 import mdiRefresh from '@iconify/icons-mdi/refresh'
 import mdiSendOutline from '@iconify/icons-mdi/send-outline'
 import mdiShuffle from '@iconify/icons-mdi/shuffle'
+import mdiSkipPrevious from '@iconify/icons-mdi/skip-previous'
+import mdiSkipNext from '@iconify/icons-mdi/skip-next'
+import mdiRepeatOnce from '@iconify/icons-mdi/repeat-once'
 import mdiSort from '@iconify/icons-mdi/sort'
 import mdiSortVariant from '@iconify/icons-mdi/sort-variant'
 import mdiSourceBranch from '@iconify/icons-mdi/source-branch'
@@ -102,6 +107,8 @@ export const iconMap = {
   phone: mdiCellphone,
   // 基础操作
   add: mdiPlus,
+  minus: mdiMinus,
+  drag: mdiDragVertical,
   edit: mdiPencilOutline,
   delete: mdiTrashCanOutline,
   close: mdiClose,
@@ -175,6 +182,9 @@ export const iconMap = {
   play: mdiPlay,
   pause: mdiPause,
   'sequence-play': mdiPlaylistPlay,
+  'skip-previous': mdiSkipPrevious,
+  'skip-next': mdiSkipNext,
+  'repeat-one': mdiRepeatOnce,
   shuffle: mdiShuffle,
   music: mdiMusicNoteOutline,
   headset: mdiHeadphones,

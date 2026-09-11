@@ -1,5 +1,5 @@
 <template>
-  <DefaultLayout>
+  <DefaultLayout mobile-back-to="/category">
     <div class="category-detail-page">
       <div class="page-header" v-if="category">
         <h1 class="page-title">{{ category.name }}</h1>

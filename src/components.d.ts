@@ -20,6 +20,7 @@ declare module 'vue' {
     AppMobileUploadPanel: typeof import('./components/app/AppMobileUploadPanel/AppMobileUploadPanel.vue')['default']
     AppSection: typeof import('./components/app/AppSection/AppSection.vue')['default']
     AppStatusPill: typeof import('./components/app/AppStatusPill/AppStatusPill.vue')['default']
+    AppTopicNavigation: typeof import('./components/app/AppTopicNavigation/AppTopicNavigation.vue')['default']
     ArticleCard: typeof import('./components/ArticleCard/ArticleCard.vue')['default']
     AuthEmailField: typeof import('./components/Auth/AuthEmailField.vue')['default']
     CategoryIcon: typeof import('./components/CategoryIcon/CategoryIcon.vue')['default']

@@ -224,7 +224,7 @@ const musicTriggerRef = ref<HTMLButtonElement | null>(null);
 const route = useRoute();
 const musicPlayer = useMusicPlayerStore();
 const compactOnly = computed(() => props.compactOnly);
-const compactView = computed(() => compactOnly.value || isCompact.value);
+const compactView = computed(() => !props.pageMode && (compactOnly.value || isCompact.value));
 const getCompactWidgetHeight = () => (
   viewportWidth.value < 1024 ? MOBILE_COMPACT_WIDGET_HEIGHT : COMPACT_WIDGET_HEIGHT
 );
@@ -876,13 +876,13 @@ watch(
 );
 
 onMounted(() => {
-  restorePosition();
   activeSessionId.value = window.localStorage.getItem(CHAT_SESSION_STORAGE_KEY) ?? '';
   visitorId.value = getOrCreateVisitorId();
   if (props.pageMode) {
     openChatPanel();
     return;
   }
+  restorePosition();
   window.addEventListener('resize', handleResize);
   speechTimer = window.setInterval(() => {
     if (!panelVisible.value && Math.random() > 0.72) {
@@ -1422,8 +1422,8 @@ onUnmounted(() => {
     font-size: 17px;
   }
 
-  .chat-panel-shell,
-  .music-panel-shell {
+  .live2d-container:not(.is-chat-page) .chat-panel-shell,
+  .live2d-container:not(.is-chat-page) .music-panel-shell {
     position: fixed;
     right: 12px !important;
     left: 12px !important;

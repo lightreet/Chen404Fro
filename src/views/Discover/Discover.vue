@@ -2,8 +2,8 @@
   <DefaultLayout mobile-title="发现">
     <div class="discover-page">
       <RouterLink :to="profileLink" class="discover-profile">
-        <UiAvatar :src="userStore.user?.avatar" :size="56">{{ userStore.user?.nickname?.slice(0, 1) || '访' }}</UiAvatar>
-        <span><strong>{{ userStore.user?.nickname || userStore.user?.username || '欢迎来到 Chen404' }}</strong><small>{{ userStore.isLoggedIn ? '进入我的空间' : '登录，保存你的阅读与收藏' }}</small></span>
+        <UiAvatar class="discover-profile__avatar" :src="userStore.user?.avatar" :size="56">{{ userStore.user?.nickname?.slice(0, 1) || '访' }}</UiAvatar>
+        <span class="discover-profile__copy"><strong>{{ userStore.user?.nickname || userStore.user?.username || '欢迎来到 Chen404' }}</strong><small>{{ userStore.isLoggedIn ? '进入我的空间' : '登录，保存你的阅读与收藏' }}</small></span>
         <UiIcon name="arrow-right" :size="22" />
       </RouterLink>
 
@@ -28,11 +28,12 @@
       <section class="discover-group">
         <h2>偏好设置</h2>
         <div class="discover-links">
-          <AppMenuLink to="/navigation" icon="grid" label="自定义底栏" description="把常用栏目放在顺手的位置" />
+          <AppMenuLink to="/navigation" icon="grid" label="自定义底栏" />
           <AppMenuLink to="/appearance" icon="appearance" label="显示与主题" />
         </div>
       </section>
     </div>
+    <NavigationSettings />
   </DefaultLayout>
 </template>
 
@@ -40,6 +41,7 @@
 import { computed } from 'vue';
 import DefaultLayout from '@/layouts/DefaultLayout.vue';
 import AppMenuLink from '@/components/app/AppMenuLink/AppMenuLink.vue';
+import NavigationSettings from './NavigationSettings.vue';
 import { UiAvatar, UiIcon } from '@/components/ui';
 import { useUserStore } from '@/stores/user';
 import { hasAnyCreatorCapability } from '@/utils/permission';
@@ -67,7 +69,8 @@ const groups = [
 <style scoped lang="scss">
 .discover-page { max-width: 680px; margin: 0 auto; padding-top: 12px; }
 .discover-profile { display: flex; align-items: center; gap: 12px; padding: 20px 16px; border-radius: var(--mobile-card-radius); background: var(--color-surface); color: var(--color-text-primary); }
-.discover-profile > span { flex: 1; min-width: 0; }
+.discover-profile__avatar { flex: none; aspect-ratio: 1; }
+.discover-profile__copy { flex: 1; min-width: 0; }
 .discover-profile strong { display: block; font-size: 18px; overflow-wrap: anywhere; }
 .discover-profile small { display: block; margin-top: 4px; font-size: 13px; color: var(--color-text-secondary); }
 .discover-group { margin-top: 28px; }

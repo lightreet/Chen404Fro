@@ -106,7 +106,8 @@ const mobileNavigation = useMobileNavigationStore();
 const musicPlayer = useMusicPlayerStore();
 const mobilePrimary = computed(() => isMobilePrimaryPage(route.path, mobileNavigation.selected,
   Boolean(route.query.focus || route.query.player || route.query.tab)));
-const showMiniPlayer = computed(() => isPhone.value && mobilePrimary.value && Boolean(musicPlayer.currentTrack));
+const showMiniPlayer = computed(() => isPhone.value && route.path === '/music'
+  && route.query.player !== '1' && Boolean(musicPlayer.currentTrack));
 </script>
 
 <style scoped lang="scss">

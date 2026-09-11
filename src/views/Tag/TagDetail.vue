@@ -1,5 +1,5 @@
 <template>
-  <DefaultLayout>
+  <DefaultLayout mobile-back-to="/tag">
     <div class="tag-detail-page">
       <div class="page-header" v-if="tag">
         <div class="tag-chip" :style="tagChipStyle">

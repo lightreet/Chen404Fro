@@ -59,7 +59,6 @@
           :article="article"
           :index="index"
           :cover-priority="index < 2"
-          :mobile-featured="index === 0 && activeCategory === null && !activeKeyword"
           :disable-hover-lift="true"
           :scroll-float-strength="scrollFloatById[String(article.id)] ?? 0"
           :scroll-wheel-phase="scrollWheelPhaseById[String(article.id)] ?? 0"
