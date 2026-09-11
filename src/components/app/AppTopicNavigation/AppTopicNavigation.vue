@@ -62,8 +62,8 @@ const sections = [
   }
 
   .is-active {
-    background: var(--color-text-primary);
-    color: var(--color-canvas);
+    background: var(--color-accent-soft);
+    color: var(--color-accent-readable);
     font-weight: 600;
   }
 }

@@ -27,8 +27,9 @@
       <template v-if="isPhone">
         <section class="mobile-home-intro">
           <div><h1>记录技术，也记录生活。</h1><p>{{ heroSubtitle }}</p></div>
-          <RouterLink v-if="owner" :to="`/user/${owner.id}`" :aria-label="`查看${owner.nickname || owner.username}的主页`">
-            <UiAvatar :src="owner.avatar" :size="48">{{ (owner.nickname || owner.username || 'C').slice(0, 1) }}</UiAvatar>
+          <RouterLink class="mobile-home-account" :to="userStore.isLoggedIn ? '/profile' : '/login'" :aria-label="userStore.isLoggedIn ? '进入个人中心' : '登录账号'">
+            <UiAvatar v-if="userStore.isLoggedIn" :key="userStore.user?.id" :src="userStore.user?.avatar" :size="48">{{ (userStore.user?.nickname || userStore.user?.username || '我').slice(0, 1) }}</UiAvatar>
+            <span v-else class="mobile-home-account__guest"><UiIcon name="user" :size="24" /></span>
           </RouterLink>
         </section>
         <div class="mobile-home-categories">
@@ -123,9 +124,8 @@ import HomeDiscoverySearch from '@/components/HomeDiscoverySearch/HomeDiscoveryS
 import PageHero from '@/components/PageHero/PageHero.vue';
 import { UiAvatar, UiButton, UiDivider, UiEmpty, UiIcon, UiLoadingState } from '@/components/ui'
 import { useSiteConfig } from '@/composables/useSiteConfig';
-import type { Article, Category, SiteOwner } from '@/types';
+import type { Article, Category } from '@/types';
 import { getArticles, getCategories } from '@/api/article';
-import { getSiteOwner } from '@/api/home';
 import { useMobileViewport } from '@/composables/useMobileViewport';
 import { useUserStore } from '@/stores/user';
 import { hasCapability } from '@/utils/permission';
@@ -140,7 +140,6 @@ const userStore = useUserStore();
 const canWriteArticle = computed(() => userStore.isLoggedIn && hasCapability(userStore.user, 'article:create'));
 const categories = ref<Category[]>([]);
 const activeCategory = ref<number | null>(null);
-const owner = ref<SiteOwner | null>(null);
 const loadError = ref('');
 let articleGeneration = 0;
 
@@ -351,7 +350,6 @@ function setupLoadObserver() {
 
 onMounted(() => {
   void getCategories().then(value => { categories.value = value; }).catch(() => { categories.value = []; });
-  void getSiteOwner().then(value => { owner.value = value; }).catch(() => { owner.value = null; });
   void loadSiteConfig(true).then((config) => {
     heroBgImage.value = resolveHeroImage(config, 'home', DEFAULT_HOME_HERO);
     heroBgPosition.value = resolveHeroImagePosition(config, 'home', DEFAULT_HOME_HERO_POSITION);
@@ -616,11 +614,14 @@ watch(
   .mobile-home-intro > div { min-width: 0; flex: 1; }
   .mobile-home-intro h1 { font-size: 22px; line-height: 1.5; font-weight: 700; letter-spacing: -.3px; }
   .mobile-home-intro p { font-size: 13px; color: var(--color-text-secondary); margin-top: 4px; line-height: 1.7; }
+  .mobile-home-account { flex-shrink: 0; border-radius: var(--radius-pill); }
+  .mobile-home-account__guest { display: grid; place-items: center; width: 48px; height: 48px; border-radius: inherit; color: var(--color-accent-readable); background: var(--color-accent-soft); }
+  .mobile-home-account:focus-visible { outline: 2px solid var(--color-accent-readable); outline-offset: 3px; }
   .mobile-home-categories { display: flex; align-items: center; gap: 4px; margin: 0 -4px 16px; }
   .mobile-home-categories__scroll { display: flex; align-items: center; gap: 8px; min-width: 0; flex: 1; overflow-x: auto; scrollbar-width: none; }
   .mobile-home-categories__scroll::-webkit-scrollbar { display: none; }
   .mobile-home-categories button { flex-shrink: 0; border: 0; border-radius: var(--radius-pill); padding: 0 18px; min-height: 44px; font: inherit; font-size: 14px; color: var(--color-text-secondary); background: var(--color-surface); cursor: pointer; }
-  .mobile-home-categories button.is-active { background: var(--color-text-primary); color: var(--color-surface); font-weight: 600; }
+  .mobile-home-categories button.is-active { background: var(--color-accent-soft); color: var(--color-accent-readable); font-weight: 600; }
   .article-list { gap: var(--mobile-article-list-gap); padding: 0; perspective: none; }
   .load-more { margin-top: 20px; padding: 0; }
 }

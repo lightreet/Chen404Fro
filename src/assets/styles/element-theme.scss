@@ -65,6 +65,14 @@
   --el-font-size-base: var(--font-size-base);
 }
 
+@media (max-width: 767px) {
+  :root:not([data-theme="dark"]) {
+    --el-color-primary: var(--color-accent-readable);
+    --el-color-primary-light-3: color-mix(in srgb, var(--color-accent-readable) 70%, white);
+    --el-color-primary-dark-2: color-mix(in srgb, var(--color-accent-readable) 85%, var(--color-text-primary));
+  }
+}
+
 // ====== 结构性微调：弱化后台感 ======
 
 // 按钮：圆角更柔，hover 轻微上浮，主按钮带渐变

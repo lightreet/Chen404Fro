@@ -153,4 +153,12 @@ const go = (page: number) => {
     cursor: default;
   }
 }
+
+@media (max-width: 767px) {
+  .ui-pagination__btn.is-active,
+  .ui-pagination__btn:hover:not(:disabled):not(.is-active) {
+    background: var(--color-accent-soft);
+    color: var(--color-accent-readable);
+  }
+}
 </style>

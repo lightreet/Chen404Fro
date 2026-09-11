@@ -169,4 +169,12 @@ const select = (item: UiTabItem) => {
 .ui-tabs__panel {
   margin-top: var(--space-md);
 }
+
+@media (max-width: 767px) {
+  .ui-tabs--line .ui-tabs__tab.is-active,
+  .ui-tabs--pill .ui-tabs__tab.is-active,
+  .ui-tabs__tab-badge {
+    color: var(--color-accent-readable);
+  }
+}
 </style>

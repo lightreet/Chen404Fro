@@ -233,7 +233,7 @@ function deleteSelected() {
 .is-fullscreen :deep(.ui-empty) { --color-text-primary: var(--player-foreground); --color-text-secondary: var(--player-muted); }
 .music-categories { display: flex; gap: 8px; overflow-x: auto; padding-block: 20px 12px; scrollbar-width: none; }
 .music-categories button { flex: none; min-height: 44px; padding: 8px 18px; border: 0; border-radius: 24px; background: var(--color-surface); color: var(--color-text-secondary); font-size: 14px; }
-.music-categories button.active { background: var(--color-text-primary); color: var(--color-surface); }
+.music-categories button.active { background: var(--color-accent-soft); color: var(--color-accent-readable); }
 .music-list-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
 .music-list-heading h2 { font-size: 20px; margin: 0; }
 .music-list-heading small { font-size: 13px; color: var(--color-text-secondary); font-weight: 400; }

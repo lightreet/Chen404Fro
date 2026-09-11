@@ -1,4 +1,4 @@
-// Shared phone geometry; desktop tokens and page layouts retain their current values.
+// 手机端共享主题与尺寸；桌面端继续沿用现有规范。
 :root {
   --mobile-gutter: 20px;
   --mobile-header-height: 58px;
@@ -30,6 +30,23 @@
 }
 
 @media (max-width: 767px) {
+  // 已确认的浅色板：内容以暖灰紫与近白色为主，粉色仅承担品牌和操作强调。
+  :root:not([data-theme="dark"]) {
+    --color-accent-readable: #b23865;
+    --color-accent-soft: #fce9f0;
+    --bg-primary: #faf7f9;
+    --bg-secondary: #ffffff;
+    --bg-elevated: #ffffff;
+    --bg-hover: color-mix(in srgb, var(--bg-secondary) 95%, var(--text-primary));
+    --text-primary: #51434b;
+    --text-secondary: #786874;
+    --text-tertiary: var(--text-secondary);
+    --text-link: var(--color-accent-readable);
+    --border-color: #eadde4;
+    --border-light: color-mix(in srgb, var(--border-color) 55%, var(--bg-secondary));
+    --border-strong: color-mix(in srgb, var(--border-color) 80%, var(--text-secondary));
+    --hero-fade-base: var(--bg-primary);
+  }
   :root {
     --control-height-sm: 44px;
     --control-height-md: 48px;
@@ -37,6 +54,7 @@
   }
   html { scroll-padding-top: calc(var(--mobile-header-height) + 16px); }
   body { background-image: none; background-attachment: scroll; }
+  ::selection { background: var(--color-accent-soft); color: var(--color-text-primary); }
   input, textarea, select { font-size: 16px; }
   .el-message-box { max-width: calc(100vw - 32px); }
   .el-drawer { max-width: 100vw; }

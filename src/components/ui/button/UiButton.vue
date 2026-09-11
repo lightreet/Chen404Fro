@@ -226,6 +226,9 @@ const handleClick = (ev: MouseEvent) => {
 @media (max-width: 767px) {
   .ui-button { border-radius: var(--mobile-control-radius); }
   .ui-button--primary { background: var(--color-accent-readable); color: var(--color-on-accent-readable); border-color: var(--color-accent-readable); }
+  .ui-button--ghost,
+  .ui-button--secondary:not(.is-disabled):hover,
+  .ui-button--text:not(.is-disabled):hover { color: var(--color-accent-readable); }
   .ui-button--round { border-radius: var(--radius-pill); }
 }
 </style>
