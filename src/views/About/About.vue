@@ -15,6 +15,11 @@
     </template>
 
     <div id="about-content" class="about-page">
+      <section v-if="isPhone" class="mobile-about-intro">
+        <img :src="heroBgImage" alt="Chen404 的小站" :style="{ objectPosition: heroBgPosition }" />
+        <h1>记录技术，也记录生活。</h1>
+        <p>一个写技术、听音乐，也珍藏旅途与朋友的小站。</p>
+      </section>
       <section class="community-section" aria-labelledby="about-community-title">
         <header class="section-heading">
           <div>
@@ -36,6 +41,13 @@
           正在加载成员信息…
         </div>
 
+        <div v-else-if="isPhone && visibleMembers.length" class="mobile-about-members">
+          <button v-for="member in visibleMembers" :key="member.id" type="button" class="mobile-about-member" @click="openMemberCard(member)">
+            <img :src="getMemberAvatar(member)" alt="" @error="handleAvatarError" />
+            <span><strong>{{ getMemberDisplayName(member) }}</strong><small>{{ getMemberRoleLabel(member) }}</small></span>
+            <UiIcon name="arrow-right" :size="20" />
+          </button>
+        </div>
         <div v-else-if="activeMember" class="community-layout">
           <article class="member-preview">
             <img
@@ -156,6 +168,8 @@ import { UiIcon } from '@/components/ui';
 import { useSiteConfig } from '@/composables/useSiteConfig';
 import DefaultLayout from '@/layouts/DefaultLayout.vue';
 import { resolveHeroImagePosition } from '@/utils/siteConfig';
+import { useMobileViewport } from '@/composables/useMobileViewport';
+const { isMobile: isPhone } = useMobileViewport();
 
 const DEFAULT_ABOUT_HERO =
   'https://images.unsplash.com/photo-1498050108023-c5249f4df085?w=1920&q=80';
@@ -829,5 +843,32 @@ onMounted(() => {
   .site-links a:hover {
     transform: none;
   }
+}
+</style>
+
+<style scoped lang="scss">
+@media (max-width: 767px) {
+  .about-page { padding-top: 8px; }
+  .mobile-about-intro { margin-bottom: 32px; }
+  .mobile-about-intro > img { width: 100%; aspect-ratio: 2.9; object-fit: cover; border-radius: var(--mobile-card-radius); }
+  .mobile-about-intro h1 { font-size: 22px; line-height: 1.5; margin: 20px 0 8px; }
+  .mobile-about-intro p { color: var(--color-text-secondary); font-size: 15px; line-height: 1.8; }
+  .community-section { padding: 0; background: none; border: 0; box-shadow: none; }
+  .section-heading { margin-bottom: 12px; }
+  .section-heading h2 { font-size: 18px; }
+  .section-heading p { display: none; }
+  .member-toggle { min-height: 44px; font-size: 13px; }
+  .mobile-about-members { display: grid; gap: 12px; }
+  .mobile-about-member { width: 100%; display: flex; align-items: center; gap: 12px; border: 0; border-radius: var(--mobile-card-radius); background: var(--color-surface); color: var(--color-text-primary); padding: 16px; text-align: left; cursor: pointer; }
+  .mobile-about-member img { width: 48px; height: 48px; object-fit: cover; border-radius: 50%; }
+  .mobile-about-member > span { flex: 1; min-width: 0; }
+  .mobile-about-member strong { display: block; font-size: 17px; font-weight: 600; overflow-wrap: anywhere; }
+  .mobile-about-member small { display: block; margin-top: 4px; color: var(--color-text-secondary); font-size: 13px; }
+  .site-notes { margin-top: 28px; padding: 0; display: block; border: 0; box-shadow: none; background: none; }
+  .site-notes__mark { display: none; }
+  .site-notes__copy h2 { font-size: 17px; line-height: 1.6; }
+  .site-notes__copy p { margin-top: 8px; font-size: 13px; }
+  .site-links { display: grid; grid-template-columns: 1fr; margin-top: 16px; gap: 10px; }
+  .site-link { min-height: 56px; border-radius: var(--mobile-card-radius); background: var(--color-surface); color: var(--color-text-primary); justify-content: flex-start; }
 }
 </style>

@@ -2106,4 +2106,27 @@ function createEmptyTrackForm(): MusicTrackUpsertCommand {
     min-width: 0;
   }
 }
+@media (max-width: 767px) {
+  .track-edit-page { width: calc(100% - 40px); padding-top: calc(84px + env(safe-area-inset-top)); padding-bottom: calc(112px + env(safe-area-inset-bottom)); background: var(--color-canvas); }
+  .track-edit-topbar { padding: env(safe-area-inset-top) 20px 0; background: var(--color-canvas); }
+  .topbar-row { display: flex; align-items: center; min-height: 58px; width: 100%; }
+  .topbar-back { min-height: 44px; font-size: 15px; }
+  .topbar-context { display: none; }
+  .draft-hint { font-size: 12px; max-width: 44vw; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+  .track-edit-layout { gap: 20px; }
+  .editor-panel { padding: 16px; background: var(--color-surface); border-radius: 16px; }
+  .editor-panel--title { background: transparent; padding: 0; box-shadow: none; border: 0; }
+  .editor-panel--title h1 { font-size: 24px; }
+  .editor-panel--title p, .panel-kicker { display: none; }
+  .section-title strong { font-size: 18px; }
+  .title-field { width: 100%; grid-template-columns: minmax(0, 1fr) auto; }
+  .ai-suggest-button { min-width: 80px; border-radius: 12px; background: var(--color-accent-readable); box-shadow: none; }
+  .track-edit-footer { padding: 12px 20px calc(12px + env(safe-area-inset-bottom)); background: var(--color-surface); }
+  .footer-inner { display: grid; grid-template-columns: minmax(0, 1fr); width: 100%; gap: 8px; justify-items: stretch; }
+  .footer-inner > span { font-size: 12px; }
+  .footer-inner > div { display: grid; grid-template-columns: 1fr 1fr; width: 100%; }
+  :deep(.footer-button) { min-height: 48px; border-radius: 12px; }
+  :deep(.footer-button--save) { background: var(--color-accent-readable) !important; color: var(--color-on-accent-readable) !important; box-shadow: none !important; border-color: transparent !important; }
+  .track-preview-panel { border-radius: 16px; background: var(--color-surface); }
+}
 </style>

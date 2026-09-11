@@ -1057,3 +1057,36 @@
     padding-right: 16px;
   }
 }
+@media (max-width: 767px) {
+  .article-edit-page { background: var(--color-canvas); }
+  .edit-container { padding-inline: 20px; }
+  .edit-paper { --article-edit-paper-pad-x: 0px; border: 0; background: transparent; box-shadow: none; }
+  .edit-top-dock { padding-top: env(safe-area-inset-top); background: var(--color-canvas); }
+  .edit-dock-row { min-height: 58px; }
+  .back-link { min-height: 44px; }
+  .draft-hint { max-width: 60vw; font-size: 13px; }
+  .autosave-text { font-size: 12px; }
+  .mobile-editor-tabs { display: flex; gap: 8px; margin-bottom: 16px; padding: 4px; border-radius: 12px; background: var(--color-surface); }
+  .mobile-editor-tabs button { flex: 1; border: 0; border-radius: 10px; min-height: 44px; background: transparent; color: var(--color-text-secondary); font-size: 15px; }
+  .mobile-editor-tabs .active { background: var(--color-accent-soft); color: var(--color-accent-readable); font-weight: 600; }
+  .mobile-editor-tabs .mobile-editor-more { flex: 0 0 44px; display: grid; place-items: center; }
+  .paper-title-input :deep(.ui-input__inner) { font-size: 20px; }
+  .paper-editor-host :deep(.md-editor-toolbar-wrapper) { max-width: 100%; }
+  .paper-editor-host :deep(.md-editor-toolbar-item) { min-width: 44px; min-height: 44px; display: inline-flex; align-items: center; justify-content: center; }
+  .paper-editor-host :deep(.md-editor-menu-item) { min-height: 44px; display: flex; align-items: center; font-size: 14px; }
+  .paper-editor-host :deep(.cm-content) { font-size: 16px; line-height: 1.8; }
+  // The library content wrapper uses width: 0 with flex: 1 in a horizontal row.
+  // Stacking this row collapses the input width when the preview is disabled.
+  .paper-editor-host :deep(.md-editor-content) { flex-direction: row; }
+  .paper-editor-host :deep(.md-editor-catalog-flat) { display: none; }
+  .mobile-article-preview { min-height: 360px; background: var(--color-surface); border-radius: 16px; }
+  .mobile-article-preview :deep(.md-editor-preview) { padding: 16px; font-size: 17px; line-height: 1.9; }
+  .settings-card { padding: 20px 16px; border-radius: 16px; background: var(--color-surface); }
+  .edit-footer-bar { flex-wrap: wrap; gap: 8px; padding: 8px 20px calc(8px + env(safe-area-inset-bottom)); background: var(--color-surface); }
+  .footer-left { width: 100%; flex-direction: row; align-items: center; justify-content: space-between; }
+  .footer-word-count { font-size: 12px; }
+  .footer-hint { display: none; }
+  .footer-settings-link { min-height: 44px; margin: 0; }
+  .footer-actions { display: grid; grid-template-columns: 1fr 1fr; width: 100%; gap: 12px; }
+  .footer-btn { min-height: 48px; border-radius: 12px; }
+}

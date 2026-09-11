@@ -31,6 +31,7 @@
       :name="name"
       :rows="rows"
       :autofocus="autofocus"
+      :aria-label="ariaLabel || placeholder"
       @input="onInput"
       @focus="onFocus"
       @blur="onBlur"
@@ -48,6 +49,7 @@
       :name="name"
       :autocomplete="autocomplete"
       :autofocus="autofocus"
+      :aria-label="ariaLabel || placeholder"
       @input="onInput"
       @focus="onFocus"
       @blur="onBlur"
@@ -67,6 +69,7 @@
       type="button"
       class="ui-input__clear"
       tabindex="-1"
+      aria-label="清空输入"
       @click="onClear"
     >
       <UiIcon name="close" />
@@ -102,6 +105,7 @@ withDefaults(
     rows?: number | string
     showWordLimit?: boolean
     autofocus?: boolean
+    ariaLabel?: string
   }>(),
   {
     modelValue: '',
@@ -120,6 +124,7 @@ withDefaults(
     rows: 3,
     showWordLimit: false,
     autofocus: false,
+    ariaLabel: undefined,
   },
 )
 
@@ -281,5 +286,10 @@ defineExpose({
   &:hover {
     color: var(--color-text-secondary);
   }
+}
+@media (max-width: 767px) {
+  .ui-input { border-radius: var(--mobile-control-radius); }
+  .ui-input__inner { font-size: 16px; }
+  .ui-input__clear { min-width: 44px; min-height: 44px; }
 }
 </style>

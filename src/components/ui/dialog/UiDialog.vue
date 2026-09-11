@@ -10,6 +10,8 @@
           <div
             v-if="modelValue"
             class="ui-dialog"
+            ref="panelRef"
+            tabindex="-1"
             :class="[`ui-dialog--${size}`, panelClass]"
             role="dialog"
             :aria-label="title"
@@ -46,8 +48,9 @@
 </template>
 
 <script setup lang="ts">
-import { computed, watch } from 'vue'
+import { computed, ref } from 'vue'
 import UiIcon from '../icon/UiIcon.vue'
+import { useDialogFocus } from './useDialogFocus'
 
 const props = withDefaults(
   defineProps<{
@@ -80,7 +83,8 @@ const emit = defineEmits<{
   (e: 'close'): void
 }>()
 
-const widthStyle = computed(() => (props.width ? { width: props.width, maxWidth: '92vw' } : undefined))
+const panelRef = ref<HTMLElement | null>(null)
+const widthStyle = computed(() => (props.width ? { width: props.width, maxWidth: 'var(--dialog-max-width, 92vw)' } : undefined))
 
 const close = () => {
   emit('update:modelValue', false)
@@ -90,13 +94,7 @@ const onMaskClick = () => {
   if (props.closeOnClickModal) close()
 }
 
-watch(
-  () => props.modelValue,
-  (open) => {
-    if (!props.lockScroll || typeof document === 'undefined') return
-    document.body.style.overflow = open ? 'hidden' : ''
-  },
-)
+useDialogFocus(() => props.modelValue, panelRef, close, () => props.lockScroll)
 </script>
 
 <style scoped lang="scss">
@@ -139,6 +137,7 @@ watch(
 
 .ui-dialog__header {
   display: flex;
+  flex-shrink: 0;
   align-items: center;
   justify-content: space-between;
   gap: var(--space-md);
@@ -146,6 +145,8 @@ watch(
 }
 
 .ui-dialog__title {
+  min-width: 0;
+  overflow-wrap: anywhere;
   font-size: var(--font-size-lg);
   font-weight: 600;
   color: var(--color-text-primary);
@@ -174,6 +175,7 @@ watch(
 }
 
 .ui-dialog__body {
+  min-height: 0;
   padding: 0 var(--space-lg) var(--space-lg);
   overflow-y: auto;
   color: var(--color-text-primary);
@@ -186,5 +188,13 @@ watch(
   gap: var(--space-sm);
   padding: var(--space-md) var(--space-lg) var(--space-lg);
   border-top: 1px solid var(--color-border-light);
+}
+@media (max-width: 767px) {
+  .ui-dialog__mask { align-items: flex-end; padding: 0; }
+  .ui-dialog { --dialog-max-width: 100vw; width: 100%; max-width: 100%; max-height: 92dvh; border-radius: var(--mobile-sheet-radius) var(--mobile-sheet-radius) 0 0; }
+  .ui-dialog__close { width: 44px; height: 44px; flex-shrink: 0; }
+  .ui-dialog__header { padding: 12px 20px; }
+  .ui-dialog__body { padding: 0 20px 20px; overscroll-behavior: contain; }
+  .ui-dialog__footer { padding: 16px 20px calc(16px + env(safe-area-inset-bottom)); }
 }
 </style>

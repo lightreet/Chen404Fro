@@ -35,3 +35,11 @@ const proxyValue = computed({
   set: (value: boolean) => emit('update:modelValue', value),
 })
 </script>
+<style lang="scss">
+@media (max-width: 767px) {
+  .ui-drawer.el-drawer.btt { border-radius: var(--mobile-sheet-radius) var(--mobile-sheet-radius) 0 0; max-height: 92dvh; }
+  .ui-drawer .el-drawer__header { color: var(--color-text-primary); font-size: 18px; font-weight: 600; padding: 16px 20px 0; margin-bottom: 16px; }
+  .ui-drawer .el-drawer__body { padding: 0 20px calc(20px + env(safe-area-inset-bottom)); }
+  .ui-drawer .el-drawer__close-btn { min-width: 44px; min-height: 44px; }
+}
+</style>

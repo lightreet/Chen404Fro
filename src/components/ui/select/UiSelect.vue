@@ -36,7 +36,7 @@ type SelectValue = string | number | boolean | Array<string | number | boolean> 
  * 短期内部复用 Element Plus 的 el-select（下拉定位 / filterable / 多选已成熟），
  * 对外暴露 options 数组 API；也支持继续用默认插槽传 el-option。
  */
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   modelValue: SelectValue
   options?: UiSelectOption[]
   placeholder?: string
@@ -47,7 +47,7 @@ const props = defineProps<{
   borderless?: boolean
   collapseTags?: boolean
   size?: 'sm' | 'md' | 'lg'
-}>()
+}>(), { size: 'md' })
 
 const emit = defineEmits<{
   (e: 'update:modelValue', v: SelectValue): void
@@ -85,5 +85,9 @@ const onChange = (v: SelectValue) => emit('change', v)
     box-shadow: none !important;
     background: transparent;
   }
+}
+@media (max-width: 767px) {
+  .ui-select :deep(.el-select__wrapper) { border-radius: var(--mobile-control-radius); }
+  .ui-select :deep(.el-select__input) { font-size: 16px; }
 }
 </style>

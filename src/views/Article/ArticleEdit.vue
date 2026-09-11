@@ -22,6 +22,11 @@
     <div class="edit-container">
       <!-- 正文纸媒：标题 → 分割线 → 编辑器（目录由 md-editor catalog 固定在左侧） -->
       <main class="edit-paper">
+        <div v-if="isPhone" class="mobile-editor-tabs" aria-label="文章编辑模式">
+          <button type="button" :aria-pressed="!mobilePreview" :class="{ active: !mobilePreview }" @click="mobilePreview = false">写正文</button>
+          <button type="button" :aria-pressed="mobilePreview" :class="{ active: mobilePreview }" @click="mobilePreview = true">预览</button>
+          <button v-if="!mobilePreview" type="button" class="mobile-editor-more" :aria-label="mobileFormattingExpanded ? '收起格式工具' : '更多格式工具'" :aria-expanded="mobileFormattingExpanded" @click="mobileFormattingExpanded = !mobileFormattingExpanded"><UiIcon name="more" :size="22" /></button>
+        </div>
         <div class="paper-title-block">
           <UiInput
             v-model="form.title"
@@ -35,6 +40,7 @@
         <div class="paper-title-divider"></div>
 
         <div
+          v-show="!isPhone || !mobilePreview"
           ref="paperEditorHostRef"
           class="paper-editor-host"
           @click.capture="onMdToolbarItemClickOpenDropdown"
@@ -43,9 +49,9 @@
             ref="editorRef"
             v-model="form.content"
             :theme="editorTheme"
-            :toolbars="toolbars"
+            :toolbars="isPhone ? mobileToolbars : toolbars"
             :defToolbars="defToolbars"
-            :preview="true"
+            :preview="!isPhone"
             :previewComponent="MdResizablePreview"
             catalog-layout="flat"
             :catalog-max-depth="4"
@@ -55,6 +61,7 @@
             @on-upload-img="onUploadImg"
           />
         </div>
+        <MdPreview v-if="isPhone && mobilePreview" class="mobile-article-preview" :model-value="form.content" :theme="editorTheme" />
       </main>
 
       <!-- 文章设置：始终在正文之后 -->
@@ -270,8 +277,9 @@
 </template>
 
 <script setup lang="ts">
-import { h } from 'vue';
-import { MdEditor } from 'md-editor-v3';
+import { computed, h, ref } from 'vue';
+import { MdEditor, MdPreview } from 'md-editor-v3';
+import { useMobileViewport } from '@/composables/useMobileViewport';
 import 'md-editor-v3/lib/style.css';
 import { ArticleStatus } from '@/types';
 import { UiButton, UiInput, UiSelect, UiCheckbox, UiIcon, UiUpload } from '@/components/ui';
@@ -331,6 +339,12 @@ const {
 } = useArticleEdit();
 
 const defToolbars = h('div', [h(MdEditorEmojiToolbar), h(MdEditorUnorderedListToolbar)]);
+const { isMobile: isPhone } = useMobileViewport();
+const mobilePreview = ref(false);
+const mobileFormattingExpanded = ref(false);
+const mobileToolbars = computed(() => mobileFormattingExpanded.value
+  ? toolbars.filter(item => !['preview', 'htmlPreview', 'catalog'].includes(String(item)))
+  : toolbars.filter(item => ['bold', 'title', 'image', 'link', 1].includes(item)));
 
 /** 仅模板使用；满足 noUnusedLocals（布局测量在 composable 内消费这些 ref） */
 void [

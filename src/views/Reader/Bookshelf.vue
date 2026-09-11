@@ -1,5 +1,8 @@
 <template>
   <DefaultLayout wide-content>
+    <template v-if="isPhone && canImportBooks" #mobile-actions>
+      <button class="app-mobile-icon" type="button" aria-label="导入小说" @click="openImport"><UiIcon name="add" :size="24" /></button>
+    </template>
     <template #hero>
       <PageHero
         title="书架"
@@ -16,8 +19,20 @@
 
     <main id="bookshelf-content" class="bookshelf-page">
       <UiLoadingState :loading="loading" message="正在整理你的书架…">
-        <template v-if="books.length">
-          <div class="library-toolbar">
+        <UiEmpty v-if="loadError" title="书架暂时未能加载" :description="loadError" icon="book">
+          <template #action><UiButton @click="loadBooks">重新加载</UiButton></template>
+        </UiEmpty>
+        <template v-else-if="books.length">
+          <template v-if="isPhone">
+            <UiInput v-model="keyword" clearable prefix-icon="search" placeholder="搜索书名或作者" aria-label="搜索书名或作者" />
+            <button v-if="continueBook && !keyword" type="button" class="continue-reading" @click="openBook(continueBook)">
+              <ReaderBookCover :title="continueBook.title" :format="continueBook.sourceFormat" :url="continueBook.coverUrl" />
+              <span class="continue-reading__copy"><small>继续阅读</small><strong>{{ continueBook.title }}</strong><span>{{ continueBook.currentChapterTitle || `已读 ${formatProgress(continueBook.progressPercent)}` }}</span></span>
+              <UiIcon name="arrow-right" :size="20" />
+            </button>
+            <div class="mobile-library-heading"><h2>全部藏书 <span>{{ filteredBooks.length }}</span></h2><UiSelect v-model="sortBy" :options="sortOptions" aria-label="书架排序" /></div>
+          </template>
+          <div v-else class="library-toolbar">
             <div>
               <h2>全部藏书</h2>
               <span>按阅读习惯整理你的书目</span>
@@ -134,6 +149,7 @@ import ReaderBookCover from '@/components/Reader/ReaderBookCover.vue'
 import ReaderBookDetailDialog from '@/components/Reader/ReaderBookDetailDialog.vue'
 import ReaderImportDialog from '@/components/Reader/ReaderImportDialog.vue'
 import {
+  UiIcon,
   UiButton,
   UiEmpty,
   UiLoadingState,
@@ -142,6 +158,7 @@ import { deleteReaderBook, getReaderBookImportStatus, listReaderBooks } from '@/
 import { confirmDelete, notify } from '@/lib/feedback'
 import { useUserStore } from '@/stores/user'
 import { useSiteConfig } from '@/composables/useSiteConfig'
+import { useMobileViewport } from '@/composables/useMobileViewport'
 import { hasCapability } from '@/utils/permission'
 import type { ReaderBook } from '@/types/reader'
 import { resolveHeroImage, resolveHeroImagePosition } from '@/utils/siteConfig'
@@ -151,6 +168,7 @@ const BOOKSHELF_HERO_IMAGE =
 const BOOKSHELF_HERO_POSITION = '50% 47%'
 
 const router = useRouter()
+const { isMobile: isPhone } = useMobileViewport()
 const userStore = useUserStore()
 const { loadSiteConfig } = useSiteConfig()
 userStore.initUser()
@@ -159,6 +177,7 @@ const heroBgImage = ref(BOOKSHELF_HERO_IMAGE)
 const heroBgPosition = ref(BOOKSHELF_HERO_POSITION)
 const books = ref<ReaderBook[]>([])
 const loading = ref(true)
+const loadError = ref('')
 const importOpen = ref(false)
 const editOpen = ref(false)
 const editingBook = ref<ReaderBook>()
@@ -178,6 +197,9 @@ const pendingImportBooks = computed(() => books.value.filter((book) => (
   book.ownedByCurrentUser && book.status === 'importing'
 )))
 const canImportBooks = computed(() => hasCapability(user.value, 'friend-content:view'))
+const continueBook = computed(() => [...books.value]
+  .filter((book) => book.status === 'ready' && book.lastReadAt && !book.finished)
+  .sort((a, b) => Date.parse(b.lastReadAt!) - Date.parse(a.lastReadAt!))[0])
 const filteredBooks = computed(() => {
   const query = keyword.value.trim().toLowerCase()
   const result = books.value.filter((book) => !query
@@ -193,9 +215,12 @@ const filteredBooks = computed(() => {
 
 const loadBooks = async () => {
   loading.value = true
+  loadError.value = ''
   try {
     books.value = await listReaderBooks()
     scheduleImportPolling(900)
+  } catch {
+    loadError.value = '请检查网络连接后重试。'
   } finally {
     loading.value = false
   }
@@ -562,4 +587,23 @@ onBeforeUnmount(() => {
   }
 }
 
+@media (max-width: 767px) {
+  .bookshelf-page { width: 100%; padding: 12px 0 0; }
+  .mobile-library-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 24px 0 18px; }
+  .mobile-library-heading h2 { margin: 0; font-size: 20px; white-space: nowrap; }
+  .mobile-library-heading h2 span { font-size: 13px; color: var(--color-text-secondary); font-weight: 400; }
+  .mobile-library-heading :deep(.ui-select) { width: 124px; }
+  .book-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px 12px; }
+  .book-card__main { display: flex; flex-direction: column; gap: 10px; min-height: 0; }
+  .book-card :deep(.book-cover) { width: 100%; }
+  .book-card__info { width: 100%; padding: 0; gap: 4px; }
+  .book-card h3 { font-size: 14px; line-height: 1.5; }
+  .book-card__meta, .book-card__description, .book-card__progress { display: none; }
+  .continue-reading { display: flex; align-items: center; gap: 14px; width: 100%; padding: 16px; margin-top: 20px; border: 0; border-radius: var(--mobile-card-radius); background: var(--color-surface); color: var(--color-text-primary); text-align: left; }
+  .continue-reading :deep(.book-cover) { width: 56px; flex: none; padding: 8px; }
+  .continue-reading__copy { display: grid; min-width: 0; flex: 1; gap: 6px; }
+  .continue-reading__copy small { font-size: 12px; color: var(--color-accent-readable); }
+  .continue-reading__copy strong { font-size: 17px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .continue-reading__copy > span { font-size: 13px; color: var(--color-text-secondary); overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+}
 </style>

@@ -16,8 +16,23 @@
     </template>
 
     <div class="home-page">
+      <template v-if="isPhone">
+        <section class="mobile-home-intro">
+          <div><h1>记录技术，也记录生活。</h1><p>{{ heroSubtitle }}</p></div>
+          <RouterLink v-if="owner" :to="`/user/${owner.id}`" :aria-label="`查看${owner.nickname || owner.username}的主页`">
+            <UiAvatar :src="owner.avatar" :size="48">{{ (owner.nickname || owner.username || 'C').slice(0, 1) }}</UiAvatar>
+          </RouterLink>
+        </section>
+        <div class="mobile-home-categories">
+          <div class="mobile-home-categories__scroll" role="group" aria-label="筛选文章分类">
+            <button type="button" :class="{ 'is-active': activeCategory === null }" :aria-pressed="activeCategory === null" @click="selectCategory(null)">全部</button>
+            <button v-for="category in categories" :key="category.id" type="button" :class="{ 'is-active': activeCategory === category.id }" :aria-pressed="activeCategory === category.id" @click="selectCategory(category.id)">{{ category.name }}</button>
+          </div>
+          <RouterLink to="/category" class="app-mobile-icon" aria-label="浏览全部分类"><UiIcon name="grid" :size="24" /></RouterLink>
+        </div>
+      </template>
       <!-- Discovery 标题与搜索同一行 -->
-      <div id="discovery" class="discovery-head">
+      <div v-if="!isPhone" id="discovery" class="discovery-head">
         <div class="jp-section-title section-header discovery-head__title">
           <UiIcon class="jp-section-icon" name="Compass" />
           <h2 class="!m-0">Discovery</h2>
@@ -44,6 +59,7 @@
           :article="article"
           :index="index"
           :cover-priority="index < 2"
+          :mobile-featured="index === 0 && activeCategory === null && !activeKeyword"
           :disable-hover-lift="true"
           :scroll-float-strength="scrollFloatById[String(article.id)] ?? 0"
           :scroll-wheel-phase="scrollWheelPhaseById[String(article.id)] ?? 0"
@@ -58,19 +74,22 @@
       />
 
       <!-- 空状态 -->
-      <div class="empty-state" v-if="!loading && articleList.length === 0">
-        <p>{{ activeKeyword ? '没有找到匹配标题的文章 ~' : '暂无文章，快去写一篇吧 ~' }}</p>
-      </div>
+      <UiLoadingState v-if="loading && !articleList.length" :loading="true" message="正在加载文章…" />
+      <UiEmpty v-else-if="loadError && !articleList.length" title="文章暂时没有加载成功" :description="loadError" icon="warning">
+        <template #action><UiButton @click="loadArticles(1)">重新加载</UiButton></template>
+      </UiEmpty>
+      <UiEmpty v-else-if="!loading && !articleList.length" title="这里还没有文章" description="可以换个分类，或稍后再来看看。" icon="article" />
 
       <!-- 加载更多 -->
-      <div class="load-more" v-if="false && hasMore">
+      <div class="load-more" v-if="articleList.length && (hasMore || loadError)">
+        <p v-if="loadError" role="alert">{{ loadError }}</p>
         <UiButton
           variant="primary"
           :loading="loading"
           @click="loadMore"
-          class="jp-btn-primary !border-0"
+          :class="isPhone ? '' : 'jp-btn-primary !border-0'"
         >
-          {{ loading ? '加载中...' : '加载更多' }}
+          {{ loading ? '加载中...' : loadError ? '重新加载' : '加载更多' }}
         </UiButton>
       </div>
 
@@ -79,7 +98,7 @@
         <span>加载中...</span>
       </div>
 
-      <div class="no-more" v-else-if="articleList.length > 0">
+      <div class="no-more" v-else-if="articleList.length > 0 && !hasMore">
         <UiDivider>
           <span class="no-more-text">已经到底啦 ~</span>
         </UiDivider>
@@ -95,16 +114,24 @@ import DefaultLayout from '@/layouts/DefaultLayout.vue';
 import ArticleCard from '@/components/ArticleCard/ArticleCard.vue';
 import HomeDiscoverySearch from '@/components/HomeDiscoverySearch/HomeDiscoverySearch.vue';
 import PageHero from '@/components/PageHero/PageHero.vue';
-import { UiButton, UiDivider, UiIcon } from '@/components/ui'
+import { UiAvatar, UiButton, UiDivider, UiEmpty, UiIcon, UiLoadingState } from '@/components/ui'
 import { useSiteConfig } from '@/composables/useSiteConfig';
-import type { Article } from '@/types';
-import { getArticles } from '@/api/article';
+import type { Article, Category, SiteOwner } from '@/types';
+import { getArticles, getCategories } from '@/api/article';
+import { getSiteOwner } from '@/api/home';
+import { useMobileViewport } from '@/composables/useMobileViewport';
 import { resolveArticlePageSize, resolveHeroImage, resolveHeroImagePosition, resolveSiteName } from '@/utils/siteConfig';
 
 const DEFAULT_HOME_HERO =
   'https://images.unsplash.com/photo-1522383225653-ed111181a951?w=1920&q=80';
 const DEFAULT_HOME_HERO_POSITION = '50% 58%';
 const DEFAULT_HOME_LEAD = '每一行代码，都是热爱的注脚。';
+const { isMobile: isPhone } = useMobileViewport();
+const categories = ref<Category[]>([]);
+const activeCategory = ref<number | null>(null);
+const owner = ref<SiteOwner | null>(null);
+const loadError = ref('');
+let articleGeneration = 0;
 
 // 文章列表
 const articleList = ref<Article[]>([]);
@@ -194,6 +221,7 @@ function computeScrollWheelState(): {
 }
 
 function scheduleCenterUpdate() {
+  if (isPhone.value) return;
   if (scrollRaf) cancelAnimationFrame(scrollRaf);
   scrollRaf = requestAnimationFrame(() => {
     scrollRaf = 0;
@@ -205,11 +233,12 @@ function scheduleCenterUpdate() {
 
 // 加载文章列表（仅已发布文章，对接后端 GET /api/articles；keyword 仅匹配标题）
 const loadArticles = async (page: number = 1) => {
-  if (loading.value) return;
+  if (loading.value && page !== 1) return;
   if (page !== 1 && loadedPageSet.value.has(page)) return;
 
-  currentPage.value = page;
+  const generation = ++articleGeneration;
   loading.value = true;
+  loadError.value = '';
   try {
     const kw = activeKeyword.value.trim();
     const res = await getArticles({
@@ -217,7 +246,10 @@ const loadArticles = async (page: number = 1) => {
       size: pageSize.value,
       status: 1, // 仅已发布
       ...(kw ? { keyword: kw } : {}),
+      ...(activeCategory.value !== null ? { categoryId: activeCategory.value } : {}),
     });
+    if (generation !== articleGeneration) return;
+    currentPage.value = page;
     const list = res?.list ?? [];
     const totalCount = res?.total ?? 0;
 
@@ -234,16 +266,28 @@ const loadArticles = async (page: number = 1) => {
     const countSuggestsMore = articleList.value.length < totalCount;
     hasMore.value = list.length > 0 && pageFilled && countSuggestsMore;
   } catch (err) {
+    if (generation !== articleGeneration) return;
+    loadError.value = '请检查网络后重试，已加载的文章会保留。';
     console.error('加载文章列表失败', err);
     notify.error('加载文章列表失败，请稍后重试');
-    if (currentPage.value === 1) {
+    if (page === 1) {
       hasMore.value = false;
     }
   } finally {
-    loading.value = false;
-    void nextTick(() => scheduleCenterUpdate());
+    if (generation === articleGeneration) {
+      loading.value = false;
+      void nextTick(() => scheduleCenterUpdate());
+    }
   }
 };
+
+function selectCategory(id: number | null) {
+  if (activeCategory.value === id) return;
+  activeCategory.value = id;
+  articleList.value = [];
+  loadedPageSet.value = new Set();
+  void loadArticles(1);
+}
 
 function handleSearchSubmit(raw: string) {
   const q = raw.trim();
@@ -281,7 +325,7 @@ function setupLoadObserver() {
 
   loadObserver = new IntersectionObserver(
     (entries) => {
-      if (!entries[0]?.isIntersecting) return;
+      if (!entries[0]?.isIntersecting || loadError.value) return;
       loadMore();
     },
     {
@@ -295,6 +339,8 @@ function setupLoadObserver() {
 }
 
 onMounted(() => {
+  void getCategories().then(value => { categories.value = value; }).catch(() => { categories.value = []; });
+  void getSiteOwner().then(value => { owner.value = value; }).catch(() => { owner.value = null; });
   void loadSiteConfig(true).then((config) => {
     heroBgImage.value = resolveHeroImage(config, 'home', DEFAULT_HOME_HERO);
     heroBgPosition.value = resolveHeroImagePosition(config, 'home', DEFAULT_HOME_HERO_POSITION);
@@ -305,6 +351,7 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
+  articleGeneration++;
   window.removeEventListener('scroll', scheduleCenterUpdate);
   window.removeEventListener('resize', scheduleCenterUpdate);
   if (scrollRaf) cancelAnimationFrame(scrollRaf);
@@ -548,5 +595,22 @@ watch(
   [data-theme='dark'] .article-list {
     margin-top: 8px;
   }
+}
+</style>
+
+<style scoped lang="scss">
+@media (max-width: 767px) {
+  .home-page { padding: 12px 0 0; }
+  .mobile-home-intro { display: flex; align-items: center; gap: 12px; margin-bottom: 24px; }
+  .mobile-home-intro > div { min-width: 0; flex: 1; }
+  .mobile-home-intro h1 { font-size: 22px; line-height: 1.5; font-weight: 700; letter-spacing: -.3px; }
+  .mobile-home-intro p { font-size: 13px; color: var(--color-text-secondary); margin-top: 4px; line-height: 1.7; }
+  .mobile-home-categories { display: flex; align-items: center; gap: 4px; margin: 0 -4px 16px; }
+  .mobile-home-categories__scroll { display: flex; align-items: center; gap: 8px; min-width: 0; flex: 1; overflow-x: auto; scrollbar-width: none; }
+  .mobile-home-categories__scroll::-webkit-scrollbar { display: none; }
+  .mobile-home-categories button { flex-shrink: 0; border: 0; border-radius: var(--radius-pill); padding: 0 18px; min-height: 44px; font: inherit; font-size: 14px; color: var(--color-text-secondary); background: var(--color-surface); cursor: pointer; }
+  .mobile-home-categories button.is-active { background: var(--color-text-primary); color: var(--color-surface); font-weight: 600; }
+  .article-list { gap: 12px; padding: 0; perspective: none; }
+  .load-more { margin-top: 20px; padding: 0; }
 }
 </style>

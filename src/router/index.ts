@@ -9,6 +9,31 @@ import { useUserStore } from '@/stores/user';
 
 const routes: RouteRecordRaw[] = [
   {
+    path: '/lyra', name: 'LyraChat',
+    component: () => import('@/views/Discover/LyraChat.vue'),
+    meta: { title: '与 Lyra 聊聊' },
+  },
+  {
+    path: '/search', name: 'ArticleSearch',
+    component: () => import('@/views/Discover/ArticleSearch.vue'),
+    meta: { title: '搜索文章' },
+  },
+  {
+    path: '/discover', name: 'Discover',
+    component: () => import('@/views/Discover/Discover.vue'),
+    meta: { title: '发现' },
+  },
+  {
+    path: '/navigation', name: 'NavigationSettings',
+    component: () => import('@/views/Discover/NavigationSettings.vue'),
+    meta: { title: '自定义底栏' },
+  },
+  {
+    path: '/appearance', name: 'AppearanceSettings',
+    component: () => import('@/views/Discover/AppearanceSettings.vue'),
+    meta: { title: '显示与主题' },
+  },
+  {
     path: '/memory-map/mobile-upload',
     name: 'TravelMobileUpload',
     component: () => import('@/views/MemoryMap/TravelMobileUpload.vue'),
@@ -300,6 +325,11 @@ router.onError((err) => {
 
 // 路由守卫
 router.beforeEach(async (to, _from, next) => {
+  if (to.path.startsWith('/admin') && window.matchMedia('(max-width: 767px)').matches) {
+    notify.info('管理后台请在电脑端访问');
+    next({ path: '/discover', replace: true });
+    return;
+  }
   // 扫码页自带短时凭证，不加载账号、站点资料或触发登录跳转。
   if (to.name === 'TravelMobileUpload') {
     document.title = '手机上传旅行照片 · Chen404';

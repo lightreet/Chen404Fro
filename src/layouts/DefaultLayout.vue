@@ -1,13 +1,20 @@
 <template>
-  <div class="default-layout">
-    <SakuraOverlay :mode="sakuraSceneMode" />
+  <div class="default-layout" :class="{ 'mobile-layout': isPhone, 'mobile-layout--with-nav': isPhone && mobilePrimary, 'mobile-layout--with-player': showMiniPlayer }">
+    <SakuraOverlay v-if="!isPhone" :mode="sakuraSceneMode" />
     <!-- 顶部导航 -->
-    <Header v-if="showHeader" />
+    <AppMobileHeader
+      v-if="isPhone && showHeader"
+      :brand="route.path === '/'"
+      :title="mobileTitle || String(route.meta.title || '')"
+      :back="!mobilePrimary"
+      :back-to="mobileBackTo"
+    ><template v-if="$slots['mobile-actions']" #default><slot name="mobile-actions" /></template></AppMobileHeader>
+    <Header v-else-if="showHeader" />
 
     <!-- 主内容区 -->
     <main class="main-content" :class="{ 'has-no-site-header': !showHeader }">
       <!-- 可选：全宽 Hero 插槽（用于首页等） -->
-      <slot name="hero" />
+      <slot v-if="!isPhone" name="hero" />
       <div class="container" :class="{ 'container--wide': wideContent }">
         <div
           class="content-wrapper"
@@ -31,7 +38,9 @@
     </main>
 
     <!-- 底部 -->
-    <Footer />
+    <AppMobileNav v-if="isPhone && mobilePrimary" />
+    <MobileMiniPlayer v-if="showMiniPlayer" />
+    <Footer v-if="!isPhone" />
   </div>
 </template>
 
@@ -42,6 +51,13 @@ import Header from '@/components/Header/Header.vue';
 import Footer from '@/components/Footer/Footer.vue';
 import SakuraOverlay from '@/components/SakuraOverlay/SakuraOverlay.vue';
 import { useLayoutMobile } from '@/composables/useLayoutMobile';
+import { useMobileViewport } from '@/composables/useMobileViewport';
+import { useMobileNavigationStore } from '@/stores/mobile-navigation';
+import { isMobilePrimaryPage } from '@/modules/mobile/navigation';
+import AppMobileHeader from '@/components/app/AppMobileHeader/AppMobileHeader.vue';
+import AppMobileNav from '@/components/app/AppMobileNav/AppMobileNav.vue';
+import MobileMiniPlayer from '@/components/Music/MobileMiniPlayer.vue';
+import { useMusicPlayerStore } from '@/stores/music-player';
 
 type SakuraSceneMode = 'hero' | 'ambient' | 'reading' | 'off';
 
@@ -72,15 +88,25 @@ interface Props {
   showRightSidebar?: boolean;
   wideContent?: boolean;
   showHeader?: boolean;
+  mobileTitle?: string;
+  mobileBackTo?: string;
 }
 
 withDefaults(defineProps<Props>(), {
   showRightSidebar: false,
   wideContent: false,
   showHeader: true,
+  mobileTitle: '',
+  mobileBackTo: '/discover',
 });
 
 const { isMobile } = useLayoutMobile();
+const { isMobile: isPhone } = useMobileViewport();
+const mobileNavigation = useMobileNavigationStore();
+const musicPlayer = useMusicPlayerStore();
+const mobilePrimary = computed(() => isMobilePrimaryPage(route.path, mobileNavigation.selected,
+  Boolean(route.query.focus || route.query.player || route.query.tab)));
+const showMiniPlayer = computed(() => isPhone.value && mobilePrimary.value && Boolean(musicPlayer.currentTrack));
 </script>
 
 <style scoped lang="scss">
@@ -159,5 +185,14 @@ const { isMobile } = useLayoutMobile();
   .content-wrapper {
     flex-direction: column;
   }
+}
+
+@media (max-width: 767px) {
+  .mobile-layout { background: var(--color-canvas); min-height: 100dvh; }
+  .mobile-layout .main-content { padding: 0 0 24px; overflow: visible; background: none; }
+  .mobile-layout--with-nav .main-content { padding-bottom: calc(var(--mobile-nav-height) + 24px); }
+  .mobile-layout--with-player .main-content { padding-bottom: calc(var(--mobile-nav-height) + 104px); }
+  .mobile-layout .container { width: 100%; padding-inline: var(--mobile-gutter); }
+  .mobile-layout .content-wrapper { gap: 0; }
 }
 </style>

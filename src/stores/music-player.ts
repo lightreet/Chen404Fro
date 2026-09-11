@@ -72,6 +72,8 @@ export const useMusicPlayerStore = defineStore('music-player', () => {
   let persistenceWriteChain: Promise<void> = Promise.resolve()
   let lastProgressPersistTime = 0
   let pendingRestore: { trackId: number; time: number } | null = null
+  let playbackRequest = 0
+  let playbackRequested = false
   audio.volume = Math.min(1, Math.max(0, volume.value))
 
   const currentTrack = computed(() => {
@@ -104,8 +106,11 @@ export const useMusicPlayerStore = defineStore('music-player', () => {
 
   const handleError = () => {
     if (!currentTrack.value) return
-    notify.warning('这首歌暂时播放不了，Lyra 帮你切到下一首')
-    void next()
+    const wasRequested = playbackRequested || playing.value
+    cancelPlayback()
+    // Restoring metadata is not a request to play. Stop on a failed source;
+    // cycling a broken queue would also run forever in single-repeat mode.
+    if (wasRequested) notify.warning('这首歌暂时无法播放，请重试或选择其他歌曲')
   }
 
   const handleVisibilityChange = () => {
@@ -206,7 +211,6 @@ export const useMusicPlayerStore = defineStore('music-player', () => {
   }
 
   async function playTrack(track: MusicTrack, tracks?: MusicTrack[], playlist?: MusicPlaylist | null) {
-    if (currentTrack.value?.id === track.id && playing.value) return
     if (currentTrack.value?.id !== track.id) {
       pendingRestore = null
     }
@@ -242,20 +246,40 @@ export const useMusicPlayerStore = defineStore('music-player', () => {
     }
     if (playing.value && !audio.paused) return
 
-    await audio.play()
-    playing.value = true
-    schedulePersistence()
+    const request = ++playbackRequest
+    playbackRequested = true
+    try {
+      if (audio.error) audio.load()
+      await audio.play()
+      if (request !== playbackRequest) return
+      playbackRequested = false
+      playing.value = true
+      schedulePersistence()
+    } catch (error) {
+      if (request !== playbackRequest) return
+      cancelPlayback()
+      const name = error && typeof error === 'object' && 'name' in error ? error.name : ''
+      if (name === 'AbortError') return
+      notify.warning(name === 'NotAllowedError'
+        ? '浏览器暂未允许播放，请点击播放按钮重试'
+        : '这首歌暂时无法播放，请重试或选择其他歌曲')
+    }
+  }
+
+  function cancelPlayback() {
+    playbackRequest++
+    playbackRequested = false
+    audio.pause()
+    playing.value = false
   }
 
   function pause() {
-    audio.pause()
-    playing.value = false
+    cancelPlayback()
     void flushPersistence()
   }
 
   function stop() {
-    audio.pause()
-    playing.value = false
+    cancelPlayback()
     currentTime.value = 0
     resetSeekState()
     schedulePersistence()
@@ -267,7 +291,12 @@ export const useMusicPlayerStore = defineStore('music-player', () => {
       return
     }
     if (!hasQueue.value) {
-      await loadPublicQueue()
+      try {
+        await loadPublicQueue()
+      } catch {
+        notify.warning('播放队列加载失败，请稍后重试')
+        return
+      }
     }
     await playCurrent()
     schedulePersistence()
@@ -438,8 +467,7 @@ export const useMusicPlayerStore = defineStore('music-player', () => {
 
     const restoredTime = Number.isFinite(value) && value > 0 ? value : 0
     const nextAudioSrc = resolveAudioSrc(track.audioUrl)
-    audio.pause()
-    playing.value = false
+    cancelPlayback()
     pendingRestore = { trackId: track.id, time: restoredTime }
     currentTime.value = restoredTime
     seekPreviewTime.value = restoredTime
@@ -552,8 +580,7 @@ export const useMusicPlayerStore = defineStore('music-player', () => {
   }
 
   function resetPlaybackForScopeChange() {
-    audio.pause()
-    playing.value = false
+    cancelPlayback()
     pendingRestore = null
     currentIndex.value = queue.value.length ? 0 : -1
     currentTime.value = 0

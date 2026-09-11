@@ -1,6 +1,6 @@
 <template>
-  <section class="chat-panel">
-    <header class="chat-panel__header">
+  <section class="chat-panel" :class="{ 'chat-panel--page': pageMode }">
+    <header v-if="!pageMode" class="chat-panel__header">
       <div class="chat-panel__heading">
         <p class="chat-panel__eyebrow">Sakura Notes</p>
         <div class="chat-panel__title-row">
@@ -19,7 +19,7 @@
       </button>
     </header>
 
-    <div ref="messageListRef" class="chat-panel__messages">
+    <div ref="messageListRef" class="chat-panel__messages" role="log" aria-label="与 Lyra 的对话">
       <article
         v-for="message in messages"
         :key="message.id"
@@ -79,12 +79,13 @@
         class="chat-panel__input"
         rows="2"
         maxlength="300"
+        aria-label="消息内容"
         placeholder="想聊聊，还是让我帮你看看这页内容呀？"
-        @keydown.enter.exact.prevent="handleSubmit"
+        @keydown.enter.exact="handleEnter"
       />
 
       <div class="chat-panel__actions">
-        <span class="chat-panel__hint">Enter 发送，Shift + Enter 换行</span>
+        <span class="chat-panel__hint">{{ pageMode ? 'Lyra 的回答仅供参考' : 'Enter 发送，Shift + Enter 换行' }}</span>
 
         <div class="chat-panel__action-buttons">
           <button
@@ -126,6 +127,7 @@ const props = defineProps<{
   messages: Live2DChatPanelMessage[];
   suggestions: string[];
   isLoading: boolean;
+  pageMode?: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -148,6 +150,7 @@ const scrollToBottom = async () => {
 };
 
 const handleSubmit = () => {
+  if (props.isLoading) return;
   const content = draft.value.trim();
   if (!content) {
     return;
@@ -155,9 +158,14 @@ const handleSubmit = () => {
   emit('send', content);
   draft.value = '';
 };
+const handleEnter = (event: KeyboardEvent) => {
+  if (event.isComposing || props.pageMode) return;
+  event.preventDefault();
+  handleSubmit();
+};
 
 watch(
-  () => [props.messages.length, props.isLoading],
+  () => [props.messages.length, props.messages.at(-1)?.content, props.isLoading],
   () => {
     void scrollToBottom();
   },
@@ -663,4 +671,28 @@ watch(
     width: 100%;
   }
 }
+.chat-panel.chat-panel--page {
+  --maid-ink-main: var(--color-text-primary);
+  --maid-ink-soft: var(--color-text-secondary);
+  --maid-assistant-bg: var(--color-surface);
+  --maid-user-bg-start: var(--color-accent-readable);
+  --maid-user-bg-end: var(--color-accent-readable);
+  --maid-accent-strong: var(--color-accent-readable);
+  background: transparent; border: 0; box-shadow: none; backdrop-filter: none; padding: 12px 0 0; gap: 16px;
+}
+.chat-panel--page::before { display: none; }
+.chat-panel--page .chat-panel__messages { flex: 1; min-height: 0; max-height: none; padding: 4px 0; }
+.chat-panel--page .chat-message__body { font-size: 15px; line-height: 1.75; }
+.chat-panel--page .chat-message--assistant .chat-message__body,
+.chat-panel--page .chat-message--assistant .chat-message__body::before { background: var(--color-surface); border-color: var(--color-border-light); }
+.chat-panel--page .chat-message--user .chat-message__body { color: var(--color-on-accent-readable); box-shadow: none; }
+.chat-panel--page .chat-panel__composer { padding: 12px; border-radius: 16px; background: var(--color-surface); border: 1px solid var(--color-border-light); }
+.chat-panel--page .chat-panel__input { font-size: 16px; line-height: 1.6; background: transparent; color: var(--color-text-primary); border-color: var(--color-border-light); box-shadow: none; }
+.chat-panel--page .chat-panel__input::placeholder { font-size: 15px; color: var(--color-text-secondary); }
+.chat-panel--page .chat-panel__input:focus { background: var(--color-surface); border-color: var(--color-accent-readable); box-shadow: 0 0 0 2px var(--color-accent-soft); }
+.chat-panel--page .chat-panel__actions { flex-direction: row; align-items: center; gap: 8px; }
+.chat-panel--page .chat-panel__hint { width: auto; flex: 1; color: var(--color-text-secondary); font-size: 12px; }
+.chat-panel--page .chat-panel__send, .chat-panel--page .chat-panel__stop { min-height: 44px; padding: 8px 16px; border-radius: 12px; font-size: 14px; }
+.chat-panel--page .chat-panel__send { background: var(--color-accent-readable); color: var(--color-on-accent-readable); box-shadow: none; }
+.chat-panel--page .suggestion-pill { min-height: 44px; padding: 10px 14px; background: var(--color-surface); color: var(--color-text-secondary); font-size: 13px; }
 </style>

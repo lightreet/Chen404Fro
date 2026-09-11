@@ -1,5 +1,6 @@
 <template>
-  <DefaultLayout wide-content>
+  <DefaultLayout wide-content :mobile-title="mobilePlayer ? '正在播放' : '音乐馆'" mobile-back-to="/music">
+    <template v-if="isPhone && !mobilePlayer && canCreateTrack" #mobile-actions><button class="app-mobile-icon" type="button" aria-label="上传歌曲" @click="openCreateTrack"><UiIcon name="add" :size="24" /></button></template>
     <template #hero>
       <PageHero
         title="音乐馆"
@@ -14,7 +15,29 @@
       />
     </template>
 
-    <div id="music-content" class="music-page">
+    <MobileMusicExperience
+      v-if="isPhone"
+      v-model:keyword="playlistSearch"
+      v-model:category-id="selectedCategoryId"
+      :tracks="filteredCategoryTracks"
+      :categories="categoryPlaylists"
+      :fullscreen="mobilePlayer"
+      :loading="loading"
+      :error="loadError"
+      :lyrics="activeLyricLines"
+      :can-edit="canEditTrack"
+      @retry="loadMusic"
+      @play="toggleTrackPlayback"
+      @play-queued="playQueuedTrack"
+      @play-all="playCategory(selectedCategory, filteredCategoryTracks)"
+      @toggle="handleTogglePlayback"
+      @previous="handlePreviousTrack"
+      @next="handleNextTrack"
+      @enqueue="enqueueTrack"
+      @edit="openEditTrack"
+      @delete="removeTrack"
+    />
+    <div v-else id="music-content" class="music-page">
       <section class="radio-panel">
         <div class="radio-panel__primary">
           <div class="radio-panel__visual">
@@ -730,7 +753,9 @@
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { notify, confirmDelete } from '@/lib/feedback'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
+import { useMobileViewport } from '@/composables/useMobileViewport'
+import MobileMusicExperience from '@/components/Music/MobileMusicExperience.vue'
 import DefaultLayout from '@/layouts/DefaultLayout.vue'
 import PageHero from '@/components/PageHero/PageHero.vue'
 import { UiButton, UiIcon, UiInput, UiPagination, UiSlider } from '@/components/ui'
@@ -810,6 +835,9 @@ const musicRowPage = ref(1)
 const player = useMusicPlayerStore()
 const userStore = useUserStore()
 const router = useRouter()
+const route = useRoute()
+const { isMobile: isPhone } = useMobileViewport()
+const mobilePlayer = computed(() => isPhone.value && route.query.player === '1')
 const resolvingTrackDurationIds = new Set<number>()
 const spectrumBars = ref<number[]>(createIdleSpectrumBars())
 let spectrumFrameId: number | null = null
@@ -1051,6 +1079,7 @@ function handleSpectrumAudioPause() {
 }
 
 function startSpectrumLoop() {
+  if (isPhone.value) return
   if (spectrumFrameId != null) return
   const drawFrame = () => {
     const runtime = window.__chen404MusicSpectrumRuntime
@@ -1453,9 +1482,9 @@ function hasPlayableCategoryTracks(category: MusicPlaylist | null) {
   return categoryTracks.some((track) => Boolean(track.audioUrl))
 }
 
-async function playCategory(category: MusicPlaylist | null) {
+async function playCategory(category: MusicPlaylist | null, visibleTracks?: MusicTrack[]) {
   const categoryName = category?.name || '全部分类'
-  const categoryTracks = category ? (category.tracks ?? []) : tracks.value
+  const categoryTracks = visibleTracks ?? (category ? (category.tracks ?? []) : tracks.value)
   const playableTracks = categoryTracks.filter((track) => Boolean(track.audioUrl))
   activePlayerPanel.value = 'queue'
 
@@ -1468,6 +1497,7 @@ async function playCategory(category: MusicPlaylist | null) {
   const firstTrack = playableTracks[0]
   await primeSpectrumRuntimeForUserGesture(firstTrack.audioUrl)
   await player.playTrack(firstTrack, playableTracks, category)
+  if (!player.playing || player.currentTrack?.id !== firstTrack.id) return
   queueStatusMessage.value = `正在播放“${categoryName}”，共 ${playableTracks.length} 首`
   notify.success(queueStatusMessage.value)
 }

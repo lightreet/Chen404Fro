@@ -954,4 +954,24 @@ function formatLocation(memory: TravelMemoryLocationListItem) {
     -webkit-line-clamp: 1;
   }
 }
+@media (max-width: 767px) {
+  .user-profile-page { width: 100%; padding-top: 12px; }
+  .profile-banner { border: 0; border-radius: var(--mobile-card-radius); background: var(--color-surface); box-shadow: none; }
+  .profile-banner__backdrop, .profile-banner__mist { display: none; }
+  .profile-banner__content { padding: 20px 16px; gap: 16px; }
+  .profile-banner__avatar-shell { width: 72px; height: 72px; border-radius: 50%; padding: 0; }
+  .profile-banner__avatar { border-radius: 50%; }
+  .profile-banner__main h2 { font-size: 24px; }
+  .profile-banner__bio { font-size: 15px; line-height: 1.8; }
+  .profile-pill { font-size: 12px; }
+  .profile-action { min-height: 44px; border-radius: 12px; font-size: 14px; }
+  .profile-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-block: 20px; }
+  .profile-metric { border-radius: 16px; padding: 16px; background: var(--color-surface); box-shadow: none; }
+  .profile-metric strong { font-size: 20px; }
+  .profile-section { padding: 0; background: none; box-shadow: none; border: 0; }
+  .profile-section__head { flex-direction: row; flex-wrap: wrap; gap: 12px; margin-bottom: 16px; }
+  .profile-eyebrow { display: none; }
+  .profile-activity-title-tab { font-size: 17px; min-height: 48px; }
+  .profile-article { background: var(--color-surface); border: 0; border-radius: 16px; }
+}
 </style>

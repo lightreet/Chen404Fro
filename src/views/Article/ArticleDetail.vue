@@ -1,12 +1,15 @@
 <template>
-  <DefaultLayout>
+  <DefaultLayout mobile-title="文章阅读" mobile-back-to="/">
+    <template v-if="isPhone && article?.canEdit" #mobile-actions>
+      <RouterLink :to="`/article/edit/${article.id}`" class="app-mobile-icon" aria-label="编辑文章"><UiIcon name="edit" :size="22" /></RouterLink>
+    </template>
     <div class="article-detail-page">
       <UiSkeleton v-if="loading" :rows="10" size="lg" />
 
       <div class="article-content-wrapper" v-else-if="article">
         <!-- 文章头部 -->
         <div class="article-header">
-          <div class="header-actions">
+          <div v-if="!isPhone" class="header-actions">
             <UiButton variant="text" icon="arrow-left" @click="$router.back()" class="back-btn">返回</UiButton>
             <UiButton
               v-if="article.canEdit"
@@ -20,6 +23,10 @@
           </div>
 
           <h1 class="article-title">{{ renderedArticleTitle }}</h1>
+          <RouterLink v-if="isPhone && article.author" :to="`/user/${article.author.id}`" class="mobile-article-author">
+            <UiAvatar :src="article.author.avatar" :size="32">{{ (article.author.nickname || article.author.username).slice(0, 1) }}</UiAvatar>
+            <span>{{ article.author.nickname || article.author.username }}</span>
+          </RouterLink>
 
           <div class="article-meta">
             <span class="meta-item">
@@ -36,7 +43,7 @@
             </span>
           </div>
 
-          <div class="article-interactions">
+          <div v-if="!isPhone" class="article-interactions">
             <button
               type="button"
               class="interaction-btn like-btn"
@@ -74,7 +81,7 @@
         <p v-if="renderedSummary" class="article-summary-lead">{{ renderedSummary }}</p>
 
         <!-- 文章内容：优先后端 contentHtml，否则用 MdPreview 渲染 Markdown -->
-        <div class="article-body">
+        <div ref="articleBodyRef" class="article-body">
           <div v-if="article.contentHtml" class="markdown-content" v-html="renderedContentHtml"></div>
           <MdPreview
             v-else
@@ -111,6 +118,7 @@
 
         <!-- 评论区 -->
         <CommentSection
+          id="article-comments"
           :article-id="article.id"
           :can-comment="article.canComment ?? false"
           :comment-policy="article.commentPolicy ?? 0"
@@ -123,6 +131,18 @@
         <UiButton variant="primary" @click="$router.push('/')">返回首页</UiButton>
       </div>
     </div>
+    <nav v-if="isPhone && article" class="mobile-article-actions" aria-label="文章阅读操作">
+      <button type="button" @click="openMobileToc"><UiIcon name="list" :size="22" /><span>目录</span></button>
+      <button type="button" @click="scrollComments"><UiIcon name="comment" :size="22" /><span>评论 {{ article.commentCount || '' }}</span></button>
+      <button type="button" :disabled="favLoading" :aria-pressed="article.favorited" @click="userStore.isLoggedIn ? handleArticleFavorite() : promptLoginForFavorite()"><UiIcon :name="article.favorited ? 'star-filled' : 'star'" :size="22" /><span>{{ article.favorited ? '已收藏' : '收藏' }}</span></button>
+      <button type="button" :disabled="likeLoading" :aria-pressed="article.liked" @click="handleArticleLike"><UiIcon name="heart" :size="22" /><span>{{ article.likeCount || '点赞' }}</span></button>
+    </nav>
+    <UiDrawer v-model="tocOpen" direction="btt" size="75%" title="文章目录" class="mobile-article-toc" @closed="scrollToHeading">
+      <div v-if="tocItems.length" class="mobile-article-toc__list">
+        <button v-for="item in tocItems" :key="item.id" type="button" :class="{ 'is-child': item.level === 'H3' }" @click="selectHeading(item.id)">{{ item.text }}</button>
+      </div>
+      <UiEmpty v-else title="这篇文章没有目录" description="可以继续向下阅读正文。" icon="article" />
+    </UiDrawer>
   </DefaultLayout>
 </template>
 
@@ -133,7 +153,9 @@ import { MdPreview } from 'md-editor-v3';
 import 'md-editor-v3/lib/preview.css';
 import DefaultLayout from '@/layouts/DefaultLayout.vue';
 import CommentSection from '@/components/Comment/CommentSection.vue';
-import { UiButton, UiIcon, UiSkeleton } from '@/components/ui'
+import { UiAvatar, UiButton, UiDrawer, UiEmpty, UiIcon, UiSkeleton } from '@/components/ui'
+import { useMobileViewport } from '@/composables/useMobileViewport';
+import { useAppStore } from '@/stores/app';
 import { useSiteConfig } from '@/composables/useSiteConfig';
 import type { Article } from '@/types';
 import { formatDate } from '@/utils/format';
@@ -146,6 +168,25 @@ import { applySiteMeta, resolveSeoDescription } from '@/utils/siteConfig';
 const route = useRoute();
 const router = useRouter();
 const userStore = useUserStore();
+const appStore = useAppStore();
+const { isMobile: isPhone } = useMobileViewport();
+const articleBodyRef = ref<HTMLElement | null>(null);
+const tocOpen = ref(false);
+const tocItems = ref<Array<{ id: string; text: string; level: string }>>([]);
+let pendingHeading = '';
+function openMobileToc() {
+  tocItems.value = [...(articleBodyRef.value?.querySelectorAll<HTMLElement>('h2, h3') || [])].map((heading, index) => {
+    if (!heading.id) heading.id = `article-section-${index}`;
+    return { id: heading.id, text: heading.textContent?.trim() || '未命名章节', level: heading.tagName };
+  });
+  tocOpen.value = true;
+}
+function selectHeading(id: string) { pendingHeading = id; tocOpen.value = false; }
+function scrollToHeading() {
+  if (pendingHeading) document.getElementById(pendingHeading)?.scrollIntoView({ block: 'start', behavior: 'instant' });
+  pendingHeading = '';
+}
+function scrollComments() { document.getElementById('article-comments')?.scrollIntoView({ block: 'start', behavior: 'smooth' }); }
 const { loadSiteConfig } = useSiteConfig();
 const loading = ref(true);
 const likeLoading = ref(false);
@@ -156,7 +197,7 @@ const nextArticle = ref<{ id: number | string; title: string } | null>(null);
 const errorMessage = ref('文章不存在或已被删除');
 
 const previewTheme = computed(() => {
-  return localStorage.getItem('theme') === 'dark' ? 'dark' : 'light';
+  return appStore.theme;
 });
 
 const renderedArticleTitle = computed(() => {
@@ -605,4 +646,31 @@ watch(
     }
   }
 }
+</style>
+
+<style scoped lang="scss">
+@media (max-width: 767px) {
+  .article-detail-page { padding: 12px 0 calc(72px + env(safe-area-inset-bottom)); }
+  .article-content-wrapper { padding: 0; border: 0; border-radius: 0; background: transparent; box-shadow: none; }
+  .article-header { padding-bottom: 24px; text-align: left; }
+  .article-title { font-size: 26px; line-height: 1.45; text-align: left; margin-bottom: 16px; overflow-wrap: anywhere; }
+  .mobile-article-author { display: flex; align-items: center; gap: 8px; color: var(--color-text-primary); font-size: 14px; margin-bottom: 12px; }
+  .article-meta { justify-content: flex-start; gap: 12px; font-size: 12px; }
+  .article-summary-lead { font-size: 15px; padding: 16px; border-radius: 12px; margin-bottom: 24px; }
+  .article-body { margin-top: 0; }
+  .article-body :deep(.md-editor-preview-wrapper) { padding: 0; }
+  .article-body :deep(.md-editor-preview), .article-body :deep(.markdown-content) { font-size: 16px; line-height: 1.9; overflow-wrap: anywhere; }
+  .article-body :deep(h2), .article-body :deep(h3) { scroll-margin-top: calc(var(--mobile-header-height) + 20px); }
+  .article-body :deep(img), .article-body :deep(video) { max-width: 100%; height: auto; }
+  .article-body :deep(pre) { max-width: 100%; overflow-x: auto; font-size: 13px; }
+  .article-body :deep(table) { display: block; max-width: 100%; overflow-x: auto; }
+  #article-comments { scroll-margin-top: calc(var(--mobile-header-height) + 16px); }
+}
+.mobile-article-actions { position: fixed; inset: auto 0 0; z-index: var(--z-sticky); display: flex; padding: 8px 12px calc(8px + env(safe-area-inset-bottom)); background: var(--color-surface); border-top: 1px solid var(--color-border-light); }
+.mobile-article-actions button { flex: 1; min-height: 48px; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 3px; border: 0; background: none; color: var(--color-text-secondary); font: inherit; font-size: 12px; cursor: pointer; }
+.mobile-article-actions button[aria-pressed='true'] { color: var(--color-accent-readable); }
+.mobile-article-actions button:disabled { opacity: .5; }
+.mobile-article-toc__list { display: flex; flex-direction: column; gap: 4px; }
+.mobile-article-toc__list button { min-height: 48px; text-align: left; padding: 12px 4px; font: inherit; font-size: 15px; border: 0; border-bottom: 1px solid var(--color-border-light); background: none; color: var(--color-text-primary); cursor: pointer; }
+.mobile-article-toc__list .is-child { padding-left: 20px; font-size: 14px; color: var(--color-text-secondary); }
 </style>

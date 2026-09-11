@@ -1,5 +1,8 @@
 <template>
+  <MobileArticleCard v-if="isPhone" :article="article" :featured="mobileFeatured" :manage="mode === 'manage'" :priority="coverPriority"
+    @edit="$emit('edit', $event)" @delete="$emit('delete', $event)" />
   <article
+    v-else
     class="article-card jp-card"
     :data-article-id="String(article.id)"
     :class="[
@@ -265,8 +268,11 @@ import { UiBadge, UiButton, UiIcon } from '@/components/ui'
 import CategoryIcon from '@/components/CategoryIcon/CategoryIcon.vue';
 import type { Article } from '@/types';
 import { formatDate, formatNumber } from '@/utils/format';
+import MobileArticleCard from './MobileArticleCard.vue';
+import { useMobileViewport } from '@/composables/useMobileViewport';
 
 const router = useRouter();
+const { isMobile: isPhone } = useMobileViewport();
 
 defineEmits<{
   (e: 'edit', id: number | string): void;
@@ -276,6 +282,7 @@ defineEmits<{
 interface Props {
   article: Article;
   index?: number;
+  mobileFeatured?: boolean;
   /** 管理态：显示状态与编辑/删除，否则显示阅读更多 */
   mode?: 'home' | 'manage';
   /** 紧凑态：缩小内边距与字号（用于个人中心列表） */
@@ -297,6 +304,7 @@ interface Props {
 
 const props = withDefaults(defineProps<Props>(), {
   index: 0,
+  mobileFeatured: false,
   mode: 'home',
   compact: false,
   profileFeed: false,

@@ -10,7 +10,9 @@
     "gen:sdk": "node ./scripts/generate-openapi-sdk.mjs",
     "maps:build": "node ./scripts/build-china-city-map.mjs",
     "check:element-boundary": "node ./scripts/check-element-boundary.mjs",
-    "test:travel-mobile": "node --test ./scripts/test-travel-mobile-upload.mjs"
+    "test:travel-mobile": "node --test ./scripts/test-travel-mobile-upload.mjs",
+    "test:mobile-navigation": "node --test ./scripts/test-mobile-navigation.mjs",
+    "test:music-playback": "node --test ./scripts/test-music-playback.mjs"
   },
   "dependencies": {
     "@element-plus/icons-vue": "^2.3.2",

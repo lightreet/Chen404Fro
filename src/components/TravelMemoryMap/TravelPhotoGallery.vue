@@ -9,12 +9,12 @@
       class="travel-photos__grid"
       :class="{ 'is-single': photos.length === 1 }"
     >
-      <div class="travel-photos__main">
+      <div class="travel-photos__main" @touchstart.passive="startSwipe" @touchend="endSwipe" @touchcancel="swipeStart = null">
         <button
           type="button"
           class="travel-photos__image"
           :aria-label="`查看大图：${photoTitle(currentPhoto, currentIndex)}`"
-          @click="emit('open', currentPhoto.imageUrl)"
+          @click="openPhoto"
         >
           <img
             :src="currentPhoto.imageUrl"
@@ -94,6 +94,27 @@ import type { TravelMemoryEntry } from '@/types'
 const props = defineProps<{ entries: TravelMemoryEntry[]; title: string }>()
 const emit = defineEmits<{ (event: 'open', imageUrl: string): void }>()
 const currentIndex = ref(0)
+let swipeStart: { x: number; y: number } | null = null
+let lastSwipeAt = 0
+function startSwipe(event: TouchEvent) {
+  const touch = event.touches[0]
+  swipeStart = touch && event.touches.length === 1 ? { x: touch.clientX, y: touch.clientY } : null
+}
+function endSwipe(event: TouchEvent) {
+  const touch = event.changedTouches[0]
+  if (swipeStart && touch) {
+    const dx = touch.clientX - swipeStart.x
+    const dy = touch.clientY - swipeStart.y
+    if (Math.abs(dx) > 48 && Math.abs(dx) > Math.abs(dy) * 1.4) {
+      move(dx < 0 ? 1 : -1)
+      lastSwipeAt = Date.now()
+    }
+  }
+  swipeStart = null
+}
+function openPhoto() {
+  if (currentPhoto.value && Date.now() - lastSwipeAt > 350) emit('open', currentPhoto.value.imageUrl)
+}
 const photos = computed(() =>
   props.entries.filter((entry) => Boolean(entry.imageUrl)),
 )
@@ -290,19 +311,19 @@ watch(
     grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
   }
 }
-@media (max-width: 760px) {
+@media (max-width: 767px) {
   .travel-photos__grid {
     height: auto;
     grid-template-columns: minmax(0, 1fr);
     gap: 10px;
   }
   .travel-photos__main {
-    height: clamp(280px, 80vw, 440px);
+    height: auto;
+    aspect-ratio: 4 / 5;
+    touch-action: pan-y pinch-zoom;
   }
   .travel-photos__previews {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    height: clamp(130px, 37vw, 200px);
-    gap: 10px;
+    display: none;
   }
   .travel-photos__caption {
     inset-inline: 15px;

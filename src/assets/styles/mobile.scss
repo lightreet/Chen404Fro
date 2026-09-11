@@ -1,0 +1,42 @@
+// Shared phone geometry; desktop tokens and page layouts retain their current values.
+:root {
+  --mobile-gutter: 20px;
+  --mobile-header-height: 58px;
+  --mobile-nav-height: calc(64px + env(safe-area-inset-bottom));
+  --mobile-card-radius: 16px;
+  --mobile-control-radius: 12px;
+  --mobile-sheet-radius: 24px;
+}
+
+.app-mobile-icon {
+  width: 44px;
+  min-width: 44px;
+  height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: var(--mobile-control-radius);
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.app-mobile-icon:focus-visible,
+.app-mobile-nav__item:focus-visible {
+  outline: 2px solid var(--color-accent-readable);
+  outline-offset: -2px;
+}
+
+@media (max-width: 767px) {
+  :root {
+    --control-height-sm: 44px;
+    --control-height-md: 48px;
+    --control-height-lg: 48px;
+  }
+  html { scroll-padding-top: calc(var(--mobile-header-height) + 16px); }
+  body { background-image: none; background-attachment: scroll; }
+  input, textarea, select { font-size: 16px; }
+  .el-message-box { max-width: calc(100vw - 32px); }
+  .el-drawer { max-width: 100vw; }
+}

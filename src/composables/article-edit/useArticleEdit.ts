@@ -52,7 +52,7 @@ export function useArticleEdit() {
   const onMdToolbarItemClickOpenDropdown = (e: MouseEvent) => {
     if (e.button !== 0) return;
     const target = e.target;
-    if (!(target instanceof HTMLElement)) return;
+    if (!(target instanceof Element)) return;
     const item = target.closest('.md-editor-toolbar-item');
     if (!(item instanceof HTMLElement)) return;
     if (!paperEditorHostRef.value?.contains(item)) return;

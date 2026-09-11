@@ -1,9 +1,9 @@
 <template>
-  <DefaultLayout>
+  <DefaultLayout :mobile-title="mobileOverview ? '我的' : panelTitle" mobile-back-to="/profile">
     <div class="profile-page">
       <div class="profile-center">
         <div class="profile-shell">
-          <aside class="profile-sidebar">
+          <aside v-if="!isPhone || mobileOverview" class="profile-sidebar">
             <section class="sidebar-user-card">
               <div class="sidebar-user-main">
                 <div class="sidebar-avatar-shell">
@@ -21,7 +21,7 @@
               </div>
             </section>
 
-            <section class="profile-nav-card">
+            <section v-if="!isPhone" class="profile-nav-card">
               <nav class="nav-menu" role="tablist">
                 <button
                   v-for="item in navItems"
@@ -38,9 +38,15 @@
                 </button>
               </nav>
             </section>
+            <div v-if="isPhone" class="mobile-profile-menu">
+              <AppMenuLink v-for="item in navItems" :key="item.index" :to="`/profile?tab=${item.index}`" :icon="item.icon" :label="item.index === 'settings' ? '编辑个人资料' : item.label" />
+              <AppMenuLink to="/navigation" icon="grid" label="自定义底栏" />
+              <AppMenuLink to="/appearance" icon="appearance" label="显示与主题" />
+              <UiButton block variant="secondary" icon="logout" @click="logoutMobile">退出登录</UiButton>
+            </div>
           </aside>
 
-          <section class="profile-main">
+          <section v-if="!isPhone || !mobileOverview" class="profile-main">
             <UiPanel class="info-card content-panel">
               <template #title>
                 <div class="panel-title-inline">
@@ -261,6 +267,8 @@ import { notify } from '@/lib/feedback'
 import { UiPanel, UiAvatar, UiButton, UiDialog, UiForm, UiFormField, UiHintTooltip, UiIcon, UiInput, UiPagination, UiSkeleton, UiSwitch, UiTextarea, UiUpload } from '@/components/ui'
 import { useRoute, useRouter } from 'vue-router'
 import DefaultLayout from '@/layouts/DefaultLayout.vue'
+import AppMenuLink from '@/components/app/AppMenuLink/AppMenuLink.vue'
+import { useMobileViewport } from '@/composables/useMobileViewport'
 import { useUserStore } from '@/stores/user'
 import { changePassword, getUserInfo, updateProfile } from '@/api/auth'
 import { uploadAvatar } from '@/api/upload'
@@ -276,6 +284,9 @@ import ProfileTrustRequestPanel from './ProfileTrustRequestPanel.vue'
 const userStore = useUserStore()
 const router = useRouter()
 const route = useRoute()
+const { isMobile: isPhone } = useMobileViewport()
+const mobileOverview = computed(() => isPhone.value && !route.query.tab)
+const logoutMobile = () => { userStore.logout(); void router.replace('/discover') }
 
 const user = ref(userStore.user)
 type ProfileMenu = 'creations' | 'likes' | 'favorites' | 'settings' | 'trust'
@@ -1072,5 +1083,25 @@ onMounted(() => {
     padding-left: 18px;
     padding-right: 18px;
   }
+}
+@media (max-width: 767px) {
+  .profile-page { padding: 12px 0 0; margin: 0; min-height: 0; background: none; }
+  .profile-center { width: 100%; max-width: 100%; }
+  .profile-shell { display: block; padding: 0; }
+  .profile-sidebar { width: 100%; }
+  .sidebar-user-card { border-radius: var(--mobile-card-radius); padding: 20px 16px; background: var(--color-surface); border: 0; box-shadow: none; }
+  .sidebar-user-main { flex-direction: row; align-items: center; gap: 14px; }
+  .sidebar-name { font-size: 20px; }
+  .sidebar-email { overflow-wrap: anywhere; font-size: 13px; }
+  .mobile-profile-menu { display: grid; gap: 8px; margin-top: 24px; }
+  .mobile-profile-menu > .ui-button { margin-top: 16px; }
+  .info-card { border: 0; background: transparent; box-shadow: none; border-radius: 0; }
+  .info-card :deep(.ui-panel__header) { display: none; }
+  .info-card :deep(.ui-panel__body) { padding: 0; }
+  .article-scroll-area { max-height: none; height: auto; overflow: visible; padding: 0; }
+  .form-grid { grid-template-columns: minmax(0, 1fr); }
+  .avatar-edit-row { flex-direction: row; align-items: center; gap: 16px; }
+  .avatar-edit-title { font-size: 15px; }
+  .profile-edit { padding: 0; }
 }
 </style>

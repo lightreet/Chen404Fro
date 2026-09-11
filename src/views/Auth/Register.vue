@@ -1,5 +1,6 @@
 ﻿<template>
   <div class="auth-page">
+    <AppMobileHeader v-if="isPhone" title="注册" back-to="/login" />
     <div class="auth-container">
       <div class="auth-banner">
         <div class="banner-content">
@@ -143,6 +144,9 @@
 </template>
 
 <script setup lang="ts">
+import AppMobileHeader from '@/components/app/AppMobileHeader/AppMobileHeader.vue';
+import { useMobileViewport } from '@/composables/useMobileViewport';
+const { isMobile: isPhone } = useMobileViewport();
 import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { notify } from '@/lib/feedback';
@@ -775,3 +779,5 @@ onBeforeUnmount(() => {
   }
 }
 </style>
+
+<style scoped lang="scss" src="./Auth.mobile.scss"></style>

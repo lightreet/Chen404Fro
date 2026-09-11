@@ -1,14 +1,15 @@
 <template>
   <div
     class="live2d-container"
-    :class="{ dragging: isDragging, 'is-compact': compactView }"
-    :style="containerStyle"
+    :class="{ dragging: isDragging, 'is-compact': compactView, 'is-chat-page': pageMode }"
+    :style="pageMode ? undefined : containerStyle"
   >
     <Live2DChatPanel
-      v-if="panelVisible"
+      v-if="panelVisible || pageMode"
       class="chat-panel-shell"
-      :class="panelVerticalPlacementClass"
-      :style="panelHorizontalStyle"
+      :class="pageMode ? undefined : panelVerticalPlacementClass"
+      :style="pageMode ? undefined : panelHorizontalStyle"
+      :page-mode="pageMode"
       :messages="chatMessages"
       :suggestions="panelSuggestions"
       :is-loading="isChatLoading"
@@ -27,7 +28,7 @@
       @close="closeMusicPanel"
     />
 
-    <div class="live2d-wrapper" :class="{ 'is-compact': compactView }">
+    <div v-if="!pageMode" class="live2d-wrapper" :class="{ 'is-compact': compactView }">
       <div
         v-if="!compactView && visibleSpeechText"
         class="speech-bubble"
@@ -193,8 +194,10 @@ interface ChatPanelMessage {
 
 const props = withDefaults(defineProps<{
   compactOnly?: boolean;
+  pageMode?: boolean;
 }>(), {
   compactOnly: false,
+  pageMode: false,
 });
 
 const isCompact = ref(window.localStorage.getItem(DISPLAY_MODE_STORAGE_KEY) === 'compact');
@@ -553,8 +556,9 @@ const handleSendMessage = async (content: string) => {
   });
 
   isChatLoading.value = true;
+  const controller = new AbortController();
   try {
-    activeAbortController.value = new AbortController();
+    activeAbortController.value = controller;
     await streamMaidChat(
       {
         sessionId: activeSessionId.value || undefined,
@@ -565,12 +569,12 @@ const handleSendMessage = async (content: string) => {
         stream: true,
       },
       {
-        signal: activeAbortController.value.signal,
+        signal: controller.signal,
         onEvent: applyStreamEvent,
       },
     );
   } catch {
-    if (activeAbortController.value?.signal.aborted) {
+    if (controller.signal.aborted) {
       return;
     }
     removeEmptyAssistantMessage(activeStreamMessageId.value);
@@ -584,8 +588,9 @@ const handleSendMessage = async (content: string) => {
         currentArticleId: currentArticleId.value,
         stream: false,
       });
-      applyChatResponse(response);
+      if (!controller.signal.aborted) applyChatResponse(response);
     } catch {
+      if (controller.signal.aborted) return;
       pushAssistantMessage({
         content: '这次我没接稳，再试一次呀。',
         suggestions: panelSuggestions.value,
@@ -593,8 +598,10 @@ const handleSendMessage = async (content: string) => {
       speechText.value = '这次我没接稳，再试一次呀。';
     }
   } finally {
-    activeAbortController.value = null;
-    isChatLoading.value = false;
+    if (activeAbortController.value === controller) {
+      activeAbortController.value = null;
+      isChatLoading.value = false;
+    }
   }
 };
 
@@ -872,6 +879,10 @@ onMounted(() => {
   restorePosition();
   activeSessionId.value = window.localStorage.getItem(CHAT_SESSION_STORAGE_KEY) ?? '';
   visitorId.value = getOrCreateVisitorId();
+  if (props.pageMode) {
+    openChatPanel();
+    return;
+  }
   window.addEventListener('resize', handleResize);
   speechTimer = window.setInterval(() => {
     if (!panelVisible.value && Math.random() > 0.72) {
@@ -891,6 +902,8 @@ onUnmounted(() => {
 </script>
 
 <style scoped lang="scss">
+.live2d-container.is-chat-page { position: static; width: 100%; height: 100%; }
+.is-chat-page .chat-panel-shell { position: static; width: 100%; height: 100%; max-height: none; }
 .live2d-container {
   position: fixed;
   z-index: 40;

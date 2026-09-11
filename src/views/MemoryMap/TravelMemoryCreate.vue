@@ -24,7 +24,8 @@
       </div>
 
       <div v-else class="travel-memory-editor">
-      <aside class="travel-memory-map-panel">
+      <UiButton v-if="isPhone" class="mobile-location-toggle" icon="location" @click="mobileMapOpen = !mobileMapOpen">{{ mobileMapOpen ? '收起地点地图' : '在地图上选择地点' }}</UiButton>
+      <aside v-show="!isPhone || mobileMapOpen" class="travel-memory-map-panel">
         <div class="map-panel__head">
           <div class="panel-title">
             <span class="panel-title__dot">
@@ -197,7 +198,7 @@
                 </div>
               </div>
             </UiUpload>
-            <TravelPhoneUpload :transfer="mobileUpload" target-key="cover" kind="cover" label="旅行封面"
+            <TravelPhoneUpload v-if="!isPhone" :transfer="mobileUpload" target-key="cover" kind="cover" label="旅行封面"
               :travel-title="form.title" :disabled="saving" />
             <div v-if="pendingMobileCover" class="mobile-cover-review" role="status">
               <img :src="pendingMobileCover.url" alt="手机传入的待确认封面" />
@@ -431,7 +432,7 @@
                           </button>
                         </UiUpload>
                       </div>
-                      <TravelPhoneUpload :transfer="mobileUpload" :target-key="stopKey(stop)" kind="stop"
+                      <TravelPhoneUpload v-if="!isPhone" :transfer="mobileUpload" :target-key="stopKey(stop)" kind="stop"
                         :label="`第 ${stopIndex + 1} 站 · ${stopDisplayTitle(stop, stopIndex)}`"
                         :travel-title="form.title" :disabled="saving" />
                     </div>
@@ -523,6 +524,7 @@ import { reverseGeocodeLocation } from '@/utils/amap'
 import { normalizeCoordinate } from '@/utils/coordinate'
 import { DEFAULT_IMAGE_MAX_MB, validateImageFile } from '@/utils/validation'
 import { applySiteMeta } from '@/utils/siteConfig'
+import { useMobileViewport } from '@/composables/useMobileViewport'
 
 interface TravelMemoryEditorForm extends Omit<CreateTravelMemoryCommand, 'entries' | 'stops'> {
   stops: TravelMemoryStopUpsertCommand[]
@@ -530,6 +532,8 @@ interface TravelMemoryEditorForm extends Omit<CreateTravelMemoryCommand, 'entrie
 
 const route = useRoute()
 const router = useRouter()
+const { isMobile: isPhone } = useMobileViewport()
+const mobileMapOpen = ref(false)
 const { siteConfig, loadSiteConfig } = useSiteConfig()
 const pickerMapRef = ref<InstanceType<typeof TravelMemoryMap> | null>(null)
 
@@ -3041,6 +3045,26 @@ watch(
     flex: 1;
     min-width: 0;
   }
+}
+@media (max-width: 767px) {
+  .travel-memory-create-page { width: calc(100% - 40px); background: var(--color-canvas); padding-bottom: calc(104px + env(safe-area-inset-bottom)); }
+  .travel-memory-create__topbar { background: var(--color-canvas); padding-top: env(safe-area-inset-top); }
+  .travel-memory-create__topbar-inner { display: flex; align-items: center; min-height: 58px; width: 100%; }
+  .travel-memory-create__meta { font-size: 12px; flex-wrap: wrap; gap: 6px; }
+  .travel-memory-editor { gap: 20px; }
+  .mobile-location-toggle { width: 100%; }
+  .editor-card, .travel-memory-map-panel { padding: 16px; border-radius: 16px; background: var(--color-surface); }
+  .section-title strong { font-size: 18px; }
+  .map-panel__canvas { min-height: 340px; }
+  .travel-memory-create__footer { padding: 12px 20px calc(12px + env(safe-area-inset-bottom)); background: var(--color-surface); }
+  .travel-memory-create__footer-inner { width: 100%; gap: 12px; }
+  :deep(.footer-button) { min-height: 48px; border-radius: 12px; }
+  :deep(.footer-button--save) { background: var(--color-accent-readable) !important; color: var(--color-on-accent-readable) !important; border-color: transparent !important; box-shadow: none !important; }
+  :deep(.el-date-editor.el-input), :deep(.el-date-editor.el-input__wrapper) { width: 100%; }
+  .photo-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .mini-photo { min-width: 0; }
+  .stop-actions { flex-wrap: wrap; }
+  .stop-editor-main { padding: 12px; }
 }
 </style>
 

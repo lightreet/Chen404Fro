@@ -42,6 +42,7 @@
       <div class="form-textarea-row">
         <textarea
           ref="textareaRef"
+          aria-label="评论内容"
           v-model="form.content"
           class="textarea-field"
           :placeholder="replyTarget ? `回复 @${replyTarget.authorName}` : '说点什么吧...'"
@@ -639,5 +640,18 @@ onMounted(() => {
 .page-info {
   font-size: 13px;
   color: var(--text-tertiary);
+}
+@media (max-width: 767px) {
+  .comment-section { padding: 0; margin-top: 20px; }
+  .section-title { font-size: 20px; }
+  .title-icon { display: none; }
+  .comment-form-card { padding: 16px; border-radius: 16px; background: var(--color-surface); box-shadow: none; }
+  .textarea-field, .input-field { font-size: 16px; }
+  .guest-fields { flex-direction: column; }
+  .form-footer { flex-wrap: wrap; gap: 8px; }
+  .submit-btn { min-height: 48px; border-radius: 12px; background: var(--color-accent-readable); color: var(--color-on-accent-readable); }
+  .emoji-toggle-btn, .cancel-reply-btn { min-height: 44px; }
+  .comment-login-hint { padding: 20px 16px; border-radius: 16px; background: var(--color-surface); font-size: 15px; }
+  .comment-login-hint a { display: inline-flex; align-items: center; min-height: 44px; }
 }
 </style>

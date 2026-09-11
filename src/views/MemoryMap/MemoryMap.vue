@@ -1,5 +1,5 @@
 <template>
-  <DefaultLayout :wide-content="true">
+  <DefaultLayout :wide-content="true" :mobile-title="mobileDetail ? '旅行详情' : '旅行游记'" mobile-back-to="/memory-map">
     <template #hero>
       <PageHero
         title="旅行纪念地图"
@@ -14,8 +14,8 @@
       />
     </template>
 
-    <div id="memory-map-content" class="memory-map-page">
-      <div v-if="authReady && canManage" class="memory-topline">
+    <div id="memory-map-content" class="memory-map-page" :class="{ 'is-mobile-detail': mobileDetail }">
+      <div v-if="authReady && canManage && !mobileDetail" class="memory-topline">
         <UiButton
           variant="primary"
           size="sm"
@@ -35,7 +35,7 @@
       </section>
 
       <div v-else class="memory-layout">
-        <aside class="memory-rail" aria-label="旅行索引与地图">
+        <aside v-show="!mobileDetail" class="memory-rail" aria-label="旅行索引与地图">
           <section class="memory-index memory-surface">
             <div class="memory-index__heading">
               <p class="memory-eyebrow">TRAVEL INDEX</p>
@@ -124,6 +124,7 @@
         </aside>
 
         <article
+          v-show="!isPhone || mobileDetail || memoryLoadError || (!loading && !locations.length)"
           ref="journalRef"
           class="travel-journal memory-surface"
           :aria-busy="loading || loadingDetail"
@@ -388,6 +389,7 @@
 
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { useMobileViewport } from '@/composables/useMobileViewport'
 import { useRoute, useRouter } from 'vue-router'
 import dayjs from 'dayjs'
 import { storeToRefs } from 'pinia'
@@ -426,6 +428,8 @@ userStore.initUser()
 const { user, isLoggedIn } = storeToRefs(userStore)
 const route = useRoute()
 const router = useRouter()
+const { isMobile: isPhone } = useMobileViewport()
+const mobileDetail = computed(() => isPhone.value && Boolean(route.query.focus))
 
 const defaultHero = resolveFeatureHero(null, 'memory-map')
 const heroBgImage = ref(defaultHero.bgImage)
@@ -843,7 +847,9 @@ function formatLocation(location?: { province?: string; city?: string }) {
 
 function selectLocation(id: number) {
   void handleSelectLocation(id)
-  syncRouteFocus(id)
+  if (isPhone.value && !mobileDetail.value) {
+    void router.push({ query: { ...route.query, focus: String(id) } }).then(() => window.scrollTo({ top: 0, behavior: 'instant' }))
+  } else syncRouteFocus(id)
 }
 
 function syncRouteFocus(id: number) {
@@ -1597,6 +1603,43 @@ watch(
   .memory-trip {
     transition: none;
   }
+}
+</style>
+
+<style scoped lang="scss">
+@media (max-width: 767px) {
+  .memory-map-page { width: 100%; padding: 12px 0 0; }
+  .memory-layout { display: block; min-height: 0; }
+  .memory-rail { gap: 20px; }
+  .memory-index { height: auto; min-height: 0; padding: 0; background: none; box-shadow: none; border: 0; }
+  .memory-index__heading { padding: 0 0 16px; }
+  .memory-index__heading h2, .memory-eyebrow { display: none; }
+  .memory-index__count { margin: 0; font-size: 13px; }
+  .memory-index__list { display: grid; grid-template-columns: minmax(0, 1fr); height: auto; max-height: none; padding: 0; gap: 12px; overflow: visible; }
+  .memory-index__list .memory-trip { width: 100%; padding: 16px; }
+  .memory-trip { border: 0; border-radius: var(--mobile-card-radius); padding: 16px; gap: 14px; min-height: 112px; background: var(--color-surface); }
+  .memory-trip.is-active { background: var(--color-surface); }
+  .memory-trip img, .memory-trip__placeholder { width: 80px; height: 80px; border-radius: 12px; }
+  .memory-trip__copy strong { color: var(--color-text-primary); font-size: 17px; line-height: 1.5; }
+  .memory-trip__copy > span, .memory-trip__copy small { font-size: 12px; line-height: 1.7; }
+  .memory-trip__dot { display: none; }
+  .memory-locator { padding: 16px; border-radius: var(--mobile-card-radius); min-height: 0; background: var(--color-surface); }
+  .memory-locator__map { display: block; height: 220px; min-height: 220px; }
+  .memory-locator__caption { display: flex; }
+  .travel-journal { min-height: 0; padding: 0; border: 0; box-shadow: none; background: transparent; }
+  .travel-journal__head { gap: 12px; margin-bottom: 20px; }
+  .travel-journal__head h2 { font-size: 24px; line-height: 1.45; }
+  .travel-journal__facts { margin-top: 12px; gap: 8px; font-size: 13px; }
+  .travel-journal__tabs { margin-bottom: 16px; gap: 16px; }
+  .stop-tab { min-height: 48px; padding: 12px 0; font-size: 14px; }
+  .stop-tab__index { display: none; }
+  .travel-journal__story { font-size: 15px; }
+  .travel-journal__footer { flex-wrap: wrap; gap: 12px; padding-top: 20px; }
+  .memory-link { min-height: 44px; display: inline-flex; align-items: center; }
+  .memory-expanded-layout { display: flex; flex-direction: column; }
+  .memory-expanded-layout > :first-child { min-height: 48dvh; }
+  .memory-expanded-index { padding: 12px 0 0; }
+  .memory-expanded-index__list { max-height: 180px; }
 }
 </style>
 

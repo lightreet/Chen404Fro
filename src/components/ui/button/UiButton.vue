@@ -221,3 +221,11 @@ const handleClick = (ev: MouseEvent) => {
   }
 }
 </style>
+
+<style scoped lang="scss">
+@media (max-width: 767px) {
+  .ui-button { border-radius: var(--mobile-control-radius); }
+  .ui-button--primary { background: var(--color-accent-readable); color: var(--color-on-accent-readable); border-color: var(--color-accent-readable); }
+  .ui-button--round { border-radius: var(--radius-pill); }
+}
+</style>

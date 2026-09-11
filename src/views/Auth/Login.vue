@@ -1,5 +1,6 @@
 ﻿<template>
   <div class="auth-page">
+    <AppMobileHeader v-if="isPhone" title="登录" back-to="/discover" />
     <div class="auth-container">
       <div class="auth-banner">
         <div class="banner-content">
@@ -110,6 +111,9 @@ import { useUserStore } from '@/stores/user';
 import { resolveSiteLogo, resolveSiteName } from '@/utils/siteConfig';
 import { notifyAuthFailure } from '@/utils/authFeedback';
 import { isValidUsername } from '@/utils/validation';
+import AppMobileHeader from '@/components/app/AppMobileHeader/AppMobileHeader.vue';
+import { useMobileViewport } from '@/composables/useMobileViewport';
+const { isMobile: isPhone } = useMobileViewport();
 
 const router = useRouter();
 const route = useRoute();
@@ -465,3 +469,5 @@ onMounted(() => {
   }
 }
 </style>
+
+<style scoped lang="scss" src="./Auth.mobile.scss"></style>

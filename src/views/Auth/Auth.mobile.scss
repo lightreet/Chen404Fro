@@ -1,0 +1,22 @@
+// Import after each auth view's scoped desktop styles so lazy route CSS cannot
+// restore the desktop flex layout beside the phone header.
+@media (max-width: 767px) {
+  .auth-page { display: block; padding: 0 0 32px; min-height: 100dvh; background: var(--color-canvas); }
+  .auth-page .auth-container { display: block; width: 100%; min-height: 0; max-width: 480px; margin: 0 auto; border: 0; border-radius: 0; box-shadow: none; background: none; }
+  .auth-page .auth-banner { display: none; }
+  .auth-page .auth-form-wrapper { width: 100%; padding: 28px 20px 0; background: transparent; }
+  .auth-page .auth-form { width: 100%; max-width: 100%; }
+  .auth-page .form-title { color: var(--color-text-primary); font-size: 24px; text-align: left; margin-bottom: 28px; }
+  .auth-page .login-mode-switch__item { min-height: 44px; font-size: 15px; }
+  .auth-page .submit-btn { border-radius: var(--mobile-control-radius); background: var(--color-accent-readable); color: var(--color-on-accent-readable); }
+  .auth-page .verify-code-wrapper { flex-direction: row; align-items: center; gap: 8px; }
+  .auth-page .verify-code-wrapper > :first-child { min-width: 0; min-height: var(--control-height-lg); }
+  .auth-page .auth-footer { margin-top: 24px; font-size: 13px; }
+  .auth-page .auth-footer .back-link { display: none; }
+}
+
+@media (max-width: 360px) {
+  .auth-page .verify-code-wrapper { flex-direction: column; align-items: stretch; }
+  .auth-page .verify-code-wrapper > :first-child { flex: none; }
+  .auth-page .verify-code-wrapper :deep(.ui-button) { width: 100%; }
+}

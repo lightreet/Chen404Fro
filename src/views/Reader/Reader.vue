@@ -16,13 +16,19 @@
         <span>{{ currentProgress.toFixed(1) }}%</span>
         <div><i :style="{ width: `${currentProgress}%` }" /></div>
       </div>
-      <div class="reader-toolbar__side reader-toolbar__actions">
+      <div v-if="!isPhone" class="reader-toolbar__side reader-toolbar__actions">
         <UiButton variant="text" icon-only icon="search" aria-label="书内搜索" @click="openSearch" />
         <UiButton variant="text" icon-only icon="menu" aria-label="打开目录" @click="openToc" />
         <UiButton variant="text" icon-only icon="edit" aria-label="打开阅读笔记" @click="openNotes" />
         <UiButton variant="text" icon-only icon="settings" aria-label="阅读设置" @click="settingsOpen = true" />
       </div>
     </header>
+    <nav v-if="isPhone" class="reader-mobile-actions" aria-label="阅读工具">
+      <button type="button" @click="openToc"><UiIcon name="list" :size="22" /><span>目录</span></button>
+      <button type="button" @click="openSearch"><UiIcon name="search" :size="22" /><span>搜索</span></button>
+      <button type="button" @click="openNotes"><UiIcon name="edit" :size="22" /><span>笔记</span></button>
+      <button type="button" @click="settingsOpen = true"><UiIcon name="appearance" :size="22" /><span>设置</span></button>
+    </nav>
 
     <UiLoadingState
       class="reader-loading"
@@ -141,8 +147,8 @@
 
     <UiDrawer
       v-model="tocOpen"
-      direction="ltr"
-      size="min(420px, 92vw)"
+      :direction="isPhone ? 'btt' : 'ltr'"
+      :size="isPhone ? '82dvh' : 'min(420px, 92vw)'"
       title="目录与搜索"
       class="reader-drawer"
       @closed="handleTocDrawerClosed"
@@ -204,8 +210,8 @@
 
     <UiDrawer
       v-model="notesOpen"
-      direction="rtl"
-      size="min(420px, 94vw)"
+      :direction="isPhone ? 'btt' : 'rtl'"
+      :size="isPhone ? '82dvh' : 'min(420px, 94vw)'"
       title="阅读笔记"
       class="reader-drawer reader-notes-drawer"
       @closed="handleNotesDrawerClosed"
@@ -223,8 +229,8 @@
 
     <UiDrawer
       v-model="settingsOpen"
-      direction="rtl"
-      size="min(380px, 92vw)"
+      :direction="isPhone ? 'btt' : 'rtl'"
+      :size="isPhone ? '82dvh' : 'min(380px, 92vw)'"
       title="阅读设置"
       class="reader-drawer"
     >
@@ -393,6 +399,7 @@ import {
 import { useReaderAssetResolver } from '@/composables/reader/useReaderAssetResolver'
 import { confirmDelete, notify } from '@/lib/feedback'
 import { useUserStore } from '@/stores/user'
+import { useMobileViewport } from '@/composables/useMobileViewport'
 import type {
   ReaderBook,
   ReaderChapter,
@@ -439,6 +446,7 @@ interface ReaderTocTreeHandle {
 
 const route = useRoute()
 const router = useRouter()
+const { isMobile: isPhone } = useMobileViewport()
 const userStore = useUserStore()
 userStore.initUser()
 const { isLoggedIn } = storeToRefs(userStore)
@@ -2220,5 +2228,22 @@ onBeforeUnmount(() => {
   .reader-paper {
     transition: none;
   }
+}
+@media (max-width: 767px) {
+  .reader-toolbar { grid-template-columns: minmax(0, 1fr); min-height: calc(58px + env(safe-area-inset-top)); padding: env(safe-area-inset-top) 12px 0; }
+  .reader-toolbar__side { min-width: 0; }
+  .reader-book-title { min-width: 0; }
+  .reader-book-title span { font-size: 17px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+  .reader-book-title small { font-size: 12px; }
+  .reader-shell { padding-top: calc(58px + env(safe-area-inset-top)); padding-bottom: calc(64px + env(safe-area-inset-bottom)); }
+  .reader-paper { padding: 28px 20px 40px; }
+  .chapter-header { margin-bottom: 28px; }
+  .chapter-header h1 { font-size: 24px; line-height: 1.5; }
+  .reader-mobile-actions { position: fixed; bottom: 0; inset-inline: 0; z-index: var(--z-sticky); display: grid; grid-template-columns: repeat(4, 1fr); padding: 8px 16px calc(8px + env(safe-area-inset-bottom)); background: var(--reader-paper); border-top: 1px solid var(--reader-border); }
+  .reader-mobile-actions button { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; min-height: 44px; border: 0; background: transparent; color: var(--reader-text); font-size: 12px; }
+  .resume-notice { bottom: calc(80px + env(safe-area-inset-bottom)); right: 16px; }
+  .chapter-navigation button { min-height: 64px; }
+  .reader-settings h3 { font-size: 17px; }
+  .font-options button { height: 48px; }
 }
 </style>

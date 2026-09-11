@@ -30,6 +30,7 @@ const showAssistant = computed(() => {
   const path = route.path;
   return !(
     path.startsWith('/admin')
+    || path === '/lyra'
     || path.startsWith('/reader/')
     || path === '/bookshelf'
     || path === '/login'
