@@ -87,7 +87,7 @@
             v-else
             :model-value="renderedMarkdownContent"
             :theme="previewTheme"
-            :sanitize="normalizeArticleHeadingHierarchy"
+            :sanitize="sanitizeArticleContent"
             class="markdown-preview"
           />
         </div>
@@ -161,6 +161,7 @@ import type { Article } from '@/types';
 import { formatDate } from '@/utils/format';
 import { getArticleById, getArticleNeighbors, likeArticle, toggleArticleFavorite } from '@/api/article';
 import { renderArticleText } from '@/emoji/renderers/articleRenderer';
+import { sanitizeRichTextHtml } from '@/utils/richText';
 import { useUserStore } from '@/stores/user';
 import { notify } from '@/lib/feedback';
 import { applySiteMeta, resolveSeoDescription } from '@/utils/siteConfig';
@@ -235,8 +236,11 @@ const normalizeArticleHeadingHierarchy = (html: string) => {
   return normalizedOpeningTags.replace(/<\/h1\s*>/gi, '</h2>');
 };
 
+// 标题归一化必须在清理之前完成，避免再次改写已清理的 HTML。
+const sanitizeArticleContent = (html: string) => sanitizeRichTextHtml(normalizeArticleHeadingHierarchy(html));
+
 const renderedContentHtml = computed(() => {
-  return normalizeArticleHeadingHierarchy(
+  return sanitizeArticleContent(
     renderArticleText(article.value?.contentHtml ?? ''),
   );
 });
@@ -454,46 +458,122 @@ watch(
   padding: 14px 18px;
   font-size: 15px;
   line-height: 1.75;
-  color: var(--text-secondary);
-  background: color-mix(in srgb, var(--bg-primary) 92%, var(--text-tertiary));
-  border-left: 3px solid rgba(251, 114, 153, 0.45);
-  border-radius: 0 var(--radius-md) var(--radius-md) 0;
+  color: var(--color-text-primary);
+  background: var(--color-surface-muted);
+  border-radius: var(--radius-md);
 }
 
 .article-body {
+  min-width: 0;
   margin-bottom: 32px;
+  color: var(--color-text-primary);
+  font-family: var(--font-sans);
 
-  :deep(.article-section-heading--from-h1) {
-    font-size: 32px;
-    line-height: 1.6;
-  }
-}
-
-.markdown-content {
-  font-size: 16px;
-  line-height: 1.8;
-  color: var(--text-primary);
-
-  :deep(img) {
-    max-width: min(100%, 720px);
-    height: auto;
-    display: block;
-    margin: 24px auto;
-    border-radius: 12px;
+  // 预览器只负责渲染，阅读页的背景、颜色和字体由站点主题统一提供。
+  :deep(.md-editor) {
+    --md-color: var(--color-text-primary);
+    --md-bk-color: transparent;
+    --md-border-color: var(--color-border);
+    background: transparent;
+    font-family: inherit;
   }
 
-  :deep(h2) {
-    font-size: 24px;
-    margin: 32px 0 16px;
-    padding-bottom: 8px;
-    border-bottom: 2px solid var(--primary);
+  :deep(.md-editor-preview-wrapper) {
+    padding: 0;
   }
 
-  :deep(p) {
-    margin: 16px 0;
+  :deep(.md-editor-preview),
+  :deep(.markdown-content) {
+    --md-theme-color: var(--color-text-primary);
+    --md-theme-heading-color: var(--color-text-primary);
+    --md-theme-link-color: var(--color-accent-readable);
+    --md-theme-link-hover-color: var(--color-accent-readable);
+    --md-theme-border-color: var(--color-border);
+    --md-theme-border-color-inset: var(--color-border);
+    --md-theme-bg-color: transparent;
+    --md-theme-bg-color-inset: var(--color-surface-muted);
+    --md-theme-table-stripe-color: var(--color-surface-muted);
+    --md-theme-color-hover: var(--color-surface-muted);
+    --md-theme-color-hover-inset: var(--color-surface-muted);
+    display: flow-root;
+    padding: 0;
+    background: transparent;
+    color: var(--color-text-primary);
+    font-family: inherit;
+    font-size: 1rem;
+    line-height: 1.85;
+    word-break: normal;
+    overflow-wrap: anywhere;
+
+    // 段间留白用于分段，正文、列表及引文不叠加首行缩进。
+    p {
+      margin-block: 0 1em;
+      line-height: inherit;
+      text-indent: 0;
+    }
+
+    h2, h3, h4, h5, h6 {
+      margin-block: 1.5em .65em;
+      padding: 0;
+      border: 0;
+      color: inherit;
+      font-family: inherit;
+      font-weight: 600;
+      line-height: 1.45;
+      text-indent: 0;
+      text-wrap: balance;
+      scroll-margin-top: 20px;
+    }
+
+    h2 { font-size: 1.5rem; }
+    h3 { font-size: 1.25rem; }
+    h4, h5, h6 { font-size: 1.0625rem; }
+    > :first-child { margin-top: 0; }
+    > :last-child { margin-bottom: 0; }
+
+    ul, ol {
+      margin-block: 0 1em;
+      padding-inline-start: 1.5em;
+      line-height: inherit;
+      text-indent: 0;
+    }
+
+    ul { list-style: disc; }
+    ol { list-style: decimal; }
+    li { margin-block: .35em; line-height: inherit; }
+    li > p { margin-block: .35em; }
+    li > ul, li > ol { margin-block: .35em 0; }
+
+    blockquote {
+      margin-block: 1.25em;
+      padding: .875em 1em;
+      border: 1px solid var(--color-border-light);
+      border-radius: var(--radius-md);
+      background: var(--color-surface-muted);
+      color: var(--color-text-primary);
+      line-height: inherit;
+    }
+
+    blockquote > :last-child { margin-bottom: 0; }
+    a { color: var(--color-accent-readable); line-height: inherit; }
+    a:not(.md-editor-anchor) { display: inline; text-decoration: underline; text-underline-offset: .18em; }
+
+    img, video {
+      max-width: min(100%, 720px);
+      height: auto;
+      display: block;
+      margin: 24px auto;
+      border-radius: var(--radius-lg);
+    }
+
+    pre { max-width: 100%; overflow-x: auto; }
+    code { font-family: var(--font-mono); text-indent: 0; }
+    :not(pre) > code { overflow-wrap: anywhere; }
+    table { display: block; max-width: 100%; overflow-x: auto; margin-block: 1em; border-collapse: collapse; }
+    th, td { padding: .5em .75em; border: 1px solid var(--color-border); }
   }
 
-  :deep(pre) {
+  :deep(.markdown-content pre) {
     background: #282c34;
     border-radius: var(--radius-md);
     padding: 16px;
@@ -539,20 +619,6 @@ watch(
     color: var(--text-secondary);
     margin: 0 0 20px;
     font-size: 16px;
-  }
-}
-
-.markdown-preview {
-  :deep(.md-editor-preview-wrapper) {
-    padding: 0;
-  }
-
-  :deep(img) {
-    max-width: min(100%, 720px);
-    height: auto;
-    display: block;
-    margin: 24px auto;
-    border-radius: 12px;
   }
 }
 
@@ -617,10 +683,6 @@ watch(
       margin-inline: auto;
     }
 
-    :deep(.article-section-heading--from-h1) {
-      font-size: 24px;
-      line-height: 1.4;
-    }
   }
 }
 
@@ -658,17 +720,13 @@ watch(
   .article-meta { justify-content: flex-start; gap: 12px; font-size: 12px; }
   .article-summary-lead { font-size: 15px; padding: 16px; border-radius: 12px; margin-bottom: 24px; }
   .article-body { margin-top: 0; }
-  .article-body :deep(.md-editor-preview-wrapper) { padding: 0; }
-  .article-body :deep(.md-editor-preview), .article-body :deep(.markdown-content) { font-size: 16px; line-height: 1.9; overflow-wrap: anywhere; }
-  .article-body :deep(h2), .article-body :deep(h3) { scroll-margin-top: calc(var(--mobile-header-height) + 20px); }
-  .article-body :deep(img), .article-body :deep(video) { max-width: 100%; height: auto; }
+  .article-body :deep(.md-editor-preview h2), .article-body :deep(.markdown-content h2) { font-size: 1.375rem; }
   .article-body :deep(pre) { max-width: 100%; overflow-x: auto; font-size: 13px; }
-  .article-body :deep(table) { display: block; max-width: 100%; overflow-x: auto; }
   #article-comments { scroll-margin-top: calc(var(--mobile-header-height) + 16px); }
 }
 .mobile-article-actions { position: fixed; inset: auto 0 0; z-index: var(--z-sticky); display: flex; padding: 8px 12px calc(8px + env(safe-area-inset-bottom)); background: var(--color-surface); border-top: 1px solid var(--color-border-light); }
 .mobile-article-actions button { flex: 1; min-height: 48px; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 3px; border: 0; background: none; color: var(--color-text-secondary); font: inherit; font-size: 12px; cursor: pointer; }
-.mobile-article-actions button[aria-pressed='true'] { color: var(--color-accent-readable); }
+.mobile-article-actions button[aria-pressed='true'] { color: var(--color-accent); }
 .mobile-article-actions button:disabled { opacity: .5; }
 .mobile-article-toc__list { display: flex; flex-direction: column; gap: 4px; }
 .mobile-article-toc__list button { min-height: 48px; text-align: left; padding: 12px 4px; font: inherit; font-size: 15px; border: 0; border-bottom: 1px solid var(--color-border-light); background: none; color: var(--color-text-primary); cursor: pointer; }

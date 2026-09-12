@@ -48,6 +48,7 @@
           <MdEditor
             ref="editorRef"
             v-model="form.content"
+            :sanitize="sanitizeRichTextHtml"
             :theme="editorTheme"
             :toolbars="isPhone ? mobileToolbars : toolbars"
             :defToolbars="defToolbars"
@@ -61,7 +62,7 @@
             @on-upload-img="onUploadImg"
           />
         </div>
-        <MdPreview v-if="isPhone && mobilePreview" class="mobile-article-preview" :model-value="form.content" :theme="editorTheme" />
+        <MdPreview v-if="isPhone && mobilePreview" class="mobile-article-preview" :model-value="form.content" :theme="editorTheme" :sanitize="sanitizeRichTextHtml" />
       </main>
 
       <!-- 文章设置：始终在正文之后 -->
@@ -288,6 +289,7 @@ import MdEditorEmojiToolbar from '@/components/Editor/MdEditorEmojiToolbar.vue';
 import MdEditorUnorderedListToolbar from '@/components/Editor/MdEditorUnorderedListToolbar.vue';
 import MdResizablePreview from '@/components/MdResizablePreview/MdResizablePreview.vue';
 import { useArticleEdit } from '@/composables/article-edit/useArticleEdit';
+import { sanitizeRichTextHtml } from '@/utils/richText';
 
 const {
   articleEditRootRef,
