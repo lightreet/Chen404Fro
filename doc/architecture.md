@@ -84,6 +84,7 @@ Route / Page -> Feature -> components/app (App*) -> components/ui (Ui*) -> desig
 ```
 
 - `design/tokens.ts`、`assets/styles/tokens.scss`：语义化 token（`--color-*` / `--radius-*` / `--space-*` / `--motion-*` 等），在不破坏历史 `variables.scss` 的前提下建立稳定命名。
+- `assets/styles/variables.scss` 定义基础浅色与深色色板；`tokens.scss` 提供语义别名，`element-theme.scss` 映射基础库。`mobile.scss` 只承载手机尺寸、触控与安全区适配。当前按用户要求在手机先行试用的「瓷白樱粉」集中于 `assets/styles/themes/porcelain.scss`，由 `main.ts` 在基础样式之后加载，通过主题与控件语义变量生效；桌面沿用基础色板和控件默认值。当前试用范围见 `DESIGN.md`，跨端主题规则与验证要求见根目录 `AGENTS.md`。
 - `assets/styles/element-theme.scss`：把 Element Plus 的 CSS 变量整体映射到项目 token，使所有 `el-*` 组件在不改页面代码的情况下立即去掉「标准后台味」，与品牌语言统一（全站生效）。
 - `components/ui`：与库无关的 primitive，对外只暴露项目自己的 API（短期内部可复用 Element Plus）。
 - `components/app`：承接 Chen404 产品语义与品牌表达，消费 `ui` 层。
@@ -208,11 +209,14 @@ Route / Page -> Feature -> components/app (App*) -> components/ui (Ui*) -> desig
 
 - `useSiteConfig`：加载、缓存和回退站点配置
 - `useLayoutMobile`：布局侧的设备判断
+- `useEmailVerificationCode`：注册与找回密码共享邮箱校验、发送防重与按截止时间计算的冷却计时；离开页面后忽略迟到响应并清理计时器
+- `utils/richText.ts`：文章阅读与编辑预览共用 DOMPurify 清理，去除可执行属性、危险链接及全页样式标记；标题归一化先于清理，图片尺寸、代码和公式保留
 - `composables/article-edit/useArticleEdit.ts`：文章编辑页的页面编排
 - `modules/article-edit/*`：文章编辑提交模型、标签逻辑、常量
 - `modules/category-icons/service.ts`：后台分类图标搜索，走 Iconify 远程检索
 - `modules/feature-access/constants.ts`：受限能力提示文案与 Hero 资源映射，供确实需要整页访问控制的场景复用
 - `modules/music-metadata/metadata.ts`：音乐上传时读取本地音频 metadata、封面与歌词
+- `modules/music/presentation.ts`：音乐馆、随身播放器与编辑器共用歌词解析、当前行定位、时间格式及播放模式展示；多时间标签展开并排序
 
 整体上，前端没有把所有业务数据推入 Pinia，而是保持“页面请求 + 局部状态”为主，仅把真正跨页面共享的状态收敛到 store。
 
@@ -312,6 +316,7 @@ home / category / archive / development-history / memory-map / music / bookshelf
 - 支持纯文本歌词与 LRC 时间轴歌词
 - 管理员可调用 AI 匹配接口补全歌手、专辑、年份、语言、风格、标签、推荐语和心情短句
 - 登录用户的队列、当前歌曲、进度和模式通过 `/music/player/state` 在 Redis 临时保存；游客使用本地状态，音量和模式保留浏览器偏好
+- 手机迷你播放器的队列直接从播放条向上展开，无模态遮罩，不锁定页面；列表按钮可切换展开状态，点外部或按 Escape 收起。顶部删除图标一键清空待播，保留当前歌曲和进度。`MusicQueueContent.vue` 复用待播排序、移除与滚动逻辑，完整播放器通过 `MusicQueueSheet.vue` 承载队列。
 
 ### 7.4 小说书架与阅读器
 
@@ -367,11 +372,13 @@ home / category / archive / development-history / memory-map / music / bookshelf
 - 文件管理
 - 好友申请
 
-文章、旅行地点和音乐的个人记录统一收敛到 `/profile?tab=creations`，再从 `文章 / 旅行 / 音乐` 分栏进入对应编辑器。`/admin` 保留站点级审核、配置与运营能力，不承担个人创作记录管理。
+文章、旅行地点和音乐的个人记录统一收敛到 `/profile?tab=creations&content=articles|travel|music`。桌面在个人中心侧栏的“我的创作”分组直接选择内容类型，右侧首行放分类标题与新增操作，搜索统一位于下一行，文章发布状态筛选与搜索同行，使用 `UiRadioGroup` 的 `line` 变体显示底边选中态；菜单沿用原有卡片与选中样式，文章保留 `ArticleCard` 管理卡片，旅行和音乐保留各自原有封面、状态徽标与记录布局。手机保留“我的创作”入口和页内三项分类切换，筛选、搜索按可用宽度换行。`Profile.vue` 负责外层导航，`ProfileCreationPanel.vue` 负责查询、筛选、分页与权限操作，分类定义共用 `creationNavigation.ts`。旧 `tab=articles` 和 `/studio` 链接继续兼容。`/admin` 保留站点级审核、配置与运营能力，不承担个人创作记录管理。
 
 ## 8. 典型业务流
 
 ### 登录与续期
+
+注册页只填写邮箱、验证码和密码，后端直接将邮箱作为用户名；注册后使用邮箱自动登录。`auth.ts` 的注册请求使用手写封装，避免旧生成 SDK 的必填用户名约束；该封装与 `RegisterParams` 对齐当前注册契约。
 
 1. 登录页调用 `auth.ts`
 2. 未勾选“记住我”时，token、refreshToken 与用户快照写入 `sessionStorage`；勾选后才写入 `localStorage`
@@ -429,7 +436,7 @@ home / category / archive / development-history / memory-map / music / bookshelf
 - `webSearchEnabled` 目前仅是配置项，还没有真实联网工具接入
 - SDK 与手写 API 并存，且当前生成 SDK 明显落后于后端，后续需重新生成并继续收敛
 - 音乐馆缺播放统计、用户互动和 Media Session；游客/登录用户跨会话播放现场已实现
-- 前端没有统一 `test` 脚本；手动执行现有测试时有 2 个音乐布局契约失败项
+- `npm test` 执行脚本级回归，覆盖认证工作流、音乐播放与歌词解析、手机导航和旅行上传；界面效果仍需结合浏览器验证
 - 文件管理缺批量治理操作闭环
 - 旅行纪念地图仍需持续关注移动端性能和地图数据体积
 - 旅行纪念地图核心文件体量仍然偏大，后续宜继续拆分 `MemoryMap.vue`、`TravelMemoryCreate.vue`、`TravelMemoryMap.vue`

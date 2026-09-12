@@ -34,7 +34,7 @@ jobs:
         run: npm ci
 
       - name: Build
-        run: npm run build
+        run: npm run check:element-boundary && npm test && npm run build
 
       - name: Package dist.zip
         shell: bash
