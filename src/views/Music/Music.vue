@@ -768,6 +768,7 @@ import {
   saveMusicPlaylistTracks,
 } from '@/api/music'
 import { useMusicPlayerStore } from '@/stores/music-player'
+import { parseLrcLines as parseLrc, formatMusicTime as formatTime, currentLyricIndex } from '@/modules/music/presentation'
 import { useSiteConfig } from '@/composables/useSiteConfig'
 import { resolveFeatureHero } from '@/modules/feature-access/constants'
 import { useUserStore } from '@/stores/user'
@@ -928,10 +929,7 @@ const activeLyricLines = computed<LyricLine[]>(() => {
   }
   const lines = parseLrc(lyrics)
   if (!lines.length) return []
-  let currentIndex = 0
-  for (let i = 0; i < lines.length; i++) {
-    if ((lines[i].time ?? 0) <= player.playbackTime) currentIndex = i
-  }
+  const currentIndex = currentLyricIndex(lines, player.playbackTime)
   return lines.map((line, index) => ({
     ...line,
     current: index === currentIndex,
@@ -986,10 +984,7 @@ function getTrackLyricPreview(track: MusicTrack): LyricLine[] {
     }))
   }
 
-  let currentIndex = 0
-  for (let i = 0; i < lines.length; i++) {
-    if ((lines[i].time ?? 0) <= player.playbackTime) currentIndex = i
-  }
+  const currentIndex = currentLyricIndex(lines, player.playbackTime)
 
   return lines.map((line, index) => ({
     ...line,
@@ -1831,26 +1826,6 @@ function statusLabel(status: MusicTrackStatus) {
   return '草稿'
 }
 
-function parseLrc(input: string): LyricLine[] {
-  return input.split('\n').map((raw, index) => {
-    const match = raw.match(/^\[(\d{1,2}):(\d{2})(?:\.(\d{1,3}))?](.*)$/)
-    if (!match) return null
-    const minute = Number(match[1])
-    const second = Number(match[2])
-    const ms = Number((match[3] || '0').padEnd(3, '0'))
-    const text = match[4].trim()
-    if (!text) return null
-    return { key: `lrc-${index}`, time: minute * 60 + second + ms / 1000, text, current: false }
-  }).filter(Boolean) as LyricLine[]
-}
-
-function formatTime(value: number) {
-  if (!Number.isFinite(value) || value <= 0) return '00:00'
-  const minute = Math.floor(value / 60)
-  const second = Math.floor(value % 60)
-  return `${String(minute).padStart(2, '0')}:${String(second).padStart(2, '0')}`
-}
-
 function handlePlaylistSearchSubmit() {
   playlistSearch.value = playlistSearch.value.trim()
 }
@@ -1884,23 +1859,11 @@ function handlePlaylistSearchSubmit() {
   align-items: stretch;
   gap: clamp(22px, 2.4vw, 32px);
   padding: clamp(18px, 2vw, 24px);
-  border-radius: 30px;
-  border: 1px solid rgba(255, 220, 232, 0.66);
-  background:
-    radial-gradient(circle at 8% 8%, rgba(255, 209, 226, 0.32), transparent 34%),
-    radial-gradient(circle at 92% 12%, rgba(199, 189, 217, 0.24), transparent 32%),
-    linear-gradient(145deg, rgba(255, 255, 255, 0.94), rgba(255, 248, 252, 0.82));
-  box-shadow: 0 22px 44px rgba(219, 174, 191, 0.14), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-primary);
+  background: var(--color-surface);
   overflow: hidden;
-}
-
-.radio-panel::before {
-  content: '';
-  position: absolute;
-  inset: 18px;
-  border-radius: 24px;
-  border: 1px solid rgba(255, 255, 255, 0.58);
-  pointer-events: none;
 }
 
 .radio-panel__primary {
@@ -1933,10 +1896,7 @@ function handlePlaylistSearchSubmit() {
   border-radius: 50%;
   display: grid;
   place-items: center;
-  background: linear-gradient(145deg, rgba(255, 248, 252, 0.92), rgba(239, 232, 245, 0.82));
-  box-shadow:
-    0 24px 42px rgba(164, 126, 148, 0.16),
-    inset 0 1px 0 rgba(255, 255, 255, 0.84);
+  background: var(--color-surface-muted);
 }
 
 .record-disc {
@@ -2105,10 +2065,9 @@ function handlePlaylistSearchSubmit() {
   flex: 0 0 auto;
   max-width: 92px;
   padding: 5px 9px;
-  border: 1px solid rgba(239, 216, 226, 0.72);
   border-radius: 999px;
-  color: #9a6b7e;
-  background: rgba(255, 250, 252, 0.74);
+  color: var(--color-text-secondary);
+  background: var(--color-surface-muted);
   font-size: 11px;
   line-height: 1;
   text-overflow: ellipsis;
@@ -2182,6 +2141,11 @@ function handlePlaylistSearchSubmit() {
 .radio-panel__recommendation {
   max-width: 48ch;
   margin-top: 0;
+  color: var(--color-text-secondary);
+}
+
+.radio-panel h2 {
+  color: var(--color-text-primary);
 }
 
 .player-controls {
@@ -2199,25 +2163,33 @@ function handlePlaylistSearchSubmit() {
   border-radius: 999px;
   display: grid;
   place-items: center;
-  color: #8a7580;
-  background: rgba(255, 255, 255, 0.78);
+  color: var(--color-text-secondary);
+  background: var(--color-surface-muted);
   cursor: pointer;
-  box-shadow: inset 0 0 0 1px rgba(238, 218, 226, 0.82);
   transition: transform 0.2s ease, color 0.2s ease, background 0.2s ease;
 }
 
 .control-btn:hover {
   transform: translateY(-1px);
-  color: #fb7299;
-  background: rgba(255, 250, 252, 0.96);
+  color: var(--color-accent-readable);
+  background: var(--color-accent-soft);
 }
 
 .control-btn--primary {
   width: 52px;
   height: 52px;
-  color: #fff;
-  background: linear-gradient(135deg, #fb7299, #ff95b7);
-  box-shadow: 0 14px 26px rgba(251, 114, 153, 0.28);
+  color: var(--color-on-accent-readable);
+  background: var(--color-accent-readable);
+}
+
+.control-btn--primary:hover {
+  color: var(--color-on-accent-readable);
+  background: var(--color-accent-strong);
+}
+
+.control-btn:focus-visible {
+  outline: 2px solid var(--color-accent-readable);
+  outline-offset: 3px;
 }
 
 .audio-visualizer {
@@ -2264,7 +2236,7 @@ function handlePlaylistSearchSubmit() {
   grid-template-columns: auto minmax(0, 1fr) auto;
   gap: 10px;
   align-items: center;
-  color: #a3919b;
+  color: var(--color-text-secondary);
   font-size: 12px;
 }
 
@@ -2274,7 +2246,7 @@ function handlePlaylistSearchSubmit() {
   gap: 10px;
   align-items: center;
   justify-content: center;
-  color: #9b8792;
+  color: var(--color-text-secondary);
   font-size: 12px;
 }
 
@@ -2304,12 +2276,11 @@ function handlePlaylistSearchSubmit() {
 .player-context-panel__header {
   min-height: 48px;
   padding: 7px 10px 7px 12px;
-  border-bottom: 1px solid rgba(241, 222, 230, 0.78);
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  background: rgba(255, 251, 253, 0.9);
+  background: transparent;
 }
 
 .player-context-tabs,
@@ -2338,7 +2309,7 @@ function handlePlaylistSearchSubmit() {
   display: inline-flex;
   align-items: center;
   gap: 7px;
-  color: #786a72;
+  color: var(--color-text-secondary);
   background: transparent;
   font-size: 13px;
   font-weight: 700;
@@ -2348,26 +2319,25 @@ function handlePlaylistSearchSubmit() {
   min-width: 20px;
   padding: 2px 6px;
   border-radius: 999px;
-  color: #9b7485;
-  background: rgba(244, 233, 239, 0.9);
+  color: var(--color-text-secondary);
+  background: var(--color-surface-muted);
   font-size: 11px;
   line-height: 1.2;
 }
 
 .player-context-tabs button:hover,
 .player-context-tabs button:focus-visible {
-  color: #d95683;
-  outline: none;
+  color: var(--color-accent-readable);
 }
 
 .player-context-tabs button.is-active {
-  color: #d95683;
-  background: rgba(255, 238, 245, 0.92);
+  color: var(--color-accent-readable);
+  background: var(--color-accent-soft);
 }
 
 .player-context-tabs button.is-active span {
-  color: #d95683;
-  background: rgba(255, 255, 255, 0.82);
+  color: inherit;
+  background: transparent;
 }
 
 .player-context-panel__tools {
@@ -2378,7 +2348,7 @@ function handlePlaylistSearchSubmit() {
   gap: 2px;
   padding: 2px;
   border-radius: 9px;
-  background: rgba(246, 239, 243, 0.9);
+  background: var(--color-surface-muted);
 }
 
 .player-context-panel__mode button {
@@ -2387,39 +2357,44 @@ function handlePlaylistSearchSubmit() {
   border-radius: 7px;
   display: grid;
   place-items: center;
-  color: #96838d;
+  color: var(--color-text-secondary);
   background: transparent;
 }
 
 .player-context-panel__mode button:hover,
 .player-context-panel__mode button:focus-visible,
 .player-context-panel__mode button.is-active {
-  color: #d95683;
-  background: #fff;
-  outline: none;
+  color: var(--color-accent-readable);
+  background: var(--color-accent-soft);
 }
 
 .player-context-panel__clear {
   min-height: 32px;
   padding: 0 8px;
-  color: #8a7580;
+  color: var(--color-text-secondary);
   background: transparent;
   font-size: 12px;
 }
 
 .player-context-panel__clear:hover,
 .player-context-panel__clear:focus-visible {
-  color: #d95683;
-  outline: none;
+  color: var(--color-accent-readable);
   text-decoration: underline;
   text-underline-offset: 3px;
+}
+
+.player-context-tabs button:focus-visible,
+.player-context-panel__mode button:focus-visible,
+.player-context-panel__clear:focus-visible {
+  outline: 2px solid var(--color-accent-readable);
+  outline-offset: 2px;
 }
 
 .player-context-panel__body {
   min-height: 0;
   overflow: auto;
   overscroll-behavior: contain;
-  scrollbar-color: rgba(216, 138, 168, 0.42) rgba(248, 242, 245, 0.72);
+  scrollbar-color: var(--color-border-strong) transparent;
   scrollbar-width: thin;
 }
 
@@ -2429,12 +2404,12 @@ function handlePlaylistSearchSubmit() {
 
 .player-context-panel__body::-webkit-scrollbar-thumb {
   border-radius: 999px;
-  background: rgba(216, 138, 168, 0.4);
+  background: var(--color-border-strong);
 }
 
 .player-context-panel__body::-webkit-scrollbar-track {
   border-radius: 999px;
-  background: rgba(248, 242, 245, 0.72);
+  background: transparent;
 }
 
 .lyric-window {
@@ -2442,24 +2417,24 @@ function handlePlaylistSearchSubmit() {
   text-align: center;
   scrollbar-gutter: stable both-edges;
   scroll-behavior: smooth;
-  background: linear-gradient(180deg, rgba(255, 252, 253, 0.82), rgba(255, 247, 251, 0.68));
+  background: transparent;
 }
 
 .lyric-window p {
   max-width: 36ch;
   margin: 0 auto;
-  color: #8d7b84;
+  color: var(--color-text-secondary);
   line-height: 1.9;
 }
 
 .lyric-window p.is-current {
-  color: #e44d78;
-  font-weight: 800;
+  color: var(--color-accent-readable);
+  font-weight: 700;
 }
 
 .queue-window {
   padding: 10px 12px 16px;
-  background: rgba(255, 253, 254, 0.82);
+  background: transparent;
   scrollbar-gutter: stable;
 }
 
@@ -2474,7 +2449,7 @@ function handlePlaylistSearchSubmit() {
 
 .queue-window__label {
   padding: 4px 8px;
-  color: #8b7882;
+  color: var(--color-text-secondary);
   font-size: 12px;
   font-weight: 750;
 }
@@ -2490,12 +2465,12 @@ function handlePlaylistSearchSubmit() {
 
 .queue-track:hover,
 .queue-track:focus-within {
-  background: rgba(255, 243, 248, 0.88);
+  background: var(--color-surface-muted);
 }
 
 .queue-track.is-current {
   grid-template-columns: minmax(0, 1fr);
-  background: rgba(255, 238, 245, 0.92);
+  background: var(--color-accent-soft);
 }
 
 .queue-track__main {
@@ -2517,19 +2492,19 @@ function handlePlaylistSearchSubmit() {
 .queue-track__main:focus-visible,
 .queue-track__remove:focus-visible {
   border-radius: 8px;
-  outline: 2px solid rgba(251, 114, 153, 0.48);
+  outline: 2px solid var(--color-accent-readable);
   outline-offset: -2px;
 }
 
 .queue-track__state {
-  color: #a08c96;
+  color: var(--color-text-secondary);
   font-size: 12px;
   font-variant-numeric: tabular-nums;
   text-align: center;
 }
 
 .queue-track.is-current .queue-track__state {
-  color: #e44d78;
+  color: var(--color-accent-readable);
 }
 
 .queue-track__cover {
@@ -2539,8 +2514,8 @@ function handlePlaylistSearchSubmit() {
   border-radius: 8px;
   display: grid;
   place-items: center;
-  color: #c66e90;
-  background: rgba(248, 234, 241, 0.96);
+  color: var(--color-accent-readable);
+  background: var(--color-surface-muted);
 }
 
 .queue-track__cover img {
@@ -2562,18 +2537,18 @@ function handlePlaylistSearchSubmit() {
 }
 
 .queue-track__copy strong {
-  color: #4f3c46;
+  color: var(--color-text-primary);
   font-size: 13px;
 }
 
 .queue-track__copy small {
   margin-top: 3px;
-  color: #8a7a84;
+  color: var(--color-text-secondary);
   font-size: 12px;
 }
 
 .queue-track__duration {
-  color: #8a7a84;
+  color: var(--color-text-secondary);
   font-size: 12px;
   font-variant-numeric: tabular-nums;
 }
@@ -2585,7 +2560,7 @@ function handlePlaylistSearchSubmit() {
   border-radius: 8px;
   display: grid;
   place-items: center;
-  color: #9b8792;
+  color: var(--color-text-secondary);
   background: transparent;
   cursor: pointer;
   opacity: 0;
@@ -2598,8 +2573,8 @@ function handlePlaylistSearchSubmit() {
 }
 
 .queue-track__remove:hover {
-  color: #d95683;
-  background: rgba(255, 255, 255, 0.92);
+  color: var(--color-accent-readable);
+  background: var(--color-surface);
 }
 
 .queue-window__empty,
@@ -2609,17 +2584,17 @@ function handlePlaylistSearchSubmit() {
   place-items: center;
   align-content: center;
   gap: 8px;
-  color: #8a7a84;
+  color: var(--color-text-secondary);
   text-align: center;
 }
 
 .queue-window__empty > .ui-icon {
-  color: #d984a5;
+  color: var(--color-accent-readable);
   font-size: 26px;
 }
 
 .queue-window__empty strong {
-  color: #5c4953;
+  color: var(--color-text-primary);
   font-size: 14px;
 }
 
@@ -2633,7 +2608,7 @@ function handlePlaylistSearchSubmit() {
 }
 
 .queue-window__finished span {
-  color: #6f5c66;
+  color: var(--color-text-primary);
   font-size: 13px;
   font-weight: 700;
 }
@@ -4830,11 +4805,6 @@ function handlePlaylistSearchSubmit() {
 @media (min-width: 1180px) {
   .radio-panel {
     border-radius: 28px;
-  }
-
-  .radio-panel::before {
-    inset: 16px;
-    border-radius: 22px;
   }
 
   .radio-panel__cover {

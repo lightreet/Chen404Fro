@@ -167,10 +167,11 @@ export const useMusicPlayerStore = defineStore('music-player', () => {
     return 'added'
   }
 
-  /** 只调整待播区域，正在播放的歌曲和进度保持不变。 */
-  function moveUpcoming(trackId: number, direction: -1 | 1) {
+  /** 按相对位移调整待播歌曲，支持一次跨多首移动，不改变当前歌曲或进度。 */
+  function moveUpcoming(trackId: number, offset: number) {
+    if (!Number.isInteger(offset) || offset === 0) return false
     const index = queue.value.findIndex((item) => item.id === trackId)
-    const target = index + direction
+    const target = index + offset
     if (index <= currentIndex.value || target <= currentIndex.value || target >= queue.value.length) {
       return false
     }

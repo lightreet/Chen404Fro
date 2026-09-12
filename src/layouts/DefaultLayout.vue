@@ -104,7 +104,7 @@ const { isMobile } = useLayoutMobile();
 const { isMobile: isPhone } = useMobileViewport();
 const mobileNavigation = useMobileNavigationStore();
 const musicPlayer = useMusicPlayerStore();
-const miniPlayerHeight = ref(160);
+const miniPlayerHeight = ref(58);
 const mobilePrimary = computed(() => isMobilePrimaryPage(route.path, mobileNavigation.selected,
   Boolean(route.query.focus || route.query.player || route.query.tab)));
 const showMiniPlayer = computed(() => isPhone.value && route.path === '/music'
@@ -166,14 +166,14 @@ const showMiniPlayer = computed(() => isPhone.value && route.path === '/music'
 }
 
 [data-theme='dark'] .main-content {
-  background:
+  background: var(--page-content-background,
     linear-gradient(
       180deg,
       rgba(33, 29, 38, 0) 0%,
       rgba(33, 29, 38, 0.1) 12%,
       rgba(33, 29, 38, 0.76) 42%,
       rgba(31, 27, 36, 0.98) 100%
-    );
+    ));
 }
 
 // 响应式
@@ -190,8 +190,8 @@ const showMiniPlayer = computed(() => isPhone.value && route.path === '/music'
 }
 
 @media (max-width: 767px) {
-  .mobile-layout { background: var(--color-canvas); min-height: 100dvh; }
-  .mobile-layout .main-content { padding: 0 0 24px; overflow: visible; background: none; }
+  .mobile-layout { min-height: 100dvh; }
+  .mobile-layout .main-content { padding: 0 0 24px; overflow: visible; }
   .mobile-layout--with-nav .main-content { padding-bottom: calc(var(--mobile-nav-height) + 24px); }
   .mobile-layout--with-player .main-content { padding-bottom: calc(var(--mobile-player-bottom) + var(--mobile-player-height) + 24px); }
   .mobile-layout .container { width: 100%; padding-inline: var(--mobile-gutter); }

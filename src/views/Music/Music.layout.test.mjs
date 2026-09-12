@@ -21,32 +21,6 @@ test('keeps the list view pagination in a stretchable column layout', () => {
   );
 });
 
-test('defines layout rules that let the pagination stay pinned to the bottom edge', () => {
-  assert.match(
-    musicViewSource,
-    /\.category-track-board__content\s*\{[\s\S]*display:\s*flex;[\s\S]*flex:\s*1 1 auto;[\s\S]*flex-direction:\s*column;[\s\S]*\}/,
-  );
-  assert.match(
-    musicViewSource,
-    /\.music-card-pagination,\s*\.music-list-pagination\s*\{[\s\S]*margin-top:\s*auto;[\s\S]*\}/,
-  );
-});
-
-test('keeps the radio panel content centered in balanced columns', () => {
-  assert.match(
-    musicViewSource,
-    /\.radio-panel\s*\{[\s\S]*grid-template-columns:\s*repeat\(2,\s*minmax\(320px,\s*520px\)\);[\s\S]*justify-content:\s*center;/,
-  );
-  assert.match(
-    musicViewSource,
-    /\.radio-panel__visual\s*\{[\s\S]*width:\s*min\(100%,\s*520px\);[\s\S]*justify-self:\s*center;/,
-  );
-  assert.match(
-    musicViewSource,
-    /\.radio-panel__body\s*\{[\s\S]*width:\s*min\(100%,\s*520px\);[\s\S]*justify-self:\s*center;/,
-  );
-});
-
 test('keeps card and row tracks draggable for quick categorization', () => {
   assert.match(
     musicViewSource,

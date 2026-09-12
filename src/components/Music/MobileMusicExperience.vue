@@ -8,27 +8,28 @@
       <template v-else-if="fullscreen">
         <div v-if="player.currentTrack" class="full-player">
           <div class="full-player__stage">
-            <svg v-if="!lyricsVisible" class="full-player__tonearm" :class="{ 'is-playing': player.playing }" viewBox="0 0 160 180" fill="none" aria-hidden="true">
-              <circle cx="22" cy="20" r="20" fill="white" fill-opacity=".06" />
-              <circle cx="22" cy="20" r="10" fill="#dadbda" />
-              <path d="M22 22V66Q22 76 30 84L107 151" stroke="#dadbda" stroke-width="7" stroke-linecap="round" />
-              <path d="m103 148 22 19" stroke="#dadbda" stroke-width="15" stroke-linecap="round" />
-            </svg>
-            <button
-              v-if="!lyricsVisible"
-              ref="coverButton"
-              class="full-player__cover"
-              type="button"
-              aria-label="显示歌词"
-              @click="lyricsVisible = true"
-            >
-              <span class="full-player__record" :class="{ 'is-playing': player.playing }">
-                <span class="full-player__record-label">
-                  <img v-if="player.currentTrack.coverUrl && !coverFailed" :src="player.currentTrack.coverUrl" :alt="player.currentTrack.title" @error="coverFailed = true" />
-                  <UiIcon v-else name="music" :size="64" />
+            <div v-if="!lyricsVisible" class="full-player__artwork">
+              <svg class="full-player__tonearm" :class="{ 'is-playing': player.playing }" viewBox="0 0 160 180" fill="none" aria-hidden="true">
+                <circle cx="22" cy="20" r="20" fill="white" fill-opacity=".06" />
+                <circle cx="22" cy="20" r="10" fill="#dadbda" />
+                <path d="M22 22V66Q22 76 30 84L107 151" stroke="#dadbda" stroke-width="7" stroke-linecap="round" />
+                <path d="m103 148 22 19" stroke="#dadbda" stroke-width="15" stroke-linecap="round" />
+              </svg>
+              <button
+                ref="coverButton"
+                class="full-player__cover"
+                type="button"
+                aria-label="显示歌词"
+                @click="lyricsVisible = true"
+              >
+                <span class="full-player__record" :class="{ 'is-playing': player.playing }">
+                  <span class="full-player__record-label">
+                    <img v-if="player.currentTrack.coverUrl && !coverFailed" :src="player.currentTrack.coverUrl" :alt="player.currentTrack.title" @error="coverFailed = true" />
+                    <UiIcon v-else name="music" :size="64" />
+                  </span>
                 </span>
-              </span>
-            </button>
+              </button>
+            </div>
             <div
               v-else
               ref="lyricContainer"
@@ -39,8 +40,13 @@
               @click="lyricsVisible = false"
               @keydown.enter.prevent="lyricsVisible = false"
               @keydown.space.prevent="lyricsVisible = false"
+              @scroll.passive="onLyricScroll"
+              @wheel.passive="pauseLyricFollow"
+              @touchmove.passive="pauseLyricFollow"
             >
-              <p v-for="line in lyrics" :key="line.key" :class="{ active: line.current }">{{ line.text }}</p>
+              <div v-if="lyrics.length" class="mobile-lyrics__lines" :style="{ paddingBlock: `${lyricViewportHeight / 2}px` }">
+                <p v-for="line in lyrics" :key="line.key" :data-lyric-key="line.key" :class="{ active: line.key === highlightedLyricKey }">{{ line.text }}</p>
+              </div>
               <UiEmpty v-if="!lyrics.length" title="这首歌暂时没有歌词" icon="music" size="sm" />
             </div>
           </div>
@@ -118,6 +124,7 @@ import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { UiButton, UiDialog, UiEmpty, UiIcon, UiInput, UiLoadingState, UiSlider } from '@/components/ui'
 import { useMusicPlayerStore } from '@/stores/music-player'
+import { PLAY_MODES, formatMusicTime } from '@/modules/music/presentation'
 import { notify } from '@/lib/feedback'
 import MusicQueueSheet from './MusicQueueSheet.vue'
 import type { MusicPlaylist, MusicTrack } from '@/types'
@@ -154,13 +161,19 @@ const canUndoEnqueue = computed(() => lastAddedTrack.value && queuedIds.value.ha
   && player.currentTrack?.id !== lastAddedTrack.value.id)
 let queueNoticeTimer: ReturnType<typeof setTimeout> | undefined
 const lyricContainer = ref<HTMLElement>()
+const lyricViewportHeight = ref(0)
+const highlightedLyricKey = ref('')
+const currentLyricKey = computed(() => props.lyrics.find(line => line.current)?.key ?? '')
+const LYRIC_BROWSE_PAUSE_MS = 4000
+let lyricFollowPausedUntil = 0
+let automaticLyricScrollTop = 0
 const coverButton = ref<HTMLButtonElement>()
 const coverFailed = ref(false)
 const visibleCount = ref(20)
 const visibleTracks = computed(() => props.tracks.slice(0, visibleCount.value))
 const category = computed(() => props.categories.find(item => item.id === categoryId.value))
-const modeLabel = computed(() => ({ sequence: '顺序播放', shuffle: '随机播放', single: '单曲循环' }[player.mode]))
-const modeIcon = computed(() => ({ sequence: 'sequence-play', shuffle: 'shuffle', single: 'repeat-one' }[player.mode]))
+const modeLabel = computed(() => PLAY_MODES[player.mode].label)
+const modeIcon = computed(() => PLAY_MODES[player.mode].icon)
 watch([keyword, categoryId], () => { visibleCount.value = 20 })
 watch(() => player.currentTrack?.coverUrl, () => { coverFailed.value = false })
 watch(() => props.fullscreen, () => { lyricsVisible.value = false; queueOpen.value = false; dismissQueueNotice() })
@@ -169,16 +182,68 @@ watch(lyricsVisible, async (visible) => {
   await nextTick()
   if (props.fullscreen) (visible ? lyricContainer.value : coverButton.value)?.focus({ preventScroll: true })
 })
-watch([lyricsVisible, () => player.currentTrack?.id, () => props.lyrics.find(line => line.current)?.key], async () => {
-  if (!lyricsVisible.value) return
+watch([lyricsVisible, () => player.currentTrack?.id], async () => {
+  lyricFollowPausedUntil = 0
+  highlightedLyricKey.value = currentLyricKey.value
   await nextTick()
-  const container = lyricContainer.value
-  const line = container?.querySelector<HTMLElement>('.active')
-  if (container && line) {
-    container.scrollTop += line.getBoundingClientRect().top - container.getBoundingClientRect().top
-      - container.clientHeight / 2 + line.clientHeight / 2
-  } else if (container) container.scrollTop = 0
+  centerCurrentLyric()
 })
+watch(currentLyricKey, async () => {
+  await nextTick()
+  if (Date.now() >= lyricFollowPausedUntil) centerCurrentLyric()
+})
+watch(lyricContainer, (container, _previous, onCleanup) => {
+  if (!container) return
+  const observer = new ResizeObserver(async () => {
+    lyricViewportHeight.value = container.clientHeight
+    await nextTick()
+    if (Date.now() >= lyricFollowPausedUntil) centerCurrentLyric()
+    else highlightCenteredLyric()
+  })
+  observer.observe(container)
+  onCleanup(() => observer.disconnect())
+})
+function centerCurrentLyric() {
+  const container = lyricContainer.value
+  if (!container) return
+  const lines = Array.from(container.querySelectorAll<HTMLElement>('[data-lyric-key]'))
+  const line = lines.find(item => item.dataset.lyricKey === currentLyricKey.value) ?? lines[0]
+  if (!line) {
+    highlightedLyricKey.value = ''
+    return
+  }
+  const lineRect = line.getBoundingClientRect()
+  container.scrollTop += lineRect.top - container.getBoundingClientRect().top
+    - container.clientHeight / 2 + lineRect.height / 2
+  automaticLyricScrollTop = container.scrollTop
+  highlightedLyricKey.value = line.dataset.lyricKey ?? ''
+}
+function pauseLyricFollow() {
+  lyricFollowPausedUntil = Date.now() + LYRIC_BROWSE_PAUSE_MS
+}
+function onLyricScroll() {
+  const container = lyricContainer.value
+  if (!container) return
+  // 自动跟随产生的 scroll 不应被当作用户正在浏览歌词。
+  if (Math.abs(container.scrollTop - automaticLyricScrollTop) > 1) pauseLyricFollow()
+  highlightCenteredLyric()
+}
+function highlightCenteredLyric() {
+  const container = lyricContainer.value
+  if (!container) return
+  const center = container.getBoundingClientRect().top + container.clientHeight / 2
+  let closestKey = ''
+  let closestDistance = Infinity
+  container.querySelectorAll<HTMLElement>('[data-lyric-key]').forEach(line => {
+    const rect = line.getBoundingClientRect()
+    const distance = Math.abs(rect.top + rect.height / 2 - center)
+    if (distance < closestDistance) {
+      closestDistance = distance
+      closestKey = line.dataset.lyricKey ?? ''
+    }
+  })
+  highlightedLyricKey.value = closestKey
+}
 function cycleMode() {
   player.setMode(player.mode === 'sequence' ? 'shuffle' : player.mode === 'shuffle' ? 'single' : 'sequence')
 }
@@ -188,10 +253,7 @@ function seek(value: number | number[]) {
 function previewSeek(value: number | number[]) {
   player.previewSeek(Array.isArray(value) ? value[0] : value)
 }
-function formatTime(value: number) {
-  const seconds = Math.max(0, Math.floor(value || 0))
-  return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`
-}
+const formatTime = (value: number) => formatMusicTime(value, { padMinutes: false })
 function addToQueue(track: MusicTrack) {
   const result = player.enqueue(track)
   if (result !== 'added') {
@@ -233,7 +295,7 @@ function deleteSelected() {
 .is-fullscreen :deep(.ui-empty) { --color-text-primary: var(--player-foreground); --color-text-secondary: var(--player-muted); }
 .music-categories { display: flex; gap: 8px; overflow-x: auto; padding-block: 20px 12px; scrollbar-width: none; }
 .music-categories button { flex: none; min-height: 44px; padding: 8px 18px; border: 0; border-radius: 24px; background: var(--color-surface); color: var(--color-text-secondary); font-size: 14px; }
-.music-categories button.active { background: var(--color-accent-soft); color: var(--color-accent-readable); }
+.music-categories button.active { background: var(--control-selected-background); color: var(--control-selected-text); }
 .music-list-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
 .music-list-heading h2 { font-size: 20px; margin: 0; }
 .music-list-heading small { font-size: 13px; color: var(--color-text-secondary); font-weight: 400; }
@@ -246,12 +308,12 @@ function deleteSelected() {
 .song-row__copy { flex: 1; min-width: 0; display: grid; gap: 4px; }
 .song-row__copy strong { font-size: 15px; font-weight: 600; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 .song-row__copy small { font-size: 12px; color: var(--color-text-secondary); overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
-.active { color: var(--color-accent-readable); }
+.active { color: var(--color-accent); }
 .song-row__enqueue { flex: none; color: var(--color-text-secondary); }
-.song-row__enqueue.is-queued { color: var(--color-accent-readable); }
+.song-row__enqueue.is-queued { color: var(--color-accent); }
 .song-row__enqueue:disabled { cursor: default; }
 .song-row__enqueue:disabled:not(.is-queued) { opacity: .4; }
-.queue-feedback { position: fixed; left: 12px; right: 12px; bottom: calc(var(--mobile-player-bottom, var(--mobile-nav-height)) + var(--mobile-player-height, 160px) + 16px); z-index: var(--z-sticky); pointer-events: none; }
+.queue-feedback { position: fixed; left: 12px; right: 12px; bottom: calc(var(--mobile-player-bottom, var(--mobile-nav-height)) + var(--mobile-player-height, 58px) + 16px); z-index: var(--z-sticky); pointer-events: none; }
 .queue-feedback__notice { display: flex; align-items: center; gap: 8px; padding: 4px 8px 4px 14px; border: 1px solid var(--color-border); border-radius: var(--radius-lg); background: var(--color-surface); box-shadow: var(--shadow-md); pointer-events: auto; }
 .queue-feedback__notice > span { flex: 1; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 13px; }
 .queue-feedback__notice > button:not(.app-mobile-icon) { min-height: 44px; min-width: 44px; padding: 0 4px; border: 0; background: transparent; color: var(--color-accent-readable); font-size: 13px; cursor: pointer; }
@@ -276,12 +338,13 @@ function deleteSelected() {
   --el-slider-stop-bg-color: var(--player-foreground);
 }
 .full-player__stage { position: relative; min-width: 0; display: grid; place-items: center; padding-top: 20px; }
+.full-player__artwork { position: relative; width: min(75%, clamp(138px, calc(75dvh - 292.5px), 270px)); aspect-ratio: 1; }
 .full-player__tonearm {
   position: absolute;
-  top: 4px;
-  left: calc(50% - 20px);
+  top: -26%;
+  left: calc(50% - 15px);
   z-index: 1;
-  width: clamp(90px, 17dvh, 144px);
+  width: 40%;
   height: auto;
   transform-origin: 13.75% 11.11%;
   transform: rotate(-28deg);
@@ -290,13 +353,13 @@ function deleteSelected() {
 }
 .full-player__tonearm.is-playing { transform: rotate(0); }
 .full-player__cover {
-  width: min(100%, clamp(184px, calc(100dvh - 390px), 360px));
+  width: 100%;
   aspect-ratio: 1;
   padding: 0;
   border: 0;
   border-radius: 50%;
   background: transparent;
-  box-shadow: 0 0 0 12px rgb(255 255 255 / 4%), 0 16px 42px rgb(0 0 0 / 25%);
+  box-shadow: 0 0 0 9px rgb(255 255 255 / 4%), 0 12px 32px rgb(0 0 0 / 25%);
   cursor: pointer;
 }
 .full-player__record {
@@ -322,14 +385,14 @@ function deleteSelected() {
 .full-player__play { flex: none; border: 1.5px solid rgb(255 255 255 / 85%); border-radius: 50%; width: 68px; height: 68px; padding: 0; display: grid; place-items: center; color: var(--player-foreground); background: transparent; cursor: pointer; }
 .full-player button:focus-visible, .mobile-lyrics:focus-visible { outline: 2px solid var(--player-foreground); outline-offset: 5px; }
 .sheet-meta { color: var(--color-text-secondary); font-size: 13px; margin: 0 0 20px; overflow-wrap: anywhere; }
-.mobile-lyrics { position: absolute; inset: 12px 0; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; text-align: center; padding: 40% 12px; border-radius: var(--mobile-card-radius); color: var(--player-muted); cursor: pointer; }
+.mobile-lyrics { position: absolute; inset: 12px 0; overflow-y: auto; overscroll-behavior: contain; overflow-anchor: none; scrollbar-width: none; text-align: center; padding-inline: 12px; border-radius: var(--mobile-card-radius); color: var(--player-muted); cursor: pointer; }
+.mobile-lyrics::-webkit-scrollbar { display: none; width: 0; height: 0; }
 .mobile-lyrics p { margin: 0; padding-block: 12px; font-size: 18px; line-height: 1.8; overflow-wrap: anywhere; }
 .mobile-lyrics .active { color: var(--player-foreground); font-weight: 700; }
 @keyframes mobile-record-turn { to { transform: rotate(360deg); } }
 @media (max-height: 680px) {
   .full-player { grid-template-rows: minmax(204px, 1fr) auto auto; gap: 12px; padding-top: 0; padding-bottom: max(16px, env(safe-area-inset-bottom)); }
   .full-player__stage { padding-top: 12px; }
-  .full-player__tonearm { width: 90px; top: 0; }
   .full-player h1 { font-size: 20px; }
   .full-player__heading p { margin-top: 4px; font-size: 14px; }
   .full-player__controls { margin-top: 12px; }

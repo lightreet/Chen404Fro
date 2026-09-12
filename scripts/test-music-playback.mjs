@@ -171,6 +171,40 @@ test('restoring songs that were only queued does not select or load a song', asy
   h.close()
 })
 
+test('dragging across multiple pending songs preserves playback and other relative positions', async () => {
+  const h = harness()
+  await h.state.playTrack(tracks[0], [tracks[0], tracks[1], song(3), song(4), song(5)])
+  h.audio.currentTime = 37
+  h.emit('timeupdate')
+  const loadCalls = h.audio.loadCalls
+  assert.equal(h.state.moveUpcoming(5, -3), true)
+  assert.deepEqual(queueIds(h), [1, 5, 2, 3, 4])
+  assert.equal(h.state.moveUpcoming(5, 3), true)
+  assert.deepEqual(queueIds(h), [1, 2, 3, 4, 5])
+  assert.equal(h.state.currentTrack.value.id, 1)
+  assert.equal(h.audio.currentTime, 37)
+  assert.equal(h.audio.loadCalls, loadCalls)
+  assert.equal(h.audio.playCalls, 1)
+  for (const offset of [0, NaN, Infinity, 0.5, -10, 10]) {
+    assert.equal(h.state.moveUpcoming(3, offset), false)
+  }
+  assert.equal(h.state.moveUpcoming(5, -4), false)
+  assert.deepEqual(queueIds(h), [1, 2, 3, 4, 5])
+  h.close()
+})
+
+test('an unstarted queue can reorder its first song without selecting a current song', () => {
+  const h = harness()
+  h.state.enqueue(tracks[0])
+  h.state.enqueue(tracks[1])
+  h.state.enqueue(song(3))
+  assert.equal(h.state.moveUpcoming(3, -2), true)
+  assert.deepEqual(queueIds(h), [3, 1, 2])
+  assert.equal(h.state.currentTrack.value, null)
+  assert.equal(h.audio.playCalls, 0)
+  h.close()
+})
+
 test('reordering pending songs does not move the current song or restart playback', async () => {
   const h = harness()
   await h.state.playTrack(tracks[0], [...tracks, song(3)])

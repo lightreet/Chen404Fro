@@ -356,6 +356,7 @@
 </template>
 
 <script setup lang="ts">
+import { parseLrcDocument as parseLrc } from '@/modules/music/presentation'
 import { computed, reactive, ref, watch } from 'vue'
 import { notify } from '@/lib/feedback'
 import { UiButton, UiDateField, UiEmpty, UiForm, UiFormField, UiIcon, UiInput, UiLoadingState, UiSegmented, UiSwitch, UiTextarea, UiTooltip, UiUpload } from '@/components/ui'
@@ -378,20 +379,6 @@ type TrackStatusOption = {
   label: string
   value: MusicTrackStatus
   description: string
-}
-
-interface ParsedLrcLine {
-  key: string
-  time: number
-  timeLabel: string
-  text: string
-  current: boolean
-}
-
-interface LrcParseResult {
-  lines: ParsedLrcLine[]
-  metadataCount: number
-  invalidCount: number
 }
 
 const loading = ref(false)
@@ -981,41 +968,6 @@ function stripLrcTiming(line: string) {
     return ''
   }
   return line.replace(/(?:\[\d{1,2}:\d{2}(?:\.\d{1,3})?])+/g, '').trim()
-}
-
-function parseLrc(input: string): LrcParseResult {
-  const result: LrcParseResult = {
-    lines: [],
-    metadataCount: 0,
-    invalidCount: 0,
-  }
-  splitMeaningfulLines(input).forEach((line, index) => {
-    if (/^\[[a-zA-Z]+:.*]$/.test(line)) {
-      result.metadataCount += 1
-      return
-    }
-    const match = line.match(/^\[(\d{1,2}):(\d{2})(?:\.(\d{1,3}))?](.*)$/)
-    if (!match) {
-      result.invalidCount += 1
-      return
-    }
-    const minute = Number(match[1])
-    const second = Number(match[2])
-    const millisecond = Number((match[3] || '0').padEnd(3, '0'))
-    const text = match[4].trim()
-    if (!text) {
-      result.invalidCount += 1
-      return
-    }
-    result.lines.push({
-      key: `lrc-${index}`,
-      time: minute * 60 + second + millisecond / 1000,
-      timeLabel: `${match[1].padStart(2, '0')}:${match[2]}.${(match[3] || '00').padEnd(2, '0').slice(0, 2)}`,
-      text,
-      current: false,
-    })
-  })
-  return result
 }
 
 function disabledReleaseYear(date: Date) {
@@ -1973,9 +1925,9 @@ function createEmptyTrackForm(): MusicTrackUpsertCommand {
 }
 
 :deep(.footer-button--save) {
-  border-color: rgba(255, 91, 144, 0.96) !important;
-  background: linear-gradient(135deg, #ff4f91, #ff8bb4) !important;
-  color: #fff !important;
+  border-color: var(--control-primary-border, rgba(255, 91, 144, 0.96)) !important;
+  background: var(--control-primary-background, linear-gradient(135deg, #ff4f91, #ff8bb4)) !important;
+  color: var(--control-primary-text, #fff) !important;
   box-shadow: 0 12px 24px rgba(255, 91, 144, 0.26) !important;
 }
 
@@ -2120,13 +2072,13 @@ function createEmptyTrackForm(): MusicTrackUpsertCommand {
   .editor-panel--title p, .panel-kicker { display: none; }
   .section-title strong { font-size: 18px; }
   .title-field { width: 100%; grid-template-columns: minmax(0, 1fr) auto; }
-  .ai-suggest-button { min-width: 80px; border-radius: 12px; background: var(--color-accent-readable); box-shadow: none; }
+  .ai-suggest-button { min-width: 80px; border-radius: 12px; background: var(--control-primary-background); color: var(--control-primary-text); box-shadow: none; }
   .track-edit-footer { padding: 12px 20px calc(12px + env(safe-area-inset-bottom)); background: var(--color-surface); }
   .footer-inner { display: grid; grid-template-columns: minmax(0, 1fr); width: 100%; gap: 8px; justify-items: stretch; }
   .footer-inner > span { font-size: 12px; }
   .footer-inner > div { display: grid; grid-template-columns: 1fr 1fr; width: 100%; }
   :deep(.footer-button) { min-height: 48px; border-radius: 12px; }
-  :deep(.footer-button--save) { background: var(--color-accent-readable) !important; color: var(--color-on-accent-readable) !important; box-shadow: none !important; border-color: transparent !important; }
+  :deep(.footer-button--save) { box-shadow: none !important; }
   .track-preview-panel { border-radius: 16px; background: var(--color-surface); }
 }
 </style>

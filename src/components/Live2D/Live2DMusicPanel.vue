@@ -329,6 +329,7 @@
 </template>
 
 <script setup lang="ts">
+import { parseLrcLines as parseLrc, formatMusicTime as formatTime, currentLyricIndex } from '@/modules/music/presentation'
 import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { UiEmpty, UiIcon, UiInput, UiLoadingState, UiSlider } from '@/components/ui'
 import { usePublicMusicCatalog } from '@/composables/usePublicMusicCatalog'
@@ -456,13 +457,6 @@ function readSliderValue(value: number | number[]) {
   return Array.isArray(value) ? value[0] : value
 }
 
-function formatTime(value: number) {
-  if (!Number.isFinite(value) || value <= 0) return '00:00'
-  const minute = Math.floor(value / 60)
-  const second = Math.floor(value % 60)
-  return `${String(minute).padStart(2, '0')}:${String(second).padStart(2, '0')}`
-}
-
 function getTrackLyricLines(currentTrack: MusicTrack | null, playbackTime: number): LyricLine[] {
   const lyrics = currentTrack?.lyrics?.trim()
   if (!currentTrack || !lyrics) return []
@@ -477,12 +471,7 @@ function getTrackLyricLines(currentTrack: MusicTrack | null, playbackTime: numbe
   const lines = parseLrc(lyrics)
   if (!lines.length) return []
 
-  let currentIndex = 0
-  for (let index = 0; index < lines.length; index += 1) {
-    if ((lines[index].time ?? 0) <= playbackTime) {
-      currentIndex = index
-    }
-  }
+  const currentIndex = currentLyricIndex(lines, playbackTime)
 
   return lines.slice(Math.max(0, currentIndex - 2), currentIndex + 7).map((line, offset) => ({
     ...line,
@@ -494,23 +483,6 @@ function splitMeaningfulLines(input: string) {
   return input.split('\n').map((line) => line.trim()).filter(Boolean)
 }
 
-function parseLrc(input: string): LyricLine[] {
-  return splitMeaningfulLines(input).map((raw, index) => {
-    const match = raw.match(/^\[(\d{1,2}):(\d{2})(?:\.(\d{1,3}))?](.*)$/)
-    if (!match) return null
-    const minute = Number(match[1])
-    const second = Number(match[2])
-    const ms = Number((match[3] || '0').padEnd(3, '0'))
-    const text = match[4].trim()
-    if (!text) return null
-    return {
-      key: `lrc-${index}`,
-      time: minute * 60 + second + ms / 1000,
-      text,
-      current: false,
-    }
-  }).filter(Boolean) as LyricLine[]
-}
 </script>
 
 <style scoped lang="scss">
