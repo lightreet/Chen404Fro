@@ -26,16 +26,6 @@
             class="register-form"
             @keyup.enter="handleRegister"
           >
-            <UiFormField prop="username">
-              <UiInput
-                v-model="form.username"
-                placeholder="请输入用户名"
-                size="lg"
-                prefix-icon="user"
-                maxlength="20"
-              />
-            </UiFormField>
-
             <UiFormField prop="email">
               <AuthEmailField
                 v-model="form.email"
@@ -78,10 +68,6 @@
                 prefix-icon="lock"
               />
             </UiFormField>
-
-            <div class="username-hint">
-              用户名会作为默认昵称使用，注册后可在个人中心再改成更喜欢的名字。
-            </div>
 
             <div class="form-agreement">
               <UiCheckbox v-model="agreement">
@@ -146,17 +132,19 @@
 <script setup lang="ts">
 import AppMobileHeader from '@/components/app/AppMobileHeader/AppMobileHeader.vue';
 import { useMobileViewport } from '@/composables/useMobileViewport';
-const { isMobile: isPhone } = useMobileViewport();
-import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue';
+import { computed, onMounted, reactive, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { notify } from '@/lib/feedback';
 import { AuthEmailField, UiButton, UiCheckbox, UiDialog, UiForm, UiFormField, UiIcon, UiInput } from '@/components/ui'
-import { login, register, sendVerifyCode as sendVerifyCodeApi } from '@/api/auth';
+import { login, register } from '@/api/auth';
 import { useSiteConfig } from '@/composables/useSiteConfig';
 import { useUserStore } from '@/stores/user';
 import { resolveSiteLogo, resolveSiteName } from '@/utils/siteConfig';
 import { notifyAuthFailure } from '@/utils/authFeedback';
-import { createConfirmPasswordRule, createUsernameRules } from '@/utils/validation';
+import { createConfirmPasswordRule, createEmailRules } from '@/utils/validation';
+import { useEmailVerificationCode } from '@/composables/useEmailVerificationCode';
+
+const { isMobile: isPhone } = useMobileViewport();
 
 const router = useRouter();
 const userStore = useUserStore();
@@ -164,19 +152,16 @@ const { siteConfig, loadSiteConfig } = useSiteConfig();
 const formRef = ref();
 const loading = ref(false);
 const agreement = ref(false);
-const codeSending = ref(false);
-const codeCountdown = ref(0);
-const countdownTimer = ref<number | null>(null);
 const legalDialogVisible = ref(false);
 const activeLegalType = ref<'agreement' | 'privacy'>('agreement');
 
 const form = reactive({
-  username: '',
   email: '',
   code: '',
   password: '',
   confirmPassword: '',
 });
+const { sending: codeSending, remaining: codeCountdown, send: sendVerifyCode } = useEmailVerificationCode('register', () => form.email);
 const siteName = computed(() => resolveSiteName(siteConfig.value));
 const siteLogo = computed(() => resolveSiteLogo(siteConfig.value));
 
@@ -191,7 +176,7 @@ const agreementSections = [
   {
     title: '2. 关于账号',
     paragraphs: [
-      '用户名需要符合站点规则并保持唯一。注册成功后，系统会默认把用户名作为你的昵称，后续你可以在个人中心再修改。',
+      '注册邮箱将作为你的用户名和默认昵称。你可以直接使用邮箱登录，也可以在个人中心修改昵称。',
       '请妥善保管你的账号和密码。如果你把密码写在便签上贴到显示器边框，那这部分安全风险多半要你自己承担。',
     ],
   },
@@ -229,7 +214,7 @@ const privacySections = [
   {
     title: '1. 我们会收集哪些信息',
     paragraphs: [
-      '当你注册或登录时，我们会处理你提供的用户名、邮箱、密码摘要、头像、昵称等与账号有关的信息。',
+      '当你注册或登录时，我们会将注册邮箱用作用户名，并处理你提供的邮箱、密码摘要、头像、昵称等与账号有关的信息。',
       '在你使用站点的过程中，我们也可能记录必要的日志信息，例如登录时间、登录 IP、部分操作记录，用于安全审计和问题排查。',
     ],
   },
@@ -290,11 +275,7 @@ function openLegalDocument(type: 'agreement' | 'privacy') {
 }
 
 const rules = {
-  username: createUsernameRules(),
-  email: [
-    { required: true, message: '请输入邮箱', trigger: 'blur' },
-    { type: 'email', message: '邮箱格式不正确', trigger: 'blur' },
-  ],
+  email: createEmailRules(),
   code: [
     { required: true, message: '请输入验证码', trigger: 'blur' },
     { min: 4, max: 6, message: '验证码长度需为 4-6 位', trigger: 'blur' },
@@ -307,52 +288,6 @@ const rules = {
     { required: true, message: '请确认密码', trigger: 'blur' },
     createConfirmPasswordRule(() => form.password),
   ],
-};
-
-function resetCountdown() {
-  if (countdownTimer.value !== null) {
-    window.clearInterval(countdownTimer.value);
-    countdownTimer.value = null;
-  }
-  codeCountdown.value = 0;
-}
-
-function startCountdown(seconds: number) {
-  resetCountdown();
-  codeCountdown.value = seconds;
-  countdownTimer.value = window.setInterval(() => {
-    codeCountdown.value -= 1;
-    if (codeCountdown.value <= 0) {
-      resetCountdown();
-    }
-  }, 1000);
-}
-
-const sendVerifyCode = async () => {
-  if (codeSending.value || codeCountdown.value > 0) return;
-
-  if (!form.email.trim()) {
-    notify.warning('请先输入邮箱');
-    return;
-  }
-
-  const emailReg = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (!emailReg.test(form.email)) {
-    notify.warning('邮箱格式不正确');
-    return;
-  }
-
-  codeSending.value = true;
-  try {
-    const result = await sendVerifyCodeApi({ email: form.email.trim(), type: 'register' });
-    notify.success('验证码已发送到邮箱');
-    startCountdown(Math.max(1, result.expireSeconds > 60 ? 60 : result.expireSeconds));
-  } catch (error) {
-    console.error('发送验证码失败:', error);
-    notifyAuthFailure(error, '验证码发送失败，请稍后重试');
-  } finally {
-    codeSending.value = false;
-  }
 };
 
 const handleRegister = async () => {
@@ -371,22 +306,19 @@ const handleRegister = async () => {
   loading.value = true;
   try {
     await register({
-      username: form.username.trim(),
       password: form.password,
-      nickname: form.username.trim(),
       email: form.email.trim(),
       code: form.code.trim(),
       registerType: 'email',
     });
   } catch (error) {
-    console.error('注册失败:', error);
     notifyAuthFailure(error, '注册失败，请检查填写内容后重试');
     loading.value = false;
     return;
   }
 
   try {
-    const loginRes = await login({ username: form.username.trim(), password: form.password });
+    const loginRes = await login({ username: form.email.trim(), password: form.password });
     userStore.login(loginRes.user, loginRes.token, {
       remember: true,
       refreshToken: loginRes.refreshToken,
@@ -395,9 +327,8 @@ const handleRegister = async () => {
     notify.success('注册成功');
     await router.push('/');
   } catch (error) {
-    console.error('注册后自动登录失败:', error);
     notify.warning({
-      message: '账号已创建，但自动登录失败，请使用刚才的账号手动登录',
+      message: '账号已创建，但自动登录失败，请使用注册邮箱和密码登录',
       duration: 5000,
       showClose: true,
     });
@@ -411,9 +342,6 @@ onMounted(() => {
   void loadSiteConfig();
 });
 
-onBeforeUnmount(() => {
-  resetCountdown();
-});
 </script>
 
 <style scoped lang="scss">
@@ -533,6 +461,10 @@ onBeforeUnmount(() => {
   :deep(.ui-input) {
     border-radius: var(--radius-md);
   }
+
+  :deep(.ui-input__inner::placeholder) {
+    color: var(--color-text-secondary);
+  }
 }
 
 .verify-code-wrapper {
@@ -558,18 +490,11 @@ onBeforeUnmount(() => {
   }
 }
 
-.username-hint {
-  margin: -4px 0 16px;
-  color: var(--text-tertiary);
-  font-size: 12px;
-  line-height: 1.6;
-}
-
 .form-agreement {
   margin-bottom: 20px;
 
   a {
-    color: var(--primary);
+    color: var(--color-text-link);
     text-decoration: none;
 
     &:hover {
@@ -581,7 +506,7 @@ onBeforeUnmount(() => {
 .submit-btn {
   width: 100%;
   border-radius: var(--radius-md);
-  background: linear-gradient(135deg, var(--primary), var(--primary-light));
+  background: var(--control-primary-background, linear-gradient(135deg, var(--primary), var(--primary-light)));
   border: none;
   font-size: 16px;
   font-weight: 500;
@@ -607,7 +532,7 @@ onBeforeUnmount(() => {
   }
 
   .link {
-    color: var(--primary);
+    color: var(--color-text-link);
     text-decoration: none;
     font-weight: 500;
 

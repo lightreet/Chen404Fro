@@ -1,5 +1,5 @@
 ﻿<template>
-  <div class="auth-page">
+  <div class="auth-page auth-page--centered">
     <AppMobileHeader v-if="isPhone" title="登录" back-to="/discover" />
     <div class="auth-container">
       <div class="auth-banner">
@@ -26,39 +26,14 @@
             class="login-form"
             @keyup.enter="handleLogin"
           >
-            <div class="login-mode-switch" role="tablist" aria-label="登录方式">
-              <button
-                type="button"
-                class="login-mode-switch__item"
-                :class="{ 'is-active': loginMode === 'username' }"
-                @click="setLoginMode('username')"
-              >
-                用户名
-              </button>
-              <button
-                type="button"
-                class="login-mode-switch__item"
-                :class="{ 'is-active': loginMode === 'email' }"
-                @click="setLoginMode('email')"
-              >
-                邮箱
-              </button>
-            </div>
-
             <UiFormField prop="account">
               <UiInput
-                v-if="loginMode === 'username'"
                 v-model="form.account"
-                placeholder="请输入用户名"
+                placeholder="用户名/邮箱"
+                name="username"
+                autocomplete="username"
                 size="lg"
                 prefix-icon="user"
-                maxlength="20"
-              />
-              <AuthEmailField
-                v-else
-                v-model="form.account"
-                placeholder="请输入邮箱账号"
-                size="lg"
               />
             </UiFormField>
 
@@ -67,6 +42,8 @@
                 v-model="form.password"
                 type="password"
                 placeholder="请输入密码"
+                name="password"
+                autocomplete="current-password"
                 size="lg"
                 prefix-icon="lock"
               />
@@ -104,13 +81,13 @@
 import { computed, onMounted, reactive, ref } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { notify } from '@/lib/feedback';
-import { AuthEmailField, UiButton, UiCheckbox, UiForm, UiFormField, UiIcon, UiInput } from '@/components/ui'
+import { UiButton, UiCheckbox, UiForm, UiFormField, UiIcon, UiInput } from '@/components/ui'
 import { login } from '@/api/auth';
 import { useSiteConfig } from '@/composables/useSiteConfig';
 import { useUserStore } from '@/stores/user';
 import { resolveSiteLogo, resolveSiteName } from '@/utils/siteConfig';
 import { notifyAuthFailure } from '@/utils/authFeedback';
-import { isValidUsername } from '@/utils/validation';
+import { isValidUsername, isValidEmail } from '@/utils/validation';
 import AppMobileHeader from '@/components/app/AppMobileHeader/AppMobileHeader.vue';
 import { useMobileViewport } from '@/composables/useMobileViewport';
 const { isMobile: isPhone } = useMobileViewport();
@@ -122,7 +99,6 @@ const { siteConfig, loadSiteConfig } = useSiteConfig();
 const formRef = ref();
 const loading = ref(false);
 const rememberMe = ref(false);
-const loginMode = ref<'username' | 'email'>('username');
 const form = reactive({
   account: '',
   password: '',
@@ -132,19 +108,13 @@ const siteLogo = computed(() => resolveSiteLogo(siteConfig.value));
 
 const rules = {
   account: [
-    { required: true, message: '请输入登录账号', trigger: 'blur' },
+    { required: true, whitespace: true, message: '请输入用户名或邮箱', trigger: 'blur' },
     {
       validator: (_rule: unknown, value: string, callback: (err?: Error) => void) => {
-        if (!value) return callback();
-        if (loginMode.value === 'email') {
-          const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
-          if (isEmail) return callback();
-          callback(new Error('请输入正确的邮箱'));
-          return;
-        }
-        const isUsername = isValidUsername(value);
-        if (isUsername) return callback();
-        callback(new Error('请输入正确的用户名（3-20 位字母、数字、下划线）'));
+        const account = value.trim();
+        if (!account) return callback();
+        if (isValidUsername(account) || isValidEmail(account)) return callback();
+        callback(new Error('请输入正确的用户名或邮箱'));
       },
       trigger: 'blur',
     },
@@ -154,15 +124,6 @@ const rules = {
     { min: 6, message: '密码至少 6 位', trigger: 'blur' },
   ],
 };
-
-function setLoginMode(mode: 'username' | 'email') {
-  if (loginMode.value === mode) {
-    return;
-  }
-  loginMode.value = mode;
-  form.account = '';
-  formRef.value?.clearValidate?.('account');
-}
 
 const handleLogin = async () => {
   if (!formRef.value || loading.value) return;
@@ -189,7 +150,6 @@ const handleLogin = async () => {
     const redirect = (route.query.redirect as string) || '/';
     router.push(redirect.startsWith('/') ? redirect : '/');
   } catch (error) {
-    console.error('登录失败:', error);
     notifyAuthFailure(error, '登录失败，请检查账号和密码后重试');
   } finally {
     loading.value = false;
@@ -321,57 +281,9 @@ onMounted(() => {
   :deep(.ui-input) {
     border-radius: var(--radius-md);
   }
-}
 
-.login-mode-switch {
-  display: inline-grid;
-  grid-template-columns: repeat(2, 72px);
-  align-items: center;
-  margin: 0 0 18px;
-  padding-bottom: 2px;
-  border-bottom: 1px solid color-mix(in srgb, var(--color-border) 88%, white);
-}
-
-.login-mode-switch__item {
-  position: relative;
-  min-width: 0;
-  height: 40px;
-  padding: 0 8px;
-  border: none;
-  background: transparent;
-  color: var(--text-secondary);
-  font-size: 16px;
-  font-weight: 600;
-  text-align: center;
-  cursor: pointer;
-  transition:
-    color var(--motion-duration-fast) var(--motion-ease-standard),
-    opacity var(--motion-duration-fast) var(--motion-ease-standard);
-
-  &::after {
-    content: '';
-    position: absolute;
-    left: 0;
-    right: 0;
-    bottom: -3px;
-    height: 2px;
-    border-radius: 999px;
-    background: linear-gradient(90deg, var(--primary), color-mix(in srgb, var(--primary-light) 78%, white));
-    transform: scaleX(0);
-    transform-origin: center;
-    transition: transform var(--motion-duration-fast) var(--motion-ease-standard);
-  }
-
-  &:hover {
-    opacity: 0.88;
-  }
-}
-
-.login-mode-switch__item.is-active {
-  color: var(--primary);
-
-  &::after {
-    transform: scaleX(1);
+  :deep(.ui-input__inner::placeholder) {
+    color: var(--color-text-secondary);
   }
 }
 
@@ -384,7 +296,7 @@ onMounted(() => {
 
 .forgot-link {
   font-size: 14px;
-  color: var(--primary);
+  color: var(--color-text-link);
   text-decoration: none;
 
   &:hover {
@@ -395,7 +307,7 @@ onMounted(() => {
 .submit-btn {
   width: 100%;
   border-radius: var(--radius-md);
-  background: linear-gradient(135deg, var(--primary), var(--primary-light));
+  background: var(--control-primary-background, linear-gradient(135deg, var(--primary), var(--primary-light)));
   border: none;
   font-size: 16px;
   font-weight: 500;
@@ -417,7 +329,7 @@ onMounted(() => {
   }
 
   .link {
-    color: var(--primary);
+    color: var(--color-text-link);
     text-decoration: none;
     font-weight: 500;
 

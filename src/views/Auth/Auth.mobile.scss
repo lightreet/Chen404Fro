@@ -1,9 +1,20 @@
 // Import after each auth view's scoped desktop styles so lazy route CSS cannot
 // restore the desktop flex layout beside the phone header.
 @media (max-width: 767px) {
-  .auth-page { --auth-brand-ink: #63243b; display: block; padding: 0 16px calc(24px + env(safe-area-inset-bottom)); min-height: 100dvh; background: var(--color-canvas); background-image: var(--page-background-image); }
-  .auth-page > :deep(.app-mobile-header) { margin-inline: -16px; margin-bottom: 12px; background: var(--color-surface-glass); backdrop-filter: blur(16px); }
-  .auth-page .auth-container { display: flex; flex-direction: column; width: 100%; min-height: 0; max-width: 440px; margin: 0 auto; border: 1px solid var(--color-border-light); border-radius: 24px; box-shadow: var(--shadow-md); background: var(--color-surface); }
+  .auth-page { --auth-brand-ink: #fff; display: block; padding: 0 16px calc(24px + env(safe-area-inset-bottom)); min-height: 100dvh; background: var(--color-canvas); background-image: var(--page-background-image); }
+  .auth-page > :deep(.app-mobile-header) { margin-inline: -16px; margin-bottom: 12px; background: var(--color-canvas); }
+  .auth-page .auth-container { display: flex; flex-direction: column; width: 100%; min-height: 0; max-width: 440px; margin: 0 auto; border: 1px solid var(--color-border-light); border-radius: 24px; box-shadow: none; background: var(--color-surface); }
+  .auth-page.auth-page--centered {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: flex-start;
+    gap: var(--space-md);
+    padding-bottom: max(var(--space-md), env(safe-area-inset-bottom));
+  }
+  .auth-page--centered > :deep(.app-mobile-header) { flex: none; margin-bottom: 0; }
+  // 自动外边距均分导航下方的剩余空间；短屏时归零，让表单自然滚动。
+  .auth-page--centered .auth-container { flex: none; margin-block: auto; }
   // 手机端延续桌面的品牌区与表单结构，改为上下排列。
   .auth-page .auth-banner { display: flex; width: 100%; min-height: 0; padding: 24px 20px; color: var(--auth-brand-ink); }
   .auth-page .banner-logo { display: block; width: 108px; height: 64px; margin: 0 auto 12px; }
@@ -13,9 +24,7 @@
   .auth-page .auth-form { width: 100%; max-width: 100%; }
   .auth-page .form-title { color: var(--color-text-primary); font-size: 22px; line-height: 1.4; text-align: left; margin-bottom: 20px; }
   .auth-page .form-heading .form-title { margin-bottom: 0; }
-  .auth-page .login-mode-switch__item { min-height: 44px; font-size: 15px; }
-  .auth-page .submit-btn { border-radius: var(--mobile-control-radius); background: linear-gradient(135deg, var(--color-accent-readable), color-mix(in srgb, var(--color-accent-readable) 84%, var(--color-accent))); color: var(--color-on-accent-readable); }
-  .auth-page .login-mode-switch__item.is-active, .auth-page .forgot-link, .auth-page .auth-footer .link { color: var(--color-accent-readable); }
+  .auth-page .submit-btn { border-radius: var(--mobile-control-radius); }
   .auth-page .verify-code-wrapper { --code-input-height: var(--control-height-lg); --code-btn-height: var(--control-height-lg); flex-direction: row; align-items: center; gap: 8px; }
   .auth-page .verify-code-wrapper > :first-child { min-width: 0; min-height: var(--control-height-lg); }
   .auth-page .verify-code-wrapper :deep(.ui-button) { width: auto; min-height: var(--control-height-lg); }

@@ -10,6 +10,21 @@ export const AVATAR_MAX_MB = 10;
 export const USERNAME_MIN_LENGTH = 3;
 export const USERNAME_MAX_LENGTH = 20;
 export const USERNAME_REGEX = /^[a-zA-Z0-9_]+$/;
+export const EMAIL_MAX_LENGTH = 100;
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+export function isValidEmail(value: string): boolean {
+  const normalized = value.trim();
+  return normalized.length <= EMAIL_MAX_LENGTH && EMAIL_REGEX.test(normalized);
+}
+
+export function createEmailRules(fieldLabel = '邮箱'): FormItemRule[] {
+  return [
+    { required: true, whitespace: true, message: `请输入${fieldLabel}`, trigger: 'blur' },
+    { type: 'email', message: '邮箱格式不正确', trigger: 'blur' },
+    { max: EMAIL_MAX_LENGTH, message: `邮箱长度不能超过 ${EMAIL_MAX_LENGTH} 位`, trigger: 'blur' },
+  ];
+}
 
 export function validateImageFile(
   file: File,

@@ -112,52 +112,35 @@
 <script setup lang="ts">
 import AppMobileHeader from '@/components/app/AppMobileHeader/AppMobileHeader.vue';
 import { useMobileViewport } from '@/composables/useMobileViewport';
-const { isMobile: isPhone } = useMobileViewport();
-import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue';
+import { computed, onMounted, reactive, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { notify } from '@/lib/feedback';
 import { AuthEmailField, UiButton, UiForm, UiFormField, UiIcon, UiInput } from '@/components/ui';
-import { forgotPassword, sendVerifyCode } from '@/api/auth';
+import { forgotPassword } from '@/api/auth';
 import { useSiteConfig } from '@/composables/useSiteConfig';
 import { resolveSiteLogo, resolveSiteName } from '@/utils/siteConfig';
 import { notifyAuthFailure } from '@/utils/authFeedback';
-import { createConfirmPasswordRule } from '@/utils/validation';
+import { createConfirmPasswordRule, createEmailRules } from '@/utils/validation';
+import { useEmailVerificationCode } from '@/composables/useEmailVerificationCode';
+
+const { isMobile: isPhone } = useMobileViewport();
 
 const router = useRouter();
 const { siteConfig, loadSiteConfig } = useSiteConfig();
 const formRef = ref();
 const loading = ref(false);
-const codeSending = ref(false);
-const codeCountdown = ref(0);
-const countdownTimer = ref<number | null>(null);
 const form = reactive({
   email: '',
   code: '',
   newPassword: '',
   confirmPassword: '',
 });
+const { sending: codeSending, remaining: codeCountdown, send: handleSendCode, reset: resetCountdown } = useEmailVerificationCode('reset', () => form.email);
 const siteName = computed(() => resolveSiteName(siteConfig.value));
 const siteLogo = computed(() => resolveSiteLogo(siteConfig.value));
 
 const rules = {
-  email: [
-    { required: true, message: '请输入注册邮箱', trigger: 'blur' },
-    {
-      validator: (_rule: unknown, value: string, callback: (err?: Error) => void) => {
-        if (!value) {
-          callback(new Error('请输入注册邮箱'));
-          return;
-        }
-        const emailReg = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (!emailReg.test(value)) {
-          callback(new Error('邮箱格式不正确'));
-          return;
-        }
-        callback();
-      },
-      trigger: 'blur',
-    },
-  ],
+  email: createEmailRules('注册邮箱'),
   code: [
     { required: true, message: '请输入验证码', trigger: 'blur' },
     { min: 4, max: 6, message: '验证码长度需为 4-6 位', trigger: 'blur' },
@@ -168,52 +151,6 @@ const rules = {
   ],
   confirmPassword: [createConfirmPasswordRule(() => form.newPassword, '确认密码')],
 };
-
-function resetCountdown() {
-  if (countdownTimer.value !== null) {
-    window.clearInterval(countdownTimer.value);
-    countdownTimer.value = null;
-  }
-  codeCountdown.value = 0;
-}
-
-function startCountdown(seconds: number) {
-  resetCountdown();
-  codeCountdown.value = seconds;
-  countdownTimer.value = window.setInterval(() => {
-    codeCountdown.value -= 1;
-    if (codeCountdown.value <= 0) {
-      resetCountdown();
-    }
-  }, 1000);
-}
-
-async function handleSendCode() {
-  if (codeSending.value || codeCountdown.value > 0) return;
-
-  if (!form.email.trim()) {
-    notify.warning('请先输入注册邮箱');
-    return;
-  }
-
-  const emailReg = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (!emailReg.test(form.email)) {
-    notify.warning('邮箱格式不正确');
-    return;
-  }
-
-  codeSending.value = true;
-  try {
-    const result = await sendVerifyCode({ email: form.email.trim(), type: 'reset' });
-    notify.success('验证码已发送到邮箱');
-    startCountdown(Math.max(1, result.expireSeconds > 60 ? 60 : result.expireSeconds));
-  } catch (error) {
-    console.error('发送重置验证码失败:', error);
-    notifyAuthFailure(error, '重置验证码发送失败，请稍后重试');
-  } finally {
-    codeSending.value = false;
-  }
-}
 
 async function handleResetPassword() {
   if (!formRef.value || loading.value) return;
@@ -236,7 +173,6 @@ async function handleResetPassword() {
     resetCountdown();
     await router.push('/login');
   } catch (error) {
-    console.error('重置密码失败:', error);
     notifyAuthFailure(error, '密码重置失败，请检查验证码后重试');
   } finally {
     loading.value = false;
@@ -247,9 +183,6 @@ onMounted(() => {
   void loadSiteConfig();
 });
 
-onBeforeUnmount(() => {
-  resetCountdown();
-});
 </script>
 
 <style scoped lang="scss">
@@ -418,10 +351,10 @@ onBeforeUnmount(() => {
   width: 100%;
   border: none;
   border-radius: 12px;
-  background: linear-gradient(135deg, var(--primary), var(--primary-light));
+  background: var(--control-primary-background, linear-gradient(135deg, var(--primary), var(--primary-light)));
   font-size: 16px;
   font-weight: 600;
-  box-shadow: 0 14px 28px rgba(251, 114, 153, 0.22);
+  box-shadow: var(--control-primary-shadow, 0 14px 28px rgba(251, 114, 153, 0.22));
 
   &:hover:not(:disabled) {
     transform: translateY(-1px);
@@ -440,7 +373,7 @@ onBeforeUnmount(() => {
   }
 
   .link {
-    color: var(--primary);
+    color: var(--color-text-link);
     font-weight: 600;
     text-decoration: none;
 

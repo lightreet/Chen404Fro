@@ -1,9 +1,9 @@
 /**
  * 认证相关 API
- * 优先通过 generated SDK 对齐后端契约；refresh/logout 这类特殊流程仍保留手写 request。
+ * 已覆盖的接口通过 generated SDK 对齐契约；注册及 refresh/logout 等流程使用手写 request。
  */
 
-import { get, post, type RequestConfig } from './request';
+import { get, post, put, type RequestConfig } from './request';
 import type {
   LoginParams,
   LoginResult,
@@ -35,16 +35,15 @@ export async function login(params: LoginParams): Promise<LoginResult> {
  * 用户注册
  */
 export async function register(params: RegisterParams): Promise<User> {
-  return unwrapResult(await Service.register({
-    requestBody: {
-      username: params.username,
-      password: params.password,
-      nickname: params.nickname,
-      email: params.email,
-      phone: params.phone,
-      code: params.code || '',
-    },
-  })) as User;
+  // 服务端以注册邮箱作为用户名；旧 SDK 仍要求填写用户名，注册采用当前接口契约。
+  return post('/auth/register', {
+    password: params.password,
+    nickname: params.nickname,
+    email: params.email,
+    phone: params.phone,
+    code: params.code || '',
+    registerType: params.registerType,
+  });
 }
 
 /**
@@ -115,13 +114,14 @@ export function forgotPassword(params: ForgotPasswordParams): Promise<void> {
  * 更新个人资料（需要登录）
  */
 export async function updateProfile(params: UpdateProfileParams): Promise<User> {
-  return unwrapResult(await Service.updateProfile({
-    requestBody: {
-      nickname: params.nickname,
-      avatar: params.avatar,
-      bio: params.bio,
-    },
-  })) as User;
+  // 生成 SDK 尚未覆盖隐私字段，使用当前契约，尤其不能丢弃显式的 false。
+  return put('/auth/profile', {
+    nickname: params.nickname,
+    avatar: params.avatar,
+    bio: params.bio,
+    profileVisible: params.profileVisible,
+    emailPublic: params.emailPublic,
+  });
 }
 
 /**

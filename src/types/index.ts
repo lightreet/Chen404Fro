@@ -90,7 +90,6 @@ export interface LoginResult {
 
 // 注册请求参数
 export interface RegisterParams {
-  username: string;
   password: string;
   nickname?: string;
   email?: string;
