@@ -20,16 +20,6 @@
     </template>
 
     <div id="memory-map-content" class="memory-map-page" :class="{ 'is-mobile-detail': mobileDetail }">
-      <div v-if="!isPhone && authReady && canManage" class="memory-topline">
-        <UiButton
-          variant="primary"
-          size="sm"
-          icon="add"
-          @click="openCreateDialog"
-        >
-          新增旅行游记
-        </UiButton>
-      </div>
       <section
         v-if="!authReady"
         class="memory-state memory-surface"
@@ -1007,17 +997,6 @@ watch(
   color: var(--color-text-primary);
   scroll-margin-top: 72px;
 }
-.memory-topline {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  flex-wrap: wrap;
-  gap: 12px;
-  min-height: 36px;
-  padding: 0 4px 12px;
-  color: var(--color-text-secondary);
-  font-size: var(--font-size-sm);
-}
 .memory-layout {
   display: grid;
   grid-template-columns: 288px minmax(0, 1fr);
@@ -1502,10 +1481,6 @@ watch(
   .memory-map-page {
     width: 100%;
     padding-bottom: 32px;
-  }
-  .memory-topline {
-    padding-bottom: 16px;
-    min-height: 38px;
   }
   .memory-layout {
     grid-template-columns: minmax(0, 1fr);
