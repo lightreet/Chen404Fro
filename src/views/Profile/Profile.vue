@@ -22,20 +22,33 @@
             </section>
 
             <section v-if="!isPhone" class="profile-nav-card">
-              <nav class="nav-menu" role="tablist">
-                <button
-                  v-for="item in navItems"
-                  :key="item.index"
-                  type="button"
-                  class="nav-menu-item"
-                  :class="{ 'is-active': activeMenu === item.index }"
-                  role="tab"
-                  :aria-selected="activeMenu === item.index"
-                  @click="handleMenuSelect(item.index)"
-                >
-                  <UiIcon :name="item.icon" />
-                  <span>{{ item.label }}</span>
-                </button>
+              <nav class="nav-menu" aria-label="个人中心导航">
+                <template v-for="item in navItems" :key="item.index">
+                  <div v-if="item.index === 'creations'" class="nav-creation-group" aria-labelledby="creation-nav-title">
+                    <p id="creation-nav-title" class="nav-group-title">我的创作</p>
+                    <RouterLink
+                      v-for="section in creationSections"
+                      :key="section.value"
+                      :to="getMenuLocation('creations', section.value)"
+                      class="nav-menu-item"
+                      :class="{ 'is-active': activeMenu === 'creations' && activeCreationKind === section.value }"
+                      :aria-current="activeMenu === 'creations' && activeCreationKind === section.value ? 'page' : undefined"
+                    >
+                      <UiIcon :name="section.icon" />
+                      <span>{{ section.label }}</span>
+                    </RouterLink>
+                  </div>
+                  <RouterLink
+                    v-else
+                    :to="getMenuLocation(item.index)"
+                    class="nav-menu-item"
+                    :class="{ 'is-active': activeMenu === item.index }"
+                    :aria-current="activeMenu === item.index ? 'page' : undefined"
+                  >
+                    <UiIcon :name="item.icon" />
+                    <span>{{ item.index === 'settings' ? '个人资料' : item.label }}</span>
+                  </RouterLink>
+                </template>
               </nav>
             </section>
             <div v-if="isPhone" class="mobile-profile-menu">
@@ -47,7 +60,10 @@
           </aside>
 
           <section v-if="!isPhone || !mobileOverview" class="profile-main">
-            <UiPanel class="info-card content-panel">
+            <UiPanel v-if="activeMenu === 'creations'" class="info-card content-panel">
+              <ProfileCreationPanel />
+            </UiPanel>
+            <UiPanel v-else class="info-card content-panel">
               <template #title>
                 <div class="panel-title-inline">
                   <UiIcon class="panel-title-inline-icon" :name="panelIcon" />
@@ -56,9 +72,7 @@
                 </div>
               </template>
 
-              <ProfileCreationPanel v-if="activeMenu === 'creations'" />
-
-              <div v-else-if="activeMenu === 'likes'" class="article-panel article-panel--content-width">
+              <div v-if="activeMenu === 'likes'" class="article-panel article-panel--content-width">
                 <UiSkeleton v-if="likedLoading" :rows="6" />
                 <div v-else-if="myLikedArticles.length === 0" class="empty-state">还没有点赞过文章。</div>
                 <div v-else class="article-list-shell">
@@ -146,7 +160,7 @@
                       <UiFormField label="昵称" prop="nickname">
                         <UiInput
                           v-model="profileForm.nickname"
-                          maxlength="20"
+                          maxlength="100"
                           show-word-limit
                           placeholder="给自己起一个更有辨识度的名字"
                         />
@@ -280,6 +294,7 @@ import { getMyFavoriteArticles, getMyLikedArticles } from '@/api/article'
 import ArticleCard from '@/components/ArticleCard/ArticleCard.vue'
 import ProfileCreationPanel from './ProfileCreationPanel.vue'
 import ProfileTrustRequestPanel from './ProfileTrustRequestPanel.vue'
+import { creationSections, resolveCreationKind, type CreationKind } from './creationNavigation'
 
 const userStore = useUserStore()
 const router = useRouter()
@@ -292,6 +307,7 @@ const user = ref(userStore.user)
 type ProfileMenu = 'creations' | 'likes' | 'favorites' | 'settings' | 'trust'
 
 const activeMenu = ref<ProfileMenu>('settings')
+const activeCreationKind = computed(() => resolveCreationKind(route.query.content))
 const roleText = computed(() => getTrustLevelLabel(user.value))
 const trustLevelText = computed(() => (user.value ? getTrustLevelLabel(user.value) : '--'))
 
@@ -304,7 +320,6 @@ const panelTitle = computed(() => {
 })
 
 const panelBadge = computed(() => {
-  if (activeMenu.value === 'creations') return '内容管理'
   if (activeMenu.value === 'likes') return `共 ${likedTotal.value} 篇`
   if (activeMenu.value === 'favorites') return `共 ${favTotal.value} 篇`
   if (activeMenu.value === 'trust') return trustLevelText.value
@@ -319,7 +334,7 @@ const panelIcon = computed(() => {
   return 'User'
 })
 
-const navItems: Array<{ index: string; icon: string; label: string }> = [
+const navItems: Array<{ index: ProfileMenu; icon: string; label: string }> = [
   { index: 'settings', icon: 'User', label: '个人中心' },
   { index: 'trust', icon: 'Postcard', label: '好友权限' },
   { index: 'creations', icon: 'edit', label: '我的创作' },
@@ -344,7 +359,7 @@ const profileForm = reactive({
 const profileRules: Record<string, FormItemRule[]> = {
   nickname: [
     { required: true, message: '请输入昵称', trigger: 'blur' },
-    { min: 2, max: 20, message: '昵称长度需在 2 到 20 个字符之间', trigger: 'blur' },
+    { min: 2, max: 100, message: '昵称长度需在 2 到 100 个字符之间', trigger: 'blur' },
   ],
   avatar: [{ required: true, message: '请上传头像', trigger: 'change' }],
   bio: [{ max: 160, message: '个人介绍最多 160 个字符', trigger: 'blur' }],
@@ -405,15 +420,14 @@ const loadUser = async () => {
   }
 }
 
-const handleMenuSelect = (index: string) => {
-  const menu = index as ProfileMenu
-  activeMenu.value = menu
+const getMenuLocation = (menu: ProfileMenu, content?: CreationKind) => {
   const { content: currentContent, ...query } = route.query
-  router.replace({
+  return {
+    path: '/profile',
     query: menu === 'creations'
-      ? { ...query, tab: menu, content: currentContent ?? 'articles' }
+      ? { ...query, tab: menu, content: content ?? resolveCreationKind(currentContent) }
       : { ...query, tab: menu },
-  })
+  }
 }
 
 const resolveProfileMenu = (tab: unknown): ProfileMenu => {
@@ -577,12 +591,12 @@ onMounted(() => {
   --profile-text: #70738a;
   --profile-muted: #9ca0b3;
   margin-top: 0;
-  padding: clamp(72px, 7vh, 88px) 0 var(--spacing-xl);
+  padding: 36px 0 var(--spacing-xl);
   background: transparent;
 }
 
 .profile-center {
-  width: min(1120px, calc(100vw - 72px));
+  width: min(1120px, 100%);
   margin: 0 auto;
 }
 
@@ -595,7 +609,7 @@ onMounted(() => {
 
 .profile-sidebar {
   position: sticky;
-  top: calc(64px + clamp(72px, 7vh, 88px));
+  top: 100px;
   align-self: start;
   height: fit-content;
   display: flex;
@@ -847,6 +861,13 @@ onMounted(() => {
   }
 }
 
+.nav-creation-group { display: flex; flex-direction: column; gap: 10px; margin-block: 8px; }
+.nav-group-title { margin: 0 18px 2px; color: var(--profile-text); font-size: 12px; }
+.nav-menu-item { text-decoration: none; }
+.nav-menu-item:focus-visible { outline: 2px solid var(--color-accent-readable); outline-offset: 2px; }
+.sidebar-avatar-shell { flex-shrink: 0; }
+.sidebar-name, .sidebar-email { overflow-wrap: anywhere; }
+
 .profile-main {
   min-width: 0;
 }
@@ -1030,9 +1051,35 @@ onMounted(() => {
   margin-top: 4px;
 }
 
+[data-theme='dark'] .profile-page {
+  --profile-title: var(--color-text-primary);
+  --profile-text: var(--color-text-secondary);
+  --profile-muted: var(--color-text-secondary);
+}
+@media (min-width: 768px) {
+  [data-theme='dark'] .sidebar-user-card,
+  [data-theme='dark'] .profile-nav-card,
+  [data-theme='dark'] .info-card {
+    background: var(--color-surface);
+    border-color: var(--color-border-light);
+  }
+  [data-theme='dark'] .nav-menu-item.is-active {
+    background: linear-gradient(135deg, var(--color-accent-soft), var(--color-surface));
+    color: var(--color-accent-readable);
+  }
+  [data-theme='dark'] .article-total {
+    background: var(--color-accent-soft);
+    border-color: var(--color-border-light);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sidebar-user-card, .sidebar-avatar-shell, .profile-nav-card, .nav-menu-item { transition: none; }
+}
+
 @media (max-width: 1180px) {
   .profile-center {
-    width: min(100%, calc(100vw - 40px));
+    width: 100%;
   }
 
   .profile-shell {
@@ -1042,13 +1089,9 @@ onMounted(() => {
 }
 
 @media (max-width: 900px) {
-  .profile-shell {
-    grid-template-columns: 1fr;
-  }
-
-  .profile-sidebar {
-    position: static;
-  }
+  .profile-shell { grid-template-columns: 240px minmax(0, 1fr); gap: 16px; }
+  .sidebar-user-card { padding-inline: 16px; }
+  .profile-nav-card { padding: 16px; }
 
   .form-grid {
     grid-template-columns: 1fr;
@@ -1088,7 +1131,7 @@ onMounted(() => {
   .profile-page { padding: 12px 0 0; margin: 0; min-height: 0; background: none; }
   .profile-center { width: 100%; max-width: 100%; }
   .profile-shell { display: block; padding: 0; }
-  .profile-sidebar { width: 100%; }
+  .profile-sidebar { position: static; width: 100%; }
   .sidebar-user-card { border-radius: var(--mobile-card-radius); padding: 20px 16px; background: var(--color-surface); border: 0; box-shadow: none; }
   .sidebar-user-main { flex-direction: row; align-items: center; gap: 14px; }
   .sidebar-name { font-size: 20px; }

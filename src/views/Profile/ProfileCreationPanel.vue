@@ -1,213 +1,242 @@
 <template>
   <div class="profile-creation-panel">
     <UiTabs
+      v-if="isPhone"
       v-model="activeKind"
       :items="creationTabs"
       variant="line"
       class="creation-tabs"
       @change="handleKindChange"
-    >
-      <template #actions>
-        <UiButton
-          v-if="currentAction"
-          variant="primary"
-          size="sm"
-          icon="add"
-          @click="router.push(currentAction.path)"
-        >
-          {{ currentAction.label }}
-        </UiButton>
-      </template>
-
-      <div v-if="!currentCanCreate" class="creation-permission-note">
-        <UiIcon name="lock" />
-        <span>你仍可查看历史记录，当前账号暂时不能新增或编辑这类内容。</span>
+    />
+    <header v-if="!isPhone" class="creation-toolbar">
+      <div class="creation-heading">
+        <h2>{{ currentSection.title }}</h2>
+        <span v-if="!currentLoading && !currentError" class="creation-total">{{ currentTotal }} {{ currentSection.unit }}</span>
       </div>
-
-      <div class="creation-filter-bar">
-        <UiRadioGroup
-          v-if="activeKind === 'articles'"
-          v-model="articleStatus"
-          variant="button"
-          :options="articleStatusOptions"
-          @change="refreshArticles(1)"
-        />
-        <UiSearchBar
-          v-model="currentSearchInput"
-          class="creation-search"
-          :placeholder="currentSearchPlaceholder"
-          :loading="currentLoading"
-          @search="handleCurrentSearch"
-        />
-      </div>
-
-      <UiLoadingState
-        :loading="currentLoading"
-        :message="currentLoadingMessage"
-        variant="plain"
-        class="creation-loading"
+      <UiButton
+        v-if="currentAction"
+        variant="primary"
+        :size="isPhone ? 'lg' : 'md'"
+        icon="add"
+        class="creation-create"
+        @click="router.push(currentAction.path)"
       >
-        <section v-if="activeKind === 'articles'" aria-label="我的文章">
-          <UiEmpty
-            v-if="!articleLoading && visibleArticles.length === 0"
-            :title="articleHasFilters ? '没有找到文章' : '还没有文章'"
-            :description="articleHasFilters
-              ? '调整关键词或发布状态后再试。'
-              : canWriteArticle
-                ? '写下第一篇文章，它会出现在这里。'
-                : '当前没有可查看的文章记录。'"
-            icon="article"
-          />
-          <div v-else class="article-list-shell">
-            <div class="article-list">
-              <ArticleCard
-                v-for="(article, index) in visibleArticles"
-                :key="String(article.id)"
-                :article="article"
-                :index="index"
-                :mode="canWriteArticle ? 'manage' : 'home'"
-                compact
-                profile-feed
-                @edit="handleEditArticle"
-                @delete="handleDeleteArticle"
-              />
-            </div>
-            <UiPagination
-              v-if="articleTotal > articlePageSize"
-              :current="articlePage"
-              :page-size="articlePageSize"
-              :total="articleTotal"
-              class="creation-pager"
-              @change="refreshArticles"
-            />
-          </div>
-        </section>
+        {{ currentAction.label }}
+      </UiButton>
+    </header>
 
-        <section v-else-if="activeKind === 'travel'" aria-label="我的旅行地点">
-          <UiEmpty
-            v-if="!travelLoading && filteredTravelMemories.length === 0"
-            :title="travelKeyword ? '没有找到旅行地点' : '还没有旅行地点'"
-            :description="travelKeyword
-              ? '换个地点名称或城市再试。'
-              : canWriteTravel
-                ? '把一次旅途放进地图，它会出现在这里。'
-                : '当前没有可查看的旅行记录。'"
-            icon="location"
-          />
-          <div v-else class="creation-record-shell">
-            <div class="creation-record-list">
-              <article
-                v-for="memory in paginatedTravelMemories"
-                :key="String(memory.id)"
-                class="creation-record"
-              >
-                <span class="creation-record__icon is-travel">
-                  <UiIcon name="location" />
-                  <img
-                    v-if="memory.coverImage"
-                    class="creation-record__cover"
-                    :src="memory.coverImage"
-                    :alt="`${memory.title}旅行封面`"
-                    decoding="async"
-                    @load="handleCoverImageLoad"
-                    @error="handleCoverImageError"
-                  />
-                </span>
-                <div class="creation-record__copy">
-                  <strong>{{ memory.title }}</strong>
-                  <span>
-                    {{ memory.city || memory.province || '未标注城市' }}
-                    ·
-                    {{ formatDate(memory.updateTime) }}
-                  </span>
-                </div>
-                <div class="creation-record__actions">
-                  <UiBadge :tone="memory.status === 1 ? 'success' : 'neutral'" size="sm">
-                    {{ memory.status === 1 ? '地图展示' : '暂不展示' }}
-                  </UiBadge>
-                  <UiButton
-                    v-if="canWriteTravel && memory.canEdit"
-                    variant="text"
-                    size="sm"
-                    @click="router.push(`/memory-map/edit/${String(memory.id)}`)"
-                  >
-                    编辑
-                  </UiButton>
-                </div>
-              </article>
-            </div>
-            <UiPagination
-              v-if="filteredTravelMemories.length > travelPageSize"
-              :current="travelPage"
-              :page-size="travelPageSize"
-              :total="filteredTravelMemories.length"
-              class="creation-pager"
-              @change="handleTravelPageChange"
-            />
-          </div>
-        </section>
+    <div v-if="!currentCanCreate" class="creation-permission-note">
+      <UiIcon name="lock" />
+      <span>你仍可查看历史记录，当前账号暂时不能新增或编辑这类内容。</span>
+    </div>
 
-        <section v-else aria-label="我的音乐">
-          <UiEmpty
-            v-if="!musicLoading && filteredMusicTracks.length === 0"
-            :title="musicKeyword ? '没有找到音乐' : '还没有音乐'"
-            :description="musicKeyword
-              ? '换个曲名、歌手或专辑再试。'
-              : canWriteMusic
-                ? '上传第一首音乐，它会出现在这里。'
-                : '当前没有可查看的音乐记录。'"
-            icon="music"
-          />
-          <div v-else class="creation-record-shell">
-            <div class="creation-record-list">
-              <article
-                v-for="track in paginatedMusicTracks"
-                :key="String(track.id)"
-                class="creation-record"
-              >
-                <span class="creation-record__icon is-music">
-                  <UiIcon name="music" />
-                  <img
-                    v-if="track.coverUrl"
-                    class="creation-record__cover"
-                    :src="track.coverUrl"
-                    :alt="`${track.title}音乐封面`"
-                    decoding="async"
-                    @load="handleCoverImageLoad"
-                    @error="handleCoverImageError"
-                  />
-                </span>
-                <div class="creation-record__copy">
-                  <strong>{{ track.title }}</strong>
-                  <span>{{ track.artist }} · {{ formatDate(track.updateTime) }}</span>
-                </div>
-                <div class="creation-record__actions">
-                  <UiBadge :tone="track.status === 'published' ? 'success' : 'neutral'" size="sm">
-                    {{ musicStatusLabel(track.status) }}
-                  </UiBadge>
-                  <UiButton
-                    v-if="canWriteMusic && track.canEdit"
-                    variant="text"
-                    size="sm"
-                    @click="router.push(`/music/tracks/${String(track.id)}/edit`)"
-                  >
-                    编辑
-                  </UiButton>
-                </div>
-              </article>
-            </div>
-            <UiPagination
-              v-if="filteredMusicTracks.length > musicPageSize"
-              :current="musicPage"
-              :page-size="musicPageSize"
-              :total="filteredMusicTracks.length"
-              class="creation-pager"
-              @change="handleMusicPageChange"
+    <div class="creation-filter-bar">
+      <UiRadioGroup
+        v-if="activeKind === 'articles'"
+        v-model="articleStatus"
+        variant="line"
+        :size="isPhone ? 'lg' : 'md'"
+        :options="articleStatusOptions"
+        class="creation-status"
+        aria-label="文章发布状态"
+        @change="refreshArticles(1)"
+      />
+      <form class="creation-search" role="search" :aria-label="`搜索${currentSection.label}`" @submit.prevent="handleCurrentSearch(currentSearchInput)">
+        <UiInput
+          v-model="currentSearchInput"
+          clearable
+          type="search"
+          :size="isPhone ? 'lg' : 'md'"
+          :placeholder="currentSearchPlaceholder"
+          :aria-label="currentSearchPlaceholder"
+          @clear="handleCurrentSearch('')"
+        >
+          <template #prefix>
+            <button class="creation-search-submit" type="submit" :disabled="currentLoading" :aria-label="`搜索${currentSection.label}`">
+              <UiIcon name="search" :size="18" />
+            </button>
+          </template>
+        </UiInput>
+      </form>
+      <UiButton
+        v-if="isPhone && currentAction"
+        variant="primary"
+        size="lg"
+        icon="add"
+        class="creation-create"
+        @click="router.push(currentAction.path)"
+      >{{ currentAction.label }}</UiButton>
+    </div>
+
+    <UiLoadingState
+      :loading="currentLoading"
+      :message="currentLoadingMessage"
+      variant="plain"
+      class="creation-loading"
+    >
+      <UiEmpty v-if="currentError" :title="`${currentSection.label}记录加载失败`" :description="currentError" icon="warning">
+        <template #action><UiButton variant="secondary" @click="retryCurrent">重新加载</UiButton></template>
+      </UiEmpty>
+      <section v-else-if="activeKind === 'articles'" aria-label="我的文章">
+        <UiEmpty
+          v-if="!articleLoading && visibleArticles.length === 0"
+          :title="articleHasFilters ? '没有找到文章' : '还没有文章'"
+          :description="articleHasFilters
+            ? '调整关键词或发布状态后再试。'
+            : canWriteArticle
+              ? '写下第一篇文章，它会出现在这里。'
+              : '当前没有可查看的文章记录。'"
+          icon="article"
+        />
+        <div v-else class="article-list-shell">
+          <div class="article-list">
+            <ArticleCard
+              v-for="(article, index) in visibleArticles"
+              :key="String(article.id)"
+              :article="article"
+              :index="index"
+              :mode="canWriteArticle ? 'manage' : 'home'"
+              compact
+              profile-feed
+              @edit="handleEditArticle"
+              @delete="handleDeleteArticle"
             />
           </div>
-        </section>
-      </UiLoadingState>
-    </UiTabs>
+          <UiPagination
+            v-if="articleTotal > articlePageSize"
+            :current="articlePage"
+            :page-size="articlePageSize"
+            :total="articleTotal"
+            class="creation-pager"
+            @change="refreshArticles"
+          />
+        </div>
+      </section>
+
+      <section v-else-if="activeKind === 'travel'" aria-label="我的旅行地点">
+        <UiEmpty
+          v-if="!travelLoading && filteredTravelMemories.length === 0"
+          :title="travelKeyword ? '没有找到旅行地点' : '还没有旅行地点'"
+          :description="travelKeyword
+            ? '换个地点名称或城市再试。'
+            : canWriteTravel
+              ? '把一次旅途放进地图，它会出现在这里。'
+              : '当前没有可查看的旅行记录。'"
+          icon="location"
+        />
+        <div v-else class="creation-record-shell">
+          <div class="creation-record-list">
+            <article
+              v-for="memory in paginatedTravelMemories"
+              :key="String(memory.id)"
+              class="creation-record"
+            >
+              <span class="creation-record__icon is-travel">
+                <UiIcon name="location" />
+                <img
+                  v-if="memory.coverImage"
+                  class="creation-record__cover"
+                  :src="memory.coverImage"
+                  :alt="`${memory.title}旅行封面`"
+                  decoding="async"
+                  @load="handleCoverImageLoad"
+                  @error="handleCoverImageError"
+                />
+              </span>
+              <div class="creation-record__copy">
+                <strong>{{ memory.title }}</strong>
+                <span>
+                  {{ memory.city || memory.province || '未标注城市' }}
+                  ·
+                  {{ formatDate(memory.updateTime) }}
+                </span>
+              </div>
+              <div class="creation-record__actions">
+                <UiBadge :tone="memory.status === 1 ? 'success' : 'neutral'" size="sm">
+                  {{ memory.status === 1 ? '地图展示' : '暂不展示' }}
+                </UiBadge>
+                <UiButton
+                  v-if="canWriteTravel && memory.canEdit"
+                  variant="text"
+                  size="sm"
+                  @click="router.push(`/memory-map/edit/${String(memory.id)}`)"
+                >
+                  编辑
+                </UiButton>
+              </div>
+            </article>
+          </div>
+          <UiPagination
+            v-if="filteredTravelMemories.length > travelPageSize"
+            :current="travelPage"
+            :page-size="travelPageSize"
+            :total="filteredTravelMemories.length"
+            class="creation-pager"
+            @change="handleTravelPageChange"
+          />
+        </div>
+      </section>
+
+      <section v-else aria-label="我的音乐">
+        <UiEmpty
+          v-if="!musicLoading && filteredMusicTracks.length === 0"
+          :title="musicKeyword ? '没有找到音乐' : '还没有音乐'"
+          :description="musicKeyword
+            ? '换个曲名、歌手或专辑再试。'
+            : canWriteMusic
+              ? '上传第一首音乐，它会出现在这里。'
+              : '当前没有可查看的音乐记录。'"
+          icon="music"
+        />
+        <div v-else class="creation-record-shell">
+          <div class="creation-record-list">
+            <article
+              v-for="track in paginatedMusicTracks"
+              :key="String(track.id)"
+              class="creation-record"
+            >
+              <span class="creation-record__icon is-music">
+                <UiIcon name="music" />
+                <img
+                  v-if="track.coverUrl"
+                  class="creation-record__cover"
+                  :src="track.coverUrl"
+                  :alt="`${track.title}音乐封面`"
+                  decoding="async"
+                  @load="handleCoverImageLoad"
+                  @error="handleCoverImageError"
+                />
+              </span>
+              <div class="creation-record__copy">
+                <strong>{{ track.title }}</strong>
+                <span>{{ track.artist }} · {{ formatDate(track.updateTime) }}</span>
+              </div>
+              <div class="creation-record__actions">
+                <UiBadge :tone="track.status === 'published' ? 'success' : 'neutral'" size="sm">
+                  {{ musicStatusLabel(track.status) }}
+                </UiBadge>
+                <UiButton
+                  v-if="canWriteMusic && track.canEdit"
+                  variant="text"
+                  size="sm"
+                  @click="router.push(`/music/tracks/${String(track.id)}/edit`)"
+                >
+                  编辑
+                </UiButton>
+              </div>
+            </article>
+          </div>
+          <UiPagination
+            v-if="filteredMusicTracks.length > musicPageSize"
+            :current="musicPage"
+            :page-size="musicPageSize"
+            :total="filteredMusicTracks.length"
+            class="creation-pager"
+            @change="handleMusicPageChange"
+          />
+        </div>
+      </section>
+    </UiLoadingState>
   </div>
 </template>
 
@@ -225,7 +254,7 @@ import {
   UiLoadingState,
   UiPagination,
   UiRadioGroup,
-  UiSearchBar,
+  UiInput,
   UiTabs,
   type UiTabItem,
 } from '@/components/ui'
@@ -235,6 +264,8 @@ import { getMyTravelMemories } from '@/api/travel-memory'
 import { confirmDelete, notify } from '@/lib/feedback'
 import { useUserStore } from '@/stores/user'
 import { hasCapability } from '@/utils/permission'
+import { useMobileViewport } from '@/composables/useMobileViewport'
+import { creationSections, resolveCreationKind } from './creationNavigation'
 import type {
   ArticleListItem,
   MusicTrack,
@@ -242,12 +273,12 @@ import type {
   TravelMemoryLocationDetail,
 } from '@/types'
 
-type CreationKind = 'articles' | 'travel' | 'music'
-
 const route = useRoute()
 const router = useRouter()
 const userStore = useUserStore()
 const { user } = storeToRefs(userStore)
+const { isMobile: isPhone } = useMobileViewport()
+const loadErrors = ref({ articles: '', travel: '', music: '' })
 
 const articles = ref<ArticleListItem[]>([])
 const articleLoading = ref(false)
@@ -256,6 +287,7 @@ const articlePageSize = 5
 const articleTotal = ref(0)
 const articleStatus = ref(-1)
 const articleKeyword = ref('')
+let articleRequestId = 0
 
 const travelMemories = ref<TravelMemoryLocationDetail[]>([])
 const travelLoading = ref(false)
@@ -270,12 +302,9 @@ const musicPageSize = 10
 const musicSearchInput = ref('')
 const musicKeyword = ref('')
 
-const resolveKind = (value: unknown): CreationKind => {
-  if (value === 'travel' || value === 'music') return value
-  return 'articles'
-}
-
-const activeKind = ref<CreationKind>(resolveKind(route.query.content))
+const activeKind = ref(resolveCreationKind(route.query.content))
+const currentSection = computed(() => creationSections.find(section => section.value === activeKind.value) ?? creationSections[0])
+const currentError = computed(() => loadErrors.value[activeKind.value])
 
 const canWriteArticle = computed(() => hasCapability(user.value, 'article:create'))
 const canWriteTravel = computed(() => hasCapability(user.value, 'travel:create'))
@@ -336,6 +365,8 @@ const creationTabs = computed<UiTabItem[]>(() => [
   { value: 'travel', label: '旅行', icon: 'location', badge: travelMemories.value.length },
   { value: 'music', label: '音乐', icon: 'music', badge: musicTracks.value.length },
 ])
+const currentTotal = computed(() => activeKind.value === 'articles' ? articleTotal.value
+  : activeKind.value === 'travel' ? filteredTravelMemories.value.length : filteredMusicTracks.value.length)
 
 const currentCanCreate = computed(() => {
   if (activeKind.value === 'articles') return canWriteArticle.value
@@ -345,8 +376,8 @@ const currentCanCreate = computed(() => {
 const currentAction = computed(() => {
   if (!currentCanCreate.value) return null
   if (activeKind.value === 'articles') return { label: '写文章', path: '/article/edit' }
-  if (activeKind.value === 'travel') return { label: '记旅途', path: '/memory-map/create' }
-  return { label: '传音乐', path: '/music/tracks/new' }
+  if (activeKind.value === 'travel') return { label: '写游记', path: '/memory-map/create' }
+  return { label: '上传音乐', path: '/music/tracks/new' }
 })
 const currentLoading = computed(() => {
   if (activeKind.value === 'articles') return articleLoading.value
@@ -377,9 +408,10 @@ const currentSearchInput = computed({
   },
 })
 const currentSearchPlaceholder = computed(() => {
-  if (activeKind.value === 'articles') return '按标题搜索文章'
-  if (activeKind.value === 'travel') return '按地点或城市搜索旅行'
-  return '按曲名、歌手或专辑搜索音乐'
+  if (isPhone.value) return `搜索${currentSection.value.label === '旅行' ? '游记' : currentSection.value.label}`
+  if (activeKind.value === 'articles') return '搜索文章标题'
+  if (activeKind.value === 'travel') return '搜索游记、城市'
+  return '搜索曲名、歌手、专辑'
 })
 
 const articleStatusOptions = [
@@ -389,8 +421,10 @@ const articleStatusOptions = [
 ]
 
 const loadArticles = async (page = 1) => {
+  const requestId = ++articleRequestId
   articlePage.value = page
   articleLoading.value = true
+  loadErrors.value.articles = ''
   try {
     const result = await getMyArticles(
       {
@@ -401,17 +435,26 @@ const loadArticles = async (page = 1) => {
       },
       { suppressErrorMessage: true },
     )
+    if (requestId !== articleRequestId) return
     articles.value = result.list ?? []
     articleTotal.value = result.total ?? 0
+  } catch (error) {
+    if (requestId !== articleRequestId) return
+    loadErrors.value.articles = '暂时无法获取文章记录，请重试。'
+    throw error
   } finally {
-    articleLoading.value = false
+    if (requestId === articleRequestId) articleLoading.value = false
   }
 }
 
 const loadTravelMemories = async () => {
   travelLoading.value = true
+  loadErrors.value.travel = ''
   try {
     travelMemories.value = await getMyTravelMemories({ suppressErrorMessage: true })
+  } catch (error) {
+    loadErrors.value.travel = '暂时无法获取旅行记录，请重试。'
+    throw error
   } finally {
     travelLoading.value = false
   }
@@ -419,8 +462,12 @@ const loadTravelMemories = async () => {
 
 const loadMusicTracks = async () => {
   musicLoading.value = true
+  loadErrors.value.music = ''
   try {
     musicTracks.value = await getMyMusicTracks({ suppressErrorMessage: true })
+  } catch (error) {
+    loadErrors.value.music = '暂时无法获取音乐记录，请重试。'
+    throw error
   } finally {
     musicLoading.value = false
   }
@@ -458,7 +505,7 @@ const handleMusicPageChange = (page: number) => {
 }
 
 const handleKindChange = (value: string) => {
-  const content = resolveKind(value)
+  const content = resolveCreationKind(value)
   activeKind.value = content
   void router.replace({
     query: {
@@ -508,38 +555,51 @@ const musicStatusLabel = (status: MusicTrackStatus) => {
 watch(
   () => route.query.content,
   (value) => {
-    activeKind.value = resolveKind(value)
+    activeKind.value = resolveCreationKind(value)
   },
 )
 
+const retryCurrent = async () => {
+  if (currentLoading.value) return
+  const loaders = { articles: () => loadArticles(articlePage.value), travel: loadTravelMemories, music: loadMusicTracks }
+  await Promise.allSettled([loaders[activeKind.value]()])
+}
+
 onMounted(async () => {
-  const resourceLabels = ['文章', '旅行', '音乐']
-  const results = await Promise.allSettled([
+  await Promise.allSettled([
     loadArticles(1),
     loadTravelMemories(),
     loadMusicTracks(),
   ])
-  const failedResources = results.flatMap((result, index) =>
-    result.status === 'rejected' ? [resourceLabels[index]] : [],
-  )
-  if (failedResources.length > 0) {
-    notify.error(`${failedResources.join('、')}记录加载失败，请稍后重试`)
-  }
 })
 </script>
 
 <style scoped lang="scss">
 .profile-creation-panel {
   min-width: 0;
+  container-type: inline-size;
 }
 
 .creation-tabs :deep(.ui-tabs__panel) {
-  margin-top: 12px;
+  display: none;
 }
 
-.creation-tabs :deep(.ui-tabs__nav) {
+.creation-toolbar {
+  display: flex;
+  align-items: center;
   flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 20px;
 }
+.creation-heading { display: flex; align-items: baseline; gap: 8px; margin-right: auto; }
+.creation-heading h2 { margin: 0; color: var(--color-text-primary); font-size: 24px; font-weight: 600; line-height: 1.4; }
+.creation-total { color: var(--color-text-secondary); font-size: 13px; white-space: nowrap; }
+.creation-search { flex: 0 1 260px; min-width: 200px; margin-left: auto; }
+.creation-status { flex: none; }
+.creation-search-submit { display: grid; place-items: center; border: 0; padding: 0; min-width: 24px; min-height: 32px; background: transparent; color: var(--color-text-secondary); cursor: pointer; }
+.creation-search-submit:focus-visible { outline: 2px solid var(--color-accent-readable); outline-offset: 2px; }
+.creation-search :deep(.ui-input__inner::placeholder) { color: var(--color-text-secondary); }
+.creation-create { flex: none; }
 
 .creation-permission-note {
   display: flex;
@@ -563,12 +623,7 @@ onMounted(async () => {
   justify-content: flex-start;
   flex-wrap: wrap;
   gap: var(--space-md);
-  margin-bottom: var(--space-lg);
-}
-
-.creation-search {
-  flex: 0 1 340px;
-  min-width: 220px;
+  margin-bottom: var(--space-md);
 }
 
 .article-list-shell,
@@ -680,11 +735,19 @@ onMounted(async () => {
   gap: var(--space-sm);
 }
 
-@media (max-width: 767px) {
-  .article-list { gap: var(--mobile-article-list-gap); }
+.creation-record__cover[hidden] { display: none; }
+
+@container (max-width: 590px) {
+  .creation-search { flex-grow: 1; }
 }
 
-@media (max-width: 720px) {
+@media (max-width: 767px) {
+  .article-list { gap: var(--mobile-article-list-gap); }
+  .creation-tabs { margin-bottom: 16px; }
+  .creation-search { flex: 1; min-width: 0; }
+  .creation-search-submit { min-height: 44px; min-width: 44px; }
+  .creation-create { padding-inline: 12px; }
+  .creation-permission-note { align-items: flex-start; }
   .creation-tabs :deep(.ui-tabs__nav) {
     flex-wrap: nowrap;
     overflow-x: auto;
@@ -696,15 +759,10 @@ onMounted(async () => {
   }
 
   .creation-filter-bar {
-    align-items: stretch;
-    flex-direction: column;
+    gap: 12px 8px;
   }
+  .creation-status { flex-basis: 100%; }
 
-  .creation-search {
-    width: 100%;
-    min-width: 0;
-    flex-basis: auto;
-  }
 }
 
 @media (max-width: 560px) {
