@@ -1068,7 +1068,7 @@
   .autosave-text { font-size: 12px; }
   .mobile-editor-tabs { display: flex; gap: 8px; margin-bottom: 16px; padding: 4px; border-radius: 12px; background: var(--color-surface); }
   .mobile-editor-tabs button { flex: 1; border: 0; border-radius: 10px; min-height: 44px; background: transparent; color: var(--color-text-secondary); font-size: 15px; }
-  .mobile-editor-tabs .active { background: var(--color-accent-soft); color: var(--color-accent-readable); font-weight: 600; }
+  .mobile-editor-tabs .active { background: var(--control-selected-background); color: var(--control-selected-text); font-weight: 600; }
   .mobile-editor-tabs .mobile-editor-more { flex: 0 0 44px; display: grid; place-items: center; }
   .paper-title-input :deep(.ui-input__inner) { font-size: 20px; }
   .paper-editor-host :deep(.md-editor-toolbar-wrapper) { max-width: 100%; }

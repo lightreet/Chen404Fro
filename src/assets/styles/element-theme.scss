@@ -8,13 +8,13 @@
 
 :root {
   // ---- 主色：樱花粉 ----
-  --el-color-primary: var(--primary);
-  --el-color-primary-light-3: var(--primary-light);
-  --el-color-primary-light-5: color-mix(in srgb, var(--primary) 55%, white);
-  --el-color-primary-light-7: color-mix(in srgb, var(--primary) 35%, white);
-  --el-color-primary-light-8: color-mix(in srgb, var(--primary) 22%, white);
+  --el-color-primary: var(--color-accent);
+  --el-color-primary-light-3: var(--element-primary-light, var(--primary-light));
+  --el-color-primary-light-5: color-mix(in srgb, var(--color-accent) 55%, white);
+  --el-color-primary-light-7: color-mix(in srgb, var(--color-accent) 35%, white);
+  --el-color-primary-light-8: color-mix(in srgb, var(--color-accent) 22%, white);
   --el-color-primary-light-9: var(--color-accent-soft);
-  --el-color-primary-dark-2: var(--primary-dark);
+  --el-color-primary-dark-2: var(--color-accent-strong);
 
   // ---- 语义色 ----
   --el-color-success: var(--success);
@@ -65,14 +65,6 @@
   --el-font-size-base: var(--font-size-base);
 }
 
-@media (max-width: 767px) {
-  :root:not([data-theme="dark"]) {
-    --el-color-primary: var(--color-accent-readable);
-    --el-color-primary-light-3: color-mix(in srgb, var(--color-accent-readable) 70%, white);
-    --el-color-primary-dark-2: color-mix(in srgb, var(--color-accent-readable) 85%, var(--color-text-primary));
-  }
-}
-
 // ====== 结构性微调：弱化后台感 ======
 
 // 按钮：圆角更柔，hover 轻微上浮，主按钮带渐变
@@ -95,11 +87,12 @@
 }
 
 .el-button.el-button--primary:not(.is-plain):not(.is-text):not(.is-link) {
-  background: linear-gradient(135deg, var(--primary), var(--primary-light));
+  background: var(--control-primary-background, linear-gradient(135deg, var(--primary), var(--primary-light)));
+  color: var(--control-primary-text, #fff);
   border-color: transparent;
 
   &:not(.is-disabled):hover {
-    box-shadow: 0 8px 20px color-mix(in srgb, var(--primary) 32%, transparent);
+    box-shadow: var(--control-primary-shadow, 0 8px 20px color-mix(in srgb, var(--primary) 32%, transparent));
   }
 }
 

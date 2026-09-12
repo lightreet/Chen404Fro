@@ -217,7 +217,7 @@ h3 > span { color: var(--color-text-secondary); font-size: 12px; font-weight: 40
 .navigation-row.is-dragging { outline: 1px solid var(--color-accent-readable); background: var(--color-accent-soft); }
 .navigation-row strong { flex: 1; min-width: 0; font-size: 15px; font-weight: 500; }
 .navigation-remove { display: grid; place-items: center; width: 44px; height: 44px; padding: 0; border: 0; background: transparent; cursor: pointer; }
-.navigation-remove > span { display: grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; color: var(--color-accent-readable); background: var(--color-accent-soft); }
+.navigation-remove > span { display: grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; color: var(--color-accent-readable); background: var(--control-secondary-background, var(--color-accent-soft)); }
 .navigation-sort { position: relative; }
 .navigation-sort__handle { touch-action: none; cursor: grab; color: var(--color-text-secondary); }
 .is-dragging .navigation-sort__handle { cursor: grabbing; }

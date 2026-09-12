@@ -2827,9 +2827,9 @@ watch(
 }
 
 :deep(.footer-button--save) {
-  border-color: rgba(255, 91, 144, 0.96) !important;
-  background: linear-gradient(135deg, #ff4f91, #ff8bb4) !important;
-  color: #fff !important;
+  border-color: var(--control-primary-border, rgba(255, 91, 144, 0.96)) !important;
+  background: var(--control-primary-background, linear-gradient(135deg, #ff4f91, #ff8bb4)) !important;
+  color: var(--control-primary-text, #fff) !important;
   box-shadow: 0 12px 24px rgba(255, 91, 144, 0.26) !important;
 }
 
@@ -3059,7 +3059,7 @@ watch(
   .travel-memory-create__footer { padding: 12px 20px calc(12px + env(safe-area-inset-bottom)); background: var(--color-surface); }
   .travel-memory-create__footer-inner { width: 100%; gap: 12px; }
   :deep(.footer-button) { min-height: 48px; border-radius: 12px; }
-  :deep(.footer-button--save) { background: var(--color-accent-readable) !important; color: var(--color-on-accent-readable) !important; border-color: transparent !important; box-shadow: none !important; }
+  :deep(.footer-button--save) { box-shadow: none !important; }
   :deep(.el-date-editor.el-input), :deep(.el-date-editor.el-input__wrapper) { width: 100%; }
   .photo-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .mini-photo { min-width: 0; }

@@ -1,0 +1,75 @@
+// 瓷白樱粉：按用户要求先在手机端试用，当前范围见 DESIGN.md。
+// 交互保留樱花粉，仅发现页功能入口降低饱和度；其余色板保持当前试用值。
+@media (max-width: 767px) {
+  :root {
+    --color-accent-readable: #fb7299;
+    --color-on-accent-readable: #ffffff;
+    --color-accent-strong: #fb7299;
+    --page-background-image: none;
+    --page-content-background: none;
+    --color-accent: var(--color-accent-readable);
+    --text-link: var(--color-accent-readable);
+    --text-link-hover: var(--color-accent-strong);
+    --color-navigation-icon: var(--color-text-secondary);
+    --control-primary-background: var(--color-accent-readable);
+    --control-primary-text: var(--color-on-accent-readable);
+    --control-primary-border: var(--control-primary-background);
+    --control-primary-shadow: none;
+    --control-primary-hover: var(--color-accent-strong);
+    --element-primary-light: color-mix(in srgb, var(--color-accent) 70%, var(--bg-secondary));
+    --control-secondary-background: #ffffff;
+    --control-secondary-text: #fb7299;
+    --control-secondary-border: #fb7299;
+    --control-selected-background: var(--control-primary-background);
+    --control-selected-text: var(--control-primary-text);
+    --selection-background: var(--color-accent-soft);
+    --selection-text: var(--color-accent-readable);
+    --content-card-border: 1px solid var(--color-border);
+    --hero-fade-base: var(--bg-primary);
+    --shadow-sm: 0 2px 4px rgb(40 37 42 / 4%);
+    --shadow-md: 0 3px 8px rgb(40 37 42 / 6%);
+    --shadow-lg: 0 4px 8px rgb(40 37 42 / 8%);
+  }
+
+  :root:not([data-theme='dark']) {
+    --bg-primary: #fafafb;
+    --bg-secondary: #ffffff;
+    --bg-elevated: #ffffff;
+    --bg-hover: #f3eff2;
+    --bg-glass: var(--bg-primary);
+    --bg-glass-strong: var(--bg-secondary);
+    --text-primary: #28252a;
+    --text-secondary: #6e6872;
+    --text-tertiary: #6e6872;
+    --border-color: #eae7ec;
+    --border-light: #eae7ec;
+    --border-strong: #bdb5c1;
+    --color-accent-soft: #fdf3f7;
+    --color-entry-text: #806574;
+    --color-entry-icon: #a17d90;
+  }
+
+  :root[data-theme='dark'] {
+    --primary: #f2a0bc;
+    --primary-light: #f6b7cb;
+    --primary-dark: #f6b7cb;
+    --bg-primary: #1d1b20;
+    --bg-secondary: #27242b;
+    --bg-elevated: #322e36;
+    --bg-hover: #322e36;
+    --bg-glass: var(--bg-primary);
+    --bg-glass-strong: var(--bg-secondary);
+    --text-primary: #f3eff4;
+    --text-secondary: #bbb4bf;
+    --text-tertiary: #bbb4bf;
+    --border-color: #403a44;
+    --border-light: #403a44;
+    --border-strong: #776d7e;
+    --color-accent-soft: #382a33;
+    --color-entry-text: #c4aab8;
+    --color-entry-icon: #c9aebe;
+    --shadow-sm: none;
+    --shadow-md: none;
+    --shadow-lg: none;
+  }
+}

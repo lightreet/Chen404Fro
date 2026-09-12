@@ -37,7 +37,7 @@ a {
   transition: color 0.3s;
 
   &:hover {
-    color: var(--primary-dark);
+    color: var(--text-link-hover, var(--primary-dark));
   }
 }
 
@@ -62,8 +62,8 @@ a {
 
 // 选中文字样式
 ::selection {
-  background: var(--primary-light);
-  color: white;
+  background: var(--selection-background, var(--primary-light));
+  color: var(--selection-text, white);
 }
 
 // 容器

@@ -135,8 +135,8 @@ const go = (page: number) => {
     transform var(--motion-duration-fast) var(--motion-ease-standard);
 
   &:hover:not(:disabled):not(.is-active) {
-    color: var(--primary);
-    background: var(--color-accent-soft);
+    color: var(--control-secondary-text, var(--primary));
+    background: var(--control-secondary-background, var(--color-accent-soft));
   }
   &:disabled {
     opacity: 0.45;
@@ -148,17 +148,10 @@ const go = (page: number) => {
     opacity: 1;
   }
   &.is-active {
-    background: linear-gradient(135deg, var(--primary), var(--primary-light));
-    color: #fff;
+    background: var(--control-selected-background, linear-gradient(135deg, var(--primary), var(--primary-light)));
+    color: var(--control-selected-text, #fff);
     cursor: default;
   }
 }
 
-@media (max-width: 767px) {
-  .ui-pagination__btn.is-active,
-  .ui-pagination__btn:hover:not(:disabled):not(.is-active) {
-    background: var(--color-accent-soft);
-    color: var(--color-accent-readable);
-  }
-}
 </style>

@@ -154,16 +154,16 @@ const handleClick = (ev: MouseEvent) => {
   background: var(--color-accent-readable);
   color: var(--color-on-accent-readable);
   &:not(.is-disabled):hover {
-    background: color-mix(in srgb, var(--color-accent-readable) 88%, var(--color-text-primary));
+    background: var(--control-primary-hover, color-mix(in srgb, var(--color-accent-readable) 88%, var(--color-text-primary)));
   }
 }
 
 .ui-button--primary {
-  background: linear-gradient(135deg, var(--primary), var(--primary-light));
-  color: #fff;
+  background: var(--control-primary-background, linear-gradient(135deg, var(--primary), var(--primary-light)));
+  color: var(--control-primary-text, #fff);
   &:not(.is-disabled):hover {
     transform: translateY(-1px);
-    box-shadow: 0 8px 20px color-mix(in srgb, var(--primary) 32%, transparent);
+    box-shadow: var(--control-primary-shadow, 0 8px 20px color-mix(in srgb, var(--primary) 32%, transparent));
   }
   &:not(.is-disabled):active {
     transform: translateY(0);
@@ -171,12 +171,12 @@ const handleClick = (ev: MouseEvent) => {
 }
 
 .ui-button--secondary {
-  background: var(--color-surface);
-  border-color: var(--color-border);
-  color: var(--color-text-primary);
+  background: var(--control-secondary-background, var(--color-surface));
+  border-color: var(--control-secondary-border, var(--color-border));
+  color: var(--control-secondary-text, var(--color-text-primary));
   &:not(.is-disabled):hover {
-    border-color: var(--primary-light);
-    color: var(--primary);
+    border-color: var(--control-secondary-border, var(--primary-light));
+    color: var(--color-accent);
     transform: translateY(-1px);
   }
   &:not(.is-disabled):active {
@@ -185,21 +185,21 @@ const handleClick = (ev: MouseEvent) => {
 }
 
 .ui-button--ghost {
-  background: var(--color-accent-soft);
-  color: var(--primary);
+  background: var(--control-secondary-background, var(--color-accent-soft));
+  color: var(--color-accent);
   &:not(.is-disabled):hover {
-    background: color-mix(in srgb, var(--primary) 20%, transparent);
+    background: var(--control-secondary-background, color-mix(in srgb, var(--primary) 20%, transparent));
   }
 }
 
 .ui-button--text {
-  background: transparent;
-  color: var(--color-text-secondary);
+  background: var(--control-secondary-background, transparent);
+  color: var(--control-secondary-text, var(--color-text-secondary));
   padding-left: 8px;
   padding-right: 8px;
   &:not(.is-disabled):hover {
-    color: var(--primary);
-    background: var(--color-accent-soft);
+    color: var(--color-accent);
+    background: var(--control-secondary-background, var(--color-accent-soft));
   }
 }
 
@@ -225,10 +225,6 @@ const handleClick = (ev: MouseEvent) => {
 <style scoped lang="scss">
 @media (max-width: 767px) {
   .ui-button { border-radius: var(--mobile-control-radius); }
-  .ui-button--primary { background: var(--color-accent-readable); color: var(--color-on-accent-readable); border-color: var(--color-accent-readable); }
-  .ui-button--ghost,
-  .ui-button--secondary:not(.is-disabled):hover,
-  .ui-button--text:not(.is-disabled):hover { color: var(--color-accent-readable); }
   .ui-button--round { border-radius: var(--radius-pill); }
 }
 </style>

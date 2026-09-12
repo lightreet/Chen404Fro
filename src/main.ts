@@ -13,6 +13,7 @@ import { installMessageDefaults } from '@/utils/message'
 // 全局样式
 import './assets/styles/global.scss'
 import './assets/styles/mobile.scss'
+import './assets/styles/themes/porcelain.scss'
 
 installMessageDefaults()
 

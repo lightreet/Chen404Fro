@@ -557,8 +557,8 @@ onMounted(() => {
 
 .submit-btn {
   padding: 8px 24px;
-  background: var(--primary);
-  color: #fff;
+  background: var(--control-primary-background, var(--primary));
+  color: var(--control-primary-text, #fff);
   border: none;
   border-radius: var(--radius-md);
   font-size: 14px;
@@ -567,7 +567,7 @@ onMounted(() => {
   transition: background-color 0.2s, opacity 0.2s;
 
   &:hover:not(:disabled) {
-    background: var(--primary-dark);
+    background: var(--control-primary-hover, var(--primary-dark));
   }
 
   &:disabled {
@@ -649,7 +649,7 @@ onMounted(() => {
   .textarea-field, .input-field { font-size: 16px; }
   .guest-fields { flex-direction: column; }
   .form-footer { flex-wrap: wrap; gap: 8px; }
-  .submit-btn { min-height: 48px; border-radius: 12px; background: var(--color-accent-readable); color: var(--color-on-accent-readable); }
+  .submit-btn { min-height: 48px; border-radius: 12px; }
   .emoji-toggle-btn, .cancel-reply-btn { min-height: 44px; }
   .comment-login-hint { padding: 20px 16px; border-radius: 16px; background: var(--color-surface); font-size: 15px; }
   .comment-login-hint a { display: inline-flex; align-items: center; min-height: 44px; }

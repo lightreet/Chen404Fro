@@ -621,7 +621,7 @@ watch(
   .mobile-home-categories__scroll { display: flex; align-items: center; gap: 8px; min-width: 0; flex: 1; overflow-x: auto; scrollbar-width: none; }
   .mobile-home-categories__scroll::-webkit-scrollbar { display: none; }
   .mobile-home-categories button { flex-shrink: 0; border: 0; border-radius: var(--radius-pill); padding: 0 18px; min-height: 44px; font: inherit; font-size: 14px; color: var(--color-text-secondary); background: var(--color-surface); cursor: pointer; }
-  .mobile-home-categories button.is-active { background: var(--color-accent-soft); color: var(--color-accent-readable); font-weight: 600; }
+  .mobile-home-categories button.is-active { background: var(--control-selected-background); color: var(--control-selected-text); font-weight: 600; }
   .article-list { gap: var(--mobile-article-list-gap); padding: 0; perspective: none; }
   .load-more { margin-top: 20px; padding: 0; }
 }

@@ -77,6 +77,23 @@ const groups = [
 .discover-group h2 { font-size: 18px; margin-bottom: 12px; }
 .discover-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
 .discover-tile { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; min-height: 96px; border-radius: var(--mobile-card-radius); background: var(--color-surface); color: var(--color-text-primary); font-size: 13px; }
-.discover-tile .ui-icon { color: var(--color-accent-readable); }
+.discover-tile .ui-icon { color: var(--color-navigation-icon, var(--color-accent-readable)); }
 .discover-links { display: grid; gap: 8px; }
+.discover-profile, .discover-tile { border: var(--content-card-border, none); }
+
+@media (max-width: 767px) {
+  .discover-tile {
+    color: var(--color-entry-text);
+    font-weight: 500;
+    transition: background-color var(--motion-duration-fast) var(--motion-ease-standard);
+  }
+  .discover-tile .ui-icon { color: var(--color-entry-icon); }
+  .discover-tile:hover,
+  .discover-tile:active { background: var(--control-secondary-background); }
+  .discover-tile:focus-visible { outline: 2px solid var(--color-accent-readable); outline-offset: 3px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .discover-tile { transition: none; }
+}
 </style>

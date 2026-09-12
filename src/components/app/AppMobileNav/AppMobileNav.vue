@@ -37,6 +37,6 @@ const userStore = useUserStore();
 }
 .app-mobile-nav__item { min-width: 0; flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; color: var(--color-text-secondary); font-size: 12px; line-height: 18px; }
 .app-mobile-nav__icon { display: grid; place-items: center; width: 46px; height: 30px; border-radius: var(--radius-pill); }
-.app-mobile-nav__item.is-active { color: var(--color-accent-readable); font-weight: 600; }
-.is-active .app-mobile-nav__icon { background: var(--color-accent-soft); }
+.app-mobile-nav__item.is-active { color: var(--color-accent); font-weight: 600; }
+.is-active .app-mobile-nav__icon { background: var(--control-selected-background); color: var(--control-selected-text); }
 </style>

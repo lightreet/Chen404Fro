@@ -19,4 +19,5 @@ defineProps<{ to: RouteLocationRaw; icon: string; label: string; description?: s
 .app-menu-link strong { display: block; font-size: 15px; font-weight: 500; }
 .app-menu-link small { display: block; font-size: 13px; color: var(--color-text-secondary); margin-top: 3px; }
 .app-menu-link > .ui-icon { color: var(--color-text-secondary); }
+.app-menu-link { border: var(--content-card-border, none); }
 </style>

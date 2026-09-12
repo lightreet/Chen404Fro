@@ -64,4 +64,5 @@ img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .has-actions:not(.has-cover) .mobile-article-card__actions { right: 12px; }
 .mobile-article-card__status { margin-left: auto; color: var(--color-accent-readable); }
 .mobile-article-card a:focus-visible { outline: 2px solid var(--color-accent-readable); outline-offset: 2px; }
+.mobile-article-card { border: var(--content-card-border, none); }
 </style>

@@ -132,12 +132,12 @@ const select = (item: UiTabItem) => {
       bottom: -1px;
       height: 2px;
       border-radius: var(--radius-pill);
-      background: linear-gradient(90deg, var(--primary), var(--primary-light));
+      background: var(--control-primary-background, linear-gradient(90deg, var(--primary), var(--primary-light)));
       transform: scaleX(0);
       transition: transform var(--motion-duration-base) var(--motion-ease-entrance);
     }
     &.is-active {
-      color: var(--primary);
+      color: var(--color-accent);
       &::after {
         transform: scaleX(1);
       }
@@ -159,8 +159,8 @@ const select = (item: UiTabItem) => {
     border-radius: var(--radius-pill);
 
     &.is-active {
-      background: var(--color-surface);
-      color: var(--primary);
+      background: var(--control-selected-background, var(--color-surface));
+      color: var(--control-selected-text, var(--color-accent));
       box-shadow: var(--shadow-sm);
     }
   }
@@ -170,11 +170,4 @@ const select = (item: UiTabItem) => {
   margin-top: var(--space-md);
 }
 
-@media (max-width: 767px) {
-  .ui-tabs--line .ui-tabs__tab.is-active,
-  .ui-tabs--pill .ui-tabs__tab.is-active,
-  .ui-tabs__tab-badge {
-    color: var(--color-accent-readable);
-  }
-}
 </style>
