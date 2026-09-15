@@ -261,6 +261,7 @@ home / category / archive / development-history / memory-map / music / bookshelf
 - `views/Article/ArticleEdit.vue`
 - `views/Article/article-edit/ArticleEdit.styles.scss`
 - `composables/article-edit/useArticleEdit.ts`
+- `composables/article-edit/useArticleOutline.ts`
 - `modules/article-edit/*`
 - `components/Editor/*`
 - `components/MdResizablePreview/*`
@@ -272,6 +273,8 @@ home / category / archive / development-history / memory-map / music / bookshelf
 - 分类/标签选择
 - 封面上传
 - Markdown 编辑与预览调整
+- 桌面文章目录由 `ArticleOutline` 独立占据工作区左列，可折叠、显示完整标题并独立滚动；顶栏、工作区和底栏均参与网格布局，正文与设置共享右侧滚动区。页面内层叠限制在自身范围，避免覆盖全局女仆工具栏；禁止再将编辑器内部目录强制固定到视口或靠测量、延时补偿布局。
+- `useArticleOutline` 复用 MdEditor 输出的标题与行号，通过公开的 CodeMirror 接口定位正文及更新当前章节，关闭预览时同样可导航；手机使用单栏编辑与独立预览，跨屏幕断点同步编辑器模式。
 - 新建文章与草稿支持导入 UTF-8 `.md` / `.markdown`（最大 1 MB），入口位于底部“保存草稿”左侧；导入与替换确认弹窗在视口内居中，长内容内部滚动。独立预览标题、摘要、标签、分类与正文；预览期间暂停草稿自动保存，确认替换后才应用内容。
 - `modules/article-edit/markdown-import.ts` 解析可选 YAML 资料头，仅提取文章资料；`markdown-images.ts` 定位真实图片语法，转存时保留普通来源链接及代码示例。
 - `ArticleMarkdownImport` 自动调用 `POST /upload/image/import` 顺序转存图片链接；同链接去重，失败可重试或手动替换，本地相对图片手动选择上传。确认导入后沿用现有草稿保存、文件认领与发布流程，不自动发布。

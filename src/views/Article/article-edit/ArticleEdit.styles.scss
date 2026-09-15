@@ -1,11 +1,4 @@
 .article-edit-page {
-  /* JS 未跑通前兜底：接近安全区 + 一行顶栏；实测由 applyLayoutMetrics 覆盖 */
-  --article-edit-top-h: calc(56px + env(safe-area-inset-top, 0px));
-  --article-edit-footer-h: 72px;
-  --article-edit-catalog-w: 200px;
-  /* 目录右缘与正文区之间的间距 */
-  --article-edit-catalog-gap: 1vw;
-  /* 正文+设置块在「目录以右」区域内居中时的最大宽度 */
   --article-edit-content-max: 1600px;
   --article-edit-accent: var(--primary, #fb7299);
   --article-edit-accent-soft: color-mix(in srgb, var(--primary, #fb7299) 9%, var(--bg-secondary, #ffffff));
@@ -15,15 +8,14 @@
   --article-edit-title-color: #475569;
   --article-edit-title-placeholder: #94a3b8;
 
-  min-height: 100vh;
+  height: 100dvh;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  isolation: isolate;
   background-color: #ffffff;
   background-image: none;
   padding: 0;
-  padding-top: var(--article-edit-top-h);
-  padding-left: 0;
-  padding-bottom: calc(var(--article-edit-footer-h) + env(safe-area-inset-bottom, 0));
-  /* visible：避免 clip 在部分环境下裁切 position:fixed 的左侧目录 */
-  overflow-x: visible;
+  overflow: hidden;
   box-sizing: border-box;
   position: relative;
 }
@@ -44,21 +36,20 @@
   background-image: none;
 }
 
-@media (min-width: 769px) {
-  .article-edit-page {
-    padding-left: calc(
-      env(safe-area-inset-left, 0px) + var(--article-edit-catalog-w) + var(--article-edit-catalog-gap)
-    );
-  }
+// 顶栏和底栏占据真实布局行；中间目录与正文各自滚动。
+.edit-workspace {
+  display: grid;
+  grid-template-columns: 248px minmax(0, 1fr);
+  min-height: 0;
+  min-width: 0;
 }
 
-// ---------- 顶栏双层（fixed，与 CSDN 顶栏一致）----------
+.edit-workspace.is-outline-collapsed { grid-template-columns: 56px minmax(0, 1fr); }
+.edit-content-scroll { min-width: 0; min-height: 0; overflow-y: auto; overscroll-behavior: contain; scrollbar-gutter: stable; }
+
 .edit-top-dock {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  z-index: 300;
+  position: relative;
+  z-index: 2;
   background: #ffffff;
   border-bottom: 1px solid var(--border-color, #e2e8f0);
   box-shadow:
@@ -156,8 +147,8 @@
   max-width: var(--article-edit-content-max);
   margin-left: auto;
   margin-right: auto;
-  /* 顶边与 fixed 返回栏盒底对齐（页面 padding-r-top 已为顶栏留位，此处不再额外下推） */
-  padding: 0 24px 32px;
+  /* 正文滚动区内保留稳定留白。 */
+  padding: 16px 24px 32px;
   box-sizing: border-box;
   background: #ffffff;
 }
@@ -230,7 +221,7 @@
 
   /*
    * 工具栏必须保留在 MdEditor 内部，Vue 才能正确 patch DOM；下拉（标题等）依赖 offsetParent 与库内定位。
-   * 使用 sticky 贴在固定顶栏下方；需让 .md-editor 对 sticky 不设为裁剪根（默认 overflow:hidden 会失效 sticky）。
+   * 使用 sticky 贴在正文滚动区顶部；需让 .md-editor 对 sticky 不设为裁剪根（默认 overflow:hidden 会失效 sticky）。
    */
   :deep(.md-editor) {
     border: none;
@@ -246,8 +237,8 @@
 
   :deep(.md-editor-toolbar-wrapper) {
     position: sticky;
-    top: var(--article-edit-top-h);
-    z-index: 295;
+    top: 0;
+    z-index: 1;
     display: flex;
     justify-content: center;
     align-items: center;
@@ -369,103 +360,6 @@
     border-radius: 12px;
   }
 
-  /* 大纲目录：覆盖 md-editor 默认 #73d13d，与全站中性灰文案一致 */
-  :deep(.md-editor-catalog-link span) {
-    color: var(--text-secondary, #64748b);
-  }
-
-  :deep(.md-editor-catalog-link span:hover) {
-    color: var(--text-primary, #475569);
-  }
-
-  :deep(.md-editor-catalog-active > span) {
-    color: var(--text-primary, #334155);
-    font-weight: 600;
-  }
-
-  :deep(.md-editor-catalog-indicator) {
-    background-color: var(--text-tertiary, #94a3b8);
-  }
-}
-
-[data-theme='dark'] .paper-editor-host {
-  :deep(.md-editor-catalog-link span) {
-    color: #94a3b8;
-  }
-
-  :deep(.md-editor-catalog-link span:hover) {
-    color: #cbd5e1;
-  }
-
-  :deep(.md-editor-catalog-active > span) {
-    color: #e2e8f0;
-  }
-
-  :deep(.md-editor-catalog-indicator) {
-    background-color: #64748b;
-  }
-}
-
-@media (min-width: 769px) {
-  .paper-editor-host {
-    :deep(.md-editor-content) {
-      flex-direction: row;
-      align-items: stretch;
-    }
-
-    /* 视口左侧固定目录（与 CSDN 一致），不占正文流宽度 */
-    :deep(.md-editor-catalog-flat) {
-      position: fixed;
-      left: env(safe-area-inset-left, 0);
-      /*
-       * 返回栏使用 fixed + 阴影，目录若紧贴其底边，首条在部分缩放/字体渲染下会被“吃掉”几像素。
-       * 这里再多留一些安全间距，避免目录首项被顶部横栏压住。
-       */
-      top: calc(var(--article-edit-top-h) + 28px);
-      bottom: var(--article-edit-footer-h);
-      width: var(--article-edit-catalog-w);
-      /* 高于 sticky 工具栏(295)，低于返回顶栏(300)，避免大纲被正文区盖住又压在返回栏下 */
-      z-index: 298;
-      max-height: none;
-      align-self: stretch;
-      border-radius: 0;
-      box-shadow: 4px 0 24px rgba(15, 23, 42, 0.07);
-      background: #ffffff;
-      border-right: 1px solid var(--border-color, #e3e5e7);
-      box-sizing: border-box;
-      display: flex;
-      flex-direction: column;
-      padding-top: 18px;
-      overflow: hidden;
-    }
-
-    :deep(.md-editor-catalog-editor) {
-      flex: 1;
-      min-height: 0;
-      height: auto !important;
-      max-height: none !important;
-      border-inline-start: none !important;
-      border-inline-end: none !important;
-      /*
-       * md-editor-v3 会在目录激活同步时微调内部滚动位置，默认顶部留白太小，
-       * 首条顶层目录容易被滚动容器上沿裁掉一截。
-       */
-      padding-top: 28px !important;
-      padding-bottom: 12px !important;
-      scroll-padding-top: 28px;
-    }
-
-    :deep(.md-editor-catalog) {
-      padding-top: 12px;
-      box-sizing: border-box;
-    }
-
-    /* 首条目录不要再贴着容器上沿 */
-    :deep(.md-editor-catalog-container > .md-editor-catalog-link:first-child),
-    :deep(.md-editor-catalog-wrapper > .md-editor-catalog-link:first-child) {
-      padding-top: 20px !important;
-    }
-  }
 }
 
 // 文末设置（与正文同宽、同居中）
@@ -474,7 +368,7 @@
   max-width: var(--article-edit-content-max);
   margin-left: auto;
   margin-right: auto;
-  scroll-margin-top: calc(var(--article-edit-top-h, 96px) + 12px);
+  scroll-margin-top: 16px;
   box-sizing: border-box;
 }
 
@@ -862,13 +756,10 @@
   transform: translateY(-4px);
 }
 
-// 底部固定栏
+// 底部操作栏
 .edit-footer-bar {
-  position: fixed;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  z-index: 290;
+  position: relative;
+  z-index: 2;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -1000,7 +891,7 @@
   }
 
   .edit-container {
-    padding: 0 16px 24px;
+    padding: 12px 16px 24px;
   }
 
   .edit-paper {
@@ -1019,36 +910,6 @@
     gap: 6px;
   }
 
-  .paper-editor-host {
-    :deep(.md-editor-content) {
-      flex-direction: column;
-    }
-
-    :deep(.md-editor-catalog-flat) {
-      position: relative;
-      left: auto;
-      top: auto;
-      bottom: auto;
-      max-height: min(220px, 40vh);
-      width: 100% !important;
-      order: -1;
-      border-radius: 10px 10px 0 0;
-      box-shadow: none;
-      background: #ffffff;
-      border-right: none;
-      display: block;
-      overflow: visible;
-    }
-
-    :deep(.md-editor-catalog-editor) {
-      width: 100% !important;
-      flex: none;
-      min-height: unset;
-      border-inline-end: none !important;
-      border-block-end: 1px solid var(--md-border-color, var(--border-color, #e3e5e7)) !important;
-    }
-  }
-
   .paper-editor-host :deep(.md-editor) {
     min-height: 360px;
   }
@@ -1059,6 +920,7 @@
   }
 }
 @media (max-width: 767px) {
+  .edit-workspace, .edit-workspace.is-outline-collapsed { grid-template-columns: minmax(0, 1fr); }
   .article-edit-page { background: var(--color-canvas); }
   .edit-container { padding-inline: 20px; }
   .edit-paper { --article-edit-paper-pad-x: 0px; border: 0; background: transparent; box-shadow: none; }
@@ -1079,7 +941,6 @@
   // The library content wrapper uses width: 0 with flex: 1 in a horizontal row.
   // Stacking this row collapses the input width when the preview is disabled.
   .paper-editor-host :deep(.md-editor-content) { flex-direction: row; }
-  .paper-editor-host :deep(.md-editor-catalog-flat) { display: none; }
   .mobile-article-preview { min-height: 360px; background: var(--color-surface); border-radius: 16px; }
   .mobile-article-preview :deep(.md-editor-preview) { padding: 16px; font-size: 17px; line-height: 1.9; }
   .settings-card { padding: 20px 16px; border-radius: 16px; background: var(--color-surface); }

@@ -1,4 +1,4 @@
-import { ref, reactive, computed, onMounted, onUnmounted, onUpdated, watch, nextTick } from 'vue';
+import { ref, reactive, computed, onMounted, onUnmounted, watch, nextTick } from 'vue';
 import { useRoute, useRouter, onBeforeRouteLeave } from 'vue-router';
 import { notify, confirmAction } from '@/lib/feedback';
 import type { ExposeParam, ToolbarNames } from 'md-editor-v3';
@@ -43,12 +43,8 @@ export function useArticleEdit() {
   const userStore = useUserStore();
   const canSetArticleTop = computed(() => isAdminUser(userStore.user));
   const editorRef = ref<ExposeParam>();
-  const articleEditRootRef = ref<HTMLElement | null>(null);
-  const editTopDockRef = ref<HTMLElement | null>(null);
-  const editFooterRef = ref<HTMLElement | null>(null);
   const settingsAnchorRef = ref<HTMLElement | null>(null);
   const paperEditorHostRef = ref<HTMLElement | null>(null);
-  const articleEditTopOffset = ref(96);
 
   const onMdToolbarItemClickOpenDropdown = (e: MouseEvent) => {
     if (e.button !== 0) return;
@@ -61,20 +57,6 @@ export function useArticleEdit() {
       new MouseEvent('mouseenter', { bubbles: false, cancelable: true, view: window }),
     );
   };
-
-  let chromeResizeObserver: ResizeObserver | null = null;
-
-  function applyLayoutMetrics() {
-    const root = articleEditRootRef.value;
-    if (!root) return;
-    const dock = editTopDockRef.value;
-    const topH = dock ? Math.max(56, Math.ceil(dock.getBoundingClientRect().bottom) + 2) : 96;
-    const footEl = editFooterRef.value;
-    const footH = footEl ? Math.max(48, Math.ceil(footEl.getBoundingClientRect().height)) : 72;
-    root.style.setProperty('--article-edit-top-h', `${topH}px`);
-    root.style.setProperty('--article-edit-footer-h', `${footH}px`);
-    articleEditTopOffset.value = topH;
-  }
 
   const goBack = () => {
     if (typeof window !== 'undefined' && window.history.length > 1) {
@@ -130,7 +112,6 @@ export function useArticleEdit() {
     '=',
     'preview',
     'htmlPreview',
-    'catalog',
   ];
 
   const escapeHtmlAttr = (value: string) => value.replace(/"/g, '&quot;');
@@ -227,7 +208,6 @@ export function useArticleEdit() {
   let autoSaveIntervalId: ReturnType<typeof setInterval> | null = null;
   let lastSavedSnapshot = '';
   let queuedAutoSave = false;
-  let layoutMetricsRaf = 0;
 
   const upsertImageWidthBySrc = (src: string, width: string) => {
     const content = form.content ?? '';
@@ -272,30 +252,6 @@ export function useArticleEdit() {
     form.content = content.replace(mdToken, nextTag);
     restorePreviewScrollState(previewScrollState);
   };
-
-  function ensureCatalogShown() {
-    editorRef.value?.toggleCatalog?.(true);
-  }
-
-  let catalogShownRetryTimer: ReturnType<typeof setTimeout> | null = null;
-
-  function scheduleEnsureCatalogShown() {
-    ensureCatalogShown();
-    void nextTick(ensureCatalogShown);
-    requestAnimationFrame(() => {
-      ensureCatalogShown();
-      requestAnimationFrame(ensureCatalogShown);
-    });
-    if (catalogShownRetryTimer) {
-      clearTimeout(catalogShownRetryTimer);
-    }
-    catalogShownRetryTimer = setTimeout(() => {
-      catalogShownRetryTimer = null;
-      ensureCatalogShown();
-    }, 150);
-  }
-
-  let layoutMetricsLateTimer: number | null = null;
 
   const fetchCategoriesAndTags = async () => {
     try {
@@ -839,30 +795,10 @@ export function useArticleEdit() {
     return window.confirm('草稿还有未同步的改动，确定离开当前页面吗？');
   });
 
-  const scheduleLayoutMetricsRaf = () => {
-    if (layoutMetricsRaf) return;
-    layoutMetricsRaf = requestAnimationFrame(() => {
-      layoutMetricsRaf = 0;
-      applyLayoutMetrics();
-    });
-  };
-
-  onUpdated(() => {
-    scheduleLayoutMetricsRaf();
-  });
-
   onMounted(async () => {
     offResizeListener = mdImageResizeEmitter.on(({ src, width }) => {
       upsertImageWidthBySrc(src, width);
     });
-
-    await nextTick();
-    applyLayoutMetrics();
-    requestAnimationFrame(() => {
-      applyLayoutMetrics();
-      requestAnimationFrame(applyLayoutMetrics);
-    });
-    window.addEventListener('resize', scheduleLayoutMetricsRaf);
 
     await Promise.all([
       fetchCategoriesAndTags(),
@@ -873,27 +809,6 @@ export function useArticleEdit() {
     editorReady.value = true;
     runDraftSnapshotReconcile();
 
-    await nextTick();
-    scheduleEnsureCatalogShown();
-    applyLayoutMetrics();
-    requestAnimationFrame(() => {
-      applyLayoutMetrics();
-      requestAnimationFrame(applyLayoutMetrics);
-    });
-    if (layoutMetricsLateTimer) clearTimeout(layoutMetricsLateTimer);
-    layoutMetricsLateTimer = window.setTimeout(() => {
-      layoutMetricsLateTimer = null;
-      applyLayoutMetrics();
-    }, 320);
-
-    chromeResizeObserver = new ResizeObserver(() => applyLayoutMetrics());
-    if (editTopDockRef.value) {
-      chromeResizeObserver.observe(editTopDockRef.value);
-    }
-    if (editFooterRef.value) {
-      chromeResizeObserver.observe(editFooterRef.value);
-    }
-
     autoSaveIntervalId = setInterval(() => {
       if (!hasPendingChanges.value || !isAutoSaveEnabled.value || !canSaveDraft()) return;
       void saveDraftCore({ source: 'auto', silent: true });
@@ -903,26 +818,6 @@ export function useArticleEdit() {
   });
 
   onUnmounted(() => {
-    if (catalogShownRetryTimer) {
-      clearTimeout(catalogShownRetryTimer);
-      catalogShownRetryTimer = null;
-    }
-
-    if (layoutMetricsLateTimer) {
-      clearTimeout(layoutMetricsLateTimer);
-      layoutMetricsLateTimer = null;
-    }
-
-    if (layoutMetricsRaf) {
-      cancelAnimationFrame(layoutMetricsRaf);
-      layoutMetricsRaf = 0;
-    }
-
-    if (chromeResizeObserver) {
-      chromeResizeObserver.disconnect();
-      chromeResizeObserver = null;
-    }
-
     if (offResizeListener) {
       offResizeListener();
       offResizeListener = null;
@@ -935,15 +830,10 @@ export function useArticleEdit() {
       autoSaveIntervalId = null;
     }
     cleanupTagSelector();
-    window.removeEventListener('resize', scheduleLayoutMetricsRaf);
     window.removeEventListener('beforeunload', handleBeforeUnload);
   });
 
   return {
-    articleEditRootRef,
-    editTopDockRef,
-    editFooterRef,
-    articleEditTopOffset,
     settingsAnchorRef,
     paperEditorHostRef,
     editorRef,
