@@ -7,6 +7,17 @@
           <UiIcon name="ArrowLeft" />
           <span>返回</span>
         </button>
+        <ArticleMarkdownImport
+          v-if="canImportMarkdown"
+          class="markdown-import-trigger"
+          :disabled="isDraftSaving || publishing || generatingSummary || generatingTags"
+          :categories="categories"
+          :theme="editorTheme"
+          :current-category-id="form.categoryId"
+          :has-existing-content="hasMeaningfulDraftContent"
+          :apply-import="applyMarkdownImport"
+          @open-change="setImportDialogOpen"
+        />
         <div class="dock-back-meta">
           <span class="draft-hint">
             {{ form.status === ArticleStatus.PUBLISHED ? '已发布' : '草稿' }}
@@ -288,10 +299,15 @@ import CategoryIcon from '@/components/CategoryIcon/CategoryIcon.vue';
 import MdEditorEmojiToolbar from '@/components/Editor/MdEditorEmojiToolbar.vue';
 import MdEditorUnorderedListToolbar from '@/components/Editor/MdEditorUnorderedListToolbar.vue';
 import MdResizablePreview from '@/components/MdResizablePreview/MdResizablePreview.vue';
+import ArticleMarkdownImport from '@/components/Editor/ArticleMarkdownImport.vue';
 import { useArticleEdit } from '@/composables/article-edit/useArticleEdit';
 import { sanitizeRichTextHtml } from '@/utils/richText';
 
 const {
+  canImportMarkdown,
+  hasMeaningfulDraftContent,
+  applyMarkdownImport,
+  setImportDialogOpen,
   articleEditRootRef,
   editTopDockRef,
   editFooterRef,

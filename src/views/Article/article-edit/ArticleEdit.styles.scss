@@ -121,6 +121,13 @@
   min-width: 0;
 }
 
+.markdown-import-trigger { flex-shrink: 0; }
+@media (max-width: 767px) {
+  .edit-dock-row--back { flex-wrap: wrap; gap: 8px; padding-block: 6px; }
+  .markdown-import-trigger { margin-left: auto; min-height: 44px; }
+  .dock-back-meta { flex-basis: 100%; justify-content: space-between; gap: 8px; }
+}
+
 .draft-hint {
   font-size: 13px;
   color: var(--text-secondary, #666666);

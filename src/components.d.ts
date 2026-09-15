@@ -22,6 +22,7 @@ declare module 'vue' {
     AppStatusPill: typeof import('./components/app/AppStatusPill/AppStatusPill.vue')['default']
     AppTopicNavigation: typeof import('./components/app/AppTopicNavigation/AppTopicNavigation.vue')['default']
     ArticleCard: typeof import('./components/ArticleCard/ArticleCard.vue')['default']
+    ArticleMarkdownImport: typeof import('./components/Editor/ArticleMarkdownImport.vue')['default']
     AuthEmailField: typeof import('./components/Auth/AuthEmailField.vue')['default']
     CategoryIcon: typeof import('./components/CategoryIcon/CategoryIcon.vue')['default']
     CommentItem: typeof import('./components/Comment/CommentItem.vue')['default']

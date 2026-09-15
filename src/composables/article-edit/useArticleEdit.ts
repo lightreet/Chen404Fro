@@ -16,6 +16,7 @@ import { validateImageFile, DEFAULT_IMAGE_MAX_MB } from '@/utils/validation';
 import { mdImageResizeEmitter } from '@/utils/mdImageResizeEmitter';
 import { useUserStore } from '@/stores/user';
 import { isAdminUser } from '@/utils/permission';
+import type { MarkdownArticleImport } from '@/modules/article-edit/markdown-import';
 import {
   AUTO_SAVE_DEBOUNCE_MS,
   AUTO_SAVE_INTERVAL_MS,
@@ -217,6 +218,8 @@ export function useArticleEdit() {
   const hasPendingChanges = ref(false);
   const editorReady = ref(false);
   const loadedArticleStatus = ref<ArticleStatus | null>(null);
+  const importDialogOpen = ref(false);
+  const canImportMarkdown = computed(() => editorReady.value && loadedArticleStatus.value !== ArticleStatus.PUBLISHED);
 
   let activeSavePromise: Promise<boolean> | null = null;
   let autoSaveDebounceTimer: ReturnType<typeof setTimeout> | null = null;
@@ -459,7 +462,8 @@ export function useArticleEdit() {
     }
 
     if (hasPendingChanges.value) {
-      return form.title?.trim() ? '未保存' : '未保存，填写标题后自动保存';
+      if (!form.title?.trim()) return '未保存，填写标题后自动保存';
+      return form.categoryId ? '未保存' : '未保存，选择分类后自动保存';
     }
 
     if (lastSavedAt.value) {
@@ -470,12 +474,12 @@ export function useArticleEdit() {
   });
 
   const canSaveDraft = (showMessage: boolean = false) => {
-    if (form.title?.trim()) {
+    if (form.title?.trim() && form.categoryId) {
       return true;
     }
 
     if (showMessage) {
-      notify.warning('请输入文章标题');
+      notify.warning(form.title?.trim() ? '请选择文章分类' : '请输入文章标题');
     }
     return false;
   };
@@ -505,7 +509,7 @@ export function useArticleEdit() {
   };
 
   const scheduleAutoSave = () => {
-    if (!editorReady.value || !isAutoSaveEnabled.value || !canSaveDraft()) return;
+    if (!editorReady.value || importDialogOpen.value || !isAutoSaveEnabled.value || !canSaveDraft()) return;
 
     clearAutoSaveDebounce();
     autoSaveDebounceTimer = setTimeout(() => {
@@ -535,7 +539,7 @@ export function useArticleEdit() {
     source: DraftSaveSource;
     silent?: boolean;
   }): Promise<boolean> => {
-    if (publishing.value) {
+    if (publishing.value || importDialogOpen.value) {
       return false;
     }
 
@@ -614,6 +618,30 @@ export function useArticleEdit() {
 
   const handleSaveDraft = async () => {
     await saveDraftCore({ source: 'manual' });
+  };
+
+  const setImportDialogOpen = (open: boolean) => {
+    importDialogOpen.value = open;
+    if (open) clearAutoSaveDebounce();
+    else if (hasPendingChanges.value) scheduleAutoSave();
+  };
+
+  const applyMarkdownImport = async (draft: MarkdownArticleImport, categoryId: number): Promise<boolean> => {
+    if (!canImportMarkdown.value || isDraftSaving.value || publishing.value) return false;
+    const selectedIds: number[] = [];
+    const customNames: string[] = [];
+    for (const name of draft.tags) {
+      const tag = tags.value.find(item => item.name.toLowerCase() === name.toLowerCase());
+      if (tag) selectedIds.push(Number(tag.id));
+      else customNames.push(name);
+    }
+    // 同一个同步更新批次进入草稿监听；文件资料永远不参与权限、状态或作者赋值。
+    Object.assign(form, { title: draft.title, content: draft.content, summary: draft.summary, categoryId });
+    setSelectedTagIds(selectedIds);
+    setCustomTagNames(customNames);
+    hasPendingChanges.value = true;
+    notify.success('Markdown 已导入，可继续编辑并保存草稿');
+    return true;
   };
 
   const handlePublish = async () => {
@@ -942,6 +970,10 @@ export function useArticleEdit() {
     generatingTags,
     hasGeneratedSummary,
     hasGeneratedTags,
+    canImportMarkdown,
+    hasMeaningfulDraftContent,
+    applyMarkdownImport,
+    setImportDialogOpen,
     autoSaveState,
     handleCoverUpload,
     beforeCoverUpload,

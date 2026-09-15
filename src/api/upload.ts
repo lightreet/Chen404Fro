@@ -54,6 +54,15 @@ export function uploadImage(file: File): Promise<UploadResult> {
   return uploadSingleFile(file, Service.uploadImage)
 }
 
+/** 下载公开图片并转存为当前作者的临时文章图片。 */
+export function importArticleImage(url: string, signal?: AbortSignal): Promise<UploadResult> {
+  return post<UploadResult>('/upload/image/import', { url }, {
+    timeout: 30000,
+    suppressErrorMessage: true,
+    signal,
+  })
+}
+
 export async function uploadImages(files: File[]): Promise<UploadResult[]> {
   const payload = unwrapResult(await Service.uploadImages({
     formData: { files },
