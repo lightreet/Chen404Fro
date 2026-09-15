@@ -154,7 +154,7 @@
         </div>
 
         <!-- 标题 -->
-        <h3 class="article-title">
+        <h3 class="article-title" :title="article.title">
           <router-link v-if="mode !== 'manage'" :to="articleDetailUrl" @click.stop>
             {{ article.title }}
           </router-link>
@@ -487,9 +487,10 @@ const authorProfileUrl = computed(() => {
 .article-card.article-card--home-balanced {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
   align-items: stretch;
   width: min(100%, 820px);
-  min-height: 300px;
+  height: 352px;
   overflow: hidden;
   margin-left: auto;
   margin-right: auto;
@@ -509,16 +510,56 @@ const authorProfileUrl = computed(() => {
 
   .card-content {
     max-width: none;
-    min-height: 100%;
+    min-height: 0;
     padding: 30px 34px;
+
+    > :not(.article-summary) {
+      flex-shrink: 0;
+    }
+  }
+
+  .article-title a,
+  .article-title > span,
+  .author-name {
+    display: block;
+    min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  .article-meta,
+  .article-stats {
+    white-space: nowrap;
+  }
+
+  .category-tag {
+    min-width: 0;
+    overflow: hidden;
+  }
+
+  .article-summary {
+    min-height: 0;
+    overflow-wrap: anywhere;
+  }
+
+  .article-tags {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: thin;
+
+    .tag {
+      flex-shrink: 0;
+      white-space: nowrap;
+    }
   }
 
   .card-image {
     width: 100%;
     min-width: 0;
-    min-height: 100%;
+    min-height: 0;
     height: 100%;
-    aspect-ratio: 16 / 10;
+    aspect-ratio: auto;
     border-radius: 0;
 
     .image-link,
@@ -554,11 +595,7 @@ const authorProfileUrl = computed(() => {
   }
 
   &.no-cover {
-    display: block;
-
-    .card-content {
-      min-height: 300px;
-    }
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .image-link:hover {
@@ -1280,17 +1317,19 @@ const authorProfileUrl = computed(() => {
   }
 
   .article-card.article-card--home-balanced {
-    display: flex;
+    display: grid;
 
     .card-content {
       flex: 1 1 auto;
-      min-height: auto;
+      min-height: 0;
       padding: 20px 24px;
     }
 
     .card-image {
       width: 100%;
-      min-height: 220px;
+      height: 100%;
+      min-height: 0;
+      border-radius: 0 !important;
     }
   }
 

@@ -623,6 +623,11 @@ watch(
   .mobile-home-categories button { flex-shrink: 0; border: 0; border-radius: var(--radius-pill); padding: 0 18px; min-height: 44px; font: inherit; font-size: 14px; color: var(--color-text-secondary); background: var(--color-surface); cursor: pointer; }
   .mobile-home-categories button.is-active { background: var(--control-selected-background); color: var(--control-selected-text); font-weight: 600; }
   .article-list { gap: var(--mobile-article-list-gap); padding: 0; perspective: none; }
+  .article-list :deep(.mobile-article-card h3 a) {
+    display: block;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
   .load-more { margin-top: 20px; padding: 0; }
 }
 </style>
