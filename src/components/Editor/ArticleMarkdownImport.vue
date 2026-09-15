@@ -1,8 +1,8 @@
 <template>
-  <UiButton v-bind="$attrs" variant="ghost" size="sm" :disabled="disabled" @click="openDialog">
-    <UiIcon name="Upload" /> 导入 Markdown
+  <UiButton v-bind="$attrs" variant="ghost" icon="Upload" aria-label="导入 Markdown" :disabled="disabled" @click="openDialog">
+    导入<span class="import-button-format"> Markdown</span>
   </UiButton>
-  <UiDialog :model-value="open" title="导入 Markdown" size="xl" :close-on-click-modal="false" @update:model-value="closeDialog">
+  <UiDialog :model-value="open" title="导入 Markdown" size="xl" centered :close-on-click-modal="false" @update:model-value="closeDialog">
     <div class="markdown-import">
       <input ref="fileInput" type="file" accept=".md,.markdown" class="file-input" aria-label="选择 Markdown 文件" @change="selectFile" />
       <button type="button" class="file-drop" :disabled="busy || applying" @click="fileInput?.click()" @dragover.prevent @drop.prevent="dropFile">
@@ -50,7 +50,7 @@
       <UiButton variant="primary" :disabled="!draft || busy || !categoryId" :loading="applying" @click="apply()">导入到编辑器</UiButton>
     </template>
   </UiDialog>
-  <UiDialog v-model="replacementConfirmOpen" title="替换当前草稿内容" size="sm" :close-on-click-modal="false">
+  <UiDialog v-model="replacementConfirmOpen" title="替换当前草稿内容" size="sm" centered :close-on-click-modal="false">
     <p>将替换当前草稿的标题、正文、摘要、分类和标签。封面与可见范围保持当前设置，是否继续？</p>
     <template #footer>
       <UiButton variant="ghost" @click="replacementConfirmOpen = false">取消</UiButton>
@@ -274,6 +274,7 @@ onBeforeUnmount(() => { generation++; abort?.abort(); });
 .content-preview :deep(pre), .content-preview :deep(.md-editor-preview-wrapper) { min-width: 0; overflow-x: auto; }
 .import-footer-hint { margin-right: auto; color: var(--color-text-secondary); font-size: 13px; }
 @media (max-width: 767px) {
+  .import-button-format { display: none; }
   .import-meta { grid-template-columns: 1fr; }
   .file-drop small { width: 100%; }
   .import-footer-hint { display: none; }

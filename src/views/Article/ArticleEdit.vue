@@ -7,17 +7,6 @@
           <UiIcon name="ArrowLeft" />
           <span>返回</span>
         </button>
-        <ArticleMarkdownImport
-          v-if="canImportMarkdown"
-          class="markdown-import-trigger"
-          :disabled="isDraftSaving || publishing || generatingSummary || generatingTags"
-          :categories="categories"
-          :theme="editorTheme"
-          :current-category-id="form.categoryId"
-          :has-existing-content="hasMeaningfulDraftContent"
-          :apply-import="applyMarkdownImport"
-          @open-change="setImportDialogOpen"
-        />
         <div class="dock-back-meta">
           <span class="draft-hint">
             {{ form.status === ArticleStatus.PUBLISHED ? '已发布' : '草稿' }}
@@ -271,7 +260,18 @@
           发文设置
         </button>
       </div>
-      <div class="footer-actions">
+      <div class="footer-actions" :class="{ 'footer-actions--with-import': canImportMarkdown }">
+        <ArticleMarkdownImport
+          v-if="canImportMarkdown"
+          class="markdown-import-trigger"
+          :disabled="isDraftSaving || publishing || generatingSummary || generatingTags"
+          :categories="categories"
+          :theme="editorTheme"
+          :current-category-id="form.categoryId"
+          :has-existing-content="hasMeaningfulDraftContent"
+          :apply-import="applyMarkdownImport"
+          @open-change="setImportDialogOpen"
+        />
         <button
           type="button"
           class="footer-btn footer-btn--ghost"

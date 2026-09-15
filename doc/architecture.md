@@ -272,7 +272,7 @@ home / category / archive / development-history / memory-map / music / bookshelf
 - 分类/标签选择
 - 封面上传
 - Markdown 编辑与预览调整
-- 新建文章与草稿支持导入 UTF-8 `.md` / `.markdown`（最大 1 MB），独立预览标题、摘要、标签、分类与正文；预览期间暂停草稿自动保存，确认替换后才应用内容。
+- 新建文章与草稿支持导入 UTF-8 `.md` / `.markdown`（最大 1 MB），入口位于底部“保存草稿”左侧；导入与替换确认弹窗在视口内居中，长内容内部滚动。独立预览标题、摘要、标签、分类与正文；预览期间暂停草稿自动保存，确认替换后才应用内容。
 - `modules/article-edit/markdown-import.ts` 解析可选 YAML 资料头，仅提取文章资料；`markdown-images.ts` 定位真实图片语法，转存时保留普通来源链接及代码示例。
 - `ArticleMarkdownImport` 自动调用 `POST /upload/image/import` 顺序转存图片链接；同链接去重，失败可重试或手动替换，本地相对图片手动选择上传。确认导入后沿用现有草稿保存、文件认领与发布流程，不自动发布。
 - AI 摘要与标签生成

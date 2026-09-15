@@ -4,6 +4,7 @@
       <div
         v-if="modelValue"
         class="ui-dialog__mask"
+        :class="{ 'ui-dialog__mask--centered': centered }"
         @click.self="onMaskClick"
       >
         <Transition name="m-panel" appear>
@@ -62,6 +63,8 @@ const props = withDefaults(
     width?: string
     /** 业务弹窗面板类名 */
     panelClass?: string
+    /** 在视口中居中，长内容在面板内滚动 */
+    centered?: boolean
     showClose?: boolean
     /** 点遮罩关闭 */
     closeOnClickModal?: boolean
@@ -72,6 +75,7 @@ const props = withDefaults(
     title: undefined,
     size: 'md',
     width: undefined,
+    centered: false,
     showClose: true,
     closeOnClickModal: true,
     lockScroll: true,
@@ -196,5 +200,19 @@ useDialogFocus(() => props.modelValue, panelRef, close, () => props.lockScroll)
   .ui-dialog__header { padding: 12px 20px; }
   .ui-dialog__body { padding: 0 20px 20px; overscroll-behavior: contain; }
   .ui-dialog__footer { padding: 16px 20px calc(16px + env(safe-area-inset-bottom)); }
+}
+
+.ui-dialog__mask--centered {
+  box-sizing: border-box;
+  align-items: center;
+  padding: 16px;
+
+  .ui-dialog {
+    --dialog-max-width: calc(100vw - 32px);
+    max-height: calc(100dvh - 32px);
+    border-radius: var(--radius-xl);
+  }
+
+  .ui-dialog__footer { flex-shrink: 0; }
 }
 </style>
