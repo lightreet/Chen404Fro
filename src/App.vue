@@ -5,19 +5,28 @@
     </transition>
   </router-view>
 
-  <Live2D v-if="showAssistant" />
+  <Live2D v-if="showAssistant" v-show="!isArticleEditor || editorAssistantOpen" />
+  <UiButton v-if="showAssistant && isArticleEditor" class="editor-assistant-launcher"
+    variant="secondary" size="sm" :aria-expanded="editorAssistantOpen"
+    @click="editorAssistantOpen = !editorAssistantOpen">
+    {{ editorAssistantOpen ? '收起 Lyra' : 'Lyra' }}
+  </UiButton>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import { useAppStore } from '@/stores';
 import Live2D from '@/components/Live2D/Live2D.vue';
 import { useLayoutMobile } from '@/composables/useLayoutMobile';
+import { UiButton } from '@/components/ui';
 
 const appStore = useAppStore();
 const route = useRoute();
 const { isMobile } = useLayoutMobile();
+const isArticleEditor = computed(() => route.name === 'ArticleEdit');
+const editorAssistantOpen = ref(false);
+watch(isArticleEditor, () => { editorAssistantOpen.value = false; });
 
 // 扫描另一张二维码即进入新的上传会话，同一路径的 hash 导航也要重建手机页面。
 const mobileUploadRouteKey = computed(() => route.name === 'TravelMobileUpload'
@@ -45,6 +54,15 @@ appStore.initDisplayPreferences();
 </script>
 
 <style>
+.editor-assistant-launcher {
+  position: fixed;
+  left: 12px;
+  bottom: 84px;
+  z-index: 301;
+  min-width: 44px;
+  padding-inline: 10px;
+}
+
 /* 页面切换动画 */
 .fade-enter-active,
 .fade-leave-active {

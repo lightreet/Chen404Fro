@@ -12,7 +12,7 @@
             {{ form.status === ArticleStatus.PUBLISHED ? '已发布' : '草稿' }}
             · {{ form.title?.trim() ? form.title : '无标题' }}
           </span>
-          <span class="autosave-text" :class="`is-${autoSaveState}`">
+          <span class="autosave-text" :class="`is-${autoSaveState}`" role="status">
             {{ autoSaveStatusText }}
           </span>
         </div>
@@ -21,7 +21,7 @@
 
     <div class="edit-workspace" :class="{ 'is-outline-collapsed': outlineCollapsed }">
       <ArticleOutline v-if="!isPhone" v-model:collapsed="outlineCollapsed" :headings="outlineHeadings"
-        :active-line="activeOutlineLine" @navigate="navigateToHeading" />
+        :active-line="activeOutlineLine" @navigate="handleOutlineNavigate" />
       <div class="edit-content-scroll">
         <div class="edit-container">
           <!-- 正文与设置共享主滚动区，目录独立滚动。 -->
@@ -34,19 +34,32 @@
             <div class="paper-title-block">
               <UiInput
                 v-model="form.title"
-                placeholder="请输入文章标题（5～100 个字）"
+                placeholder="请输入文章标题"
+                aria-label="文章标题，5 至 100 个字"
+                borderless
                 size="lg"
                 class="paper-title-input"
                 :maxlength="100"
                 show-word-limit
               />
             </div>
-            <div class="paper-title-divider"></div>
+            <div v-if="!isPhone" class="editor-command-bar">
+              <div class="editor-mode-switch" role="group" aria-label="文章编辑模式">
+                <button v-for="mode in desktopModes" :key="mode.value" type="button"
+                  :class="{ active: desktopMode === mode.value }" :aria-pressed="desktopMode === mode.value"
+                  @click="desktopMode = mode.value">{{ mode.label }}</button>
+              </div>
+              <button v-if="desktopMode !== 'preview'" type="button" class="format-toggle"
+                :aria-expanded="desktopFormattingExpanded" @click="desktopFormattingExpanded = !desktopFormattingExpanded">
+                <UiIcon name="more" :size="16" />{{ desktopFormattingExpanded ? '收起格式' : '更多格式' }}
+              </button>
+            </div>
 
             <div
               v-show="!isPhone || !mobilePreview"
               ref="paperEditorHostRef"
               class="paper-editor-host"
+              :class="{ 'is-preview-mode': !isPhone && desktopMode === 'preview' }"
               @click.capture="onMdToolbarItemClickOpenDropdown"
             >
               <MdEditor
@@ -54,9 +67,10 @@
                 v-model="form.content"
                 :sanitize="sanitizeRichTextHtml"
                 :theme="editorTheme"
-                :toolbars="isPhone ? mobileToolbars : toolbars"
+                :toolbars="isPhone ? mobileToolbars : desktopToolbars"
                 :defToolbars="defToolbars"
-                :preview="!isPhone"
+                :preview="false"
+                :footers="!isPhone && desktopMode === 'split' ? ['=', 'scrollSwitch'] : []"
                 :previewComponent="MdResizablePreview"
                 @on-get-catalog="updateOutlineHeadings"
                 placeholder="开始编写正文，支持 Markdown…"
@@ -258,9 +272,8 @@
     <footer class="edit-footer-bar">
       <div class="footer-left">
         <span class="footer-word-count">共 {{ contentCharCount }} 字</span>
-        <span class="footer-hint">正文与设置修改后请及时保存</span>
         <button type="button" class="footer-settings-link" @click="scrollToArticleSettings">
-          发文设置
+          <UiIcon name="Setting" :size="16" />发文设置
         </button>
       </div>
       <div class="footer-actions" :class="{ 'footer-actions--with-import': canImportMarkdown }">
@@ -281,7 +294,7 @@
           @click="handleSaveDraft"
           :disabled="isDraftSaving"
         >
-          保存草稿
+          {{ isDraftSaving ? '保存中…' : '保存草稿' }}
         </button>
         <UiButton variant="primary" class="footer-publish" @click="handlePublish" :loading="publishing">
           {{ form.status === ArticleStatus.PUBLISHED ? '更新发布' : '发布文章' }}
@@ -293,7 +306,7 @@
 
 <script setup lang="ts">
 import { computed, h, ref, watch } from 'vue';
-import { MdEditor, MdPreview } from 'md-editor-v3';
+import { MdEditor, MdPreview, type HeadList } from 'md-editor-v3';
 import { useMobileViewport } from '@/composables/useMobileViewport';
 import 'md-editor-v3/lib/style.css';
 import { ArticleStatus } from '@/types';
@@ -369,12 +382,38 @@ const defToolbars = h('div', [h(MdEditorEmojiToolbar), h(MdEditorUnorderedListTo
 const { isMobile: isPhone } = useMobileViewport();
 const mobilePreview = ref(false);
 const mobileFormattingExpanded = ref(false);
+type DesktopMode = 'write' | 'split' | 'preview';
+const desktopModes: { value: DesktopMode; label: string }[] = [
+  { value: 'write', label: '写作' },
+  { value: 'split', label: '分栏' },
+  { value: 'preview', label: '预览' },
+];
+const desktopMode = ref<DesktopMode>('write');
+const desktopFormattingExpanded = ref(false);
+const desktopToolbars = computed(() => desktopFormattingExpanded.value
+  ? toolbars.filter(item => !['preview', 'htmlPreview', 'save', '='].includes(String(item)))
+  : toolbars.filter(item => ['bold', 'italic', 'title', 'quote', 1, 'orderedList', 'link', 'image', 'code', '-', 'revoke', 'next'].includes(item)));
 const mobileToolbars = computed(() => mobileFormattingExpanded.value
   ? toolbars.filter(item => !['preview', 'htmlPreview'].includes(String(item)))
   : toolbars.filter(item => ['bold', 'title', 'image', 'link', 1].includes(item)));
 
 // MdEditor 的 preview 属性只决定初始状态，跨端调整窗口时需同步编辑模式。
-watch(isPhone, phone => editorRef.value?.togglePreview(!phone));
+watch([isPhone, desktopMode, editorRef], ([phone, mode]) => {
+  // 两个方法会互相关闭对方的模式，不能连续调用覆盖纯预览状态。
+  if (!phone && mode === 'preview') editorRef.value?.togglePreviewOnly(true);
+  else editorRef.value?.togglePreview(!phone && mode === 'split');
+}, { flush: 'post' });
+
+function handleOutlineNavigate(heading: HeadList) {
+  if (desktopMode.value !== 'preview') {
+    navigateToHeading(heading);
+    return;
+  }
+  const index = outlineHeadings.value.findIndex(item => item.line === heading.line);
+  const headings = paperEditorHostRef.value?.querySelectorAll('.md-editor-preview :is(h1, h2, h3, h4, h5, h6)');
+  headings?.[index]?.scrollIntoView({ block: 'start' });
+  activeOutlineLine.value = heading.line;
+}
 
 // 此引用仅用于模板绑定，显式保留以兼容当前 vue-tsc 的未使用检查。
 void settingsAnchorRef;
