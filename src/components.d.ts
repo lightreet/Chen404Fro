@@ -59,6 +59,7 @@ declare module 'vue' {
     TravelMemoryMap: typeof import('./components/TravelMemoryMap/TravelMemoryMap.vue')['default']
     TravelPhoneUpload: typeof import('./components/TravelMemoryMap/TravelPhoneUpload.vue')['default']
     TravelPhotoGallery: typeof import('./components/TravelMemoryMap/TravelPhotoGallery.vue')['default']
+    TravelUploadQueue: typeof import('./components/TravelMemoryMap/TravelUploadQueue.vue')['default']
     UiAvatar: typeof import('./components/ui/avatar/UiAvatar.vue')['default']
     UiBadge: typeof import('./components/ui/badge/UiBadge.vue')['default']
     UiButton: typeof import('./components/ui/button/UiButton.vue')['default']

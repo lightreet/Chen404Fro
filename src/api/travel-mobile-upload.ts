@@ -1,6 +1,7 @@
 import axios from 'axios'
 import { get, post, del } from './request'
 import type { UploadResult } from './upload'
+import { retryTravelUpload, travelUploadError, TRAVEL_UPLOAD_TIMEOUT_MS } from '@/modules/travel-upload/policy'
 
 export interface MobileUploadReceipt {
   requestId: string
@@ -61,8 +62,7 @@ export function closeMobileUpload(id: string, requireIdle = false) {
 // 使用同源 /api，避免手机把电脑配置中的 localhost 当成自己的地址。
 const mobileClient = axios.create({ baseURL: '/api', timeout: 15_000, withCredentials: false })
 export function mobileUploadError(error: unknown): string {
-  if (axios.isAxiosError(error)) return error.response?.data?.message || '连接中断，请检查网络后重试'
-  return error instanceof Error ? error.message : '操作失败，请重试'
+  return travelUploadError(error)
 }
 export function isMobileUploadForbidden(error: unknown) {
   return axios.isAxiosError(error) && [401, 403].includes(error.response?.status || 0)
@@ -95,21 +95,22 @@ export async function sendMobilePhoto(
   file: File,
   onProgress: (progress: number) => void,
   signal: AbortSignal,
+  onRetry: (attempt: number) => void = () => {},
 ) {
   const body = new FormData()
   body.append('file', file)
   body.append('requestId', requestId)
-  const { data } = await mobileClient.post<{ code: number; data: MobileUploadReceipt; message?: string }>(
+  const { data } = await retryTravelUpload(() => mobileClient.post<{ code: number; data: MobileUploadReceipt; message?: string }>(
     `${endpoint}/public/${id}/images`,
     body,
     {
       headers: { 'X-Upload-Token': token },
-      timeout: 120_000,
+      timeout: TRAVEL_UPLOAD_TIMEOUT_MS,
       signal,
       onUploadProgress: (event) =>
         onProgress(Math.min(99, Math.round((event.loaded / (event.total || file.size)) * 100))),
     },
-  )
+  ), signal, onRetry)
   if (data.code !== 200) throw new Error(data.message || '图片上传失败')
   return data.data
 }

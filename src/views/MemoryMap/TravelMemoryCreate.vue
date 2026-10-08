@@ -171,7 +171,8 @@
               :show-file-list="false"
               :before-upload="beforeImageUpload"
               :http-request="handleUploadCoverImage"
-              accept="image/*"
+              :accept="TRAVEL_IMAGE_ACCEPT"
+              :disabled="saving || sealingMobileUpload"
             >
               <div v-if="coverEntry?.imageUrl" class="cover-upload__filled">
                 <div class="cover-upload__preview-frame">
@@ -198,6 +199,8 @@
                 </div>
               </div>
             </UiUpload>
+            <TravelUploadQueue :tasks="photoQueue.tasks.filter(task => task.cover)" :disabled="saving || sealingMobileUpload"
+              @retry="photoQueue.retry" @remove="photoQueue.remove" />
             <TravelPhoneUpload v-if="!isPhone" :transfer="mobileUpload" target-key="cover" kind="cover" label="旅行封面"
               :travel-title="form.title" :disabled="saving" />
             <div v-if="pendingMobileCover" class="mobile-cover-review" role="status">
@@ -423,7 +426,8 @@
                           :show-file-list="false"
                           :before-upload="beforeImageUpload"
                           :http-request="(options) => handleUploadStopImage(stopIndex, options)"
-                          accept="image/*"
+                          :accept="TRAVEL_IMAGE_ACCEPT"
+                          :disabled="saving || sealingMobileUpload"
                           multiple
                         >
                           <button type="button" class="mini-photo-add">
@@ -432,6 +436,8 @@
                           </button>
                         </UiUpload>
                       </div>
+                      <TravelUploadQueue :tasks="photoQueue.tasks.filter(task => !task.cover && task.target === stopKey(stop))"
+                        :disabled="saving || sealingMobileUpload" @retry="photoQueue.retry" @remove="photoQueue.remove" />
                       <TravelPhoneUpload v-if="!isPhone" :transfer="mobileUpload" :target-key="stopKey(stop)" kind="stop"
                         :label="`第 ${stopIndex + 1} 站 · ${stopDisplayTitle(stop, stopIndex)}`"
                         :travel-title="form.title" :disabled="saving" />
@@ -447,6 +453,7 @@
                     <span class="stop-compact__meta">
                       <span>{{ stopDateText(stop) }}</span>
                       <span>{{ stop.entries.length }} 张照片</span>
+                      <span v-if="stopUploadSummary(stop)">{{ stopUploadSummary(stop) }}</span>
                     </span>
                   </span>
                   <span class="stop-compact__thumbs" aria-hidden="true">
@@ -480,10 +487,10 @@
             class="footer-button footer-button--save"
             variant="primary"
             :loading="saving"
-            :disabled="uploading"
+            :disabled="uploading || sealingMobileUpload"
             @click="handleSave"
           >
-            {{ saveButtonLabel }}
+            {{ uploading ? '照片上传中…' : saveButtonLabel }}
           </UiButton>
         </div>
       </div>
@@ -492,14 +499,17 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import type { AxiosError } from 'axios'
-import { notify } from '@/lib/feedback'
+import { confirmAction, notify } from '@/lib/feedback'
 import { UiButton, UiDateField, UiForm, UiFormField, UiIcon, UiInput, UiLoadingState, UiSegmented, UiSwitch, UiTextarea, UiUpload } from '@/components/ui'
 import type { UploadRequestOptions } from '@/components/ui'
 import { onBeforeRouteLeave, onBeforeRouteUpdate, useRoute, useRouter } from 'vue-router'
 import TravelMemoryMap from '@/components/TravelMemoryMap/TravelMemoryMap.vue'
 import TravelPhoneUpload from '@/components/TravelMemoryMap/TravelPhoneUpload.vue'
+import TravelUploadQueue from '@/components/TravelMemoryMap/TravelUploadQueue.vue'
+import { useTravelPhotoQueue } from '@/composables/useTravelPhotoQueue'
+import { TRAVEL_IMAGE_ACCEPT, validateTravelPhoto } from '@/modules/travel-upload/policy'
 import { useTravelMobileUpload } from '@/composables/useTravelMobileUpload'
 import { mobileUploadError, mobileUploadRequestId } from '@/api/travel-mobile-upload'
 import type { UploadResult } from '@/api/upload'
@@ -509,7 +519,6 @@ import {
   getTravelMemories,
   updateTravelMemory,
 } from '@/api/travel-memory'
-import { uploadTravelMemoryImage } from '@/api/upload'
 import { useSiteConfig } from '@/composables/useSiteConfig'
 import { TravelMemoryVisibility } from '@/types'
 import type {
@@ -522,7 +531,7 @@ import type {
 } from '@/types'
 import { reverseGeocodeLocation } from '@/utils/amap'
 import { normalizeCoordinate } from '@/utils/coordinate'
-import { DEFAULT_IMAGE_MAX_MB, validateImageFile } from '@/utils/validation'
+import { DEFAULT_IMAGE_MAX_MB } from '@/utils/validation'
 import { applySiteMeta } from '@/utils/siteConfig'
 import { useMobileViewport } from '@/composables/useMobileViewport'
 
@@ -541,8 +550,6 @@ const list = ref<TravelMemoryLocationListItem[]>([])
 const loading = ref(false)
 const saving = ref(false)
 const sealingMobileUpload = ref(false)
-const uploadCount = ref(0)
-const uploading = computed(() => uploadCount.value > 0)
 const resolvingLocationMeta = ref(false)
 const locationMetaNeedsManualConfirm = ref(false)
 const lastResolvedAddress = ref('')
@@ -650,6 +657,22 @@ function stopKey(stop: TravelMemoryStopUpsertCommand) {
   if (!key) { key = `stop-${mobileUploadRequestId()}`; stopKeys.set(stop, key) }
   return key
 }
+const photoQueue = useTravelPhotoQueue((image, task) => {
+  const stopIndex = form.stops.findIndex(stop => stopKey(stop) === task.target)
+  if (stopIndex < 0) return
+  void appendUploadedEntry(image, { stopIndex, cover: task.cover })
+  if ((form.latitude == null || form.longitude == null) && image.latitude != null && image.longitude != null) {
+    // 地址解析是辅助操作，不能把已经上传成功的照片改判为失败。
+    void applyLocationCoordinateSelection(image.latitude, image.longitude, { silent: true }).catch(() => {})
+  }
+})
+const uploading = photoQueue.busy
+function stopUploadSummary(stop: TravelMemoryStopUpsertCommand) {
+  const pending = photoQueue.tasks.filter(task => task.target === stopKey(stop) && task.status !== 'done')
+  const failed = pending.filter(task => task.status === 'failed').length
+  if (failed) return `${failed} 张上传失败，展开重试`
+  return pending.length ? `${pending.length} 张等待或上传中` : ''
+}
 const mobileUpload = useTravelMobileUpload((image, target) => {
   if (target.kind === 'cover' && coverEntry.value) {
     pendingMobileCover.value = image
@@ -671,20 +694,24 @@ function acceptMobileCover() {
   pendingMobileCover.value = undefined
 }
 watch(() => form.stops.map(stopKey), keys => {
+  photoQueue.tasks.filter(task => !keys.includes(task.target)).forEach(task => photoQueue.remove(task.id))
   if (mobileUpload.target?.kind === 'stop' && !keys.includes(mobileUpload.target.key)) {
     void mobileUpload.finish(false).catch(() => {})
   }
 })
 onBeforeRouteLeave(async () => {
+  if (!await confirmLeavingUploads()) return false
   try { await mobileUpload.finish(false) } catch { /* 断网时由服务端租约回收会话。 */ }
 })
 onBeforeRouteUpdate(async () => {
+  if (!await confirmLeavingUploads()) return false
   try { await mobileUpload.finish(false) } catch { /* 旧目标已绑定稳定标识，不能回填新表单。 */ }
   mobileUpload.detach()
   pendingMobileCover.value = undefined
 })
 
 function resetForm() {
+  photoQueue.reset()
   pendingMobileCover.value = undefined
   Object.assign(form, createEmptyForm())
   selectedStopIndex.value = 0
@@ -883,9 +910,10 @@ function goBack() {
 }
 
 function beforeImageUpload(file: File) {
-  const result = validateImageFile(file, DEFAULT_IMAGE_MAX_MB)
-  if (!result.valid) {
-    notify.error(result.message)
+  if (saving.value || sealingMobileUpload.value) return false
+  const message = validateTravelPhoto(file, DEFAULT_IMAGE_MAX_MB * 1024 * 1024)
+  if (message) {
+    notify.error(`${file.name}：${message}`)
     return false
   }
   return true
@@ -1033,47 +1061,38 @@ async function appendUploadedEntry(
   normalizeAllStops()
 }
 
-async function handleUploadStopImage(stopIndex: number, options: UploadRequestOptions) {
-  const targetStop = form.stops[stopIndex]
-  uploadCount.value += 1
-  try {
-    const result = await uploadTravelMemoryImage(options.file as File)
-    const currentIndex = form.stops.indexOf(targetStop)
-    if (currentIndex >= 0) await appendUploadedEntry(result, { stopIndex: currentIndex })
-    if ((form.latitude == null || form.longitude == null) && result.latitude != null && result.longitude != null) {
-      await applyLocationCoordinateSelection(result.latitude, result.longitude, { silent: true })
-    }
-    options.onSuccess?.(result as never)
-    notify.success('片段照片上传成功')
-  } catch (error) {
-    options.onError?.(error as never)
-    notify.error('照片上传失败')
-  } finally {
-    uploadCount.value -= 1
-  }
+// UiUpload 只负责选图，传输生命周期由页面队列接管，避免组件对 Promise 再次回调。
+function handleUploadStopImage(stopIndex: number, options: UploadRequestOptions) {
+  const stop = form.stops[stopIndex]
+  if (stop && !saving.value && !sealingMobileUpload.value) photoQueue.enqueue(options.file as File, stopKey(stop))
+  return Promise.resolve({ queued: true })
 }
 
-async function handleUploadCoverImage(options: UploadRequestOptions) {
-  uploadCount.value += 1
-  try {
-    const result = await uploadTravelMemoryImage(options.file as File)
-    const stopIndex = ensureUploadStopIndex()
-    await appendUploadedEntry(result, {
-      stopIndex,
-      cover: true,
-    })
-    if ((form.latitude == null || form.longitude == null) && result.latitude != null && result.longitude != null) {
-      await applyLocationCoordinateSelection(result.latitude, result.longitude, { silent: true })
-    }
-    options.onSuccess?.(result as never)
-    notify.success('封面图片上传成功')
-  } catch (error) {
-    options.onError?.(error as never)
-    notify.error('封面上传失败')
-  } finally {
-    uploadCount.value -= 1
+function handleUploadCoverImage(options: UploadRequestOptions) {
+  if (!saving.value && !sealingMobileUpload.value) {
+    const stop = form.stops[ensureUploadStopIndex()]
+    photoQueue.enqueue(options.file as File, stopKey(stop), true)
   }
+  return Promise.resolve({ queued: true })
 }
+
+async function confirmLeavingUploads() {
+  if (!photoQueue.unresolved.value) return true
+  const leave = await confirmAction({
+    title: '还有未完成的照片',
+    message: '离开会取消上传，并清除等待或失败的照片。已上传的照片仍需保存游记才能保留。',
+    confirmText: '离开页面', cancelText: '继续编辑', tone: 'warning',
+  })
+  if (leave) photoQueue.reset()
+  return leave
+}
+function warnLeavingUploads(event: BeforeUnloadEvent) {
+  if (!photoQueue.unresolved.value) return
+  event.preventDefault()
+  event.returnValue = ''
+}
+onMounted(() => window.addEventListener('beforeunload', warnLeavingUploads))
+onBeforeUnmount(() => window.removeEventListener('beforeunload', warnLeavingUploads))
 
 function updateLocationCoordinateFields(latitude: number, longitude: number) {
   const coordinate = normalizeCoordinate(latitude, longitude)
@@ -1342,6 +1361,10 @@ async function handleSave() {
   if (saving.value || sealingMobileUpload.value || mobileUpload.busy) return
   if (uploading.value) {
     notify.warning('照片还在上传中，请等上传完成后再保存')
+    return
+  }
+  if (photoQueue.failed.value) {
+    notify.warning('还有上传失败的照片，请重试或移除后再保存')
     return
   }
   if (!form.title.trim()) {
@@ -3067,4 +3090,3 @@ watch(
   .stop-editor-main { padding: 12px; }
 }
 </style>
-

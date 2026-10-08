@@ -301,6 +301,7 @@ home / category / archive / development-history / memory-map / music / bookshelf
 - 展开地图可继续选择地点并返回对应游记；展示页通过 `compact`、`displayMaxZoom` 配置地图尺寸与地点适配范围，创建/编辑页的选点地图和表单流程沿用原布局
 - 创建/编辑页采用 `location + stops + entries` 结构，支持地图点选、自动定位、地点搜索、图片上传、EXIF 辅助坐标回填
 - 封面和片段照片支持手机扫码直传，入口为 `TravelPhoneUpload.vue`，编辑器会话在 `useTravelMobileUpload.ts` 中维护。独立 `/memory-map/mobile-upload` 页面仅消费上传凭证，不加载账号流程；封面一张、片段多张，稳定片段标识保障重排后的回填归属。
+- 编辑器本地选图通过 `useTravelPhotoQueue.ts` 在封面与各片段之间共享串行队列；单张上传超时为 120 秒，网络中断、超时与临时网关错误最多自动重试两次。失败照片留在原片段，可重试或移除，不阻塞后续照片；未完成上传时防止保存漏图，离开或刷新前提示。扫码上传复用相同重试策略，并沿用固定 requestId 防止重复回执。原图先由服务端提取 EXIF 再压缩，前端不重新编码照片。
 - 具备 `travel:create` capability 的用户可创建；所有者或管理员可编辑删除，前端入口不替代后端对象级鉴权
 - 当前前端主要维护地点级展示坐标；片段日期按 `stop.visitedAt` 保存，照片拍摄时间默认跟随片段日期，片段未填日期时回退到地点日期
 

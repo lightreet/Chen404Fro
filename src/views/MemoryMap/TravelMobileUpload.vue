@@ -34,7 +34,7 @@
             <strong>{{ item.file.name }}</strong>
             <span v-if="item.status === 'done'">上传成功</span>
             <span v-else-if="item.status === 'uploading'">{{
-              item.progress === 99 ? '正在处理照片…' : `上传中 ${item.progress}%`
+              item.error || (item.progress === 99 ? '正在处理照片…' : `上传中 ${item.progress}%`)
             }}</span>
             <span v-else-if="item.status === 'failed'" class="mobile-photo__error">{{ item.error }}</span>
             <span v-else>待上传 · {{ (item.file.size / 1024 / 1024).toFixed(1) }} MB</span>
@@ -104,13 +104,14 @@
       >
         {{ queue.length ? '继续选择照片' : '从相册选择照片' }}
       </UiButton>
-      <p class="mobile-upload-limit">单张不超过 {{ maxMb }} MB</p>
+      <p class="mobile-upload-limit">单张不超过 {{ maxMb }} MB，依次上传。网络中断会自动重试，请保持页面打开。</p>
     </template>
   </AppMobileUploadPanel>
 </template>
 
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { validateTravelPhoto } from '@/modules/travel-upload/policy'
 import { UiButton, UiIcon, UiLoadingState } from '@/components/ui'
 import { AppMobileUploadPanel } from '@/components/app'
 import {
@@ -257,12 +258,9 @@ function selectFiles(event: Event) {
   }
   const rejected: string[] = []
   for (const file of selected) {
-    if (file.size > session.value.maxFileBytes || file.size === 0) {
-      rejected.push(`${file.name}：照片为空或超过 ${maxMb.value} MB`)
-      continue
-    }
-    if (/\.(heic|heif)$/i.test(file.name)) {
-      rejected.push(`${file.name}：请从相册导出为 JPG 后再选`)
+    const validationError = validateTravelPhoto(file, session.value.maxFileBytes)
+    if (validationError) {
+      rejected.push(`${file.name}：${validationError}`)
       continue
     }
     if (
@@ -309,13 +307,18 @@ async function upload(items: PhotoItem[]) {
           item.id,
           item.file,
           (progress) => {
+            item.error = ''
             item.progress = progress
           },
           uploadController.signal,
+          (attempt) => { item.error = `连接中断，正在第 ${attempt} 次重试…` },
         )
+        if (disposed) break
         item.status = 'done'
         item.progress = 100
+        item.error = ''
       } catch (cause) {
+        if (disposed) break
         // 回执可能已落库但响应在弱网中丢失，先拉取状态，再决定是否展示失败。
         await refresh()
         if ((item as PhotoItem).status !== 'done') {

@@ -7,6 +7,7 @@ import { Service } from '@/sdk/generated'
 import { unwrapResult, type ResultEnvelope } from '@/sdk/runtime'
 import type { RequestConfig } from './request'
 import { post } from './request'
+import { TRAVEL_UPLOAD_TIMEOUT_MS } from '@/modules/travel-upload/policy'
 
 export interface UploadResult {
   id?: number | string
@@ -126,10 +127,15 @@ export function uploadMusicCover(file: File): Promise<UploadResult> {
   return uploadFileByEndpoint(file, '/upload/music-cover')
 }
 
-export async function uploadTravelMemoryImage(file: File): Promise<UploadResult> {
+export async function uploadTravelMemoryImage(file: File, config?: RequestConfig): Promise<UploadResult> {
   const formData = new FormData()
   formData.append('file', file)
-  const payload = await post<UploadPayload>('/upload/travel-memory-image', formData as any)
+  const payload = await post<UploadPayload>('/upload/travel-memory-image', formData, {
+    timeout: TRAVEL_UPLOAD_TIMEOUT_MS,
+    suppressErrorMessage: true,
+    skipAuthRedirect: true,
+    ...config,
+  })
 
   return {
     id: payload.id,
