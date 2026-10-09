@@ -32,3 +32,35 @@ test('unsupported local decoder falls back to authoritative server validation; o
   assert.equal(p.released(),1)
   assert.equal(await p.validateTravelMedia({name:'photo.jpg',type:'image/jpeg',size:3},1024),undefined)
 })
+
+test('JPEG motion containers use the video envelope limit; actual still size is validated after server extraction', async () => {
+  const p = policy(2)
+  assert.equal(await p.validateTravelMedia({name:'live.jpg',type:'image/jpeg',size:20*1024*1024},12*1024*1024), undefined)
+  assert.match(await p.validateTravelMedia({name:'live.jpg',type:'image/jpeg',size:60*1024*1024+1},12*1024*1024), /60 MB/)
+  assert.match(await p.validateTravelMedia({name:'static.png',type:'image/png',size:20*1024*1024},12*1024*1024), /12 MB/)
+})
+
+test('image upload keeps optional motion video URL and the processing timeout', async () => {
+  const source = fs.readFileSync(new URL('../src/api/upload.ts', import.meta.url), 'utf8')
+  const compiled = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText
+  const module = { exports: {} }, calls = []
+  const response = { id: 1, url: '/poster.jpg', videoUrl: '/motion.mp4', name: 'live.jpg', latitude: 23 }
+  vm.runInNewContext(compiled, {
+    module, exports: module.exports, FormData,
+    require(name) {
+      if (name === './request') return { post: async (...args) => { calls.push(args); return response } }
+      if (name.includes('policy')) return policy(2)
+      return {}
+    },
+  })
+  const file = new File(['jpeg with movie'], 'live.jpg', { type: 'image/jpeg' })
+  const result = await module.exports.uploadTravelMedia(file)
+  assert.equal(result.videoUrl, response.videoUrl)
+  assert.equal(result.url, response.url)
+  assert.equal(result.latitude, 23)
+  assert.equal(calls[0][0], '/upload/travel-memory-image')
+  assert.equal(calls[0][2].timeout, 240000)
+  assert.equal(calls[0][1].get('file'), file)
+  delete response.videoUrl
+  assert.equal((await module.exports.uploadTravelMedia(file)).videoUrl, undefined)
+})

@@ -1,7 +1,8 @@
 /** 旅行原图保留 EXIF，由服务端解析后压缩；弱网下为单张传输留足时间。 */
 export const TRAVEL_UPLOAD_TIMEOUT_MS = 120_000
 export const TRAVEL_IMAGE_ACCEPT = '.jpg,.jpeg,.png,.gif,.webp'
-export const TRAVEL_MEDIA_ACCEPT = `${TRAVEL_IMAGE_ACCEPT},.mp4,.mov,.webm`
+export const TRAVEL_MEDIA_ACCEPT = `image/*,video/*,${TRAVEL_IMAGE_ACCEPT},.mp4,.mov,.webm`
+export const TRAVEL_MOTION_PHOTO_HINT = '实况照片请上传含动态内容的 JPG 原文件。若相册只传入静态图，可从文件中选择原文件，或先在相册导出为视频。'
 export const TRAVEL_VIDEO_MAX_BYTES = 60 * 1024 * 1024
 export const TRAVEL_VIDEO_MAX_SECONDS = 30
 export const TRAVEL_VIDEO_TIMEOUT_MS = 240_000
@@ -12,7 +13,11 @@ export function isTravelVideo(file: Pick<File, 'name' | 'type'>): boolean {
 
 /** 选文件时提前反馈，最终格式与时长仍由服务端验证。 */
 export async function validateTravelMedia(file: File, maxImageBytes: number): Promise<string | undefined> {
-  if (!isTravelVideo(file)) return validateTravelPhoto(file, maxImageBytes)
+  if (!isTravelVideo(file)) {
+    // JPG 可能包含实况短视频；服务端拆分后仍对静态照片执行站点大小限制。
+    const maxBytes = /\.jpe?g$/i.test(file.name) ? Math.max(maxImageBytes, TRAVEL_VIDEO_MAX_BYTES) : maxImageBytes
+    return validateTravelPhoto(file, maxBytes)
+  }
   if (!/\.(mp4|mov|webm)$/i.test(file.name)) return '请选择 MP4、MOV 或 WebM 视频'
   if (!file.size) return '视频为空，请重新选择'
   if (file.size > TRAVEL_VIDEO_MAX_BYTES) return '视频不能超过 60 MB'

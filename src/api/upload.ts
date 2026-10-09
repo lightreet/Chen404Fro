@@ -7,7 +7,7 @@ import { Service } from '@/sdk/generated'
 import { unwrapResult, type ResultEnvelope } from '@/sdk/runtime'
 import type { RequestConfig } from './request'
 import { post } from './request'
-import { TRAVEL_UPLOAD_TIMEOUT_MS, TRAVEL_VIDEO_TIMEOUT_MS, isTravelVideo } from '@/modules/travel-upload/policy'
+import { TRAVEL_VIDEO_TIMEOUT_MS, isTravelVideo } from '@/modules/travel-upload/policy'
 
 export interface UploadResult {
   id?: number | string
@@ -133,7 +133,8 @@ export async function uploadTravelMemoryImage(file: File, config?: RequestConfig
   const formData = new FormData()
   formData.append('file', file)
   const payload = await post<UploadPayload>('/upload/travel-memory-image', formData, {
-    timeout: TRAVEL_UPLOAD_TIMEOUT_MS,
+    // 实况照片仍以 JPG 进入此接口，需要给服务端视频处理留足时间。
+    timeout: TRAVEL_VIDEO_TIMEOUT_MS,
     suppressErrorMessage: true,
     skipAuthRedirect: true,
     ...config,
@@ -147,6 +148,7 @@ export async function uploadTravelMemoryImage(file: File, config?: RequestConfig
     latitude: payload.latitude,
     longitude: payload.longitude,
     shotAt: payload.shotAt,
+    videoUrl: payload.videoUrl,
   }
 }
 

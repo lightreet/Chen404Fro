@@ -85,6 +85,7 @@
         hidden
         @change="selectFiles"
       />
+      <input ref="originalInput" type="file" :multiple="!isCover" hidden @change="selectFiles" />
       <UiButton
         v-if="pending.length"
         variant="solid"
@@ -106,14 +107,19 @@
       >
         {{ queue.length ? '继续选择影像' : '从相册选择影像' }}
       </UiButton>
-      <p class="mobile-upload-limit">图片不超过 {{ maxMb }} MB；视频少于 30 秒、不超过 60 MB。依次上传。网络中断会自动重试，请保持页面打开。</p>
+      <details v-if="remainingSlots > 0" class="mobile-upload-limit">
+        <summary>上传实况照片</summary>
+        <p>{{ TRAVEL_MOTION_PHOTO_HINT }}</p>
+        <UiButton size="sm" :disabled="running || selecting" @click="originalInput?.click()">从文件选择实况原图</UiButton>
+      </details>
+      <p class="mobile-upload-limit">普通图片不超过 {{ maxMb }} MB；实况照片、视频不超过 60 MB，动态内容少于 30 秒。依次上传，请保持页面打开。</p>
     </template>
   </AppMobileUploadPanel>
 </template>
 
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
-import { validateTravelMedia, isTravelVideo, TRAVEL_MEDIA_ACCEPT } from '@/modules/travel-upload/policy'
+import { validateTravelMedia, isTravelVideo, TRAVEL_MEDIA_ACCEPT, TRAVEL_MOTION_PHOTO_HINT } from '@/modules/travel-upload/policy'
 import { UiButton, UiIcon, UiLoadingState } from '@/components/ui'
 import { AppMobileUploadPanel } from '@/components/app'
 import {
@@ -140,6 +146,7 @@ interface PhotoItem {
 const session = ref<MobileUploadSession>()
 const queue = ref<PhotoItem[]>([])
 const fileInput = ref<HTMLInputElement>()
+const originalInput = ref<HTMLInputElement>()
 const loading = ref(true)
 const running = ref(false)
 const selecting = ref(false)
