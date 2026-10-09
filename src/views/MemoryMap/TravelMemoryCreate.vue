@@ -2908,8 +2908,12 @@ watch(
     max-height: 320px;
   }
 
-  .mini-photo.is-cover {
+  .mini-photo.is-cover:not(:only-child) {
     grid-row: auto;
+  }
+
+  .photo-strip:not(.is-single) .mini-photo.is-cover img {
+    aspect-ratio: 16 / 11;
   }
 
   .stop-compact {
