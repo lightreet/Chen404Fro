@@ -1,7 +1,6 @@
 <template>
-  <div class="travel-upload-queue">
-    <p class="queue-hint">图片支持 JPG、PNG、GIF、WebP，不超过 {{ DEFAULT_IMAGE_MAX_MB }} MB；视频支持 MP4、MOV、WebM，少于 30 秒且不超过 60 MB。文件依次上传，可继续编辑文字。</p>
-    <p v-if="tasks.length" role="status">已上传 {{ completed }} / {{ tasks.length }} 项<span v-if="pending.length">，请保持页面打开</span></p>
+  <div v-if="tasks.length" class="travel-upload-queue">
+    <p role="status">已上传 {{ completed }} / {{ tasks.length }} 项<span v-if="pending.length">，请保持页面打开</span></p>
     <ul v-if="pending.length" aria-label="影像上传队列">
       <li v-for="task in pending" :key="task.id">
         <div class="queue-details">
@@ -22,7 +21,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { UiButton } from '@/components/ui'
-import { DEFAULT_IMAGE_MAX_MB } from '@/utils/validation'
 import type { TravelPhotoTask } from '@/composables/useTravelPhotoQueue'
 const props = defineProps<{ tasks: TravelPhotoTask[]; disabled?: boolean }>()
 defineEmits<{ retry: [id: number]; remove: [id: number] }>()

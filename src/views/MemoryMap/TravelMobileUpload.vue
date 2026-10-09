@@ -80,12 +80,11 @@
       <input
         ref="fileInput"
         type="file"
-        :accept="acceptTypes"
+        :accept="TRAVEL_MEDIA_ACCEPT"
         :multiple="!isCover"
         hidden
         @change="selectFiles"
       />
-      <input ref="originalInput" type="file" :multiple="!isCover" hidden @change="selectFiles" />
       <UiButton
         v-if="pending.length"
         variant="solid"
@@ -105,21 +104,15 @@
         :disabled="running || selecting"
         @click="fileInput?.click()"
       >
-        {{ queue.length ? '继续选择影像' : '从相册选择影像' }}
+        {{ queue.length ? '继续选择影像' : '选择影像' }}
       </UiButton>
-      <details v-if="remainingSlots > 0" class="mobile-upload-limit">
-        <summary>上传实况照片</summary>
-        <p>{{ TRAVEL_MOTION_PHOTO_HINT }}</p>
-        <UiButton size="sm" :disabled="running || selecting" @click="originalInput?.click()">从文件选择实况原图</UiButton>
-      </details>
-      <p class="mobile-upload-limit">普通图片不超过 {{ maxMb }} MB；实况照片、视频不超过 60 MB，动态内容少于 30 秒。依次上传，请保持页面打开。</p>
     </template>
   </AppMobileUploadPanel>
 </template>
 
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
-import { validateTravelMedia, isTravelVideo, TRAVEL_MEDIA_ACCEPT, TRAVEL_MOTION_PHOTO_HINT } from '@/modules/travel-upload/policy'
+import { validateTravelMedia, isTravelVideo, TRAVEL_MEDIA_ACCEPT } from '@/modules/travel-upload/policy'
 import { UiButton, UiIcon, UiLoadingState } from '@/components/ui'
 import { AppMobileUploadPanel } from '@/components/app'
 import {
@@ -146,7 +139,6 @@ interface PhotoItem {
 const session = ref<MobileUploadSession>()
 const queue = ref<PhotoItem[]>([])
 const fileInput = ref<HTMLInputElement>()
-const originalInput = ref<HTMLInputElement>()
 const loading = ref(true)
 const running = ref(false)
 const selecting = ref(false)
@@ -206,8 +198,6 @@ const remainingSlots = computed(() =>
   ),
 )
 const selectedCount = computed(() => (session.value?.maxCount || 0) - remainingSlots.value)
-const maxMb = computed(() => Math.floor((session.value?.maxFileBytes || 0) / 1024 / 1024))
-const acceptTypes = computed(() => TRAVEL_MEDIA_ACCEPT)
 
 function refresh(): Promise<void> {
   if (refreshPromise) return refreshPromise
@@ -431,11 +421,6 @@ p {
   font-size: 13px;
   font-weight: 600;
   margin-top: 18px;
-}
-.mobile-upload-limit {
-  font-size: 12px;
-  text-align: center;
-  color: var(--color-text-secondary);
 }
 .mobile-photo-list {
   list-style: none;

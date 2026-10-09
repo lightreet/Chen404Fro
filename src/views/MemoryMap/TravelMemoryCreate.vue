@@ -199,14 +199,6 @@
                 </div>
               </div>
             </UiUpload>
-            <details class="motion-photo-help">
-              <summary>上传实况照片</summary>
-              <p>{{ TRAVEL_MOTION_PHOTO_HINT }}</p>
-              <UiUpload :before-upload="beforeImageUpload" :http-request="handleUploadCoverImage"
-                :disabled="saving || sealingMobileUpload">
-                <UiButton size="sm" :disabled="saving || sealingMobileUpload">从文件选择实况原图</UiButton>
-              </UiUpload>
-            </details>
             <TravelUploadQueue :tasks="photoQueue.tasks.filter(task => task.cover)" :disabled="saving || sealingMobileUpload"
               @retry="photoQueue.retry" @remove="photoQueue.remove" />
             <TravelPhoneUpload v-if="!isPhone" :transfer="mobileUpload" target-key="cover" kind="cover" label="旅行封面"
@@ -444,15 +436,6 @@
                           </button>
                         </UiUpload>
                       </div>
-                      <details class="motion-photo-help">
-                        <summary>上传实况照片</summary>
-                        <p>{{ TRAVEL_MOTION_PHOTO_HINT }}</p>
-                        <UiUpload multiple :before-upload="beforeImageUpload"
-                          :http-request="(options) => handleUploadStopImage(stopIndex, options)"
-                          :disabled="saving || sealingMobileUpload">
-                          <UiButton size="sm" :disabled="saving || sealingMobileUpload">从文件选择实况原图</UiButton>
-                        </UiUpload>
-                      </details>
                       <TravelUploadQueue :tasks="photoQueue.tasks.filter(task => !task.cover && task.target === stopKey(stop))"
                         :disabled="saving || sealingMobileUpload" @retry="photoQueue.retry" @remove="photoQueue.remove" />
                       <TravelPhoneUpload v-if="!isPhone" :transfer="mobileUpload" :target-key="stopKey(stop)" kind="stop"
@@ -526,7 +509,7 @@ import TravelMemoryMap from '@/components/TravelMemoryMap/TravelMemoryMap.vue'
 import TravelPhoneUpload from '@/components/TravelMemoryMap/TravelPhoneUpload.vue'
 import TravelUploadQueue from '@/components/TravelMemoryMap/TravelUploadQueue.vue'
 import { useTravelPhotoQueue } from '@/composables/useTravelPhotoQueue'
-import { TRAVEL_MEDIA_ACCEPT, TRAVEL_MOTION_PHOTO_HINT, validateTravelMedia } from '@/modules/travel-upload/policy'
+import { TRAVEL_MEDIA_ACCEPT, validateTravelMedia } from '@/modules/travel-upload/policy'
 import { useTravelMobileUpload } from '@/composables/useTravelMobileUpload'
 import { mobileUploadError, mobileUploadRequestId } from '@/api/travel-mobile-upload'
 import type { UploadResult } from '@/api/upload'
@@ -1489,16 +1472,6 @@ watch(
 </script>
 
 <style scoped lang="scss">
-.motion-photo-help {
-  margin-top: 12px;
-  color: var(--text-secondary, #777);
-  font-size: 12px;
-  line-height: 1.7;
-
-  summary { cursor: pointer; }
-  p { margin: 8px 0; }
-}
-
 .mobile-cover-review { display: grid; gap: 10px; margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--color-border); color: var(--color-text-primary); font-size: 13px; }
 .mobile-cover-review img { width: 100%; max-height: 180px; object-fit: cover; border-radius: 8px; }
 .mobile-cover-review span { color: var(--color-text-secondary); }
