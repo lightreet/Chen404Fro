@@ -378,13 +378,12 @@
                           <div class="mini-photo__media" @click="toggleEntryActions(stopIndex, entryIndex)">
                             <img :src="entry.imageUrl" :alt="entry.remark || stop.title || form.title || `片段照片 ${entryIndex + 1}`" />
                             <span v-if="entry.stopCover" class="mini-photo-badge">片段封面</span>
-                            <span v-if="entry.cover" class="mini-photo-badge mini-photo-badge--travel">旅行封面</span>
                             <span class="mini-photo-drag-handle" title="拖拽排序" aria-hidden="true">
                               <UiIcon name="Rank" />
                             </span>
                             <div class="mini-photo__overlay" @click.stop>
                               <button type="button" class="mini-photo-overlay-action" @click="setTravelCoverFromOverlay(stopIndex, entryIndex)">
-                                设为旅行封面
+                                {{ isPhone ? '设封面' : '设为旅行封面' }}
                               </button>
                               <div class="mini-photo__mobile-sort">
                                 <button type="button" class="mini-photo-overlay-action" @click="moveEntryFromOverlay(stopIndex, entryIndex, -1)">
@@ -2465,8 +2464,14 @@ watch(
   box-shadow: 0 10px 20px rgba(213, 190, 203, 0.08);
 }
 
-.mini-photo.is-cover:not(:only-child) {
-  grid-row: span 2;
+@media (min-width: 1181px) {
+  .mini-photo.is-cover:not(:only-child) {
+    grid-row: span 2;
+  }
+
+  .mini-photo.is-cover:not(:only-child) img {
+    aspect-ratio: 4 / 3;
+  }
 }
 
 .photo-strip.is-single .mini-photo {
@@ -2482,10 +2487,6 @@ watch(
   aspect-ratio: 16 / 11;
   object-fit: cover;
   border-radius: 0;
-}
-
-.mini-photo.is-cover:not(:only-child) img {
-  aspect-ratio: 4 / 3;
 }
 
 .photo-strip.is-single .mini-photo img {
@@ -2506,12 +2507,6 @@ watch(
   background: rgba(255, 91, 144, 0.92);
   font-size: 12px;
   font-weight: 800;
-}
-
-.mini-photo-badge--travel {
-  left: auto;
-  right: 46px;
-  background: rgba(97, 86, 102, 0.92);
 }
 
 .mini-photo-drag-handle {
@@ -2558,10 +2553,16 @@ watch(
   transition: opacity 0.18s ease;
 }
 
-.mini-photo:hover .mini-photo__overlay,
 .mini-photo.is-action-open .mini-photo__overlay {
   opacity: 1;
   pointer-events: auto;
+}
+
+@media (min-width: 768px) and (hover: hover) {
+  .mini-photo:hover .mini-photo__overlay {
+    opacity: 1;
+    pointer-events: auto;
+  }
 }
 
 .mini-photo-overlay-action {
@@ -2908,14 +2909,6 @@ watch(
     max-height: 320px;
   }
 
-  .mini-photo.is-cover:not(:only-child) {
-    grid-row: auto;
-  }
-
-  .photo-strip:not(.is-single) .mini-photo.is-cover img {
-    aspect-ratio: 16 / 11;
-  }
-
   .stop-compact {
     grid-template-columns: auto minmax(140px, 1fr) auto;
   }
@@ -3088,8 +3081,55 @@ watch(
   :deep(.footer-button) { min-height: 48px; border-radius: 12px; }
   :deep(.footer-button--save) { box-shadow: none !important; }
   :deep(.el-date-editor.el-input), :deep(.el-date-editor.el-input__wrapper) { width: 100%; }
-  .photo-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .photo-strip,
+  .photo-strip.is-empty,
+  .photo-strip.is-single {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-auto-rows: auto;
+  }
   .mini-photo { min-width: 0; }
+  .photo-strip .mini-photo__media { aspect-ratio: 1; }
+  .photo-strip .mini-photo .mini-photo__media img {
+    height: 100%;
+    aspect-ratio: 1;
+    max-height: none;
+  }
+  .photo-strip .mini-photo-add {
+    min-height: 0;
+    aspect-ratio: 1;
+  }
+  .mini-photo-badge {
+    top: 6px;
+    left: 6px;
+    min-height: 20px;
+    padding: 0 6px;
+    font-size: 10px;
+  }
+  .mini-photo-drag-handle {
+    top: 6px;
+    right: 6px;
+    width: 24px;
+    height: 24px;
+  }
+  .mini-photo__overlay {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: stretch;
+    align-content: end;
+    gap: 4px;
+    padding: 32px 6px 6px;
+  }
+  .mini-photo__mobile-sort { display: contents; }
+  .mini-photo-overlay-action {
+    min-width: 0;
+    min-height: 28px;
+    padding: 3px 2px;
+    border-radius: 8px;
+    font-size: 11px;
+    line-height: 1.2;
+    white-space: nowrap;
+  }
+  .mini-photo.is-action-open .mini-photo-drag-handle { opacity: 0; }
   .stop-actions { flex-wrap: wrap; }
   .stop-editor-main { padding: 12px; }
 }
