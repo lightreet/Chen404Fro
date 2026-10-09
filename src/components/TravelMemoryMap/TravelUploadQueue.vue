@@ -1,14 +1,14 @@
 <template>
   <div class="travel-upload-queue">
-    <p class="queue-hint">支持 JPG、PNG、GIF、WebP，单张不超过 {{ DEFAULT_IMAGE_MAX_MB }} MB。多张照片依次上传，可继续编辑文字。</p>
-    <p v-if="tasks.length" role="status">已上传 {{ completed }} / {{ tasks.length }} 张<span v-if="pending.length">，请保持页面打开</span></p>
-    <ul v-if="pending.length" aria-label="照片上传队列">
+    <p class="queue-hint">图片支持 JPG、PNG、GIF、WebP，不超过 {{ DEFAULT_IMAGE_MAX_MB }} MB；视频支持 MP4、MOV、WebM，少于 30 秒且不超过 60 MB。文件依次上传，可继续编辑文字。</p>
+    <p v-if="tasks.length" role="status">已上传 {{ completed }} / {{ tasks.length }} 项<span v-if="pending.length">，请保持页面打开</span></p>
+    <ul v-if="pending.length" aria-label="影像上传队列">
       <li v-for="task in pending" :key="task.id">
         <div class="queue-details">
           <strong>{{ task.name }}</strong>
           <span v-if="task.status === 'queued'">等待上传</span>
           <span v-else-if="task.status === 'retrying'">连接中断，正在第 {{ task.retry }} 次重试…</span>
-          <span v-else-if="task.status === 'uploading'">{{ task.progress >= 99 ? '正在处理照片…' : `上传中 ${task.progress}%` }}</span>
+          <span v-else-if="task.status === 'uploading'">{{ task.progress >= 99 ? '正在处理文件…' : `上传中 ${task.progress}%` }}</span>
           <span v-else role="alert">{{ task.error }}</span>
           <progress v-if="task.status === 'uploading'" :value="task.progress" max="100" :aria-label="`${task.name} 上传进度`" />
         </div>

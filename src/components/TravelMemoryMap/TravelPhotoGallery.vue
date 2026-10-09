@@ -10,7 +10,10 @@
       :class="{ 'is-single': photos.length === 1 }"
     >
       <div class="travel-photos__main" @touchstart.passive="startSwipe" @touchend="endSwipe" @touchcancel="swipeStart = null">
+        <TravelVideo v-if="currentPhoto.videoUrl" :key="currentPhoto.videoUrl" :src="currentPhoto.videoUrl"
+          :poster="currentPhoto.imageUrl" :label="photoTitle(currentPhoto, currentIndex)" class="travel-photos__video" />
         <button
+          v-else
           type="button"
           class="travel-photos__image"
           :aria-label="`查看大图：${photoTitle(currentPhoto, currentIndex)}`"
@@ -29,7 +32,7 @@
           <button
             type="button"
             class="travel-photos__arrow is-previous"
-            aria-label="上一张照片"
+            aria-label="上一项影像"
             @click="move(-1)"
           >
             <UiIcon name="arrow-left" />
@@ -37,7 +40,7 @@
           <button
             type="button"
             class="travel-photos__arrow is-next"
-            aria-label="下一张照片"
+            aria-label="下一项影像"
             @click="move(1)"
           >
             <UiIcon name="arrow-right" />
@@ -49,16 +52,15 @@
           aria-live="polite"
           aria-atomic="true"
         >
-          <span class="sr-only">当前照片：</span>{{ currentIndex + 1 }} /
+          <span class="sr-only">当前影像：</span>{{ currentIndex + 1 }} /
           {{ photos.length }}
         </span>
       </div>
       <div
-        v-if="previews.length"
-        ref="previewStrip"
+        v-if="!isMobile && previews.length"
         class="travel-photos__previews"
         role="group"
-        :aria-label="isMobile ? '照片缩略图' : '更多照片'"
+        aria-label="更多影像"
       >
         <button
           v-for="preview in previews"
@@ -66,8 +68,7 @@
           type="button"
           class="travel-photos__image travel-photos__preview"
           :class="{ 'is-active': preview.index === currentIndex }"
-          :aria-label="`切换到第 ${preview.index + 1} 张：${photoTitle(preview.photo, preview.index)}`"
-          :aria-pressed="isMobile ? preview.index === currentIndex : undefined"
+          :aria-label="`切换到第 ${preview.index + 1} 项：${photoTitle(preview.photo, preview.index)}${preview.photo.videoUrl ? '，视频' : ''}`"
           @click="currentIndex = preview.index"
         >
           <img
@@ -78,24 +79,35 @@
           <span class="travel-photos__caption">{{
             photoTitle(preview.photo, preview.index)
           }}</span>
+          <span v-if="preview.photo.videoUrl" class="travel-photos__video-mark" aria-hidden="true"><UiIcon name="play" /></span>
         </button>
       </div>
     </div>
     <div v-else class="travel-photos__empty">
       <UiIcon name="image" />
-      <p>这个片段还没有照片</p>
+      <p>这个片段还没有照片或视频</p>
+    </div>
+    <div v-if="photos.length > 1" ref="previewStrip" class="travel-photos__thumbnails" role="group" aria-label="照片和视频缩略图">
+      <button v-for="(photo, index) in photos" :key="photo.id || index" type="button"
+        class="travel-photos__thumbnail" :class="{ 'is-active': index === currentIndex }"
+        :aria-label="`切换到第 ${index + 1} 项：${photoTitle(photo, index)}${photo.videoUrl ? '，视频' : ''}`"
+        :aria-pressed="index === currentIndex" @click="currentIndex = index">
+        <img :src="photo.imageUrl" :alt="photoTitle(photo, index)" loading="lazy" />
+        <span v-if="photo.videoUrl" class="travel-photos__video-mark" aria-hidden="true"><UiIcon name="play" /></span>
+      </button>
     </div>
     <p v-if="currentPhoto?.thanksNote?.trim()" class="travel-photos__note">
       {{ currentPhoto.thanksNote }}
     </p>
     <p v-if="photos.length > 1" class="travel-photos__hint">
-      左右切换照片 · 点击大图放大查看
+      左右切换影像 · 点击照片放大查看
     </p>
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed, nextTick, ref, watch } from 'vue'
+import TravelVideo from './TravelVideo.vue'
 import { UiIcon } from '@/components/ui'
 import { useMobileViewport } from '@/composables/useMobileViewport'
 import type { TravelMemoryEntry } from '@/types'
@@ -124,14 +136,13 @@ function endSwipe(event: TouchEvent) {
   swipeStart = null
 }
 function openPhoto() {
-  if (currentPhoto.value && Date.now() - lastSwipeAt > 350) emit('open', currentPhoto.value.imageUrl)
+  if (currentPhoto.value && !currentPhoto.value.videoUrl && Date.now() - lastSwipeAt > 350) emit('open', currentPhoto.value.imageUrl)
 }
 const photos = computed(() =>
   props.entries.filter((entry) => Boolean(entry.imageUrl)),
 )
 const currentPhoto = computed(() => photos.value[currentIndex.value])
 const previews = computed(() => {
-  if (isMobile.value) return photos.value.map((photo, index) => ({ index, photo }))
   return Array.from(
     { length: Math.min(2, Math.max(0, photos.value.length - 1)) },
     (_, offset) => {
@@ -143,7 +154,6 @@ const previews = computed(() => {
 
 // 箭头或手势切图时只滚动缩略图条，不改变页面的垂直位置。
 watch([currentIndex, isMobile], async () => {
-  if (!isMobile.value) return
   await nextTick()
   const strip = previewStrip.value
   const selected = strip?.querySelector<HTMLElement>('.is-active')
@@ -347,30 +357,21 @@ watch(
     aspect-ratio: 4 / 5;
     touch-action: pan-y pinch-zoom;
   }
-  .travel-photos__previews {
-    display: flex;
-    gap: 8px;
-    min-width: 0;
-    padding: 4px;
-    overflow-x: auto;
-    overscroll-behavior-x: contain;
-    scrollbar-width: thin;
-  }
-  .travel-photos__preview {
-    flex: 0 0 64px;
-    width: 64px;
-    height: 56px;
-    padding: 2px;
-    border: 2px solid transparent;
-    border-radius: var(--mobile-control-radius);
-    background: transparent;
-
-    img { border-radius: 7px; }
-    &.is-active { border-color: var(--color-accent-readable); }
-    &::after, .travel-photos__caption { display: none; }
-  }
   .travel-photos__caption {
     inset-inline: 15px;
   }
 }
+
+.travel-photos__video { border-radius: 12px; }
+.travel-photos__thumbnails {
+  display: flex; gap: 8px; min-width: 0; margin-top: 10px; padding: 4px;
+  overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: thin;
+}
+.travel-photos__thumbnail {
+  position: relative; flex: 0 0 72px; width: 72px; height: 60px; padding: 2px;
+  border: 2px solid transparent; border-radius: 10px; background: transparent; cursor: pointer;
+  img { display: block; width: 100%; height: 100%; border-radius: 6px; object-fit: cover; }
+  &.is-active { border-color: var(--color-accent-readable); }
+}
+.travel-photos__video-mark { position: absolute; inset: 0; display: grid; place-items: center; color: #fff; text-shadow: 0 1px 4px #000; pointer-events: none; }
 </style>

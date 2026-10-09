@@ -37,7 +37,7 @@
               <h2>旅行索引</h2>
               <p class="memory-index__count">
                 {{ locations.length }} 篇游记 <span>·</span>
-                {{ totalPhotoCount }} 张照片
+                {{ totalPhotoCount }} 项影像
               </p>
             </div>
             <div
@@ -272,7 +272,7 @@
                   </p>
                   <span class="travel-journal__photo-count"
                     ><UiIcon name="image" />
-                    {{ activeStop.entries.length }} 张照片</span
+                    {{ activeStop.entries.length }} 项影像</span
                   >
                 </div>
                 <TravelPhotoGallery
@@ -298,7 +298,7 @@
                 {{
                   activeDetail.entryCount ?? activeDetail.entries.length
                 }}
-                张照片</span
+                项影像</span
               >
               <button
                 type="button"
@@ -536,7 +536,7 @@ const stopPhotoUrls = computed<string[]>(() =>
 const photoViewerVisible = ref(false)
 const photoViewerIndex = ref(0)
 
-/** 打开大图查看器，并定位到被点击的那张照片 */
+/** 打开大图查看器，并定位到被点击的那项影像 */
 function openStopPhoto(imageUrl?: string | null) {
   if (!imageUrl) return
   const index = stopPhotoUrls.value.indexOf(imageUrl)

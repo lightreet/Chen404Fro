@@ -7,11 +7,12 @@ import { Service } from '@/sdk/generated'
 import { unwrapResult, type ResultEnvelope } from '@/sdk/runtime'
 import type { RequestConfig } from './request'
 import { post } from './request'
-import { TRAVEL_UPLOAD_TIMEOUT_MS } from '@/modules/travel-upload/policy'
+import { TRAVEL_UPLOAD_TIMEOUT_MS, TRAVEL_VIDEO_TIMEOUT_MS, isTravelVideo } from '@/modules/travel-upload/policy'
 
 export interface UploadResult {
   id?: number | string
   url: string
+  videoUrl?: string
   name: string
   size?: string
   latitude?: number
@@ -22,6 +23,7 @@ export interface UploadResult {
 type UploadPayload = {
   id?: number | string
   url?: string
+  videoUrl?: string
   name?: string
   size?: string
   latitude?: number
@@ -146,6 +148,15 @@ export async function uploadTravelMemoryImage(file: File, config?: RequestConfig
     longitude: payload.longitude,
     shotAt: payload.shotAt,
   }
+}
+
+export async function uploadTravelMedia(file: File, config?: RequestConfig): Promise<UploadResult> {
+  if (!isTravelVideo(file)) return uploadTravelMemoryImage(file, config)
+  const form = new FormData()
+  form.append('file', file)
+  return post<UploadResult>('/upload/travel-memory-video', form, {
+    timeout: TRAVEL_VIDEO_TIMEOUT_MS, suppressErrorMessage: true, skipAuthRedirect: true, ...config,
+  })
 }
 
 export async function deleteFile(url: string): Promise<void> {

@@ -1,5 +1,5 @@
 import { computed, markRaw, onBeforeUnmount, reactive } from 'vue'
-import { uploadTravelMemoryImage, type UploadResult } from '@/api/upload'
+import { uploadTravelMedia, type UploadResult } from '@/api/upload'
 import { retryTravelUpload, travelUploadError } from '@/modules/travel-upload/policy'
 
 export interface TravelPhotoTask {
@@ -43,7 +43,7 @@ export function useTravelPhotoQueue(receive: (image: UploadResult, task: TravelP
           const image = await retryTravelUpload(() => {
             current.status = 'uploading'
             current.progress = 0
-            return uploadTravelMemoryImage(current.file!, {
+            return uploadTravelMedia(current.file!, {
               signal: abort.signal,
               onUploadProgress: event => {
                 if (!abort.signal.aborted) current.progress = Math.min(99, Math.round(event.loaded / (event.total || current.file!.size) * 100))

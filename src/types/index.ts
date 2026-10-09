@@ -220,6 +220,7 @@ export type TravelMemoryGeoSource = 'NONE' | 'EXIF' | 'MANUAL';
 export interface TravelMemoryEntry {
   id?: number;
   imageUrl: string;
+  videoUrl?: string;
   remark?: string;
   thanksNote?: string;
   shotAt?: string;
@@ -275,6 +276,7 @@ export interface TravelMemoryLocationDetail extends TravelMemoryLocationListItem
 export interface TravelMemoryEntryUpsertCommand {
   id?: number;
   imageUrl: string;
+  videoUrl?: string;
   remark?: string;
   thanksNote?: string;
   shotAt?: string;

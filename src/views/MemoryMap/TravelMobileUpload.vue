@@ -1,6 +1,6 @@
 <template>
   <AppMobileUploadPanel
-    module-label="旅行照片"
+    module-label="旅行影像"
     :target-label="session?.targetLabel"
     :selected-count="selectedCount"
     :max-count="session?.maxCount"
@@ -13,15 +13,16 @@
       <div v-if="!active && !loading && session" class="mobile-ended">
         <UiIcon name="clock" />
         <h2>本次手机上传已结束</h2>
-        <p>请在电脑重新生成二维码。已经传入的照片仍保留在电脑编辑页。</p>
+        <p>请在电脑重新生成二维码。已经传入的影像仍保留在电脑编辑页。</p>
       </div>
       <div v-if="session && !queue.length && active" class="mobile-empty">
         <UiIcon name="image" />
-        <strong>{{ remainingSlots > 0 ? '添加照片' : '照片已上传' }}</strong>
+        <strong>{{ remainingSlots > 0 ? '添加影像' : '影像已上传' }}</strong>
       </div>
-      <ul v-if="queue.length" class="mobile-photo-list" aria-label="待上传与已上传照片">
+      <ul v-if="queue.length" class="mobile-photo-list" aria-label="待上传与已上传影像">
         <li v-for="item in queue" :key="item.id" class="mobile-photo">
-          <img
+          <video v-if="isTravelVideo(item.file)" :src="item.preview" muted playsinline preload="metadata" class="mobile-photo__video" />
+          <img v-else
             :src="item.preview"
             :alt="item.file.name"
             loading="lazy"
@@ -34,7 +35,7 @@
             <strong>{{ item.file.name }}</strong>
             <span v-if="item.status === 'done'">上传成功</span>
             <span v-else-if="item.status === 'uploading'">{{
-              item.error || (item.progress === 99 ? '正在处理照片…' : `上传中 ${item.progress}%`)
+              item.error || (item.progress === 99 ? '正在处理影像…' : `上传中 ${item.progress}%`)
             }}</span>
             <span v-else-if="item.status === 'failed'" class="mobile-photo__error">{{ item.error }}</span>
             <span v-else>待上传 · {{ (item.file.size / 1024 / 1024).toFixed(1) }} MB</span>
@@ -68,7 +69,7 @@
           running
             ? '上传中，请保持此页打开'
             : receivedCount
-              ? `已上传 ${receivedCount} 张，请回电脑确认并保存`
+              ? `已上传 ${receivedCount} 项，请回电脑确认并保存`
               : active
                 ? '已连接电脑'
                 : ''
@@ -90,28 +91,29 @@
         size="lg"
         block
         :loading="running"
+        :disabled="selecting"
         @click="upload(pending)"
       >
-        {{ running ? '正在上传…' : `上传 ${pending.length} 张照片` }}
+        {{ running ? '正在上传…' : `上传 ${pending.length} 项影像` }}
       </UiButton>
       <UiButton
         v-if="remainingSlots > 0"
         :variant="pending.length ? 'secondary' : 'solid'"
         size="lg"
         block
-        :disabled="running"
+        :disabled="running || selecting"
         @click="fileInput?.click()"
       >
-        {{ queue.length ? '继续选择照片' : '从相册选择照片' }}
+        {{ queue.length ? '继续选择影像' : '从相册选择影像' }}
       </UiButton>
-      <p class="mobile-upload-limit">单张不超过 {{ maxMb }} MB，依次上传。网络中断会自动重试，请保持页面打开。</p>
+      <p class="mobile-upload-limit">图片不超过 {{ maxMb }} MB；视频少于 30 秒、不超过 60 MB。依次上传。网络中断会自动重试，请保持页面打开。</p>
     </template>
   </AppMobileUploadPanel>
 </template>
 
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
-import { validateTravelPhoto } from '@/modules/travel-upload/policy'
+import { validateTravelMedia, isTravelVideo, TRAVEL_MEDIA_ACCEPT } from '@/modules/travel-upload/policy'
 import { UiButton, UiIcon, UiLoadingState } from '@/components/ui'
 import { AppMobileUploadPanel } from '@/components/app'
 import {
@@ -140,6 +142,7 @@ const queue = ref<PhotoItem[]>([])
 const fileInput = ref<HTMLInputElement>()
 const loading = ref(true)
 const running = ref(false)
+const selecting = ref(false)
 const terminal = ref(false)
 const connectionError = ref('')
 const selectionError = ref('')
@@ -197,7 +200,7 @@ const remainingSlots = computed(() =>
 )
 const selectedCount = computed(() => (session.value?.maxCount || 0) - remainingSlots.value)
 const maxMb = computed(() => Math.floor((session.value?.maxFileBytes || 0) / 1024 / 1024))
-const acceptTypes = computed(() => (session.value?.allowedTypes || []).map((type) => `.${type}`).join(','))
+const acceptTypes = computed(() => TRAVEL_MEDIA_ACCEPT)
 
 function refresh(): Promise<void> {
   if (refreshPromise) return refreshPromise
@@ -246,46 +249,52 @@ async function loadStatus() {
   }
 }
 
-function selectFiles(event: Event) {
+async function selectFiles(event: Event) {
   const input = event.target as HTMLInputElement
   const selected = Array.from(input.files || [])
   input.value = ''
   selectionError.value = ''
-  if (!active.value || !session.value) return
+  if (!active.value || !session.value || selecting.value || running.value) return
   if (selected.length > remainingSlots.value) {
-    selectionError.value = `本次还可选择 ${remainingSlots.value} 张照片`
+    selectionError.value = `本次还可选择 ${remainingSlots.value} 项影像`
     return
   }
   const rejected: string[] = []
-  for (const file of selected) {
-    const validationError = validateTravelPhoto(file, session.value.maxFileBytes)
-    if (validationError) {
-      rejected.push(`${file.name}：${validationError}`)
-      continue
-    }
-    if (
-      queue.value.some(
-        (item) =>
-          item.file.name === file.name &&
-          item.file.size === file.size &&
-          item.file.lastModified === file.lastModified,
+  selecting.value = true
+  try {
+    for (const file of selected) {
+      const validationError = await validateTravelMedia(file, session.value.maxFileBytes)
+      if (disposed || !active.value) return
+      if (validationError) {
+        rejected.push(`${file.name}：${validationError}`)
+        continue
+      }
+      if (
+        queue.value.some(
+          (item) =>
+            item.file.name === file.name &&
+            item.file.size === file.size &&
+            item.file.lastModified === file.lastModified,
+        )
       )
-    )
-      continue
-    queue.value.push({
-      id: mobileUploadRequestId(),
-      file,
-      preview: URL.createObjectURL(file),
-      status: 'queued',
-      progress: 0,
-      error: '',
-    })
+        continue
+      queue.value.push({
+        id: mobileUploadRequestId(),
+        file,
+        preview: URL.createObjectURL(file),
+        status: 'queued',
+        progress: 0,
+        error: '',
+      })
+    }
+    if (rejected.length) selectionError.value = rejected.join('；')
+  } finally {
+    selecting.value = false
   }
-  if (rejected.length) selectionError.value = rejected.join('；')
 }
 
 async function upload(items: PhotoItem[]) {
-  if (running.value || !active.value || !credentials) return
+  if (running.value || selecting.value || !active.value || !credentials) return
   running.value = true
   selectionError.value = ''
   const batch = [...items]
@@ -469,4 +478,5 @@ p {
   height: 5px;
   accent-color: var(--color-accent);
 }
+.mobile-photo__video { width: 64px; height: 64px; object-fit: cover; border-radius: 8px; }
 </style>

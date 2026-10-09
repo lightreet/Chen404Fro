@@ -7,7 +7,7 @@
           <div class="travel-memory-create__meta">
             <span>{{ pageTitle }}</span>
             <span>{{ stopCount }} 个片段</span>
-            <span>{{ photoCount }} 张照片</span>
+            <span>{{ photoCount }} 项影像</span>
           </div>
         </div>
       </div>
@@ -171,7 +171,7 @@
               :show-file-list="false"
               :before-upload="beforeImageUpload"
               :http-request="handleUploadCoverImage"
-              :accept="TRAVEL_IMAGE_ACCEPT"
+              :accept="TRAVEL_MEDIA_ACCEPT"
               :disabled="saving || sealingMobileUpload"
             >
               <div v-if="coverEntry?.imageUrl" class="cover-upload__filled">
@@ -190,7 +190,7 @@
                     上传新封面
                   </button>
                 </div>
-                <p class="cover-upload__hint">封面会保存成一张真实照片，也可以在下方片段照片里直接设为整趟封面。</p>
+                <p class="cover-upload__hint">上传图片或短视频后，可在下方片段中设为旅行封面；视频使用自动截取的封面图。</p>
               </div>
               <div v-else class="cover-upload__empty">
                 <div class="cover-upload__placeholder">
@@ -256,7 +256,7 @@
             <div class="inline-actions">
               <div class="inline-stats">
                 <span>{{ stopCount }} 个片段</span>
-                <span>{{ photoCount }} 张照片</span>
+                <span>{{ photoCount }} 项影像</span>
               </div>
               <UiButton variant="primary" icon="add" class="section-action section-action--primary" @click="addStop">
                 添加旅途片段
@@ -349,8 +349,8 @@
 
                     <div class="field field--subsection field--gallery">
                       <div class="field-head">
-                        <label>片段照片</label>
-                        <span class="field-head__meta">{{ stop.entries.length }} 张，第一张为片段封面，可设整趟封面</span>
+                        <label>片段影像</label>
+                        <span class="field-head__meta">{{ stop.entries.length }} 项，第一项为片段封面，可设整趟封面</span>
                       </div>
 
                       <div
@@ -376,7 +376,8 @@
                           @drop="handleEntryDrop($event, stopIndex, entryIndex)"
                         >
                           <div class="mini-photo__media" @click="toggleEntryActions(stopIndex, entryIndex)">
-                            <img :src="entry.imageUrl" :alt="entry.remark || stop.title || form.title || `片段照片 ${entryIndex + 1}`" />
+                            <img :src="entry.imageUrl" :alt="entry.remark || stop.title || form.title || `片段影像 ${entryIndex + 1}`" />
+                            <span v-if="entry.videoUrl" class="mini-photo-video-badge"><UiIcon name="play" /> 视频</span>
                             <span v-if="entry.stopCover" class="mini-photo-badge">片段封面</span>
                             <span class="mini-photo-drag-handle" title="拖拽排序" aria-hidden="true">
                               <UiIcon name="Rank" />
@@ -403,7 +404,7 @@
                               v-if="isEditingEntryRemark(stopIndex, entryIndex)"
                               v-model="entry.remark"
                               maxlength="80"
-                              placeholder="添加一句照片说明"
+                              placeholder="添加一句影像说明"
                               autofocus
                               class="photo-remark-input"
                               @blur="finishEntryRemarkEdit"
@@ -415,7 +416,7 @@
                               :class="{ 'is-empty': !entry.remark?.trim() }"
                               @click="editEntryRemark(stopIndex, entryIndex)"
                             >
-                              {{ entry.remark?.trim() || '添加一句照片说明' }}
+                              {{ entry.remark?.trim() || '添加一句影像说明' }}
                             </button>
                           </div>
                         </div>
@@ -425,13 +426,13 @@
                           :show-file-list="false"
                           :before-upload="beforeImageUpload"
                           :http-request="(options) => handleUploadStopImage(stopIndex, options)"
-                          :accept="TRAVEL_IMAGE_ACCEPT"
+                          :accept="TRAVEL_MEDIA_ACCEPT"
                           :disabled="saving || sealingMobileUpload"
                           multiple
                         >
                           <button type="button" class="mini-photo-add">
                             <UiIcon name="Plus" />
-                            <span>{{ stop.entries.length ? '继续添加' : '添加照片' }}</span>
+                            <span>{{ stop.entries.length ? '继续添加' : '添加影像' }}</span>
                           </button>
                         </UiUpload>
                       </div>
@@ -451,7 +452,7 @@
                     <span class="stop-compact__title">{{ stopDisplayTitle(stop, stopIndex) }}</span>
                     <span class="stop-compact__meta">
                       <span>{{ stopDateText(stop) }}</span>
-                      <span>{{ stop.entries.length }} 张照片</span>
+                      <span>{{ stop.entries.length }} 项影像</span>
                       <span v-if="stopUploadSummary(stop)">{{ stopUploadSummary(stop) }}</span>
                     </span>
                   </span>
@@ -461,9 +462,9 @@
                       :key="entry.id || entry.imageUrl || `${stopIndex}-preview-${entryIndex}`"
                       class="stop-compact__thumb"
                     >
-                      <img :src="entry.imageUrl" :alt="entry.remark || stop.title || `片段照片 ${entryIndex + 1}`" />
+                      <img :src="entry.imageUrl" :alt="entry.remark || stop.title || `片段影像 ${entryIndex + 1}`" />
                     </span>
-                    <span v-if="!stop.entries.length" class="stop-compact__empty">暂无照片</span>
+                    <span v-if="!stop.entries.length" class="stop-compact__empty">暂无影像</span>
                   </span>
                   <span class="stop-compact__toggle" title="展开片段" aria-label="展开片段">
                     <UiIcon name="ArrowDown" />
@@ -489,7 +490,7 @@
             :disabled="uploading || sealingMobileUpload"
             @click="handleSave"
           >
-            {{ uploading ? '照片上传中…' : saveButtonLabel }}
+            {{ uploading ? '影像上传中…' : saveButtonLabel }}
           </UiButton>
         </div>
       </div>
@@ -508,7 +509,7 @@ import TravelMemoryMap from '@/components/TravelMemoryMap/TravelMemoryMap.vue'
 import TravelPhoneUpload from '@/components/TravelMemoryMap/TravelPhoneUpload.vue'
 import TravelUploadQueue from '@/components/TravelMemoryMap/TravelUploadQueue.vue'
 import { useTravelPhotoQueue } from '@/composables/useTravelPhotoQueue'
-import { TRAVEL_IMAGE_ACCEPT, validateTravelPhoto } from '@/modules/travel-upload/policy'
+import { TRAVEL_MEDIA_ACCEPT, validateTravelMedia } from '@/modules/travel-upload/policy'
 import { useTravelMobileUpload } from '@/composables/useTravelMobileUpload'
 import { mobileUploadError, mobileUploadRequestId } from '@/api/travel-mobile-upload'
 import type { UploadResult } from '@/api/upload'
@@ -661,16 +662,17 @@ const photoQueue = useTravelPhotoQueue((image, task) => {
   if (stopIndex < 0) return
   void appendUploadedEntry(image, { stopIndex, cover: task.cover })
   if ((form.latitude == null || form.longitude == null) && image.latitude != null && image.longitude != null) {
-    // 地址解析是辅助操作，不能把已经上传成功的照片改判为失败。
+    // 地址解析是辅助操作，不能把已经上传成功的影像改判为失败。
     void applyLocationCoordinateSelection(image.latitude, image.longitude, { silent: true }).catch(() => {})
   }
 })
-const uploading = photoQueue.busy
+const validatingMedia = ref(0)
+const uploading = computed(() => photoQueue.busy.value || validatingMedia.value > 0)
 function stopUploadSummary(stop: TravelMemoryStopUpsertCommand) {
   const pending = photoQueue.tasks.filter(task => task.target === stopKey(stop) && task.status !== 'done')
   const failed = pending.filter(task => task.status === 'failed').length
-  if (failed) return `${failed} 张上传失败，展开重试`
-  return pending.length ? `${pending.length} 张等待或上传中` : ''
+  if (failed) return `${failed} 项上传失败，展开重试`
+  return pending.length ? `${pending.length} 项等待或上传中` : ''
 }
 const mobileUpload = useTravelMobileUpload((image, target) => {
   if (target.kind === 'cover' && coverEntry.value) {
@@ -682,10 +684,13 @@ const mobileUpload = useTravelMobileUpload((image, target) => {
   if (stopIndex < 0 || !form.stops[stopIndex]) return
   void appendUploadedEntry(image, { stopIndex, cover: target.kind === 'cover' })
 }, image => {
-  // 长时间整理照片时更新短时图片票据，不重新插入用户已经删除的照片。
+  // 长时间整理影像时更新短时图片票据，不重新插入用户已经删除的影像。
   const stableUrl = image.url.split('?')[0]
-  allEntries.value.filter(entry => entry.imageUrl.split('?')[0] === stableUrl).forEach(entry => { entry.imageUrl = image.url })
-  if (pendingMobileCover.value?.url.split('?')[0] === stableUrl) pendingMobileCover.value.url = image.url
+  allEntries.value.filter(entry => entry.imageUrl.split('?')[0] === stableUrl).forEach(entry => { entry.imageUrl = image.url; entry.videoUrl = image.videoUrl })
+  if (pendingMobileCover.value?.url.split('?')[0] === stableUrl) {
+    pendingMobileCover.value.url = image.url
+    pendingMobileCover.value.videoUrl = image.videoUrl
+  }
 })
 function acceptMobileCover() {
   if (!pendingMobileCover.value) return
@@ -772,6 +777,7 @@ function cloneEntry(entry: TravelMemoryEntry, index: number): TravelMemoryEntryU
   return {
     id: entry.id,
     imageUrl: entry.imageUrl,
+    videoUrl: entry.videoUrl,
     remark: entry.remark || '',
     thanksNote: entry.thanksNote || '',
     shotAt: '',
@@ -908,14 +914,19 @@ function goBack() {
   goToMemoryMap()
 }
 
-function beforeImageUpload(file: File) {
+async function beforeImageUpload(file: File) {
   if (saving.value || sealingMobileUpload.value) return false
-  const message = validateTravelPhoto(file, DEFAULT_IMAGE_MAX_MB * 1024 * 1024)
-  if (message) {
-    notify.error(`${file.name}：${message}`)
-    return false
+  validatingMedia.value++
+  try {
+    const message = await validateTravelMedia(file, DEFAULT_IMAGE_MAX_MB * 1024 * 1024)
+    if (message) {
+      notify.error(`${file.name}：${message}`)
+      return false
+    }
+    return !saving.value && !sealingMobileUpload.value
+  } finally {
+    validatingMedia.value--
   }
-  return true
 }
 
 function isEndDateBeforeStartDate(start?: string, end?: string) {
@@ -1033,7 +1044,7 @@ function normalizeAllStops() {
 }
 
 async function appendUploadedEntry(
-  result: { url: string; latitude?: number; longitude?: number },
+  result: { url: string; videoUrl?: string; latitude?: number; longitude?: number },
   options: { stopIndex: number; cover?: boolean } = { stopIndex: 0 },
 ) {
   const stop = form.stops[options.stopIndex]
@@ -1046,6 +1057,7 @@ async function appendUploadedEntry(
   }
   const nextEntry: TravelMemoryEntryUpsertCommand = {
     imageUrl: result.url,
+    videoUrl: result.videoUrl,
     remark: '',
     thanksNote: '',
     shotAt: '',
@@ -1078,8 +1090,8 @@ function handleUploadCoverImage(options: UploadRequestOptions) {
 async function confirmLeavingUploads() {
   if (!photoQueue.unresolved.value) return true
   const leave = await confirmAction({
-    title: '还有未完成的照片',
-    message: '离开会取消上传，并清除等待或失败的照片。已上传的照片仍需保存游记才能保留。',
+    title: '还有未完成的影像',
+    message: '离开会取消上传，并清除等待或失败的影像。已上传的影像仍需保存游记才能保留。',
     confirmText: '离开页面', cancelText: '继续编辑', tone: 'warning',
   })
   if (leave) photoQueue.reset()
@@ -1348,7 +1360,7 @@ function validateStopsBeforeSave() {
       return false
     }
     if (!stop.entries.length) {
-      notify.warning(`第 ${stopIndex + 1} 个片段还没有照片`)
+      notify.warning(`第 ${stopIndex + 1} 个片段还没有影像`)
       selectStop(stopIndex)
       return false
     }
@@ -1359,11 +1371,11 @@ function validateStopsBeforeSave() {
 async function handleSave() {
   if (saving.value || sealingMobileUpload.value || mobileUpload.busy) return
   if (uploading.value) {
-    notify.warning('照片还在上传中，请等上传完成后再保存')
+    notify.warning('影像还在上传中，请等上传完成后再保存')
     return
   }
   if (photoQueue.failed.value) {
-    notify.warning('还有上传失败的照片，请重试或移除后再保存')
+    notify.warning('还有上传失败的影像，请重试或移除后再保存')
     return
   }
   if (!form.title.trim()) {
@@ -1419,6 +1431,7 @@ async function handleSave() {
       entries: stop.entries.map((entry, entryIndex) => ({
         id: entry.id,
         imageUrl: entry.imageUrl,
+        videoUrl: entry.videoUrl,
         remark: entry.remark?.trim() || '',
         thanksNote: entry.thanksNote?.trim() || '',
         shotAt: stopEntryShotAt(stop),
@@ -2456,6 +2469,7 @@ watch(
 }
 
 .mini-photo__media {
+  aspect-ratio: 16 / 11;
   position: relative;
   overflow: hidden;
   border-radius: 12px;
@@ -2469,6 +2483,7 @@ watch(
     grid-row: span 2;
   }
 
+  .mini-photo.is-cover:not(:only-child) .mini-photo__media,
   .mini-photo.is-cover:not(:only-child) img {
     aspect-ratio: 4 / 3;
   }
@@ -2489,6 +2504,7 @@ watch(
   border-radius: 0;
 }
 
+.photo-strip.is-single .mini-photo__media,
 .photo-strip.is-single .mini-photo img {
   aspect-ratio: 16 / 9;
   max-height: 360px;
@@ -2539,6 +2555,7 @@ watch(
 }
 
 .mini-photo__overlay {
+  z-index: 4;
   position: absolute;
   inset: 0;
   display: flex;
@@ -2588,6 +2605,10 @@ watch(
 .mini-photo__mobile-sort {
   display: none;
   gap: 7px;
+}
+
+.mini-photo-video-badge {
+  position: absolute; bottom: 6px; left: 6px; display: flex; align-items: center; gap: 3px; padding: 3px 6px; border-radius: 6px; color: white; background: #181218bf; font-size: 11px; pointer-events: none;
 }
 
 .mini-photo__remark {

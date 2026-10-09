@@ -1,7 +1,7 @@
 import axios from 'axios'
 import { get, post, del } from './request'
 import type { UploadResult } from './upload'
-import { retryTravelUpload, travelUploadError, TRAVEL_UPLOAD_TIMEOUT_MS } from '@/modules/travel-upload/policy'
+import { retryTravelUpload, travelUploadError, TRAVEL_VIDEO_TIMEOUT_MS } from '@/modules/travel-upload/policy'
 
 export interface MobileUploadReceipt {
   requestId: string
@@ -105,7 +105,7 @@ export async function sendMobilePhoto(
     body,
     {
       headers: { 'X-Upload-Token': token },
-      timeout: TRAVEL_UPLOAD_TIMEOUT_MS,
+      timeout: TRAVEL_VIDEO_TIMEOUT_MS,
       signal,
       onUploadProgress: (event) =>
         onProgress(Math.min(99, Math.round((event.loaded / (event.total || file.size)) * 100))),

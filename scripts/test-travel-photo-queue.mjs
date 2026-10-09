@@ -27,7 +27,7 @@ function harness(upload) {
   let dispose
   const { useTravelPhotoQueue } = load('../src/composables/useTravelPhotoQueue.ts', {
     vue: { ...vue, onBeforeUnmount: fn => { dispose = fn } },
-    '@/api/upload': { uploadTravelMemoryImage: upload },
+    '@/api/upload': { uploadTravelMedia: upload },
     '@/modules/travel-upload/policy': policy,
   })
   const queue = useTravelPhotoQueue((image, task) => received.push({ url: image.url, target: task.target, cover: task.cover }))
