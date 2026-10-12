@@ -254,7 +254,7 @@
                     String(index + 1).padStart(2, '0')
                   }}</span>
                   {{ stop.title }}
-                  <span class="stop-tab__count">{{ stop.entries.length }}</span>
+                  <span v-if="!isPhone" class="stop-tab__count">{{ stop.entries.length }}</span>
                 </button>
               </nav>
               <section
@@ -1612,8 +1612,10 @@ watch(
   .travel-journal__head { gap: 12px; margin-bottom: 20px; }
   .travel-journal__head h2 { font-size: 24px; line-height: 1.45; }
   .travel-journal__facts { margin-top: 12px; gap: 8px; font-size: 13px; }
-  .travel-journal__tabs { margin-bottom: 16px; gap: 16px; }
-  .stop-tab { min-height: 48px; padding: 12px 0; font-size: 14px; }
+  .travel-journal__tabs { margin-block: 23px 17px; padding: 1px 0 2px; gap: 8px; border: 0; scrollbar-width: none; }
+  .travel-journal__tabs::-webkit-scrollbar { display: none; }
+  .stop-tab { min-height: 38px; padding: 7px 13px; border: 1px solid transparent; border-radius: 12px; background: var(--color-surface-muted); font-size: 13px; font-weight: 500; white-space: nowrap; }
+  .stop-tab.is-active { background: var(--color-accent-soft); border-color: color-mix(in srgb, var(--color-accent) 28%, transparent); color: var(--color-accent-readable); font-weight: 600; }
   .stop-tab__index { display: none; }
   .travel-journal__story { font-size: 14px; line-height: 1.8; }
   .travel-journal__photo-count { display: none; }

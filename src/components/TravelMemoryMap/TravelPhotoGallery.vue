@@ -28,14 +28,15 @@
             <UiIcon name="external" />
           </span>
         </button>
-        <template v-if="!isMobile && photos.length > 1">
+        <template v-if="photos.length > 1">
           <button
             type="button"
             class="travel-photos__arrow is-previous"
             aria-label="上一项影像"
             @click="move(-1)"
           >
-            <UiIcon name="arrow-left" />
+            <svg v-if="isMobile" viewBox="0 0 24 24" aria-hidden="true"><path class="travel-photos__arrow-outline" d="m15 5-7 7 7 7" /><path d="m15 5-7 7 7 7" /></svg>
+            <UiIcon v-else name="arrow-left" />
           </button>
           <button
             type="button"
@@ -43,7 +44,8 @@
             aria-label="下一项影像"
             @click="move(1)"
           >
-            <UiIcon name="arrow-right" />
+            <svg v-if="isMobile" viewBox="0 0 24 24" aria-hidden="true"><path class="travel-photos__arrow-outline" d="m9 5 7 7-7 7" /><path d="m9 5 7 7-7 7" /></svg>
+            <UiIcon v-else name="arrow-right" />
           </button>
         </template>
         <span
@@ -91,9 +93,7 @@
     <div v-if="isMobile && currentPhoto" class="travel-photos__mobile-caption">
       <p>{{ photoTitle(currentPhoto, currentIndex) }}</p>
       <div v-if="photos.length > 1" class="travel-photos__pager">
-        <button type="button" aria-label="上一项影像" @click="move(-1)"><UiIcon name="arrow-left" /></button>
         <span role="status" aria-live="polite" aria-atomic="true"><span class="sr-only">当前影像：</span>{{ currentIndex + 1 }} / {{ photos.length }}</span>
-        <button type="button" aria-label="下一项影像" @click="move(1)"><UiIcon name="arrow-right" /></button>
       </div>
     </div>
     <div v-if="photos.length > 1" ref="previewStrip" class="travel-photos__thumbnails" role="group" aria-label="照片和视频缩略图">
@@ -407,10 +407,17 @@ watch(
   flex-shrink: 0;
   font-size: 12px;
   font-variant-numeric: tabular-nums;
-  > span { min-width: 42px; text-align: center; white-space: nowrap; }
-  button { display: grid; place-items: center; width: 44px; height: 44px; padding: 0; border: 0; background: transparent; color: inherit; cursor: pointer; }
+  > span { min-width: 48px; text-align: right; white-space: nowrap; }
 }
 @media (max-width: 767px) {
+  .travel-photos__arrow {
+    border: 0; border-radius: 0; background: transparent; color: #35313a; box-shadow: none;
+    &.is-previous { left: 2px; }
+    &.is-next { right: 2px; }
+    &:hover { background: transparent; }
+    svg { width: 25px; height: 25px; fill: none; stroke: currentColor; stroke-width: 2.7; stroke-linecap: round; stroke-linejoin: round; }
+    .travel-photos__arrow-outline { stroke: rgb(255 255 255 / 79%); stroke-width: 4.2; }
+  }
   .travel-photos__thumbnails { margin-top: 2px; padding: 3px 1px 4px; scrollbar-width: none; }
   .travel-photos__thumbnails::-webkit-scrollbar { display: none; }
   .travel-photos__thumbnail { flex-basis: 58px; width: 58px; height: 52px; border-width: 1.5px; border-radius: 9px; }
