@@ -378,6 +378,8 @@
       v-model="photoViewerVisible"
       :urls="stopPhotoUrls"
       :initial-index="photoViewerIndex"
+      :minimal="isPhone"
+      spacious
     />
   </DefaultLayout>
 </template>
@@ -1613,7 +1615,10 @@ watch(
   .travel-journal__tabs { margin-bottom: 16px; gap: 16px; }
   .stop-tab { min-height: 48px; padding: 12px 0; font-size: 14px; }
   .stop-tab__index { display: none; }
-  .travel-journal__story { font-size: 15px; }
+  .travel-journal__story { font-size: 14px; line-height: 1.8; }
+  .travel-journal__photo-count { display: none; }
+  .travel-journal__stop-meta { margin-bottom: 15px; }
+  .travel-journal__quote { margin-block: 24px; padding: 3px 0 3px 14px; background: transparent; border-radius: 0; font-size: 14px; }
   .travel-journal__footer { flex-wrap: wrap; gap: 12px; padding-top: 20px; }
   .memory-link { min-height: 44px; display: inline-flex; align-items: center; }
   .memory-expanded-layout { display: flex; flex-direction: column; }

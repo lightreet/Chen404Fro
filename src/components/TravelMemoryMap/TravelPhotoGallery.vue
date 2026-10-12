@@ -24,11 +24,11 @@
             :alt="photoTitle(currentPhoto, currentIndex)"
           />
           <span class="travel-photos__caption">
-            <span>{{ photoTitle(currentPhoto, currentIndex) }}</span>
+            <span v-if="!isMobile">{{ photoTitle(currentPhoto, currentIndex) }}</span>
             <UiIcon name="external" />
           </span>
         </button>
-        <template v-if="photos.length > 1">
+        <template v-if="!isMobile && photos.length > 1">
           <button
             type="button"
             class="travel-photos__arrow is-previous"
@@ -47,6 +47,7 @@
           </button>
         </template>
         <span
+          v-if="!isMobile"
           class="travel-photos__position"
           role="status"
           aria-live="polite"
@@ -87,6 +88,14 @@
       <UiIcon name="image" />
       <p>这个片段还没有照片或视频</p>
     </div>
+    <div v-if="isMobile && currentPhoto" class="travel-photos__mobile-caption">
+      <p>{{ photoTitle(currentPhoto, currentIndex) }}</p>
+      <div v-if="photos.length > 1" class="travel-photos__pager">
+        <button type="button" aria-label="上一项影像" @click="move(-1)"><UiIcon name="arrow-left" /></button>
+        <span role="status" aria-live="polite" aria-atomic="true"><span class="sr-only">当前影像：</span>{{ currentIndex + 1 }} / {{ photos.length }}</span>
+        <button type="button" aria-label="下一项影像" @click="move(1)"><UiIcon name="arrow-right" /></button>
+      </div>
+    </div>
     <div v-if="photos.length > 1" ref="previewStrip" class="travel-photos__thumbnails" role="group" aria-label="照片和视频缩略图">
       <button v-for="(photo, index) in photos" :key="photo.id || index" type="button"
         class="travel-photos__thumbnail" :class="{ 'is-active': index === currentIndex }"
@@ -99,7 +108,7 @@
     <p v-if="currentPhoto?.thanksNote?.trim()" class="travel-photos__note">
       {{ currentPhoto.thanksNote }}
     </p>
-    <p v-if="photos.length > 1" class="travel-photos__hint">
+    <p v-if="!isMobile && photos.length > 1" class="travel-photos__hint">
       左右切换影像 · 点击照片放大查看
     </p>
   </div>
@@ -354,11 +363,19 @@ watch(
   }
   .travel-photos__main {
     height: auto;
-    aspect-ratio: 4 / 5;
+    aspect-ratio: 4 / 3;
     touch-action: pan-y pinch-zoom;
   }
   .travel-photos__caption {
-    inset-inline: 15px;
+    inset: auto 8px 8px auto;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    background: rgb(24 18 24 / 48%);
+  }
+  .travel-photos__image::after {
+    display: none;
   }
 }
 
@@ -374,4 +391,28 @@ watch(
   &.is-active { border-color: var(--color-accent-readable); }
 }
 .travel-photos__video-mark { position: absolute; inset: 0; display: grid; place-items: center; color: #fff; text-shadow: 0 1px 4px #000; pointer-events: none; }
+.travel-photos__mobile-caption {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 44px;
+  margin-top: 4px;
+  color: var(--color-text-secondary);
+  > p { margin: 0; min-width: 0; font-size: 13px; overflow-wrap: anywhere; }
+}
+.travel-photos__pager {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  > span { min-width: 42px; text-align: center; white-space: nowrap; }
+  button { display: grid; place-items: center; width: 44px; height: 44px; padding: 0; border: 0; background: transparent; color: inherit; cursor: pointer; }
+}
+@media (max-width: 767px) {
+  .travel-photos__thumbnails { margin-top: 2px; padding: 3px 1px 4px; scrollbar-width: none; }
+  .travel-photos__thumbnails::-webkit-scrollbar { display: none; }
+  .travel-photos__thumbnail { flex-basis: 58px; width: 58px; height: 52px; border-width: 1.5px; border-radius: 9px; }
+}
 </style>
