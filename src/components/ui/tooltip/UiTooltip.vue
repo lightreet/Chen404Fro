@@ -4,6 +4,7 @@
     :placement="placement"
     :disabled="disabled"
     :show-after="showAfter"
+    :trigger="trigger"
     effect="customized"
     popper-class="ui-tooltip__popper"
   >
@@ -16,6 +17,8 @@
 
 <script setup lang="ts">
 import { ElTooltip } from 'element-plus'
+
+type TooltipTrigger = 'hover' | 'focus' | 'click' | 'contextmenu'
 
 withDefaults(
   defineProps<{
@@ -31,12 +34,14 @@ withDefaults(
       | 'right'
     disabled?: boolean
     showAfter?: number
+    trigger?: TooltipTrigger | TooltipTrigger[]
   }>(),
   {
     content: '',
     placement: 'top',
     disabled: false,
     showAfter: 120,
+    trigger: 'hover',
   },
 )
 </script>

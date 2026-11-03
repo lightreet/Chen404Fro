@@ -26,23 +26,14 @@
             <h2 id="about-community-title">一起停留的人</h2>
             <p>{{ communitySummary }}</p>
           </div>
-          <button
-            v-if="canToggleMembers"
-            type="button"
-            class="member-toggle"
-            :aria-expanded="membersExpanded"
-            @click="membersExpanded = !membersExpanded"
-          >
-            {{ memberToggleLabel }}
-          </button>
         </header>
 
         <div v-if="isMembersLoading" class="member-status" role="status">
           正在加载成员信息…
         </div>
 
-        <div v-else-if="isPhone && visibleMembers.length" class="mobile-about-members">
-          <button v-for="member in visibleMembers" :key="member.id" type="button" class="mobile-about-member" @click="openMemberCard(member)">
+        <div v-else-if="isPhone && displayMembers.length" class="mobile-about-members" role="region" aria-label="公开成员列表" tabindex="0">
+          <button v-for="member in displayMembers" :key="member.id" type="button" class="mobile-about-member" @click="openMemberCard(member)">
             <img :src="getMemberAvatar(member)" alt="" @error="handleAvatarError" />
             <span><strong>{{ getMemberDisplayName(member) }}</strong><small>{{ getMemberRoleLabel(member) }}</small></span>
             <UiIcon name="arrow-right" :size="20" />
@@ -57,9 +48,14 @@
             />
             <div class="member-preview__content">
               <span class="member-role">{{ getMemberRoleLabel(activeMember) }}</span>
-              <h3>{{ getMemberDisplayName(activeMember) }}</h3>
-              <p v-if="activeMember.username" class="member-handle">@{{ activeMember.username }}</p>
-              <p class="member-bio">{{ getMemberBio(activeMember) }}</p>
+              <h3 :title="getMemberDisplayName(activeMember)">{{ getMemberDisplayName(activeMember) }}</h3>
+              <p class="member-handle" :title="activeMember.username">{{ activeMember.username ? `@${activeMember.username}` : '' }}</p>
+              <UiTooltip :key="activeMember.id" placement="top" :show-after="250" :trigger="['hover', 'focus']">
+                <template #content>
+                  <div class="member-bio-full" tabindex="0">{{ getMemberBio(activeMember) }}</div>
+                </template>
+                <p class="member-bio" tabindex="0">{{ getMemberBio(activeMember) }}</p>
+              </UiTooltip>
               <button
                 type="button"
                 class="member-card-button"
@@ -71,10 +67,10 @@
           </article>
 
           <div class="member-picker">
-            <p class="member-picker__label">选择头像预览成员，打开卡片查看详情</p>
-            <div class="member-list">
+            <p class="member-picker__label">点击头像切换成员，滚动查看更多</p>
+            <div class="member-list" role="region" aria-label="公开成员列表" tabindex="0">
               <button
-                v-for="member in visibleMembers"
+                v-for="member in displayMembers"
                 :key="member.id"
                 type="button"
                 class="member-option"
@@ -82,8 +78,6 @@
                 :aria-label="`预览 ${getMemberDisplayName(member)}`"
                 :aria-pressed="String(activeMember.id) === String(member.id)"
                 :title="getMemberDisplayName(member)"
-                @mouseenter="setActiveMember(member.id)"
-                @focus="setActiveMember(member.id)"
                 @click="setActiveMember(member.id)"
               >
                 <img
@@ -110,6 +104,11 @@
           >
             重新加载成员
           </button>
+        </div>
+
+        <div v-if="!isMembersLoading && membersLoadFailed && displayMembers.length" class="member-load-error" role="status">
+          <span>成员列表加载失败，暂时仅显示已加载的资料。</span>
+          <button type="button" class="member-card-button" @click="loadAboutPage">重新加载成员</button>
         </div>
       </section>
 
@@ -164,7 +163,7 @@ import type { SiteOwner } from '@/types';
 import { getSiteMembers, getSiteOwner, type SiteMember } from '@/api/home';
 import PageHero from '@/components/PageHero/PageHero.vue';
 import UserProfilePopover from '@/components/UserProfile/UserProfilePopover.vue';
-import { UiIcon } from '@/components/ui';
+import { UiIcon, UiTooltip } from '@/components/ui';
 import { useSiteConfig } from '@/composables/useSiteConfig';
 import DefaultLayout from '@/layouts/DefaultLayout.vue';
 import { resolveHeroImagePosition } from '@/utils/siteConfig';
@@ -179,7 +178,6 @@ const DEFAULT_MEMBER_AVATAR = '/default-member-avatar.svg';
 const DEFAULT_GITHUB_LINK = 'https://github.com/lightreet';
 const LEGACY_GITHUB_LINK = 'https://github.com/chen404';
 const LEGACY_DEFAULT_AVATAR = '/default-avatar.jpg';
-const INITIAL_MEMBER_LIMIT = 4;
 const heroBgImage = ref(DEFAULT_ABOUT_HERO);
 const heroBgPosition = ref(DEFAULT_ABOUT_HERO_POSITION);
 const owner = ref<SiteOwner | null>(null);
@@ -189,7 +187,6 @@ const selectedMember = ref<SiteMember | null>(null);
 const profilePopoverVisible = ref(false);
 const siteEmail = ref('');
 const githubLink = ref('');
-const membersExpanded = ref(false);
 const isMembersLoading = ref(true);
 const membersLoadFailed = ref(false);
 const { loadSiteConfig } = useSiteConfig();
@@ -254,19 +251,10 @@ const activeMember = computed(() => {
   );
 });
 
-const visibleMembers = computed(() =>
-  membersExpanded.value
-    ? displayMembers.value
-    : displayMembers.value.slice(0, INITIAL_MEMBER_LIMIT)
-);
 const memberCount = computed(() => displayMembers.value.length);
-const canToggleMembers = computed(() => memberCount.value > INITIAL_MEMBER_LIMIT);
-const memberToggleLabel = computed(() =>
-  membersExpanded.value ? '收起成员' : `查看全部 ${memberCount.value} 位成员`
-);
 const communitySummary = computed(() =>
   memberCount.value > 0
-    ? `${memberCount.value} 位成员在这里留下了名字，选择一位认识他们。`
+    ? `${memberCount.value} 位成员公开了资料，选择一位认识他们。`
     : '成员们会在这里留下名字和一点介绍。'
 );
 const ownerName = computed(() =>
@@ -414,7 +402,10 @@ onMounted(() => {
   text-wrap: balance;
 }
 
-.member-toggle:focus-visible,
+.member-list:focus-visible,
+.mobile-about-members:focus-visible,
+.mobile-about-member:focus-visible,
+.member-bio:focus-visible,
 .member-option:focus-visible,
 .member-card-button:focus-visible,
 .site-links a:focus-visible {
@@ -448,19 +439,8 @@ onMounted(() => {
   line-height: 1.65;
 }
 
-.member-toggle {
-  flex: 0 0 auto;
-  min-height: 44px;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  color: var(--color-accent-strong);
-  font-size: 14px;
-  font-weight: 650;
-  cursor: pointer;
-}
-
 .community-layout {
+  --member-panel-height: 320px;
   display: grid;
   grid-template-columns: minmax(0, 1.05fr) minmax(340px, 0.95fr);
   gap: clamp(28px, 5vw, 56px);
@@ -468,6 +448,8 @@ onMounted(() => {
 }
 
 .member-preview {
+  height: var(--member-panel-height);
+  box-sizing: border-box;
   display: grid;
   grid-template-columns: 104px minmax(0, 1fr);
   gap: 22px;
@@ -476,6 +458,20 @@ onMounted(() => {
   border: 1px solid var(--color-border-light);
   border-radius: 16px;
   background: var(--color-surface);
+}
+
+.member-preview__content {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  height: 100%;
+  min-height: 0;
+}
+
+.member-preview__content .member-card-button {
+  flex-shrink: 0;
+  align-self: flex-start;
+  margin-top: auto;
 }
 
 .member-preview > img {
@@ -487,9 +483,21 @@ onMounted(() => {
 }
 
 .member-role {
+  display: block;
+  min-height: 20px;
+  line-height: 20px;
   color: var(--color-accent-strong);
   font-size: 13px;
   font-weight: 650;
+}
+
+.member-role,
+.member-preview h3,
+.member-handle {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .member-preview h3 {
@@ -500,17 +508,34 @@ onMounted(() => {
 }
 
 .member-handle {
+  height: 20px;
+  line-height: 20px;
   margin: 3px 0 0;
   color: var(--color-text-tertiary);
   font-size: 13px;
 }
 
 .member-bio {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  white-space: pre-line;
+  height: 76.5px;
+  flex-shrink: 0;
   margin: 14px 0 0;
   color: var(--color-text-secondary);
   font-size: 15px;
   line-height: 1.7;
   text-wrap: pretty;
+}
+
+.member-bio-full {
+  max-height: min(320px, 50dvh);
+  overflow-y: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }
 
 .member-card-button {
@@ -533,6 +558,9 @@ onMounted(() => {
 
 .member-picker {
   min-width: 0;
+  height: var(--member-panel-height);
+  display: flex;
+  flex-direction: column;
 }
 
 .member-picker__label {
@@ -543,8 +571,18 @@ onMounted(() => {
 }
 
 .member-list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border) transparent;
+  padding: 3px;
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-auto-rows: 76px;
+  align-content: start;
   gap: 12px;
 }
 
@@ -567,7 +605,10 @@ onMounted(() => {
     color var(--motion-duration-fast) var(--motion-ease-standard);
 }
 
-.member-option:hover,
+.member-option:hover {
+  border-color: var(--color-accent);
+}
+
 .member-option.is-active {
   border-color: color-mix(in srgb, var(--color-accent) 48%, var(--color-border));
   background: var(--color-accent-soft);
@@ -622,6 +663,17 @@ onMounted(() => {
 
 .member-status p {
   margin: 0;
+}
+
+.member-load-error {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  color: var(--color-text-secondary);
+  font-size: 13px;
+
+  .member-card-button { margin-top: 0; }
 }
 
 .site-notes {
@@ -857,13 +909,12 @@ onMounted(() => {
   .section-heading { margin-bottom: 12px; }
   .section-heading h2 { font-size: 18px; }
   .section-heading p { display: none; }
-  .member-toggle { min-height: 44px; font-size: 13px; }
-  .mobile-about-members { display: grid; gap: 12px; }
+  .mobile-about-members { display: grid; grid-auto-rows: 88px; align-content: start; gap: 12px; height: 320px; overflow-y: auto; overscroll-behavior: contain; scrollbar-gutter: stable; scrollbar-width: thin; scrollbar-color: var(--color-border) transparent; padding: 3px; }
   .mobile-about-member { width: 100%; display: flex; align-items: center; gap: 12px; border: 0; border-radius: var(--mobile-card-radius); background: var(--color-surface); color: var(--color-text-primary); padding: 16px; text-align: left; cursor: pointer; }
-  .mobile-about-member img { width: 48px; height: 48px; object-fit: cover; border-radius: 50%; }
+  .mobile-about-member img { width: 48px; height: 48px; flex-shrink: 0; object-fit: cover; border-radius: 50%; }
   .mobile-about-member > span { flex: 1; min-width: 0; }
-  .mobile-about-member strong { display: block; font-size: 17px; font-weight: 600; overflow-wrap: anywhere; }
-  .mobile-about-member small { display: block; margin-top: 4px; color: var(--color-text-secondary); font-size: 13px; }
+  .mobile-about-member strong { display: block; font-size: 17px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .mobile-about-member small { display: block; margin-top: 4px; color: var(--color-text-secondary); font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .site-notes { margin-top: 28px; padding: 0; display: block; border: 0; box-shadow: none; background: none; }
   .site-notes__mark { display: none; }
   .site-notes__copy h2 { font-size: 17px; line-height: 1.6; }
