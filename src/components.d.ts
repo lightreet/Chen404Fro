@@ -26,6 +26,7 @@ declare module 'vue' {
     ArticleOutline: typeof import('./components/Editor/ArticleOutline.vue')['default']
     AuthEmailField: typeof import('./components/Auth/AuthEmailField.vue')['default']
     CategoryIcon: typeof import('./components/CategoryIcon/CategoryIcon.vue')['default']
+    CategoryIconPicker: typeof import('./components/CategoryIcon/CategoryIconPicker.vue')['default']
     CommentItem: typeof import('./components/Comment/CommentItem.vue')['default']
     CommentSection: typeof import('./components/Comment/CommentSection.vue')['default']
     EmojiPickerPanel: typeof import('./components/Emoji/EmojiPickerPanel.vue')['default']
